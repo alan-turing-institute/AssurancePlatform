@@ -120,10 +120,12 @@ describe("fetchCaseFromPrisma — AWAY_GOAL/MODULE admission (ADR 0005 D3)", () 
 		expect(strategyResponse?.awayGoals?.[0]?.name).toBe("AG1");
 	});
 
-	it("marks the cited case as inaccessible when the viewer lacks permission on it", async () => {
+	it("marks the cited case as inaccessible and returns no name for it when the viewer lacks permission on it", async () => {
 		const owner = await createTestUser();
 		const otherOwner = await createTestUser();
-		const citedCase = await createTestCase(otherOwner.id);
+		const citedCase = await createTestCase(otherOwner.id, {
+			name: "Hidden Case Zeta",
+		});
 		const citedGoal = await createTestElement(citedCase.id, otherOwner.id, {
 			elementType: "GOAL",
 			name: "CG1",
@@ -147,8 +149,11 @@ describe("fetchCaseFromPrisma — AWAY_GOAL/MODULE admission (ADR 0005 D3)", () 
 
 		const awayGoal = data.goals?.[0]?.awayGoals?.[0];
 		expect(awayGoal?.citedCaseAccessible).toBe(false);
-		// The name still resolves — accessibility only gates the link, not the label.
-		expect(awayGoal?.citedCaseName).toBe(citedCase.name);
+		// Neither the cited case's name nor the cited element's is returned.
+		expect(awayGoal?.citedCaseName).toBeNull();
+		expect(awayGoal?.citedElementName).toBeNull();
+		expect(JSON.stringify(data)).not.toContain(citedCase.name);
+		expect(JSON.stringify(data)).not.toContain("CG1");
 	});
 
 	it("shows the cited case as accessible once it's shared with the viewer", async () => {

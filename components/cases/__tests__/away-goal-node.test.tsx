@@ -103,8 +103,8 @@ describe("AwayGoalNode (ADR 0005 D3)", () => {
 		expect(container.querySelector("[data-reference-id]")).toBeNull();
 	});
 
-	it("hides the link when the viewer cannot access the cited case", () => {
-		renderWithReactFlow(
+	it("shows 'Cited case not available' and no name or link when the viewer cannot access the cited case, whatever the data carries", () => {
+		const { container } = renderWithReactFlow(
 			<AwayGoalNode
 				{...nodeProps({
 					id: "el-1",
@@ -119,10 +119,33 @@ describe("AwayGoalNode (ADR 0005 D3)", () => {
 			/>
 		);
 
-		expect(screen.getByText("Cited Case — G3")).toBeInTheDocument();
+		expect(screen.getByText("Cited case not available")).toBeInTheDocument();
+		expect(container).not.toHaveTextContent("Cited Case");
+		expect(container).not.toHaveTextContent("G3");
 		expect(
 			screen.queryByRole("link", { name: VIEW_CITED_CASE_LINK_PATTERN })
 		).not.toBeInTheDocument();
+	});
+
+	it("marks the cited name line as left out of the dashboard thumbnail", () => {
+		renderWithReactFlow(
+			<AwayGoalNode
+				{...nodeProps({
+					id: "el-1",
+					name: "AG1",
+					description: "An away goal",
+					citedCaseName: "Cited Case",
+					citedElementName: "G3",
+					citedCaseAccessible: true,
+					moduleReferenceId: "case-2",
+					citedElementId: "goal-3",
+				})}
+			/>
+		);
+
+		expect(screen.getByText("Cited Case — G3")).toHaveAttribute(
+			"data-left-out-of-shared-thumbnail"
+		);
 	});
 
 	it("says the cited element is unresolved when citedElementId is null (dangling citation)", () => {

@@ -97,8 +97,8 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 		expect(container.querySelector("[data-reference-id]")).toBeNull();
 	});
 
-	it("hides the link when the viewer cannot access the referenced case", () => {
-		renderWithReactFlow(
+	it("shows 'Cited case not available' and no name or link when the viewer cannot access the referenced case, whatever the data carries", () => {
+		const { container } = renderWithReactFlow(
 			<ModuleNode
 				{...nodeProps({
 					id: "el-1",
@@ -111,27 +111,30 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 			/>
 		);
 
-		expect(screen.getByText("Referenced Case")).toBeInTheDocument();
+		expect(screen.getByText("Cited case not available")).toBeInTheDocument();
+		expect(container).not.toHaveTextContent("Referenced Case");
 		expect(
 			screen.queryByRole("link", { name: VIEW_REFERENCED_CASE_LINK_PATTERN })
 		).not.toBeInTheDocument();
 	});
 
-	it("falls back to 'Unknown case' when the referenced case name didn't resolve", () => {
+	it("marks the referenced case's name line as left out of the dashboard thumbnail", () => {
 		renderWithReactFlow(
 			<ModuleNode
 				{...nodeProps({
 					id: "el-1",
 					name: "M1",
 					description: "A module",
-					moduleCaseName: null,
-					moduleCaseAccessible: false,
+					moduleCaseName: "Referenced Case",
+					moduleCaseAccessible: true,
 					moduleReferenceId: "case-2",
 				})}
 			/>
 		);
 
-		expect(screen.getByText("Unknown case")).toBeInTheDocument();
+		expect(screen.getByText("Referenced Case")).toHaveAttribute(
+			"data-left-out-of-shared-thumbnail"
+		);
 	});
 
 	it("shows 'Cited case not available' and no link when moduleReferenceDangling is set (Chris's ruling, 2026-09-16)", () => {
@@ -150,7 +153,6 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 		);
 
 		expect(screen.getByText("Cited case not available")).toBeInTheDocument();
-		expect(screen.queryByText("Unknown case")).not.toBeInTheDocument();
 		expect(
 			screen.queryByRole("link", { name: VIEW_REFERENCED_CASE_LINK_PATTERN })
 		).not.toBeInTheDocument();

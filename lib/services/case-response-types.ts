@@ -42,9 +42,10 @@ export interface PlaceholderFields {
  * cited goal within it (ADR 0004 D5). The `cited*` fields are resolved by
  * `case-fetch-service.ts` — never carried on the Prisma row itself — so the
  * canvas card can show a name without a follow-up fetch. `citedCaseAccessible`
- * gates whether the card links to the cited case: false whenever the viewer
- * lacks permission on it, matching the same-error-for-missing-and-forbidden
- * rule used elsewhere in this file.
+ * is true only when the viewer can view the cited case now. `citedCaseName`
+ * and `citedElementName` are null whenever it is false, so a case in the bin,
+ * deleted, never shared or no longer shared looks the same to the viewer, and
+ * the card shows no link.
  */
 export interface AwayGoalResponse extends PlaceholderFields {
 	citationDangling?: boolean;
@@ -75,7 +76,8 @@ export interface AwayGoalResponse extends PlaceholderFields {
 /**
  * A module (ADR 0005 D3): a reference to a whole other case. Same
  * name-resolution and accessibility rules as `AwayGoalResponse` above, minus
- * the element-level citation (a module cites a case, not an element within it).
+ * the element-level citation (a module cites a case, not an element within it):
+ * `moduleCaseName` is null unless `moduleCaseAccessible` is true.
  */
 export interface ModuleResponse extends PlaceholderFields {
 	comments?: CommentResponse[];
