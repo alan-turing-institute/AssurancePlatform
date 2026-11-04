@@ -13,7 +13,12 @@ import type {
 	RenderedDocument,
 	RenderedSection,
 } from "../types";
-import { escapeMarkdown, escapeMarkdownText, getElementTitle } from "../utils";
+import {
+	escapeMarkdown,
+	escapeMarkdownCharacters,
+	escapeMarkdownText,
+	getElementTitle,
+} from "../utils";
 import { AbstractExporter } from "./base-exporter";
 
 /** An address that may be written as a link: no whitespace, web or mail scheme. */
@@ -362,7 +367,7 @@ export class MarkdownExporter extends AbstractExporter {
 		const target = address.replace(UNSAFE_LINK_TARGET_CHARACTER, (character) =>
 			encodeURIComponent(character)
 		);
-		return `[${escapeMarkdown(address)}](<${target}>)`;
+		return `[${escapeMarkdownCharacters(address)}](<${target}>)`;
 	}
 
 	/**

@@ -222,7 +222,7 @@ describe("MarkdownExporter", () => {
 				expect(result.content).toContain("| Name | URL | Description |");
 				expect(result.content).toContain("| --- | --- | --- |");
 				expect(result.content).toContain(
-					"| E1 | https://example.com | Test evidence |"
+					"| E1 | <https://example.com> | Test evidence |"
 				);
 			}
 		});
@@ -525,7 +525,7 @@ describe("MarkdownExporter", () => {
 			const content = await exportText(document);
 
 			expect(content).toContain(
-				"See &lt;img src=x onerror=1> and \\[here\\](https://example.test) \\&amp; C:\\\\temp"
+				"See &lt;img src=x onerror=1> and \\[here\\](<https://example.test>) \\&amp; C:\\\\temp"
 			);
 		});
 
@@ -558,7 +558,7 @@ describe("MarkdownExporter", () => {
 			const content = await exportText(document);
 
 			expect(content).toContain(
-				"| &lt;i>x&lt;/i> \\| y | \\[a\\](https://example.test) |"
+				"| &lt;i>x&lt;/i> \\| y | \\[a\\](<https://example.test>) |"
 			);
 		});
 
@@ -669,7 +669,7 @@ describe("MarkdownExporter", () => {
 			const content = await exportText(document);
 
 			expect(content).toContain(
-				"**Source:** https://example.com \\<img src\\=x onerror\\=1\\>"
+				"**Source:** <https://example.com> \\<img src\\=x onerror\\=1\\>"
 			);
 			expect(content).toContain(
 				"**URL:** [https://example.com/p](<https://example.com/p>)"
