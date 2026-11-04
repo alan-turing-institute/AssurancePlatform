@@ -307,14 +307,26 @@ function generateUuid(): string {
 /**
  * Builds the ID mapping from temp/original IDs to new UUIDs, or to themselves
  * when the caller asked to keep the file's ids.
+ *
+ * New ids are random, but they are handed out in ascending order along the
+ * elements as the file lists them. The export breaks a tie between siblings
+ * with the same name and kind by id, so this keeps such siblings in the order
+ * the file had them, however often the case is exported and imported again.
  */
 function buildIdMap(
 	elements: ElementV2[],
 	keepIds: boolean
 ): Map<string, string> {
 	const idMap = new Map<string, string>();
-	for (const el of elements) {
-		idMap.set(el.id, keepIds ? el.id : generateUuid());
+	if (keepIds) {
+		for (const el of elements) {
+			idMap.set(el.id, el.id);
+		}
+		return idMap;
+	}
+	const newIds = elements.map(() => generateUuid()).sort();
+	for (const [index, el] of elements.entries()) {
+		idMap.set(el.id, newIds[index] ?? generateUuid());
 	}
 	return idMap;
 }
