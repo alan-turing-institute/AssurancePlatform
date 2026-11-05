@@ -81,9 +81,7 @@ async function fetchCommentsForElements(
 				},
 			},
 		},
-		orderBy: {
-			createdAt: "asc",
-		},
+		orderBy: [{ createdAt: "asc" }, { id: "asc" }],
 	});
 
 	for (const comment of comments) {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveReactFlowNodeType } from "../node-type-resolver";
+import {
+	elementKindRank,
+	nodeKindRank,
+	resolveReactFlowNodeType,
+} from "../node-type-resolver";
 
 describe("resolveReactFlowNodeType (ADR 0005 D5)", () => {
 	it.each([
@@ -32,5 +36,30 @@ describe("resolveReactFlowNodeType (ADR 0005 D5)", () => {
 		expect(resolveReactFlowNodeType("goal", { isDefeater: false })).toBe(
 			"goal"
 		);
+	});
+});
+
+describe("sibling rank by kind", () => {
+	it("ranks strategies and claims, then evidence, then away goals and modules", () => {
+		expect(nodeKindRank("strategy")).toBe(0);
+		expect(nodeKindRank("property")).toBe(0);
+		expect(nodeKindRank("evidence")).toBe(1);
+		expect(nodeKindRank("awayGoal")).toBe(2);
+		expect(nodeKindRank("module")).toBe(2);
+	});
+
+	it("ties a goal, an unknown kind and no kind at rank 0", () => {
+		expect(nodeKindRank("goal")).toBe(0);
+		expect(nodeKindRank("something-unknown")).toBe(0);
+		expect(nodeKindRank(undefined)).toBe(0);
+	});
+
+	it("gives an element type the rank of the node kind it is drawn as", () => {
+		expect(elementKindRank("STRATEGY")).toBe(0);
+		expect(elementKindRank("PROPERTY_CLAIM")).toBe(0);
+		expect(elementKindRank("EVIDENCE")).toBe(1);
+		expect(elementKindRank("AWAY_GOAL")).toBe(2);
+		expect(elementKindRank("MODULE")).toBe(2);
+		expect(elementKindRank("CONTRACT")).toBe(0);
 	});
 });

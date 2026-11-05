@@ -249,6 +249,8 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 	interface Row {
 		defeater?: boolean;
 		id: string;
+		/** The element's name; the id when left out. */
+		name?: string;
 		parent?: string;
 		type: TreeNode["type"];
 	}
@@ -264,7 +266,7 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 				{
 					id: row.id,
 					elementType: row.type,
-					name: row.id,
+					name: row.name ?? row.id,
 					description: row.id,
 					inSandbox: false,
 					parentId: row.parent ?? null,
@@ -352,12 +354,13 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 			["E3", "CGP"],
 		],
 	};
-	// E3 is shown with its counter-goal CG3 under X, which comes first, and is a
-	// leaf inside E's part, which is hidden once A goes.
+	// E3 is shown with its counter-goal CG3 under X, which comes first (its name
+	// sorts before A and B), and is a leaf inside E's part, which is hidden once
+	// A goes.
 	const crossed: Model = {
 		rows: [
 			{ id: "G1", type: "GOAL" },
-			{ id: "X", type: "PROPERTY_CLAIM", parent: "G1" },
+			{ id: "X", type: "PROPERTY_CLAIM", parent: "G1", name: "0" },
 			...shared.rows.slice(1),
 			{ id: "CG3", type: "GOAL", parent: "E3", defeater: true },
 			{ id: "P3", type: "PROPERTY_CLAIM", parent: "CG3" },
@@ -406,14 +409,14 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 			["E2", "C"],
 		],
 	};
-	// E2 is linked to M before E1 is, so the export shows E2 under M, and E2 is
-	// a leaf inside E1's hidden part, which is hidden once M goes.
+	// E2's name sorts before E1's, so the export shows E2 first under M, and E2
+	// is a leaf inside E1's hidden part, which is hidden once M goes.
 	const sideBySide: Model = {
 		rows: [
 			{ id: "G1", type: "GOAL" },
 			{ id: "M", type: "PROPERTY_CLAIM", parent: "G1" },
 			{ id: "B", type: "PROPERTY_CLAIM", parent: "G1" },
-			{ id: "E2", type: "EVIDENCE" },
+			{ id: "E2", type: "EVIDENCE", name: "E0" },
 			{ id: "CG2", type: "GOAL", parent: "E2", defeater: true },
 			{ id: "P2", type: "PROPERTY_CLAIM", parent: "CG2" },
 			{ id: "E1", type: "EVIDENCE" },

@@ -5,6 +5,8 @@
  * a hierarchical tree where evidence appears inline under claims.
  */
 
+import { compareElementNames } from "../case/identifier-utils";
+import { elementKindRank } from "../case/node-type-resolver";
 import type {
 	AssertionStatus,
 	ElementRole,
@@ -181,7 +183,31 @@ function buildCleanNode(
 }
 
 /**
- * Builds a nested tree from flat elements.
+ * The order the diagram shows siblings in, and so the order they are written
+ * in: by kind (strategies and claims, then evidence, then away goals and
+ * modules), then by name in natural numeric order, then by id. The id settles
+ * the order of elements with equal or missing names, so the same elements are
+ * written the same way whatever order the rows arrive in.
+ */
+function compareSiblings(a: ElementWithLinks, b: ElementWithLinks): number {
+	const byKind =
+		elementKindRank(a.elementType) - elementKindRank(b.elementType);
+	if (byKind !== 0) {
+		return byKind;
+	}
+	const byName = compareElementNames(a.name, b.name);
+	if (byName !== 0) {
+		return byName;
+	}
+	if (a.id === b.id) {
+		return 0;
+	}
+	return a.id < b.id ? -1 : 1;
+}
+
+/**
+ * Builds a nested tree from flat elements. Siblings are written in the
+ * diagram's order (see `compareSiblings`), not the order of the rows.
  *
  * @param elements - Flat array of elements with evidence links
  * @returns Root tree node (the top-level GOAL)
@@ -201,12 +227,12 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 		childrenMap.set(parentId, existing);
 	}
 
-	// Find root element (GOAL with no parent)
-	const roots =
-		childrenMap.get(null)?.filter((el) => el.elementType === "GOAL") ?? [];
+	// Find root element (GOAL with no parent), choosing among the candidates
+	// in sibling order so the choice does not depend on the order of the rows
+	const anyRoots = [...(childrenMap.get(null) ?? [])].sort(compareSiblings);
+	const roots = anyRoots.filter((el) => el.elementType === "GOAL");
 	if (roots.length === 0) {
 		// Fallback: find any element with no parent
-		const anyRoots = childrenMap.get(null) ?? [];
 		const firstAnyRoot = anyRoots[0];
 		if (!firstAnyRoot) {
 			throw new Error("No root element found (element with parentId = null)");
@@ -214,10 +240,15 @@ export function buildTreeFromElements(elements: ElementWithLinks[]): TreeNode {
 		return buildNode(firstAnyRoot, childrenMap, new Set());
 	}
 
-	// A case has one ordinary root goal. A goal defeater with no parent (stored
-	// before such goals were refused) never stands in for it, whatever order
-	// the rows come back in.
-	const firstRoot = roots.find((root) => !root.isDefeater) ?? roots[0];
+	// A case has one ordinary root goal, the one marked as the top-level goal if
+	// any is, otherwise the first in sibling order. A goal defeater with no
+	// parent (stored before such goals were refused) never stands in for it,
+	// whatever order the rows come back in.
+	const ordinaryRoots = roots.filter((root) => !root.isDefeater);
+	const firstRoot =
+		ordinaryRoots.find((root) => root.role === "TOP_LEVEL") ??
+		ordinaryRoots[0] ??
+		roots[0];
 	if (!firstRoot) {
 		throw new Error("No root element found");
 	}
@@ -301,21 +332,19 @@ function buildNode(
 	}
 	const nextAncestors = new Set(ancestors);
 	nextAncestors.add(element.id);
-	// Get direct children (via parentId relationship)
-	const directChildren = (childrenMap.get(element.id) ?? []).filter((child) =>
-		isBuiltBeneath(element, child)
-	);
+	// Direct children (via parentId) and linked evidence (if this is a claim),
+	// together in sibling order
+	const children = [
+		...(childrenMap.get(element.id) ?? []).filter((child) =>
+			isBuiltBeneath(element, child)
+		),
+		...(element.evidenceLinksTo ?? []).map((link) => link.evidence),
+	].sort(compareSiblings);
 
 	// Build children nodes recursively
-	const childNodes = directChildren.map((child) =>
+	const childNodes = children.map((child) =>
 		buildNode(child, childrenMap, builtEvidence, nextAncestors)
 	);
 
-	// Get evidence linked to this element (if it's a claim)
-	const linkedEvidence =
-		element.evidenceLinksTo?.map((link) =>
-			buildNode(link.evidence, childrenMap, builtEvidence, nextAncestors)
-		) ?? [];
-
-	return buildCleanNode(element, [...childNodes, ...linkedEvidence]);
+	return buildCleanNode(element, childNodes);
 }

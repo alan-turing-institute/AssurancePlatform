@@ -11,6 +11,7 @@ import ELK from "elkjs/lib/elk.bundled.js";
 import type { ElkExtendedEdge, ElkNode } from "elkjs/lib/elk-api";
 import type { Edge, Node } from "reactflow";
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
+import { nodeKindRank } from "@/lib/case/node-type-resolver";
 import { logger } from "@/lib/logger";
 
 const elk = new ELK();
@@ -319,21 +320,13 @@ function buildCells(sortedVisibleNodes: Node[]): {
 
 /**
  * Kind-ordering rank for a cell's (or any parent's) children, before
- * identifier (ADR 0005 D1's "cross-kind order", D8): strategies and
- * property claims first, then evidence, then away goals and modules. An
- * unranked type (goal — always a root here — or a future node kind) ties
- * at rank 0 rather than breaking the sort.
+ * identifier: strategies and property claims first, then evidence, then away
+ * goals and modules. The ranks live in `node-type-resolver.ts`, which the
+ * export reads as well; an unranked type (a future node kind) ties at rank 0
+ * rather than breaking the sort.
  */
-const KIND_RANK: Record<string, number> = {
-	strategy: 0,
-	property: 0,
-	evidence: 1,
-	awayGoal: 2,
-	module: 2,
-};
-
 function kindRank(node: Node): number {
-	return KIND_RANK[node.type ?? ""] ?? 0;
+	return nodeKindRank(node.type);
 }
 
 /**

@@ -62,3 +62,31 @@ export function resolveReactFlowNodeType(
 		? (key as ReactFlowNodeKind)
 		: "property";
 }
+
+/**
+ * Where each kind of node sits among its siblings: strategies and claims
+ * first, then evidence, then away goals and modules. The diagram lays its
+ * rows out in this order and the export writes children in it, both read from
+ * this one table.
+ */
+const NODE_KIND_RANK: Record<ReactFlowNodeKind, number> = {
+	goal: 0,
+	strategy: 0,
+	property: 0,
+	evidence: 1,
+	awayGoal: 2,
+	module: 2,
+};
+
+/**
+ * The sibling rank of a node kind (a React Flow `node.type`). A kind the
+ * table does not list ties at rank 0 rather than breaking the sort.
+ */
+export function nodeKindRank(kind: string | undefined): number {
+	return (NODE_KIND_RANK as Record<string, number>)[kind ?? ""] ?? 0;
+}
+
+/** The sibling rank of an element type, through the node kind it is drawn as. */
+export function elementKindRank(elementType: string): number {
+	return nodeKindRank(resolveReactFlowNodeType(elementType));
+}

@@ -145,6 +145,19 @@ The `case` object carries `"kind": "PATTERN"` when the case is a pattern.
 An ordinary case omits `kind`, so its file has the shape it always had, and a file without `kind` imports as an ordinary case.
 The nested and flat formats both accept `kind`, with the values `CASE` and `PATTERN`.
 
+`buildTreeFromElements` writes the children of each element in the order the diagram shows them, whatever order the database returns the rows in.
+Evidence linked to a claim counts among the claim's children.
+Children sort by kind first: goals, counter-goals, strategies, claims and contracts together, then evidence, then away goals and modules.
+The ranks are in `lib/case/node-type-resolver.ts`, and the diagram's layout reads the same table.
+Within a kind, children sort by name in natural numeric order (`compareElementNames` in `lib/case/identifier-utils.ts`), so `P2` comes before `P10` and `P1.2` before `P1.10`.
+The comparison uses no locale, and a missing or empty name comes first.
+A difference in letter case or leading zeros counts only when the names are otherwise equal, so `p2` comes before `P10` and `P1.1` before `P01.2`.
+Children with the same name, or none, sort by id, so the order is the same on every export.
+Siblings with identical names keep the order they were imported in, because an import gives its elements new ids that rise along the file.
+Because the order depends on names, renaming an element can move it, as it moves on the diagram, and an import keeps names, so the order survives export and import.
+A piece of evidence linked to several claims is written under each of them; what hangs from it is written with the first copy in this order.
+The same order picks the root when a case holds more than one goal with no parent: the goal marked as top level if there is one, otherwise the first goal that is not a defeater.
+
 `importCase` takes options that only server code sets.
 `kind` overrides the file's kind, `name` and `description` replace the file's, `sourcePatternId` records the pattern the new case was started from, and `markFromPattern` sets `fromPattern` on every element and clears `modifiedFromPattern`, because a case just started from a pattern has not yet been changed.
 No import route reads these from a request, and a `sourcePatternId` written inside a file is ignored.

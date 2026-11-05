@@ -273,6 +273,129 @@ describe("buildTreeFromElements evidence", () => {
 	});
 });
 
+describe("buildTreeFromElements sibling order", () => {
+	const childIds = (tree: TreeNode, id: string) =>
+		nodes(tree)
+			.find((node) => node.id === id)
+			?.children.map((child) => child.id);
+
+	function away(id: string, name: string, parentId: string) {
+		return element(id, { elementType: "AWAY_GOAL", name, parentId });
+	}
+
+	// Siblings under G1 stored in an order that is not the diagram's, with E2
+	// linked before E1 and a second claim sharing E1.
+	const e1 = evidence("E1");
+	const e2 = evidence("E2");
+	const rows = (): ElementWithLinks[] => [
+		element("G1", { role: "TOP_LEVEL" }),
+		away("AG1", "AG1", "G1"),
+		claim("P10", "G1"),
+		element("S1", { elementType: "STRATEGY", name: "S1", parentId: "G1" }),
+		claim("P2", "G1", [e2, e1]),
+		claim("P1", "G1"),
+		claim("P3", "S1", [e1]),
+		e1,
+		e2,
+		counterGoal("CG1", "E1"),
+		claim("P4", "CG1"),
+	];
+
+	it("writes claims and strategies by name, then evidence, then away goals", () => {
+		const tree = buildTreeFromElements(rows());
+
+		expect(childIds(tree, "G1")).toEqual(["P1", "P2", "P10", "S1", "AG1"]);
+		expect(childIds(tree, "P2")).toEqual(["E1", "E2"]);
+	});
+
+	it("puts evidence linked to a claim among the claim's own children by kind and name", () => {
+		const parts = [
+			claim("P1", "G1", [evidence("E9")]),
+			claim("P2", "P1"),
+			element("S1", { elementType: "STRATEGY", name: "S1", parentId: "P1" }),
+			away("AG1", "AG1", "P1"),
+		];
+
+		const tree = buildTreeFromElements([
+			element("G1", { role: "TOP_LEVEL" }),
+			...parts,
+		]);
+
+		expect(childIds(tree, "P1")).toEqual(["P2", "S1", "E9", "AG1"]);
+	});
+
+	it("carries a piece of shared evidence's counter-goals on the first copy in that order", () => {
+		const tree = buildTreeFromElements(rows());
+
+		const copies = nodes(tree).filter((node) => node.id === "E1");
+		expect(copies).toHaveLength(2);
+		// P2 is written before S1, so P2's copy of E1 is met first.
+		expect(copies[0]?.children.map((child) => child.id)).toEqual(["CG1"]);
+		expect(copies[1]?.children).toEqual([]);
+	});
+
+	it("orders siblings with the same name, or none, by id", () => {
+		const second = { ...evidence("e-b"), name: "E3" };
+		const first = { ...evidence("e-a"), name: "E3" };
+		const unnamed = (id: string, name: string | null) =>
+			element(id, { elementType: "PROPERTY_CLAIM", parentId: "G1", name });
+
+		const tree = buildTreeFromElements([
+			element("G1", { role: "TOP_LEVEL" }),
+			claim("P1", "G1", [second, first]),
+			unnamed("p-c", null),
+			unnamed("p-b", null),
+			unnamed("p-a", ""),
+		]);
+
+		expect(childIds(tree, "G1")).toEqual(["p-b", "p-c", "p-a", "P1"]);
+		expect(childIds(tree, "P1")).toEqual(["e-a", "e-b"]);
+	});
+
+	it("writes the same tree for every order of the rows", () => {
+		const reference = buildTreeFromElements(rows());
+		const [top, ...others] = rows();
+		const shuffled = others.slice(0, 7);
+		const fixed = others.slice(7);
+
+		for (const order of permutations(shuffled)) {
+			expect(
+				buildTreeFromElements([top as ElementWithLinks, ...order, ...fixed])
+			).toEqual(reference);
+		}
+	});
+
+	it("chooses the top-level goal among stray goals for every order of the rows", () => {
+		const strays = [
+			counterGoal("CG8", null),
+			element("G2", { name: "G2" }),
+			element("G1", { name: "G1", role: "TOP_LEVEL" }),
+			element("G0", { name: null }),
+		];
+
+		for (const order of permutations(strays)) {
+			expect(buildTreeFromElements(order).id).toBe("G1");
+		}
+	});
+
+	it("writes the same tree when a claim lists its evidence the other way round", () => {
+		const forward = buildTreeFromElements([
+			element("G1", { role: "TOP_LEVEL" }),
+			claim("P1", "G1", [e1, e2]),
+			e1,
+			e2,
+		]);
+		const backward = buildTreeFromElements([
+			element("G1", { role: "TOP_LEVEL" }),
+			claim("P1", "G1", [e2, e1]),
+			e2,
+			e1,
+		]);
+
+		expect(backward).toEqual(forward);
+	});
+});
+
 describe("flattenNestedToFlat with evidence that carries counter-goals", () => {
 	function node(
 		id: string,
