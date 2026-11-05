@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { convertCaseKind } from "@/lib/services/case-kind-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -155,6 +156,36 @@ describe("when the case cannot be exported", () => {
 			where: { id: scene.caseId },
 		});
 		expect(row?.published).toBe(false);
+	});
+});
+
+describe("when the case is converted while it is being exported", () => {
+	it.each(
+		Object.entries(ROUTES)
+	)("is refused through %s, and publishes nothing, when the pattern is converted during the export", async (_label, publish) => {
+		const scene = await publishableCase("PATTERN");
+		await addPlaceholder(scene, "P1");
+		const actual = await vi.importActual<
+			typeof import("@/lib/services/case-export-service")
+		>("@/lib/services/case-export-service");
+		vi.mocked(exportCase).mockImplementationOnce(async (...args) => {
+			const exported = await actual.exportCase(...args);
+			await convertCaseKind(scene.ownerId, scene.caseId, "CASE");
+			return exported;
+		});
+
+		const response = await publish(scene.caseId);
+
+		expect(response.status).toBe(409);
+		const row = await prisma.assuranceCase.findUnique({
+			where: { id: scene.caseId },
+		});
+		expect(row).toMatchObject({ kind: "CASE", published: false });
+		expect(
+			await prisma.publishedAssuranceCase.count({
+				where: { assuranceCaseId: scene.caseId },
+			})
+		).toBe(0);
 	});
 });
 

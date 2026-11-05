@@ -123,7 +123,7 @@ The reference editor shows names and writes `{name#id}`; it is given the terms f
 Evidence is edited in that editor, with the terms of the claim it sits under.
 
 Publishing counts variables as well as placeholders.
-`requireCaseInformationComplete` counts, over the exported tree, the distinct variables with no value that the text of any element mentions where the variable is in reach (`countUnsetVariables` in `lib/case/placeholders.ts`), and the status dialog counts the same from the cards on the diagram.
+`publishAssuranceCase` and `updatePublishedCase` count, over the exported tree the snapshot is composed from, the distinct variables with no value that the text of any element mentions where the variable is in reach (`countUnsetVariables` in `lib/case/placeholders.ts`), and the status dialog counts the same from the cards on the diagram.
 The refusal message gives each count that is left, joined by a semicolon: "1 element still to fill in; 2 variables with no value".
 A pattern is not held back by either.
 Change detection for "Update published version" also compares the variables each element defines (id, name and value), so changing a value counts as a change although no element's own text changed.
@@ -155,15 +155,22 @@ No import route reads these from a request, and a `sourcePatternId` written insi
 
 ## Published records
 
-The publish gate, `requireCaseInformationComplete`, refuses a case whose exported tree still holds placeholders, with the message "N elements still to fill in", or whose text mentions a variable with no value, with "N variables with no value"; when both are left the message carries both, separated by a semicolon.
+Publishing and republishing refuse a case whose snapshot still holds placeholders, with the message "N elements still to fill in", or whose text mentions a variable with no value, with "N variables with no value"; when both are left the message carries both, separated by a semicolon.
+The check runs in `publishAssuranceCase` and `updatePublishedCase`, on the exported tree the snapshot is composed from, so it judges exactly the content that is written and nothing that changes after the export can get past it.
+It goes by the kind the snapshot records, which is also the kind the guarded write of the case row pins, so the snapshot and the row's type cannot disagree.
 It counts each element once and leaves out detached sandbox elements, which the tree does not contain, and it counts a variable once however often it is mentioned.
 It does not count a pattern's placeholders or empty variables.
-Both the publish route and the status route call it, so first publication and republication are held back alike.
+Before publishing, the publish route and the status route call `requireCaseInformationComplete`, which checks the case information only.
+A person without edit access is refused for permission rather than told what is left to fill in.
 
 Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.
 The row's `type` is `ARGUMENT_PATTERN` when the case is a pattern and `ASSURANCE_CASE` when it is a case.
 `swapCurrentPublishedVersion` in `lib/services/publish-service.ts` sets it from the case's kind when it creates the row, and a republish keeps it.
-A republish is refused, with "The case changed while it was being published. Try again.", if the case was unpublished or converted after the snapshot was composed.
+A publish or republish is refused, with "The case changed while it was being published. Try again.", if the case was converted after the snapshot was composed, or, for a republish, unpublished after it.
+Every transaction that writes a case and its published rows takes the case row first: publish, republish, unpublish, moving a case to Trash, restoring it, removing an archived copy, a permanent delete and an account deletion.
+No two of them can wait on each other's locks in opposite orders, so none can deadlock with another.
+An unpublish that meets a republish waits for it, then takes the version it wrote down as well, so the case ends as a draft with no published version.
+An unpublish that was waiting for a move to Trash is refused with "Case not found" and leaves the archived copy alone.
 
 ## Working with the schema
 

@@ -53,11 +53,12 @@ export async function GET(
  * Publishes an assurance case.
  * Body: { description?: string } (optional — no body at all is valid)
  *
- * Gated on case-information completeness (ADR 0003 §4 — "the admission
- * ticket to Discover"): the guided publish flow in the case editor already
- * runs this same check before it ever shows a confirm step, so a 400 here
- * means either a direct API call bypassing that flow, or the record
- * changed after the client checked it.
+ * Gated on case-information completeness: the guided publish flow in the
+ * case editor already runs this same check before it ever shows a confirm
+ * step, so a 400 here means either a direct API call bypassing that flow, or
+ * the record changed after the client checked it. A case with placeholders or
+ * variables still to fill in is refused by `publishAssuranceCase` itself, on
+ * the snapshot it is about to write.
  */
 export async function POST(
 	request: NextRequest,
