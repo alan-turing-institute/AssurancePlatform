@@ -27,7 +27,8 @@ const RAW_TEXTS = [GOAL_TEXT, CASE_TEXT, COMMENT_TEXT];
 
 const XML_TEXT = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
 const XML_ENTITY = /&(lt|gt|amp|quot|apos);/g;
-const PDF_TEXT_ARRAY = /\[((?:\s*(?:<[0-9a-fA-F]*>|-?[0-9.]+))+)\s*\]\s*TJ/g;
+/** A text-showing array: everything between one `[` and the next `]`; the hex strings in it are read in a second step. */
+const PDF_TEXT_ARRAY = /\[([^[\]]*)\]\s*TJ/g;
 const PDF_HEX_STRING = /<([0-9a-fA-F]*)>/g;
 const PDF_STREAM = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 /** A wrapped line or a split run reads as one space, so text is compared as a viewer reads it. */
