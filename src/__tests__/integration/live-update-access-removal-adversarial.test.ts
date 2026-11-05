@@ -778,11 +778,15 @@ describe("a revocation that meets a check already in progress", () => {
 		const viewer = await open(user.id, world.caseId);
 		const release = deferred<void>();
 		let held = false;
+		// Set once the held check has read the share, so the revocation below
+		// cannot commit before that read.
+		let read = false;
 		canAccess.mockImplementation(async (...args) => {
 			const [identity, level] = args;
 			if (!held && identity.userId === user.id && level === "VIEW") {
 				held = true;
 				const answer = await realCanAccess(...args);
+				read = true;
 				await release.promise;
 				return answer;
 			}
@@ -790,7 +794,7 @@ describe("a revocation that meets a check already in progress", () => {
 		});
 
 		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
-		await until(() => held, "the heartbeat check to start");
+		await until(() => read, "the heartbeat check to read the share");
 		const revoking = revokeUserPermission(
 			world.owner.id,
 			world.caseId,
@@ -983,18 +987,25 @@ describe("access removed behind the manager's back", () => {
 		const { user, grant } = await directGrant(world);
 		const release = deferred<void>();
 		let held = false;
+		// Set once the held check has read the share, so the revocation below
+		// cannot commit before that read.
+		let read = false;
 		canAccess.mockImplementation(async (...args) => {
 			const [identity, level] = args;
 			if (!held && identity.userId === user.id && level === "VIEW") {
 				held = true;
 				const answer = await realCanAccess(...args);
+				read = true;
 				await release.promise;
 				return answer;
 			}
 			return realCanAccess(...args);
 		});
 		const opening = open(user.id, world.caseId);
-		await until(() => held, "the opening request's access check");
+		await until(
+			() => read,
+			"the opening request's access check to read the share"
+		);
 
 		await mustSucceed(
 			revokeUserPermission(world.owner.id, world.caseId, grant.id)
