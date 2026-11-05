@@ -408,7 +408,10 @@ describe("the plain-text copy", () => {
 			}
 			expect(exported.content).not.toContain(ID_A);
 			expect(exported.content).not.toContain(ID_B);
-			expect(exported.content).not.toContain("[object Object]");
+			// The exporter backslash-escapes brackets, so look at the text without them.
+			expect(exported.content.replaceAll("\\", "")).not.toContain(
+				"[object Object]"
+			);
 			if (preset === "full-report") {
 				expect(exported.content).toContain("{interval}");
 				expect(exported.content).toContain("{narrow}");

@@ -42,6 +42,26 @@ const nextConfig = {
 			},
 		],
 	},
+	// Rules that need nothing from the page's own scripts, sent on every
+	// response: no plug-in content, no base-address changes, forms post only to
+	// this site, and no other site may frame the app. Linking an account in
+	// Settings posts a form to this site that answers with a redirect to the
+	// provider, and browsers check that redirect against form-action, so the
+	// two sign-in providers are listed beside 'self'.
+	async headers() {
+		return [
+			{
+				source: "/:path*",
+				headers: [
+					{
+						key: "Content-Security-Policy",
+						value:
+							"object-src 'none'; base-uri 'self'; form-action 'self' https://github.com https://accounts.google.com; frame-ancestors 'none'",
+					},
+				],
+			},
+		];
+	},
 	// Redirect old /documentation URLs to new /docs URLs
 	async redirects() {
 		return [

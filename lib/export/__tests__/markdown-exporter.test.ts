@@ -3,6 +3,7 @@ import type { PlainTreeNode } from "@/lib/case/defined-terms";
 import { MarkdownExporter } from "../exporters/markdown-exporter";
 import type { RenderedDocument } from "../types";
 
+const UNESCAPED_PIPE = /(?<!\\)\|/g;
 const MARKDOWN_FILENAME_PATTERN = /^test-case-\d{4}-\d{2}-\d{2}\.md$/;
 
 /**
@@ -222,7 +223,7 @@ describe("MarkdownExporter", () => {
 				expect(result.content).toContain("| Name | URL | Description |");
 				expect(result.content).toContain("| --- | --- | --- |");
 				expect(result.content).toContain(
-					"| E1 | https://example.com | Test evidence |"
+					"| E1 | <https://example.com> | Test evidence |"
 				);
 			}
 		});
@@ -403,7 +404,7 @@ describe("MarkdownExporter", () => {
 			expect(result.success).toBe(true);
 			if (result.success && "content" in result) {
 				expect(result.content).toContain(
-					"**URL:** [https://example.com/doc](https://example.com/doc)"
+					"**URL:** [https://example.com/doc](<https://example.com/doc>)"
 				);
 			}
 		});
@@ -469,6 +470,280 @@ describe("MarkdownExporter", () => {
 				expect(result.content).toContain('title: "Case with \\"quotes\\""');
 				expect(result.content).toContain('description: "Line 1\\nLine 2"');
 			}
+		});
+	});
+
+	describe("case text is written as plain text", () => {
+		async function exportText(document: RenderedDocument): Promise<string> {
+			const result = await exporter.export(document, { caseName: "Test" });
+			if (!(result.success && "content" in result)) {
+				throw new Error("the Markdown export failed");
+			}
+			return result.content;
+		}
+
+		function elementDocument(node: Partial<PlainTreeNode>): RenderedDocument {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "goals",
+					title: "Goals",
+					blocks: [
+						{
+							type: "element",
+							node: {
+								id: "n1",
+								type: "GOAL",
+								name: "G1",
+								description: "",
+								inSandbox: false,
+								children: [],
+								...node,
+							},
+							depth: 0,
+						},
+					],
+				},
+			];
+			return document;
+		}
+
+		it("escapes tags, links and entities in paragraphs", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Info",
+					blocks: [
+						{
+							type: "paragraph",
+							text: "See <img src=x onerror=1> and [here](https://example.test) &amp; C:\\temp",
+						},
+					],
+				},
+			];
+
+			const content = await exportText(document);
+
+			expect(content).toContain(
+				"See &lt;img src=x onerror=1> and \\[here\\](<https://example.test>) \\&amp; C:\\\\temp"
+			);
+		});
+
+		it("escapes tags in an element description and keeps {term} and hyphens", async () => {
+			const content = await exportText(
+				elementDocument({
+					description: "Top-level <b>{interval}</b> holds",
+				})
+			);
+
+			expect(content).toContain("Top-level &lt;b>{interval}&lt;/b> holds");
+		});
+
+		it("escapes tags in a table cell without losing the pipe escape", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Data",
+					blocks: [
+						{
+							type: "table",
+							headers: ["Key", "Value"],
+							rows: [["<i>x</i> | y", "[a](https://example.test)"]],
+						},
+					],
+				},
+			];
+
+			const content = await exportText(document);
+
+			expect(content).toContain(
+				"| &lt;i>x&lt;/i> \\| y | \\[a\\](<https://example.test>) |"
+			);
+		});
+
+		it("escapes tags in a comment, in a list of comments and in a comments section", async () => {
+			const inList = await exportText(
+				elementDocument({
+					comments: [
+						{
+							author: "<u>me</u>",
+							content: "Look <script>1</script>",
+							createdAt: "2024-01-15T10:00:00Z",
+						},
+					],
+				})
+			);
+			expect(inList).toContain("**\\<u\\>me\\</u\\>**");
+			expect(inList).toContain("Look \\<script\\>1\\</script\\>");
+
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "comments",
+					title: "Comments",
+					blocks: [{ type: "paragraph", text: "me: Look <script>1</script>" }],
+				},
+			];
+			expect(await exportText(document)).toContain(
+				"me: Look &lt;script>1&lt;/script>"
+			);
+		});
+
+		it("escapes a tag in a heading", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "goals",
+					title: "Goals",
+					blocks: [{ type: "heading", level: 3, text: "A <b>title</b>" }],
+				},
+			];
+
+			expect(await exportText(document)).toContain("A \\<b\\>title\\</b\\>");
+		});
+
+		it("writes a web evidence address as a link with the target in angle brackets", async () => {
+			const content = await exportText(
+				elementDocument({
+					type: "EVIDENCE",
+					url: "https://example.com/a)b",
+				})
+			);
+
+			expect(content).toContain(
+				"**URL:** [https://example.com/a\\)b](<https://example.com/a)b>)"
+			);
+		});
+
+		it("encodes the characters that would end a link target", async () => {
+			const content = await exportText(
+				elementDocument({
+					type: "EVIDENCE",
+					url: "https://example.com/a>b\\c",
+				})
+			);
+
+			expect(content).toContain("(<https://example.com/a%3Eb%5Cc>)");
+		});
+
+		it("writes a mail address as a link", async () => {
+			const content = await exportText(
+				elementDocument({ type: "EVIDENCE", url: "mailto:me@example.com" })
+			);
+
+			expect(content).toContain("](<mailto:me@example.com>)");
+		});
+
+		it("writes a non-web evidence address as text", async () => {
+			const content = await exportText(
+				elementDocument({
+					type: "EVIDENCE",
+					url: "javascript://example.com/%0Aalert(1)",
+				})
+			);
+
+			expect(content).toContain(
+				"**URL:** javascript://example.com/%0Aalert\\(1\\)"
+			);
+			expect(content).not.toContain("](");
+		});
+
+		it("writes a metadata value that starts with a web address as text when more follows", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Details",
+					blocks: [
+						{
+							type: "metadata",
+							key: "Source",
+							value: "https://example.com <img src=x onerror=1>",
+						},
+						{ type: "metadata", key: "URL", value: "https://example.com/p" },
+					],
+				},
+			];
+
+			const content = await exportText(document);
+
+			expect(content).toContain(
+				"**Source:** <https://example.com> \\<img src\\=x onerror\\=1\\>"
+			);
+			expect(content).toContain(
+				"**URL:** [https://example.com/p](<https://example.com/p>)"
+			);
+		});
+
+		it("escapes backticks and tildes so text never opens a code span or fence", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Info",
+					blocks: [{ type: "paragraph", text: "`code` and ~~struck~~" }],
+				},
+			];
+
+			expect(await exportText(document)).toContain(
+				"\\`code\\` and \\~\\~struck\\~\\~"
+			);
+		});
+
+		it("writes markup characters and line breaks in the frontmatter as YAML escapes", async () => {
+			const document = createSampleDocument();
+			document.metadata.caseDescription = "<b>[x]</b> & y\r\nz\u0001";
+
+			const content = await exportText(document);
+
+			expect(content).toContain(
+				'description: "\\x3Cb>\\x5Bx\\x5D\\x3C/b> \\x26 y\\r\\nz\\x01"'
+			);
+		});
+
+		it("keeps a table cell whole when an address in it holds a pipe or a backslash", async () => {
+			const document = createSampleDocument();
+			document.sections = [
+				{
+					type: "metadata",
+					title: "Data",
+					blocks: [
+						{
+							type: "table",
+							headers: ["Key", "Value"],
+							rows: [
+								["a", "https://x.example/a|b"],
+								["b", "https://x.example/a\\|b"],
+								["c", "x | y https://x.example/a|b"],
+							],
+						},
+					],
+				},
+			];
+
+			const content = await exportText(document);
+
+			expect(content).toContain("| a | <https://x.example/a%7Cb> |");
+			expect(content).toContain("| b | <https://x.example/a%5C%7Cb> |");
+			expect(content).toContain("| c | x \\| y <https://x.example/a%7Cb> |");
+			const rows = content.split("\n").filter((line) => line.startsWith("| "));
+			expect(rows).toHaveLength(5);
+			for (const row of rows) {
+				expect(row.match(UNESCAPED_PIPE)).toHaveLength(3);
+			}
+		});
+
+		it("escapes backslashes in the frontmatter values", async () => {
+			const document = createSampleDocument();
+			document.metadata.exportedBy = 'a\\b"c';
+			document.metadata.caseDescription = "ends with a backslash\\";
+
+			const content = await exportText(document);
+
+			expect(content).toContain('exportedBy: "a\\\\b\\"c"');
+			expect(content).toContain('description: "ends with a backslash\\\\"');
 		});
 	});
 

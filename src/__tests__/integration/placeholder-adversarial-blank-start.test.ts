@@ -183,9 +183,11 @@ describe.each(KINDS)("a new blank %s", (kind) => {
 			if (!(exported.success && "content" in exported)) {
 				throw new Error(`the markdown export of ${preset} failed`);
 			}
-			expect(exported.content).not.toContain("undefined");
-			expect(exported.content).not.toContain("null");
-			expect(exported.content).not.toContain("[object Object]");
+			// The exporter backslash-escapes brackets, so look at the text without them.
+			const text = exported.content.replaceAll("\\", "");
+			expect(text).not.toContain("undefined");
+			expect(text).not.toContain("null");
+			expect(text).not.toContain("[object Object]");
 		}
 	});
 

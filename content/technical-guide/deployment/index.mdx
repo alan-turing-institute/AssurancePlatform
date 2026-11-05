@@ -44,4 +44,6 @@ The [Case Assistant page](/docs/technical-guide/architecture/case-assistant) des
 
 Terminate HTTPS at a proxy or hosting platform and keep PostgreSQL reachable only by the application and administrators who need it. The code implements rate limiting for several sensitive routes and records security audit events; check the [rate limiting and audit page](/docs/technical-guide/deployment/rate-limiting-and-audit-log) for the covered operations. Monitor `/api/health` as an application endpoint. The supplied compose file health-checks PostgreSQL but does not define an application container health check.
 
+The application sends a `Content-Security-Policy` header on every response, so a reverse proxy in front of it should pass the header through and not overwrite it.
+
 Plan a database backup and restore process before applying a new build. The entrypoint applies pending migrations automatically, but backups and restore tests remain an operator task.
