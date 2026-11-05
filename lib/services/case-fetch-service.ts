@@ -6,7 +6,11 @@ import {
 } from "@/lib/case/defined-terms";
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { logger } from "@/lib/logger";
-import { canAccessCase, getCasePermission } from "@/lib/permissions";
+import {
+	canAccessCase,
+	getCasePermission,
+	viewableCaseWhere,
+} from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { UpdateAssuranceCaseInput } from "@/lib/schemas/assurance-case";
 import type { CaseKind } from "@/lib/schemas/case-export";
@@ -117,26 +121,34 @@ function placeholderFields(element: {
 // ---------------------------------------------------------------------------
 
 /**
- * Names and accessibility, resolved once per fetch, for every AWAY_GOAL/
- * MODULE element in the case — so the canvas card can show a cited case's
- * (and, for away goals, cited element's) name without a follow-up fetch.
+ * A cited case the viewer can view, with the names of the cited elements that
+ * live in it. An element's name is only ever read from the case it belongs to.
+ */
+interface CitedCase {
+	elementNames: Map<string, string>;
+	name: string;
+}
+
+/**
+ * The cited cases the viewer can view now, resolved once per fetch for every
+ * AWAY_GOAL/MODULE element in the case, so the canvas card can show a cited
+ * case's (and, for away goals, cited element's) name without a follow-up
+ * fetch. A case that is not in the map is one the viewer cannot see: in the
+ * bin, deleted, never shared with them or no longer shared. Nothing about it
+ * is loaded, so nothing about it can reach the response.
  */
 interface CitationContext {
-	accessibleCaseIds: Set<string>;
-	caseNameById: Map<string, string>;
-	elementNameById: Map<string, string>;
+	viewableCases: Map<string, CitedCase>;
 }
 
 const EMPTY_CITATION_CONTEXT: CitationContext = {
-	accessibleCaseIds: new Set(),
-	caseNameById: new Map(),
-	elementNameById: new Map(),
+	viewableCases: new Map(),
 };
 
 /**
- * Resolves the case names, cited-element names, and viewer accessibility
- * needed by every AWAY_GOAL/MODULE element's card. Skips all three extra
- * queries when the case has none (the common case).
+ * Loads, in one query, the cited cases the viewer can view and, within each,
+ * its own live elements among the cited element ids. Skips the query when the
+ * case has no AWAY_GOAL/MODULE element naming a case (the common case).
  */
 async function buildCitationContext(
 	userId: string,
@@ -145,10 +157,6 @@ async function buildCitationContext(
 	const citing = elements.filter(
 		(el) => el.elementType === "AWAY_GOAL" || el.elementType === "MODULE"
 	);
-	if (citing.length === 0) {
-		return EMPTY_CITATION_CONTEXT;
-	}
-
 	const caseIds = [
 		...new Set(
 			citing
@@ -156,39 +164,64 @@ async function buildCitationContext(
 				.filter((id): id is string => !!id)
 		),
 	];
+	if (caseIds.length === 0) {
+		return EMPTY_CITATION_CONTEXT;
+	}
 	const elementIds = [
 		...new Set(
 			citing.map((el) => el.citedElementId).filter((id): id is string => !!id)
 		),
 	];
 
-	const [cases, citedElements, accessFlags] = await Promise.all([
-		caseIds.length
-			? prisma.assuranceCase.findMany({
-					where: { id: { in: caseIds }, deletedAt: null },
-					select: { id: true, name: true },
-				})
-			: Promise.resolve([]),
-		elementIds.length
-			? prisma.assuranceElement.findMany({
-					where: { id: { in: elementIds }, deletedAt: null },
-					select: { id: true, name: true },
-				})
-			: Promise.resolve([]),
-		Promise.all(
-			caseIds.map(async (caseId) => ({
-				caseId,
-				accessible: await canAccessCase({ userId, caseId }, "VIEW"),
-			}))
-		),
-	]);
+	const cases = await prisma.assuranceCase.findMany({
+		where: { id: { in: caseIds }, AND: [viewableCaseWhere(userId)] },
+		select: {
+			id: true,
+			name: true,
+			elements: {
+				where: { id: { in: elementIds }, deletedAt: null },
+				select: { id: true, name: true },
+			},
+		},
+	});
 
 	return {
-		caseNameById: new Map(cases.map((c) => [c.id, c.name])),
-		elementNameById: new Map(citedElements.map((el) => [el.id, el.name ?? ""])),
-		accessibleCaseIds: new Set(
-			accessFlags.filter((f) => f.accessible).map((f) => f.caseId)
+		viewableCases: new Map(
+			cases.map((c) => [
+				c.id,
+				{
+					name: c.name,
+					elementNames: new Map(c.elements.map((el) => [el.id, el.name ?? ""])),
+				},
+			])
 		),
+	};
+}
+
+/**
+ * What an away goal or module card may show of the case it cites: whether the
+ * viewer can view it, and the names, which are null unless they can.
+ */
+function resolveCitation(
+	element: CaseElement,
+	citation: CitationContext
+): {
+	accessible: boolean;
+	caseName: string | null;
+	elementName: string | null;
+} {
+	const citedCase = element.moduleReferenceId
+		? citation.viewableCases.get(element.moduleReferenceId)
+		: undefined;
+	if (!citedCase) {
+		return { accessible: false, caseName: null, elementName: null };
+	}
+	return {
+		accessible: true,
+		caseName: citedCase.name,
+		elementName: element.citedElementId
+			? (citedCase.elementNames.get(element.citedElementId) ?? null)
+			: null,
 	};
 }
 
@@ -198,12 +231,7 @@ function buildAwayGoalStructure(
 	strategyId: string | null,
 	citation: CitationContext
 ): AwayGoalResponse {
-	const citedCaseName = element.moduleReferenceId
-		? (citation.caseNameById.get(element.moduleReferenceId) ?? null)
-		: null;
-	const citedElementName = element.citedElementId
-		? (citation.elementNameById.get(element.citedElementId) ?? null)
-		: null;
+	const cited = resolveCitation(element, citation);
 
 	return {
 		id: element.id,
@@ -217,11 +245,9 @@ function buildAwayGoalStructure(
 		moduleReferenceDangling: element.moduleReferenceDangling,
 		citedElementId: element.citedElementId,
 		citationDangling: element.citationDangling,
-		citedCaseName,
-		citedElementName,
-		citedCaseAccessible: element.moduleReferenceId
-			? citation.accessibleCaseIds.has(element.moduleReferenceId)
-			: false,
+		citedCaseName: cited.caseName,
+		citedElementName: cited.elementName,
+		citedCaseAccessible: cited.accessible,
 		comments: [],
 		inSandbox: element.inSandbox,
 		...placeholderFields(element),
@@ -234,9 +260,7 @@ function buildModuleStructure(
 	strategyId: string | null,
 	citation: CitationContext
 ): ModuleResponse {
-	const moduleCaseName = element.moduleReferenceId
-		? (citation.caseNameById.get(element.moduleReferenceId) ?? null)
-		: null;
+	const cited = resolveCitation(element, citation);
 
 	return {
 		id: element.id,
@@ -248,10 +272,8 @@ function buildModuleStructure(
 		strategyId,
 		moduleReferenceId: element.moduleReferenceId,
 		moduleReferenceDangling: element.moduleReferenceDangling,
-		moduleCaseName,
-		moduleCaseAccessible: element.moduleReferenceId
-			? citation.accessibleCaseIds.has(element.moduleReferenceId)
-			: false,
+		moduleCaseName: cited.caseName,
+		moduleCaseAccessible: cited.accessible,
 		comments: [],
 		inSandbox: element.inSandbox,
 		...placeholderFields(element),

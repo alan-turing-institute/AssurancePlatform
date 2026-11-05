@@ -1,5 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { isAuthoredContent } from "@/lib/case/plugin-display-capture";
 import { useAutoScreenshot } from "../use-auto-screenshot";
 
 vi.mock("html-to-image", () => ({ toPng: vi.fn() }));
@@ -79,6 +80,29 @@ describe("the dashboard thumbnail", () => {
 			edgeStyle: "",
 		});
 		expect(edge.getAttribute("style")).toBe(EDGE_STYLE);
+	});
+
+	it("leaves out the line naming a cited case, which an image export keeps", async () => {
+		const citedLine = document.createElement("p");
+		citedLine.setAttribute("data-left-out-of-shared-thumbnail", "");
+		target.append(citedLine);
+		let thumbnailKeeps: boolean | undefined;
+		vi.mocked(toPng).mockImplementationOnce((_node, options) => {
+			thumbnailKeeps = options?.filter?.(citedLine);
+			return Promise.resolve("data:image/png;base64,AAAAAAAAAAAAAAAA");
+		});
+		const { result } = renderHook(() =>
+			useAutoScreenshot({
+				caseId: "case-1",
+				canEdit: true,
+				selector: "#screenshot-target",
+			})
+		);
+
+		await result.current.captureScreenshot();
+
+		expect(thumbnailKeeps).toBe(false);
+		expect(isAuthoredContent(citedLine)).toBe(true);
 	});
 
 	it("puts the edge colours back when the capture fails", async () => {

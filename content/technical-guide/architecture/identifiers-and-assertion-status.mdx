@@ -18,6 +18,8 @@ An assertion status is an author's explicit statement about support, not a score
 ## Citation integrity
 
 Only an `AWAY_GOAL` may set `citedElementId`. An away goal must first name a module case, then cite an existing, active element in it that is not the away goal itself. Element create and edit enforce the pair, as does the JSON editor's batch update. Import checks the pair too: if the reference is invalid, or names a case the importing user cannot view, it clears the citation and sets `citationDangling` or `moduleReferenceDangling` for review. If a cited element is deleted or detached later, the citation is cleared and a dangling indicator remains. Restoring that element does not silently recreate the old citation.
+The case fetch returns a cited case's name and a cited element's identifier only to a viewer who can open the cited case at that moment.
+For any other viewer, whether the case is in the bin, deleted, never shared or no longer shared, the fetch returns no names and marks the case inaccessible, and the card shows "Cited case not available" and no link.
 
 ## Limits and code location
 
