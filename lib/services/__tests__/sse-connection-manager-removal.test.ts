@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { captureLogs } from "@/src/__tests__/helpers/capture-logs";
 import { sseConnectionManager } from "../sse-connection-manager";
 
 let nextCase = 0;
@@ -166,7 +167,8 @@ describe("sseConnectionManager failed writes", () => {
 		const live = connect(caseId, "live", "user-b");
 		dead.breakWrites();
 
-		sseConnectionManager.sendHeartbeat(caseId);
+		sseConnectionManager.sendHeartbeat(caseId, "dead");
+		sseConnectionManager.sendHeartbeat(caseId, "live");
 
 		expect(dead.onRemove).toHaveBeenCalledTimes(1);
 		expect(live.onRemove).not.toHaveBeenCalled();
@@ -180,14 +182,15 @@ describe("sseConnectionManager failed writes", () => {
 		const live = connect(caseId, "live", "user-b");
 		dead.breakWrites();
 
+		sseConnectionManager.sendHeartbeat(caseId, "dead");
 		broadcastTo(caseId);
-		sseConnectionManager.sendHeartbeat(caseId);
+		sseConnectionManager.sendHeartbeat(caseId, "dead");
 		broadcastTo(caseId);
 		sseConnectionManager.removeConnection(caseId, "dead");
 
 		expect(dead.onRemove).toHaveBeenCalledTimes(1);
 		expect(live.onRemove).not.toHaveBeenCalled();
-		expect(live.writes).toHaveLength(3);
+		expect(live.writes).toHaveLength(2);
 	});
 
 	it("removes every dead connection in one pass and leaves the case empty", () => {
@@ -206,10 +209,74 @@ describe("sseConnectionManager failed writes", () => {
 		expect(sseConnectionManager.getConnectedUsers(caseId)).toEqual([]);
 
 		// The case entry is gone, so a later heartbeat has nothing to write to.
-		expect(() => sseConnectionManager.sendHeartbeat(caseId)).not.toThrow();
+		expect(() => sseConnectionManager.sendHeartbeat(caseId, "a")).not.toThrow();
 		for (const stub of stubs) {
 			expect(stub.onRemove).toHaveBeenCalledTimes(1);
 		}
+	});
+});
+
+describe("sseConnectionManager broadcast recipients", () => {
+	let logs: ReturnType<typeof captureLogs> | undefined;
+
+	afterEach(() => {
+		logs?.restore();
+		logs = undefined;
+	});
+
+	const recipientsLogged = (): unknown[] =>
+		(logs?.entries ?? [])
+			.filter((entry) => entry.msg === "SSE broadcast event")
+			.map((entry) => entry.recipients);
+
+	it("logs the connections it wrote to, counting a dead one out once", () => {
+		logs = captureLogs();
+		const caseId = freshCase();
+		connect(caseId, "a");
+		connect(caseId, "b", "user-b");
+		connect(caseId, "dead", "user-c").breakWrites();
+
+		broadcastTo(caseId);
+
+		expect(recipientsLogged()).toEqual([2]);
+	});
+
+	it("logs none when every connection is dead", () => {
+		logs = captureLogs();
+		const caseId = freshCase();
+		for (const id of ["a", "b", "c"]) {
+			connect(caseId, id).breakWrites();
+		}
+
+		broadcastTo(caseId);
+
+		expect(recipientsLogged()).toEqual([0]);
+	});
+});
+
+describe("sseConnectionManager heartbeat", () => {
+	it("writes only to the connection it is sent for", () => {
+		const caseId = freshCase();
+		const a = connect(caseId, "a");
+		const b = connect(caseId, "b", "user-b");
+
+		sseConnectionManager.sendHeartbeat(caseId, "a");
+
+		expect(a.writes).toEqual([": heartbeat\n\n"]);
+		expect(b.writes).toEqual([]);
+	});
+
+	it("does nothing for a connection or case it has never seen", () => {
+		const caseId = freshCase();
+		const a = connect(caseId, "a");
+
+		expect(() => {
+			sseConnectionManager.sendHeartbeat(caseId, "ghost");
+			sseConnectionManager.sendHeartbeat(freshCase(), "a");
+		}).not.toThrow();
+
+		expect(a.writes).toEqual([]);
+		expect(sseConnectionManager.getConnectionCount(caseId)).toBe(1);
 	});
 });
 
@@ -229,7 +296,7 @@ describe("sseConnectionManager open and close cycles", () => {
 				broadcastTo(caseId);
 			} else if (ending === "heartbeat") {
 				stub.breakWrites();
-				sseConnectionManager.sendHeartbeat(caseId);
+				sseConnectionManager.sendHeartbeat(caseId, id);
 			} else {
 				sseConnectionManager.removeConnection(caseId, id);
 				if (ending === "remove-twice") {

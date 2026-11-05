@@ -86,7 +86,7 @@ describe("removing a connection", () => {
 			onRemove
 		);
 
-		sseConnectionManager.sendHeartbeat("case-heartbeat");
+		sseConnectionManager.sendHeartbeat("case-heartbeat", "a");
 
 		expect(onRemove).toHaveBeenCalledTimes(1);
 		expect(sseConnectionManager.getConnectionCount("case-heartbeat")).toBe(0);

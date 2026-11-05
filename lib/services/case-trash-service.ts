@@ -10,6 +10,7 @@ import {
 	extractPublishedImageKey,
 	removePublishedCopies,
 } from "@/lib/services/publish-service";
+import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "case-trash-service" });
@@ -202,6 +203,10 @@ export async function softDeleteCase(
 						: await removePublishedCopies(tx, [caseId]);
 			}
 		});
+
+		// A case in the bin is hidden from everyone, so every open stream on it
+		// ends; this does not wait for the stored copies to be deleted
+		await sseConnectionManager.recheckConnections({ caseId });
 		await deleteMediaKeys(removedKeys);
 
 		return { data: true };

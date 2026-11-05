@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getSessionVersion } from "@/lib/auth/session-version";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
@@ -6,6 +7,7 @@ import {
 	emitSSEEvent,
 	sseConnectionManager,
 } from "@/lib/services/sse-connection-manager";
+import { HEARTBEAT_INTERVAL_MS } from "@/lib/sse-heartbeat";
 import { mockAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -30,7 +32,26 @@ vi.mock("@/lib/permissions", async (importOriginal) => {
 	return { ...actual, canAccessCase: vi.fn(actual.canAccessCase) };
 });
 
-const HEARTBEAT_MS = 30_000;
+// The session check wraps the real read the same way, so a test can wait for
+// the session step a passing access check goes on to make.
+vi.mock("@/lib/auth/session-version", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/auth/session-version")>();
+	return { ...actual, getSessionVersion: vi.fn(actual.getSessionVersion) };
+});
+
+// Each stream's heartbeat period is random. These tests reach a heartbeat by
+// advancing the clock by exactly one period, so it is pinned to the interval.
+vi.mock("@/lib/sse-heartbeat", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/sse-heartbeat")>();
+	return {
+		...actual,
+		heartbeatPeriodMs: vi.fn(() => actual.HEARTBEAT_INTERVAL_MS),
+	};
+});
+
+const HEARTBEAT_MS = HEARTBEAT_INTERVAL_MS;
+const CLOSING_EVENT = "event: stream:closed";
 const decoder = new TextDecoder();
 
 interface OpenedStream {
@@ -62,6 +83,7 @@ async function drain(stream: OpenedStream) {
 
 async function openStream(caseId: string, userId: string) {
 	await mockAuth(userId);
+	vi.mocked(canAccessCase).mockClear();
 	const { GET } = await import("@/app/api/cases/[id]/events/route");
 	const abort = new AbortController();
 	const response = await GET(
@@ -82,7 +104,10 @@ async function openStream(caseId: string, userId: string) {
 	};
 	opened.push(stream);
 	drain(stream);
-	// The access check made on opening is not one of a heartbeat's.
+	// The access checks made on opening, the one that let the stream in and the
+	// one the server makes straight after it, are not a heartbeat's.
+	await until(() => vi.mocked(canAccessCase).mock.calls.length >= 2);
+	await afterChecks();
 	vi.mocked(canAccessCase).mockClear();
 	return stream;
 }
@@ -102,10 +127,13 @@ async function until(condition: () => boolean) {
 	}
 }
 
-/** Lets the continuations of a finished access check run. */
+/** Lets the continuations of a finished access check run, including its session read. */
 async function afterChecks() {
 	const results = vi.mocked(canAccessCase).mock.results;
 	await Promise.allSettled(results.map((result) => result.value));
+	await new Promise((resolve) => setImmediate(resolve));
+	const reads = vi.mocked(getSessionVersion).mock.results;
+	await Promise.allSettled(reads.map((result) => result.value));
 	await new Promise((resolve) => setImmediate(resolve));
 }
 
@@ -207,6 +235,8 @@ describe("a heartbeat on a stream whose user may still view the case", () => {
 		);
 		expect(ownerStream.ended).toBe(false);
 		expect(viewerStream.ended).toBe(false);
+		expect(heartbeatsIn(ownerStream)).toBe(1);
+		expect(heartbeatsIn(viewerStream)).toBe(1);
 		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(2);
 
 		emitSSEEvent("case:updated", assuranceCase.id, { action: "later" });
@@ -229,6 +259,8 @@ describe("a heartbeat on a stream whose user has lost access", () => {
 		await until(() => viewerStream.ended);
 
 		expect(ownerStream.ended).toBe(false);
+		expect(viewerStream.text()).toContain(CLOSING_EVENT);
+		expect(ownerStream.text()).not.toContain(CLOSING_EVENT);
 		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(1);
 		expect(vi.getTimerCount()).toBe(timersBeforeOpening + 1);
 
@@ -249,6 +281,8 @@ describe("a heartbeat on a stream whose user has lost access", () => {
 		await beat(2);
 		await until(() => ownerStream.ended && viewerStream.ended);
 
+		expect(ownerStream.text()).toContain(CLOSING_EVENT);
+		expect(viewerStream.text()).toContain(CLOSING_EVENT);
 		expect(sseConnectionManager.getConnectionCount(assuranceCase.id)).toBe(0);
 		expect(vi.getTimerCount()).toBe(timersBeforeOpening);
 	});

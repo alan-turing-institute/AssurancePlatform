@@ -20,7 +20,9 @@ import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 import { ErrorBoundary } from "../ui/error-boundary";
+import { CaseAccessRemoved } from "./case-access-removed";
 import CaseDetails from "./case-details";
+import { CaseSignedOut } from "./case-signed-out";
 import Flow from "./flow";
 import Header from "./header";
 
@@ -127,6 +129,11 @@ function showEventToast(event: SSEEvent): void {
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const [loading, setLoading] = useState(true);
+	// Whether the first load found the case. It is not cleared when the case is
+	// dropped from the store after access is removed, so the live-update stream
+	// opens only for a case this viewer could see, and stays subscribed to say
+	// why it ended.
+	const [caseLoaded, setCaseLoaded] = useState(false);
 	const {
 		assuranceCase,
 		setAssuranceCase,
@@ -272,9 +279,9 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	);
 
 	// Subscribe to real-time case events via SSE
-	useCaseEvents({
+	const { status: eventsStatus } = useCaseEvents({
 		caseId: effectiveCaseId || "",
-		enabled: Boolean(effectiveCaseId) && !loading,
+		enabled: Boolean(effectiveCaseId) && !loading && caseLoaded,
 		onEvent: (event) => {
 			// Suppress toasts for self-events (acting user)
 			const isSelfEvent = event.userId && event.userId === session?.user?.id;
@@ -301,6 +308,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 					const result = await fetchSingleCase(idValue);
 					setAssuranceCase((result as AssuranceCaseResponse) || null);
+					setCaseLoaded(Boolean(result));
 					setLoading(false);
 				} catch {
 					setLoading(false);
@@ -346,6 +354,14 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 				</div>
 			</div>
 		);
+	}
+
+	if (eventsStatus === "access-removed") {
+		return <CaseAccessRemoved />;
+	}
+
+	if (eventsStatus === "signed-out") {
+		return <CaseSignedOut />;
 	}
 
 	if (assuranceCase) {

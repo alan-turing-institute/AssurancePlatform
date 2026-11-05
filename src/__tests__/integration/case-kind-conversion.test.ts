@@ -40,6 +40,7 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 
 vi.mock("@/lib/services/sse-connection-manager", () => ({
 	emitSSEEvent: vi.fn(),
+	sseConnectionManager: { recheckConnections: vi.fn() },
 }));
 
 /**

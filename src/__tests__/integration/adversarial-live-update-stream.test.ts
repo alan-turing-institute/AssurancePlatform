@@ -9,18 +9,21 @@ import {
 	vi,
 } from "vitest";
 import { GET } from "@/app/api/cases/[id]/events/route";
+import { getSessionVersion } from "@/lib/auth/session-version";
+import { validateSession } from "@/lib/auth/validate-session";
 import { canAccessCase } from "@/lib/permissions";
 import {
 	revokeTeamPermission,
 	revokeUserPermission,
 } from "@/lib/services/case-permission-service";
-import { purgeCase, softDeleteCase } from "@/lib/services/case-trash-service";
+import { softDeleteCase } from "@/lib/services/case-trash-service";
 import {
 	emitSSEEvent,
 	sseConnectionManager,
 } from "@/lib/services/sse-connection-manager";
 import { leaveTeam, removeMember } from "@/lib/services/team-member-service";
 import { deleteTeam } from "@/lib/services/team-service";
+import { HEARTBEAT_INTERVAL_MS, heartbeatPeriodMs } from "@/lib/sse-heartbeat";
 import type { User } from "@/src/generated/prisma";
 import { captureLogs } from "../helpers/capture-logs";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
@@ -44,11 +47,35 @@ vi.mock("@/lib/permissions", async (importOriginal) => {
 	return { ...actual, canAccessCase: vi.fn(actual.canAccessCase) };
 });
 
-const HEARTBEAT_MS = 30_000;
+// The session check wraps the real read the same way, so a test can tell when
+// a check that has passed the access step has also finished the session step.
+vi.mock("@/lib/auth/session-version", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@/lib/auth/session-version")>();
+	return { ...actual, getSessionVersion: vi.fn(actual.getSessionVersion) };
+});
+
+// Each stream's heartbeat period is random. These tests find a stream's timer
+// by its exact period, so the period is pinned to the full interval unless a
+// test lets the real draw through.
+vi.mock("@/lib/sse-heartbeat", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@/lib/sse-heartbeat")>();
+	return {
+		...actual,
+		heartbeatPeriodMs: vi.fn(() => actual.HEARTBEAT_INTERVAL_MS),
+	};
+});
+
+const HEARTBEAT_MS = HEARTBEAT_INTERVAL_MS;
 const ACCESS_LOG = /access lost|keeping stream open/;
 const KEEPING_OPEN = /keeping stream open/;
 const EVENT_LINE = /^event: (.+)$/gm;
+const CLOSING_EVENT =
+	'event: stream:closed\ndata: {"reason":"access-removed"}\n\n';
+const SIGNED_OUT_EVENT =
+	'event: stream:closed\ndata: {"reason":"signed-out"}\n\n';
 const canAccess = vi.mocked(canAccessCase);
+const sessionReads = vi.mocked(getSessionVersion);
 
 // ---------------------------------------------------------------------------
 // Timers: only the interval timers are faked, so the database driver and the
@@ -75,6 +102,8 @@ beforeEach(() => {
 	clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
 	baselineTimers = vi.getTimerCount();
 	canAccess.mockReset();
+	sessionReads.mockClear();
+	vi.mocked(heartbeatPeriodMs).mockReset();
 	logs = captureLogs();
 });
 
@@ -151,6 +180,7 @@ async function openStream(
 	if (response.status !== 200 || !response.body) {
 		throw new Error(`Expected an open stream, got ${response.status}`);
 	}
+	const checksBefore = settledChecks();
 
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
@@ -178,6 +208,9 @@ async function openStream(
 		cancel: () => reader.cancel().catch(() => undefined),
 	};
 	opened.push(viewer);
+	if (!options.preAborted) {
+		await afterOpeningCheck(checksBefore);
+	}
 	return viewer;
 }
 
@@ -215,6 +248,35 @@ function settledChecks(): number {
 	).length;
 }
 
+/** Session reads that have started and not yet finished. */
+function sessionReadsInFlight(): number {
+	return (
+		sessionReads.mock.results.length -
+		sessionReads.mock.settledResults.filter(
+			(result) => result.type !== "incomplete"
+		).length
+	);
+}
+
+/**
+ * Waits for the access check, and the session read after it, that the server
+ * makes straight after a stream opens. Tests that follow change data and
+ * count checks, so the opening check must be over before they start.
+ */
+async function afterOpeningCheck(settledBefore: number): Promise<void> {
+	await until(
+		() => settledChecks() > settledBefore,
+		"the check made on opening"
+	);
+	await untilSessionReadsDone();
+}
+
+/** Waits for the session read a passing access check goes on to make. */
+async function untilSessionReadsDone(): Promise<void> {
+	await flush();
+	await until(() => sessionReadsInFlight() === 0, "the session reads");
+}
+
 /**
  * Lets one heartbeat fall due and waits for `checks` access checks to finish.
  * Several streams on one case each have their own timer, so each runs a check.
@@ -223,7 +285,29 @@ async function passHeartbeat(checks = 1): Promise<void> {
 	const before = settledChecks();
 	await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
 	await until(() => settledChecks() >= before + checks, "the access checks");
+	await untilSessionReadsDone();
 	await flushAll();
+}
+
+/** Waits for the access checks that a change to someone's access has started. */
+async function afterRecheck(checks = 1): Promise<void> {
+	await until(() => settledChecks() >= checks, "the access checks");
+	await flushAll();
+}
+
+/** Raises a user's session version, as a password change or reset does. */
+async function bumpSessionVersion(userId: string): Promise<void> {
+	const { default: prisma } = await import("@/lib/prisma");
+	await prisma.user.update({
+		where: { id: userId },
+		data: { sessionVersion: { increment: 1 } },
+	});
+}
+
+/** Removes a direct grant with a database write, so nothing asks for a re-check. */
+async function deleteGrantQuietly(grantId: string): Promise<void> {
+	const { default: prisma } = await import("@/lib/prisma");
+	await prisma.casePermission.delete({ where: { id: grantId } });
 }
 
 type Check = ReturnType<typeof deferred<boolean>>;
@@ -399,6 +483,54 @@ describe("opening a live-update stream", () => {
 		expect(canAccess).not.toHaveBeenCalled();
 	});
 
+	it("refuses a stream when the user's session version changes between the two session reads", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const session = { userId: user.id, username: "viewer", email: "v@x.test" };
+		// The first read passes. The password change lands right after it, before
+		// the session version is read, so the version read is the new one; the
+		// second read, made with the old token, fails.
+		vi.mocked(validateSession)
+			.mockImplementationOnce(async () => {
+				await bumpSessionVersion(user.id);
+				return session;
+			})
+			.mockResolvedValueOnce(null);
+
+		const response = await GET(
+			new Request(`http://localhost:3000/api/cases/${world.caseId}/events`),
+			{ params: Promise.resolve({ id: world.caseId }) }
+		);
+
+		expect(response.status).toBe(401);
+		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
+		expect(startedTimers()).toBe(0);
+	});
+
+	it("closes a stream, with no heartbeat due, whose access was removed after the opening check and before the stream registered", async () => {
+		const world = await newWorld();
+		const { user, grant } = await directGrant(world);
+		const actual =
+			await vi.importActual<typeof import("@/lib/permissions")>(
+				"@/lib/permissions"
+			);
+		// The opening check passes; the grant is removed straight after it, with
+		// no re-check requested, before the connection is registered.
+		canAccess.mockImplementationOnce(async (...args) => {
+			const allowed = await actual.canAccessCase(...args);
+			await deleteGrantQuietly(grant.id);
+			return allowed;
+		});
+
+		const viewer = await openStream(user.id, world.caseId);
+		await until(viewer.isClosed, "the stream to close");
+
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+		expect(heartbeatsSeen(viewer)).toBe(0);
+		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
+		expect(liveTimers()).toBe(0);
+	});
+
 	it("starts exactly one heartbeat timer per stream", async () => {
 		const world = await newWorld();
 
@@ -458,22 +590,42 @@ const ENDINGS: Ending[] = [
 		},
 	},
 	{
-		name: "the user's access is revoked and the next heartbeat finds out",
+		name: "the user's access is revoked",
 		serverCloses: true,
 		end: async (world, viewer, grantId) => {
 			await mustSucceed(
 				revokeUserPermission(world.owner.id, world.caseId, grantId)
 			);
+			await until(viewer.isClosed, "the stream to close");
+		},
+	},
+	{
+		name: "the user's access is removed with no re-check and the next heartbeat finds out",
+		serverCloses: true,
+		end: async (_world, viewer, grantId) => {
+			await deleteGrantQuietly(grantId);
 			canAccess.mockClear();
 			await passHeartbeat();
 			await until(viewer.isClosed, "the stream to close");
 		},
 	},
 	{
-		name: "the case is trashed and the next heartbeat finds out",
+		name: "the case is trashed",
 		serverCloses: true,
 		end: async (world, viewer) => {
 			await mustSucceed(softDeleteCase(world.owner.id, world.caseId));
+			await until(viewer.isClosed, "the stream to close");
+		},
+	},
+	{
+		name: "the case is trashed with no re-check and the next heartbeat finds out",
+		serverCloses: true,
+		end: async (world, viewer) => {
+			const { default: prisma } = await import("@/lib/prisma");
+			await prisma.assuranceCase.update({
+				where: { id: world.caseId },
+				data: { deletedAt: new Date() },
+			});
 			canAccess.mockClear();
 			await passHeartbeat();
 			await until(viewer.isClosed, "the stream to close");
@@ -540,7 +692,6 @@ describe("every way a stream ends", () => {
 		await mustSucceed(
 			revokeUserPermission(world.owner.id, world.caseId, grant.id)
 		);
-		await passHeartbeat();
 		await until(viewer.isClosed, "the stream to close");
 
 		viewer.abort();
@@ -761,30 +912,43 @@ const REVOCATIONS: Revocation[] = [
 describe("closing the stream of a user who has lost access", () => {
 	it.each(
 		REVOCATIONS
-	)("closes the stream at the next heartbeat, and not before, when $name", async (revocation) => {
+	)("closes the stream at once, and says why, when $name", async (revocation) => {
 		const world = await newWorld();
 		const { user, revoke } = await revocation.setup(world);
 		const viewer = await openStream(user.id, world.caseId);
-		await revoke();
+		const bystander = await openStream(world.owner.id, world.caseId);
 		canAccess.mockClear();
 
-		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS - 1);
-		await flushAll();
-		expect(canAccess).not.toHaveBeenCalled();
-		expect(viewer.isClosed()).toBe(false);
+		await revoke();
 
-		await vi.advanceTimersByTimeAsync(1);
+		// The stream is gone by the time the change returns, so an event the
+		// caller announces next does not reach it.
+		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
+			world.owner.id,
+		]);
+		emitMarker(world.caseId);
 		await until(viewer.isClosed, "the stream to close");
 
-		expect(canAccess).toHaveBeenCalledTimes(1);
-		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
-		expect(liveTimers()).toBe(0);
-		expect(clearCounts()).toEqual([1]);
+		// No heartbeat was due: the change itself asked for the check.
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+		expect(heartbeatsSeen(viewer)).toBe(0);
+		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(1);
+		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
+			world.owner.id,
+		]);
+		expect(liveTimers()).toBe(1);
+		expect(clearCounts()).toEqual([1, 0]);
 		expect(
 			logs.entries.filter(
 				(entry) => entry.msg === "Closing stream: case access lost"
 			)
 		).toHaveLength(1);
+
+		// A stream whose user kept access carries on.
+		await flushAll();
+		expect(bystander.isClosed()).toBe(false);
+		expect(eventsSeen(bystander)).toContain("case:updated");
+		expect(eventsSeen(viewer)).not.toContain("case:updated");
 	});
 
 	it("receives nothing after it closes, while the users who kept access keep receiving", async () => {
@@ -796,13 +960,14 @@ describe("closing the stream of a user who has lost access", () => {
 		const revokedView = await openStream(revoked.user.id, world.caseId);
 		const directView = await openStream(direct.user.id, world.caseId);
 		const memberView = await openStream(member.user.id, world.caseId);
+
 		await mustSucceed(
 			revokeUserPermission(world.owner.id, world.caseId, revoked.grant.id)
 		);
-
-		await passHeartbeat(4);
 		await until(revokedView.isClosed, "the revoked stream to close");
 		const seenByRevoked = revokedView.chunks.length;
+		canAccess.mockClear();
+		await passHeartbeat(3);
 		emitMarker(world.caseId);
 		await flushAll();
 
@@ -826,22 +991,25 @@ describe("closing the stream of a user who has lost access", () => {
 		expect(retry.status).toBe(404);
 	});
 
-	it("closes every stream the revoked user has open on the case and none of anyone else's", async () => {
+	it("closes every stream the revoked user has open on the case and checks no one else's", async () => {
 		const world = await newWorld();
 		const revoked = await directGrant(world);
 		const other = await directGrant(world);
 		const firstTab = await openStream(revoked.user.id, world.caseId);
 		const secondTab = await openStream(revoked.user.id, world.caseId);
 		const bystander = await openStream(other.user.id, world.caseId);
+		canAccess.mockClear();
+
 		await mustSucceed(
 			revokeUserPermission(world.owner.id, world.caseId, revoked.grant.id)
 		);
+		await until(
+			() => firstTab.isClosed() && secondTab.isClosed(),
+			"both tabs to close"
+		);
 
-		await passHeartbeat(3);
-
-		expect(firstTab.isClosed()).toBe(true);
-		expect(secondTab.isClosed()).toBe(true);
 		expect(bystander.isClosed()).toBe(false);
+		expect(canAccess).toHaveBeenCalledTimes(2);
 		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
 			other.user.id,
 		]);
@@ -855,21 +1023,19 @@ describe("closing the stream of a user who has lost access", () => {
 		await addTeamMember(kept.team.id, leaver.id);
 		const keptView = await openStream(kept.user.id, world.caseId);
 		const leaverView = await openStream(leaver.id, world.caseId);
+		canAccess.mockClear();
+
 		await mustSucceed(leaveTeam(leaver.id, kept.team.id));
+		await until(leaverView.isClosed, "the leaver's stream to close");
 
-		await passHeartbeat(2);
-
-		expect(leaverView.isClosed()).toBe(true);
 		expect(keptView.isClosed()).toBe(false);
+		expect(canAccess).toHaveBeenCalledTimes(1);
 		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
 			kept.user.id,
 		]);
 	});
 
-	it.each([
-		"trashed",
-		"permanently deleted",
-	])("closes the stream of every user when the case is %s", async (fate) => {
+	it("closes the stream of every user at once when the case is moved to the bin", async () => {
 		const world = await newWorld();
 		const direct = await directGrant(world, "EDIT");
 		const member = await teamGrant(world, { level: "ADMIN" });
@@ -878,16 +1044,15 @@ describe("closing the stream of a user who has lost access", () => {
 			await openStream(direct.user.id, world.caseId),
 			await openStream(member.user.id, world.caseId),
 		];
-		await mustSucceed(softDeleteCase(world.owner.id, world.caseId));
-		if (fate === "permanently deleted") {
-			await mustSucceed(purgeCase(world.owner.id, world.caseId));
-		}
-		canAccess.mockClear();
 
-		await passHeartbeat(3);
+		await mustSucceed(softDeleteCase(world.owner.id, world.caseId));
+		await until(
+			() => viewers.every((viewer) => viewer.isClosed()),
+			"every stream to close"
+		);
 
 		for (const viewer of viewers) {
-			expect(viewer.isClosed()).toBe(true);
+			expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
 		}
 		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
 		expect(liveTimers()).toBe(0);
@@ -904,15 +1069,15 @@ describe("closing the stream of a user who has lost access", () => {
 			"VIEW"
 		);
 		const viewer = await openStream(team.user.id, world.caseId);
+		canAccess.mockClear();
 
 		await mustSucceed(
 			revokeUserPermission(world.owner.id, world.caseId, direct.id)
 		);
-		await passHeartbeat();
+		await afterRecheck();
 		expect(viewer.isClosed()).toBe(false);
 
 		await mustSucceed(leaveTeam(team.user.id, team.team.id));
-		await passHeartbeat();
 		await until(viewer.isClosed, "the stream to close");
 		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
 	});
@@ -927,17 +1092,17 @@ describe("closing the stream of a user who has lost access", () => {
 			"ADMIN"
 		);
 		const viewer = await openStream(team.user.id, world.caseId);
+		canAccess.mockClear();
 
 		await mustSucceed(
 			revokeTeamPermission(world.owner.id, world.caseId, team.grant.id)
 		);
-		await passHeartbeat();
+		await afterRecheck();
 		expect(viewer.isClosed()).toBe(false);
 
 		await mustSucceed(
 			revokeUserPermission(world.owner.id, world.caseId, direct.id)
 		);
-		await passHeartbeat();
 		await until(viewer.isClosed, "the stream to close");
 	});
 
@@ -946,16 +1111,237 @@ describe("closing the stream of a user who has lost access", () => {
 		const first = await teamGrant(world);
 		const second = await secondTeamGrant(world, first.user);
 		const viewer = await openStream(first.user.id, world.caseId);
+		canAccess.mockClear();
 
 		await mustSucceed(deleteTeam(world.owner.id, first.team.id));
-		await passHeartbeat();
+		await afterRecheck();
 		expect(viewer.isClosed()).toBe(false);
 
 		await mustSucceed(
 			revokeTeamPermission(world.owner.id, world.caseId, second.grant.id)
 		);
+		await until(viewer.isClosed, "the stream to close");
+	});
+});
+
+describe("the heartbeat as a backstop for a change that asks for no re-check", () => {
+	it("closes the stream at the next heartbeat, and not before", async () => {
+		const world = await newWorld();
+		const { user, grant } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+		await deleteGrantQuietly(grant.id);
+		canAccess.mockClear();
+
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS - 1);
+		await flushAll();
+		expect(canAccess).not.toHaveBeenCalled();
+		expect(viewer.isClosed()).toBe(false);
+
+		await vi.advanceTimersByTimeAsync(1);
+		await until(viewer.isClosed, "the stream to close");
+
+		expect(canAccess).toHaveBeenCalledTimes(1);
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+		expect(sseConnectionManager.getConnectionCount(world.caseId)).toBe(0);
+		expect(liveTimers()).toBe(0);
+		expect(clearCounts()).toEqual([1]);
+		expect(
+			logs.entries.filter(
+				(entry) => entry.msg === "Closing stream: case access lost"
+			)
+		).toHaveLength(1);
+	});
+});
+
+describe("closing the stream of a user whose session has ended", () => {
+	it("closes every stream the user has open at the next heartbeat, and says so, once the session version changes", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const firstTab = await openStream(user.id, world.caseId);
+		const secondTab = await openStream(user.id, world.caseId);
+		const bystander = await openStream(world.owner.id, world.caseId);
+
+		await bumpSessionVersion(user.id);
+		canAccess.mockClear();
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS - 1);
+		await flushAll();
+		expect(firstTab.isClosed()).toBe(false);
+
+		await vi.advanceTimersByTimeAsync(1);
+		await until(
+			() => firstTab.isClosed() && secondTab.isClosed(),
+			"both streams to close"
+		);
+
+		for (const tab of [firstTab, secondTab]) {
+			expect(tab.chunks.at(-1)).toBe(SIGNED_OUT_EVENT);
+		}
+		expect(bystander.isClosed()).toBe(false);
+		expect(sseConnectionManager.getConnectedUsers(world.caseId)).toEqual([
+			world.owner.id,
+		]);
+		expect(liveTimers()).toBe(1);
+		expect(clearCounts()).toEqual([1, 1, 0]);
+		expect(
+			logs.entries.filter(
+				(entry) => entry.msg === "Closing stream: session ended"
+			)
+		).toHaveLength(2);
+	});
+
+	it("leaves the stream open while the session version is unchanged", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+
+		await passHeartbeat();
+		await passHeartbeat();
+
+		expect(viewer.isClosed()).toBe(false);
+		expect(heartbeatsSeen(viewer)).toBe(2);
+	});
+
+	it("says access was removed, not that the session ended, when both have happened", async () => {
+		const world = await newWorld();
+		const { user, grant } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+
+		await bumpSessionVersion(user.id);
+		await deleteGrantQuietly(grant.id);
+		canAccess.mockClear();
 		await passHeartbeat();
 		await until(viewer.isClosed, "the stream to close");
+
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+	});
+
+	it("keeps the stream open when the session read fails, and looks again at the next heartbeat", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+		sessionReads.mockRejectedValueOnce(new Error("database unavailable"));
+
+		await passHeartbeat();
+
+		expect(viewer.isClosed()).toBe(false);
+		expect(
+			logs.entries.filter((entry) => KEEPING_OPEN.test(entry.msg))
+		).toHaveLength(1);
+
+		await bumpSessionVersion(user.id);
+		await passHeartbeat();
+		await until(viewer.isClosed, "the stream to close");
+		expect(viewer.chunks.at(-1)).toBe(SIGNED_OUT_EVENT);
+	});
+});
+
+describe("a re-check requested while a heartbeat check is running", () => {
+	it("runs again once the running check ends, so a check that began before the change cannot keep the stream open", async () => {
+		const world = await newWorld();
+		const { user, grant } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+		const beforeChange = deferred<boolean>();
+		canAccess.mockClear();
+		canAccess.mockImplementationOnce(() => beforeChange.promise);
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+		await flushAll();
+		expect(canAccess).toHaveBeenCalledTimes(1);
+
+		// The change waits for the re-check it asked for, so it is not awaited yet.
+		const revoking = revokeUserPermission(
+			world.owner.id,
+			world.caseId,
+			grant.id
+		);
+		await until(
+			() =>
+				logs.entries.some(
+					(entry) => entry.msg === "SSE access re-check requested"
+				),
+			"the re-check to be requested"
+		);
+		canAccess.mockClear();
+		await flushAll();
+		expect(canAccess).not.toHaveBeenCalled();
+		expect(viewer.isClosed()).toBe(false);
+
+		// The running check read the grant before it was removed.
+		beforeChange.resolve(true);
+		await mustSucceed(revoking);
+		await until(viewer.isClosed, "the stream to close");
+
+		expect(canAccess).toHaveBeenCalledTimes(1);
+		expect(viewer.chunks.at(-1)).toBe(CLOSING_EVENT);
+	});
+
+	it("starts no second check for a heartbeat that falls due meanwhile", async () => {
+		const world = await newWorld();
+		const { user } = await directGrant(world);
+		const viewer = await openStream(user.id, world.caseId);
+		const running = deferred<boolean>();
+		canAccess.mockClear();
+		canAccess.mockImplementationOnce(() => running.promise);
+
+		await vi.advanceTimersByTimeAsync(HEARTBEAT_MS * 3);
+		await flushAll();
+		running.resolve(true);
+		await flushAll();
+
+		expect(canAccess).toHaveBeenCalledTimes(1);
+		expect(viewer.isClosed()).toBe(false);
+	});
+});
+
+describe("the heartbeat each stream is sent", () => {
+	it("sends each of three viewers one heartbeat per period", async () => {
+		const world = await newWorld();
+		const viewers = [
+			await openStream(world.owner.id, world.caseId),
+			await openStream(world.owner.id, world.caseId),
+			await openStream(world.owner.id, world.caseId),
+		];
+
+		await passHeartbeat(3);
+		expect(viewers.map(heartbeatsSeen)).toEqual([1, 1, 1]);
+
+		await passHeartbeat(3);
+		expect(viewers.map(heartbeatsSeen)).toEqual([2, 2, 2]);
+	});
+
+	it("gives streams different periods in (25 s, 30 s], and each is sent one heartbeat in its own period", async () => {
+		const actual = await vi.importActual<typeof import("@/lib/sse-heartbeat")>(
+			"@/lib/sse-heartbeat"
+		);
+		vi.mocked(heartbeatPeriodMs).mockImplementation(actual.heartbeatPeriodMs);
+		const world = await newWorld();
+		const viewers = [
+			await openStream(world.owner.id, world.caseId),
+			await openStream(world.owner.id, world.caseId),
+			await openStream(world.owner.id, world.caseId),
+		];
+		const periods = vi.mocked(heartbeatPeriodMs).mock.results.map((result) => {
+			if (result.type !== "return") {
+				throw new Error("The period draw threw");
+			}
+			return result.value;
+		});
+
+		expect(periods).toHaveLength(3);
+		expect(new Set(periods).size).toBeGreaterThan(1);
+		for (const period of periods) {
+			expect(period).toBeGreaterThan(25_000);
+			expect(period).toBeLessThanOrEqual(30_000);
+			expect(setIntervalSpy.mock.calls.map((call) => call[1])).toContain(
+				period
+			);
+		}
+
+		await vi.advanceTimersByTimeAsync(25_000);
+		await flushAll();
+		expect(viewers.map(heartbeatsSeen)).toEqual([0, 0, 0]);
+		await vi.advanceTimersByTimeAsync(5000);
+		await flushAll();
+		expect(viewers.map(heartbeatsSeen)).toEqual([1, 1, 1]);
 	});
 });
 
@@ -981,9 +1367,7 @@ describe("when the access re-check goes wrong", () => {
 		);
 		expect(warnings).toHaveLength(1);
 
-		await mustSucceed(
-			revokeUserPermission(world.owner.id, world.caseId, grant.id)
-		);
+		await deleteGrantQuietly(grant.id);
 		canAccess.mockClear();
 		await passHeartbeat();
 
@@ -1028,6 +1412,7 @@ describe("when the access re-check goes wrong", () => {
 		expect(canAccess).toHaveBeenCalledTimes(1);
 
 		slow.resolve(true);
+		await untilSessionReadsDone();
 		await flushAll();
 		expect(viewer.isClosed()).toBe(false);
 
@@ -1062,7 +1447,6 @@ describe("when the access re-check goes wrong", () => {
 			revokeUserPermission(world.owner.id, world.caseId, grant.id)
 		);
 
-		await passHeartbeat();
 		await until(viewer.isClosed, "the stream to close");
 
 		expect(logs.entries.map((entry) => entry.msg)).toContain(

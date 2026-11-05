@@ -31,6 +31,8 @@ The editor uses both server actions and API routes. Element services and validat
 The toolbar has Undo and Redo controls for people with editing access. `use-keyboard-shortcuts.ts` supports Command or Control plus Z for undo, Command or Control plus Shift plus Z for redo, and Command or Control plus Y as another redo shortcut. These shortcuts do not intercept typing in inputs, textareas or editable content. The toolbar also exposes case information, sharing when the user can manage the case, export and a JSON view. Check permissions before assuming a control is available to every reader.
 
 `CaseContainer` subscribes to case events over server-sent events. On a relevant event it refetches the case, with a short debounce, and shows a toast for another user's change. There is no `lockUuid` field or edit-lock flow in this implementation. Changes can still arrive while someone is working, so the editor should be understood as a live shared view, not an exclusive editing session.
+When the server ends the stream because the viewer can no longer see the case, the hook moves to the final `access-removed` status and does not reconnect, and `CaseContainer` clears the case from the store and shows an **Access removed** message.
+When it ends the stream because the viewer's session has ended with a password change or reset, the hook moves to the final `signed-out` status and `CaseContainer` sends the browser to `/login`.
 
 ## Key files
 
