@@ -227,7 +227,7 @@ const PrivacyPolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<p className="mt-6 italic">Last updated: September 2026</p>
+					<p className="mt-6 italic">Last updated: November 2026</p>
 				</div>
 			</div>
 		</div>

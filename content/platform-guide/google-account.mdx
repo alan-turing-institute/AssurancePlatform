@@ -7,7 +7,10 @@ The sign-in page at `/login` offers email or username and password, Google, and 
 
 ## Sign in and connect
 
-Choose **Google** on the sign-in page to authorise the account. The platform stores connection details and obtains Drive access for the related features. If a Drive grant is absent or later revoked, the import and backup sections prompt you to sign in or reconnect. A successful ordinary login does not by itself prove that Drive access remains available; those sections check it when opened. Choose **GitHub** when you need to import a case file from a public repository. The import dialog checks that connection separately. Google requests the `drive.file` scope. Check the consent screen before authorising either connection.
+Choose **Google** on the sign-in page to authorise the account. The platform stores connection details and obtains Drive access for the related features. If a Drive grant is absent or later revoked, the import and backup sections prompt you to sign in or reconnect. A successful ordinary login does not by itself prove that Drive access remains available; those sections check it when opened. Choose **GitHub** when you need to import a case file from a public repository. The import dialog checks that connection separately.
+Google requests the `drive.file` scope.
+GitHub sign-in requests the `read:user` and `user:email` scopes, which read your profile and email address.
+Check the consent screen before authorising either connection.
 
 ## Import a case
 
@@ -25,4 +28,4 @@ In the case's share and export controls, the Google backup section offers **Back
 
 ## Limits and code location
 
-Drive and GitHub operations require valid account grants and can fail when a provider refuses access or its token expires. GitHub import works for public repositories only. The UI does not promise continuous synchronisation with either provider. Sign-in is rendered by `components/auth/sign-in-form.tsx`; import UI is in `components/modals/_import-modal/`; Drive backup UI is in `components/modals/_share-modal/google-backup-section.tsx`. The case import and backup routes are under `app/api/cases/`.
+Drive and GitHub operations require valid account grants and can fail when a provider refuses access or its token expires. The UI does not promise continuous synchronisation with either provider. Sign-in is rendered by `components/auth/sign-in-form.tsx`; import UI is in `components/modals/_import-modal/`; Drive backup UI is in `components/modals/_share-modal/google-backup-section.tsx`. The case import and backup routes are under `app/api/cases/`.
