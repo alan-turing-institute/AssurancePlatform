@@ -239,12 +239,32 @@ describe("PluginCard", () => {
 		});
 	});
 
-	it("disables the switch and shows 'Saving…' while a toggle is pending", () => {
+	it("marks the switch aria-disabled, not disabled, and shows 'Saving…' while a toggle is pending", () => {
 		renderWithoutProviders(
 			<PluginCard onToggle={vi.fn()} pending plugin={makePlugin()} />
 		);
 
-		expect(screen.getByRole("switch")).toBeDisabled();
+		const toggle = screen.getByRole("switch");
+		expect(toggle).toHaveAttribute("aria-disabled", "true");
+		expect(toggle).not.toBeDisabled();
 		expect(screen.getByText("Saving…")).toBeInTheDocument();
+	});
+
+	it("ignores input on the switch while a toggle is pending", async () => {
+		const onToggle = vi.fn();
+		const user = userEvent.setup();
+
+		renderWithoutProviders(
+			<PluginCard
+				onToggle={onToggle}
+				pending
+				plugin={makePlugin({ enabled: false, pinnedAt: "USER" })}
+			/>
+		);
+
+		await user.click(screen.getByRole("switch"));
+
+		expect(onToggle).not.toHaveBeenCalled();
+		expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 	});
 });

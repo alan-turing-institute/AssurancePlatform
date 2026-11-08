@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -57,6 +57,7 @@ export function PluginCard({
 	plugin,
 }: PluginCardProps) {
 	const [confirmOffOpen, setConfirmOffOpen] = useState(false);
+	const switchRef = useRef<HTMLButtonElement>(null);
 	const lockedByHigherScope =
 		plugin.pinnedAt === "ORGANISATION" || plugin.pinnedAt === "TEAM";
 	const locked = !plugin.available || lockedByHigherScope;
@@ -75,6 +76,11 @@ export function PluginCard({
 		.some((registration) => registration.pluginId === plugin.pluginId);
 
 	function handleCheckedChange(next: boolean) {
+		// The switch stays focusable while saving (aria-disabled, not disabled),
+		// so input has to be ignored here.
+		if (pending) {
+			return;
+		}
 		if (next) {
 			onToggle(plugin.pluginId, true);
 			return;
@@ -85,6 +91,13 @@ export function PluginCard({
 	function handleConfirmOff() {
 		setConfirmOffOpen(false);
 		onToggle(plugin.pluginId, false);
+	}
+
+	// The dialog is opened from code, not by a trigger, so Radix has no element
+	// to return focus to; the switch is the one that opened it.
+	function returnFocusToSwitch(event: Event) {
+		event.preventDefault();
+		switchRef.current?.focus();
 	}
 
 	return (
@@ -106,11 +119,15 @@ export function PluginCard({
 					<Label className="sr-only" htmlFor={toggleId}>
 						{`Turn ${plugin.name} ${checked ? "off" : "on"}`}
 					</Label>
+					{/* aria-disabled, not disabled, while saving: a focused button that
+					becomes disabled drops focus to the page body. */}
 					<Switch
+						aria-disabled={pending || undefined}
 						checked={checked}
-						disabled={locked || pending}
+						disabled={locked}
 						id={toggleId}
 						onCheckedChange={handleCheckedChange}
+						ref={switchRef}
 					/>
 				</div>
 			</div>
@@ -154,6 +171,7 @@ export function PluginCard({
 				))}
 
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={returnFocusToSwitch}
 				onConfirm={handleConfirmOff}
 				onOpenChange={setConfirmOffOpen}
 				open={confirmOffOpen}
