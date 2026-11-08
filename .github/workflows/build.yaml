@@ -1206,6 +1206,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      # Digest of the image pushed for a staging build; the deploy job points
+      # the `staging` tag at it. Empty for every other ref.
+      staging_digest: ${{ steps.build-staging.outputs.digest }}
 
     steps:
       - name: Checkout repository
@@ -1227,8 +1231,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Branch name
-            type=ref,event=branch
+            # Branch name (none for staging; the deploy job sets the staging tag)
+            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/staging' }}
             # PR number
             type=ref,event=pr
             # SHA (short) - only for branch pushes, not PRs
@@ -1237,7 +1241,6 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
             # For staging branch
-            type=raw,value=staging,enable=${{ github.ref == 'refs/heads/staging' }}
             type=raw,value=staging-{{date 'YYYY-MM-DD'}}-{{sha}},enable=${{ github.ref == 'refs/heads/staging' }}
             # Semantic versions (for releases)
             type=semver,pattern={{version}}
@@ -1267,6 +1270,7 @@ jobs:
 
       - name: Build and push Docker image (Staging branch)
         if: github.ref == 'refs/heads/staging'
+        id: build-staging
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -1319,18 +1323,32 @@ jobs:
       needs.docker-build.result == 'success' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
 
+    # contents: read is for the compare call in the staging order check;
+    # packages: write is for moving the `staging` image tag.
+    permissions:
+      contents: read
+      packages: write
+
     # Serialise deploys to the same branch: stacked merges to staging or
-    # main otherwise fire this job's Azure webhook concurrently, which is
-    # what failed the deploy on 2026-07-14 (three merges, webhook retries
-    # exhausted). cancel-in-progress stays false — cancelling a RUNNING job
-    # here wouldn't stop the Azure webhook it already fired, it would just
-    # abandon that deployment's health-check monitoring. Staging deploys
-    # share the `staging-database` group with seed-staging.yml's reset job,
-    # so a reset never runs while a staging deploy job is in progress. main
-    # keeps its own group, deploy-refs/heads/main, so production deploys
-    # never wait on staging. queue: max applies to both branches: every push
-    # deploys in turn rather than collapsing to the latest, and no waiting
-    # deploy or reset is cancelled.
+    # main otherwise fire this job's Azure webhook concurrently, and the
+    # webhook retries run out. cancel-in-progress stays false: cancelling a
+    # RUNNING job here would not stop the Azure webhook it already fired, it
+    # would just abandon that deployment's health-check monitoring. Staging
+    # deploys share the `staging-database` group with seed-staging.yml's
+    # reset job, so a reset never runs while a staging deploy job is in
+    # progress. main keeps its own group, deploy-refs/heads/main, so
+    # production deploys never wait on staging. queue: max applies to both
+    # branches: every push deploys in turn rather than collapsing to the
+    # latest, and no waiting deploy or reset is cancelled.
+    #
+    # The queue serves staging deploys in the order they arrive, which is not
+    # always commit order: a faster build of an older commit can arrive
+    # last. The staging webhook carries no image reference; Azure pulls
+    # whatever the `staging` tag points at. So the staging steps below run
+    # inside the queue: they skip this deploy when the current staging image
+    # was built from a newer commit, and otherwise point `staging` at this
+    # run's own image before the webhook fires. The build job never moves
+    # `staging`.
     concurrency:
       group: ${{ github.ref == 'refs/heads/staging' && 'staging-database' || format('deploy-{0}', github.ref) }}
       cancel-in-progress: false
@@ -1400,8 +1418,122 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy to Azure (Staging)
+      - name: Log in to Container Registry
         if: github.ref == 'refs/heads/staging'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Compares this commit with the commit recorded on the image `staging`
+      # points at now. ahead or identical: deploy. behind: skip, leaving
+      # staging as it is (a newer commit's own run deploys). diverged, or the
+      # current revision cannot be read: deploy, with a warning.
+      - name: Check staging image order
+        if: github.ref == 'refs/heads/staging'
+        id: staging-gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          # The jq filter finds the label whether imagetools prints one
+          # image config or a map of platform to config.
+          read_revision() {
+            docker buildx imagetools inspect "$1" --format '{{json .Image}}' 2>/dev/null \
+              | jq -r '[.. | objects | .["org.opencontainers.image.revision"]? | select(. != null)] | first // empty' 2>/dev/null \
+              || true
+          }
+
+          SHA7="${GITHUB_SHA::7}"
+          CURRENT=$(read_revision "$IMAGE:staging")
+          CUR7=""
+          STATUS=""
+          if [[ "$CURRENT" =~ ^[0-9a-f]{40}$ ]]; then
+            CUR7="${CURRENT::7}"
+            STATUS=$(gh api "repos/$REPO/compare/$CURRENT...$GITHUB_SHA" --jq .status || true)
+          fi
+
+          case "$STATUS" in
+            ahead)
+              DEPLOY=true
+              RELATION="ahead of $CUR7"
+              ;;
+            identical)
+              DEPLOY=true
+              RELATION="identical to $CUR7"
+              ;;
+            behind)
+              DEPLOY=false
+              RELATION="behind $CUR7"
+              echo "::notice title=Staging deploy skipped::${SHA7} (run ${RUN_NUMBER}) is behind ${CUR7}; not moving staging backwards"
+              ;;
+            diverged)
+              DEPLOY=true
+              RELATION="diverged from $CUR7"
+              echo "::warning::staging revision ${CUR7} diverged; deploying ${SHA7}"
+              ;;
+            *)
+              DEPLOY=true
+              RELATION="current revision unreadable"
+              echo "::warning::staging revision unreadable; deploying ${SHA7}"
+              ;;
+          esac
+
+          {
+            echo "deploy=$DEPLOY"
+            echo "relation=$RELATION"
+          } >> "$GITHUB_OUTPUT"
+
+      # Moves `staging` to the image this run built, then reads the tag back:
+      # the job fails, leaving staging as it was, unless the tag now carries
+      # this commit.
+      - name: Point staging at this build
+        if: github.ref == 'refs/heads/staging' && steps.staging-gate.outputs.deploy == 'true'
+        id: staging-retag
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          DIGEST: ${{ needs.docker-build.outputs.staging_digest }}
+          RELATION: ${{ steps.staging-gate.outputs.relation }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          read_revision() {
+            docker buildx imagetools inspect "$1" --format '{{json .Image}}' 2>/dev/null \
+              | jq -r '[.. | objects | .["org.opencontainers.image.revision"]? | select(. != null)] | first // empty' 2>/dev/null \
+              || true
+          }
+
+          if [ -z "$DIGEST" ]; then
+            echo "::error::The build job produced no staging image digest"
+            exit 1
+          fi
+
+          docker buildx imagetools create --tag "$IMAGE:staging" "$IMAGE@$DIGEST"
+
+          REVISION=""
+          for attempt in 1 2 3; do
+            REVISION=$(read_revision "$IMAGE:staging")
+            if [ "$REVISION" = "$GITHUB_SHA" ]; then
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep 5
+            fi
+          done
+
+          if [ "$REVISION" != "$GITHUB_SHA" ]; then
+            echo "::error::After retagging, staging carries revision '${REVISION:-unreadable}', not ${GITHUB_SHA}"
+            exit 1
+          fi
+
+          echo "::notice title=Staging deploy::${GITHUB_SHA::7} (run ${RUN_NUMBER}) ${RELATION}; staging → ${DIGEST}"
+
+      # The name of this step is matched by seed-staging.yml, which reseeds
+      # only after a run in which this step succeeded.
+      - name: Deploy to Azure (Staging)
+        if: github.ref == 'refs/heads/staging' && steps.staging-gate.outputs.deploy == 'true'
         id: deploy-staging
         env:
           WEBHOOK_URL: ${{ secrets.AZURE_WEBAPP_WEBHOOK_STAGING }}
@@ -1466,21 +1598,35 @@ jobs:
       # GitHub Deployment Summary
       - name: Create Deployment Summary - Success
         if: success()
+        env:
+          STAGING_DEPLOY: ${{ steps.staging-gate.outputs.deploy }}
+          STAGING_RELATION: ${{ steps.staging-gate.outputs.relation }}
         run: |
+          HEADING="Deployment Successful"
+          HEALTH="Passed"
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             ENV="Production"
             APP_URL="${{ env.PROD_APP_URL }}"
+            OUTCOME="Deployed"
           else
             ENV="Staging"
             APP_URL="${{ env.STAGING_APP_URL }}"
+            if [ "$STAGING_DEPLOY" = "false" ]; then
+              HEADING="Deployment Skipped"
+              HEALTH="Not run"
+              OUTCOME="Skipped (${STAGING_RELATION}); staging not moved"
+            else
+              OUTCOME="Deployed (${STAGING_RELATION})"
+            fi
           fi
 
-          echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "## ${HEADING}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Environment** | ${ENV} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Health Check** | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Outcome** | ${OUTCOME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Health Check** | ${HEALTH} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Actor** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Application** | [${APP_URL}](${APP_URL}) |" >> $GITHUB_STEP_SUMMARY
