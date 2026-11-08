@@ -41,6 +41,55 @@ export interface GrantCaseAccessFormProps {
 	) => Promise<boolean>;
 }
 
+interface CaseListStatusProps {
+	/** How many of the listed cases are not yet granted to the integration. */
+	available: number;
+	/** True when the case list could not be loaded. */
+	failed: boolean;
+	/** True while the case list is loading. */
+	loading: boolean;
+	/** How many cases the list holds, before already-granted ones are removed. */
+	total: number;
+}
+
+/**
+ * The one message that explains why the picker has nothing to offer: loading,
+ * a failed load, no administered cases, or every administered case already
+ * granted. Renders nothing once the list is usable.
+ */
+function CaseListStatus({
+	available,
+	failed,
+	loading,
+	total,
+}: CaseListStatusProps) {
+	if (loading) {
+		return <p className="text-muted-foreground text-xs">Loading your cases…</p>;
+	}
+	if (failed) {
+		return (
+			<p className="text-destructive text-xs" role="alert">
+				Couldn't load your cases. Close the form and try again.
+			</p>
+		);
+	}
+	if (total === 0) {
+		return (
+			<p className="text-muted-foreground text-xs">
+				You don't administer any cases yet.
+			</p>
+		);
+	}
+	if (available === 0) {
+		return (
+			<p className="text-muted-foreground text-xs">
+				Every case you administer already has this integration granted.
+			</p>
+		);
+	}
+	return null;
+}
+
 /**
  * The inline "grant access to a case" form — rendered by `CaseAccessSection`
  * once "+ Grant access to a case…" is clicked. Its case options come from
@@ -122,29 +171,12 @@ export function GrantCaseAccessForm({
 				</p>
 			)}
 
-			{casesLoading && (
-				<p className="text-muted-foreground text-xs">Loading your cases…</p>
-			)}
-
-			{!casesLoading && casesFailed && (
-				<p className="text-destructive text-xs" role="alert">
-					Couldn't load your cases. Close the form and try again.
-				</p>
-			)}
-
-			{!(casesLoading || casesFailed) && cases.length === 0 && (
-				<p className="text-muted-foreground text-xs">
-					You don't administer any cases yet.
-				</p>
-			)}
-
-			{!(casesLoading || casesFailed) &&
-				cases.length > 0 &&
-				availableCases.length === 0 && (
-					<p className="text-muted-foreground text-xs">
-						Every case you administer already has this integration granted.
-					</p>
-				)}
+			<CaseListStatus
+				available={availableCases.length}
+				failed={casesFailed}
+				loading={casesLoading}
+				total={cases.length}
+			/>
 
 			{!casesLoading && availableCases.length > 0 && (
 				<div className="flex flex-wrap items-center gap-2">
