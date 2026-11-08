@@ -5,6 +5,20 @@ import type { Prisma } from "@/src/generated/prisma";
 const log = logger.child({ component: "user-email-lookup" });
 
 /**
+ * How many accounts have this email once capitals are ignored, compared the
+ * way `findUserByEmailIgnoringCase` compares them (ASCII capitals only, in the
+ * `"C"` collation, in a parameterised query).
+ */
+export async function countUsersByEmailIgnoringCase(
+	email: string
+): Promise<number> {
+	const [row] = await prisma.$queryRaw<Array<{ count: number }>>`
+		SELECT count(*)::int AS count FROM users WHERE lower(email COLLATE "C") = lower(${email}::text COLLATE "C")
+	`;
+	return row?.count ?? 0;
+}
+
+/**
  * Finds the one account whose stored email equals `email` ignoring capitals,
  * for callers that have already tried the exact text and found nothing.
  *

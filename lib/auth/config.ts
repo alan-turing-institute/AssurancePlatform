@@ -490,9 +490,11 @@ async function resolveLinkIntentUserId({
 
 /**
  * The address sign-in attempts are counted against, or undefined when the
- * request carries none that can be trusted (never on Azure; always when
- * running locally). The address limit is skipped then, so unrelated visitors
- * do not share one count.
+ * request carries no address header at all (never on Azure, whose front end
+ * always writes one). Next sets `x-forwarded-for` from the socket, so a local
+ * request arrives as 127.0.0.1 and local traffic shares that one address's
+ * count; only a request with neither header is unreadable. The address limit
+ * is skipped then, so unrelated visitors do not share one count.
  */
 function signInAddress(headers: Headers): string | undefined {
 	const ipAddress = extractClientIp(headers);
@@ -504,9 +506,10 @@ function signInAddress(headers: Headers): string | undefined {
 }
 
 /**
- * Hands back the slots a successful sign-in took and forgets the failures
- * before it. Best effort: a correct password must not fail because this
- * bookkeeping did.
+ * Hands back the slots a successful sign-in took and, when the name's failures
+ * are this account's alone, forgets them too (an email shared by two accounts
+ * that differ only in capitals keeps its failures). Best effort: a correct
+ * password must not fail because this bookkeeping did.
  */
 async function refundSignInSlots(
 	identifier: string,
@@ -516,7 +519,7 @@ async function refundSignInSlots(
 		const { clearSignInFailures } = await import(
 			"@/lib/services/rate-limit-service"
 		);
-		await clearSignInFailures([identifier], ipAddress);
+		await clearSignInFailures([identifier], { ipAddress });
 	} catch (error) {
 		log.error("Failed to clear sign-in failures", {
 			error: error instanceof Error ? error.message : String(error),
@@ -552,6 +555,32 @@ async function pauseSignIn(
 }
 
 /**
+ * Takes this attempt's slots, or returns null when the limiter itself fails.
+ * The caller then refuses the sign-in rather than let it past an unchecked
+ * limit. The failure is logged as its error message alone, never with the name
+ * or the address.
+ */
+async function takeSignInSlots(
+	identifier: string,
+	ipAddress: string | undefined
+): Promise<RateLimitCheckResult | null> {
+	try {
+		const { RATE_LIMIT_CONFIGS, takeRateLimitSlot } = await import(
+			"@/lib/services/rate-limit-service"
+		);
+		return await takeRateLimitSlot(RATE_LIMIT_CONFIGS.signIn, {
+			email: signInIdentifierKey(identifier),
+			ipAddress,
+		});
+	} catch (error) {
+		log.error("Sign-in attempt limit failed; sign-in refused", {
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return null;
+	}
+}
+
+/**
  * Signs a person in from what the form posted. Sign-in is paused for an email
  * or username after 10 failures, and for a network address after 20, each
  * over 15 minutes. The slots are taken before the password is checked, so
@@ -577,31 +606,23 @@ export async function authorizeCredentials(
 
 	const headers = new Headers(requestHeaders);
 	const ipAddress = signInAddress(headers);
-	let refusal: RateLimitCheckResult | null = null;
-	let user: Awaited<ReturnType<typeof authenticateWithPrisma>> = null;
 
+	const slots = await takeSignInSlots(identifier, ipAddress);
+	if (!slots) {
+		return null;
+	}
+	if (!slots.allowed) {
+		throw await pauseSignIn(slots, identifier, ipAddress, headers);
+	}
+
+	let user: Awaited<ReturnType<typeof authenticateWithPrisma>>;
 	try {
-		const { RATE_LIMIT_CONFIGS, takeRateLimitSlot } = await import(
-			"@/lib/services/rate-limit-service"
-		);
-		const slots = await takeRateLimitSlot(RATE_LIMIT_CONFIGS.signIn, {
-			email: signInIdentifierKey(identifier),
-			ipAddress,
-		});
-		if (slots.allowed) {
-			user = await authenticateWithPrisma(identifier, password);
-			if (user) {
-				await refundSignInSlots(identifier, ipAddress);
-			}
-		} else {
-			refusal = slots;
-		}
+		user = await authenticateWithPrisma(identifier, password);
 	} catch (_error) {
 		return null;
 	}
-
-	if (refusal) {
-		throw await pauseSignIn(refusal, identifier, ipAddress, headers);
+	if (user) {
+		await refundSignInSlots(identifier, ipAddress);
 	}
 	return user;
 }

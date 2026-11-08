@@ -33,6 +33,7 @@ beforeAll(async () => {
 
 afterEach(() => {
 	vi.useRealTimers();
+	vi.unstubAllEnvs();
 });
 
 type Outcome = "signed-in" | "refused" | string;
@@ -295,6 +296,26 @@ describe("sign-in attempt limit: an address", () => {
 	});
 });
 
+describe("sign-in attempt limit: without a signing secret", () => {
+	it("refuses even the correct password and logs the problem without the name or address", async () => {
+		await demoUser();
+		vi.stubEnv("NEXTAUTH_SECRET", "");
+		const logs = captureLogs();
+		try {
+			expect(await attempt("alice", PASSWORD)).toBe("refused");
+
+			const errors = logs.entries.filter((entry) => entry.level === "error");
+			expect(errors).toHaveLength(1);
+			expect(JSON.stringify(errors)).toContain("NEXTAUTH_SECRET");
+			expect(JSON.stringify(logs.entries)).not.toContain("alice");
+			expect(JSON.stringify(logs.entries)).not.toContain("198.51.100.1");
+		} finally {
+			logs.restore();
+		}
+		expect(await prisma.rateLimitAttempt.count()).toBe(0);
+	});
+});
+
 describe("sign-in attempt limit: password reset", () => {
 	async function completeResetFor(userId: string) {
 		const token = createHash("sha256").update(userId).digest("hex");
@@ -332,5 +353,33 @@ describe("sign-in attempt limit: password reset", () => {
 		expect(await attempt("alice", NEW_PASSWORD, fromUsername)).toBe(
 			"signed-in"
 		);
+	});
+
+	it("keeps the count of an email that another account shares", async () => {
+		const user = await demoUser({
+			username: "pat-one",
+			email: "Pat@Example.com",
+		});
+		await demoUser({ username: "pat-two", email: "pat@example.com" });
+		await failTimes(10, "pat@example.com");
+
+		expect(await completeResetFor(user.id)).toEqual({ data: null });
+
+		expect(await attempt("pat@example.com", PASSWORD)).toBe(PAUSED_FOR_15);
+	});
+
+	it("completes the reset, and logs the problem, when the counts cannot be cleared", async () => {
+		const user = await demoUser();
+		vi.stubEnv("NEXTAUTH_SECRET", "");
+		const logs = captureLogs();
+		try {
+			expect(await completeResetFor(user.id)).toEqual({ data: null });
+
+			expect(logs.entries.some((entry) => entry.level === "error")).toBe(true);
+		} finally {
+			logs.restore();
+			vi.unstubAllEnvs();
+		}
+		expect(await attempt("alice", NEW_PASSWORD)).toBe("signed-in");
 	});
 });

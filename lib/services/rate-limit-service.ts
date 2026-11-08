@@ -1,6 +1,10 @@
-import { signInIdentifierKey } from "@/lib/auth/sign-in-identifier";
+import {
+	isEmailName,
+	signInIdentifierKey,
+} from "@/lib/auth/sign-in-identifier";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
+import { countUsersByEmailIgnoringCase } from "@/lib/services/user-email-lookup-service";
 
 // ============================================
 // TYPES
@@ -315,38 +319,80 @@ export async function takeRateLimitSlot(
 }
 
 /**
+ * Takes back the newest sign-in attempt counted against a name's key or an
+ * address. One row is chosen and locked in a single statement, so two sign-ins
+ * finishing together each hand back a different one.
+ */
+async function handBackSlot(
+	identifierType: "email" | "ip",
+	identifier: string
+): Promise<void> {
+	await prisma.$executeRaw`
+		DELETE FROM rate_limit_attempts WHERE id = (
+			SELECT id FROM rate_limit_attempts
+			WHERE endpoint = ${RATE_LIMIT_CONFIGS.signIn.endpoint}
+				AND identifier_type = ${identifierType}
+				AND identifier = ${identifier}
+			ORDER BY attempted_at DESC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+	`;
+}
+
+/**
+ * Whether the failures counted under this name belong to one account: always
+ * for a username, which is unique as typed, and for an email only when exactly
+ * one account has it once capitals are ignored. Two accounts whose emails
+ * differ only in capitals share one count, and neither may clear the other's.
+ */
+async function failuresBelongToOneAccount(
+	identifier: string
+): Promise<boolean> {
+	return (
+		!isEmailName(identifier) ||
+		(await countUsersByEmailIgnoringCase(identifier)) === 1
+	);
+}
+
+/**
  * Forgets the failed sign-ins counted against each of these emails or
  * usernames, so a person who has signed in or reset their password starts
- * again from zero. When an address is given, one attempt counted against it is
- * handed back as well: the slot the successful sign-in took, since only
- * failures count. The address's other attempts stay.
+ * again from zero. An email that two accounts share (they differ only in
+ * capitals) is left alone, because its failures are not one person's.
+ *
+ * Pass `signIn` when a sign-in has just succeeded: the attempt's own slots are
+ * handed back as well, since only failures count. That is the newest attempt
+ * counted against the address when one is given, and, for a shared email, the
+ * newest counted against the email. The other attempts stay.
  */
 export async function clearSignInFailures(
 	identifiers: readonly string[],
-	ipAddress?: string
+	signIn?: { ipAddress?: string }
 ): Promise<void> {
-	const { endpoint } = RATE_LIMIT_CONFIGS.signIn;
+	const names = await Promise.all(
+		identifiers.map(async (identifier) => ({
+			key: signInIdentifierKey(identifier),
+			oneAccount: await failuresBelongToOneAccount(identifier),
+		}))
+	);
 	await prisma.rateLimitAttempt.deleteMany({
 		where: {
-			endpoint,
+			endpoint: RATE_LIMIT_CONFIGS.signIn.endpoint,
 			identifierType: "email",
-			identifier: { in: identifiers.map(signInIdentifierKey) },
+			identifier: {
+				in: names.filter((name) => name.oneAccount).map((name) => name.key),
+			},
 		},
 	});
-	if (ipAddress) {
-		// One row is chosen and locked in a single statement, so two sign-ins
-		// finishing together each hand back a different one.
-		await prisma.$executeRaw`
-			DELETE FROM rate_limit_attempts WHERE id = (
-				SELECT id FROM rate_limit_attempts
-				WHERE endpoint = ${endpoint}
-					AND identifier_type = 'ip'
-					AND identifier = ${ipAddress}
-				ORDER BY attempted_at DESC
-				LIMIT 1
-				FOR UPDATE SKIP LOCKED
-			)
-		`;
+	if (!signIn) {
+		return;
+	}
+	for (const { key } of names.filter((name) => !name.oneAccount)) {
+		await handBackSlot("email", key);
+	}
+	if (signIn.ipAddress) {
+		await handBackSlot("ip", signIn.ipAddress);
 	}
 }
 
