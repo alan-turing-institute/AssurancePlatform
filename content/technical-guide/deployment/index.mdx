@@ -25,7 +25,7 @@ Supply secrets through the deployment environment. These variable names come fro
 | `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | Session signing and the public application URL |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Compose-managed PostgreSQL; defaults are `tea`, `tea_user` and `tea_password` |
 | `TOKEN_ENCRYPTION_KEY` | Base64 key for stored OAuth tokens and model connection keys; the encryption code requires exactly 32 decoded bytes |
-| `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET` | GitHub sign-in and authorised import |
+| `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET` | GitHub sign-in and import from public repositories |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in and Drive access |
 | `USE_LOCAL_STORAGE` | Selects local file storage; compose defaults to `true` |
 | `UPLOADS_DIR` | Local upload root when `USE_LOCAL_STORAGE` is set; defaults to `<working directory>/uploads`, which the compose file mounts the `uploads_data` volume onto |

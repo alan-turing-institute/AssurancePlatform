@@ -3,20 +3,21 @@ title: "Google account features and case import"
 description: "Sign in with a connected account and move case files through Drive or GitHub."
 ---
 
-The sign-in page at `/login` offers email or username and password, Google, and GitHub sign-in. A Google connection also enables case backup to Google Drive and import from Drive. GitHub sign-in enables import from a repository. These are account connections: they do not publish a case or give other people case access.
+The sign-in page at `/login` offers email or username and password, Google, and GitHub sign-in. A Google connection also enables case backup to Google Drive and import from Drive. GitHub sign-in enables import from a public repository. These are account connections: they do not publish a case or give other people case access.
 
 ## Sign in and connect
 
-Choose **Google** on the sign-in page to authorise the account. The platform stores connection details and obtains Drive access for the related features. If a Drive grant is absent or later revoked, the import and backup sections prompt you to sign in or reconnect. A successful ordinary login does not by itself prove that Drive access remains available; those sections check it when opened. Choose **GitHub** when you need to import a case file from a repository. The import dialog checks that connection separately. Google requests the `drive.file` scope. GitHub requests the `repo` scope, granting read and write access to all repositories the account can access, including private repositories. Check the consent screen before authorising either connection.
+Choose **Google** on the sign-in page to authorise the account. The platform stores connection details and obtains Drive access for the related features. If a Drive grant is absent or later revoked, the import and backup sections prompt you to sign in or reconnect. A successful ordinary login does not by itself prove that Drive access remains available; those sections check it when opened. Choose **GitHub** when you need to import a case file from a public repository. The import dialog checks that connection separately. Google requests the `drive.file` scope. Check the consent screen before authorising either connection.
 
 ## Import a case
 
-From the dashboard, open **Import File**. The import dialog supports a local JSON file, a GitHub JSON file, and a Google Drive backup. On the GitHub tab, enter a URL to a JSON file or the supported `owner/repo/file.json` shorthand, then select **Import from GitHub**. The connection prompt appears when the account has no usable GitHub token. On the Google Drive tab, select a file from the **TEA Platform Backups** folder and choose **Import from Google Drive**. The Drive tab prompts for Google connection if needed.
+From the dashboard, open **Import File**. The import dialog supports a local JSON file, a JSON file in a public GitHub repository, and a Google Drive backup. On the GitHub tab, enter a URL to a JSON file in a public repository or the supported `owner/repo/file.json` shorthand, then select **Import from GitHub**. The connection prompt appears when the account has no usable GitHub token. On the Google Drive tab, select a file from the **TEA Platform Backups** folder and choose **Import from Google Drive**. The Drive tab prompts for Google connection if needed.
 
 An import creates a working case from case data. It does not merge a file into the case you currently have open. The import logic accepts supported case formats and can return warnings. Read those warnings before continuing to the imported case.
 An away goal or module in the file that cites another case keeps that reference only if you can view the cited case.
 Otherwise the reference is dropped, the element is flagged as having lost its citation, and a warning names it.
-A GitHub URL must point to a JSON case file; the GitHub tab is not a general repository browser.
+A GitHub URL must point to a JSON case file in a public repository; the GitHub tab is not a general repository browser.
+To import a file from a private repository, download it and use the File tab.
 
 ## Back up to Drive
 
@@ -24,4 +25,4 @@ In the case's share and export controls, the Google backup section offers **Back
 
 ## Limits and code location
 
-Drive and GitHub operations require valid account grants and can fail when a provider refuses access or its token expires. The UI does not promise continuous synchronisation with either provider. Sign-in is rendered by `components/auth/sign-in-form.tsx`; import UI is in `components/modals/_import-modal/`; Drive backup UI is in `components/modals/_share-modal/google-backup-section.tsx`. The case import and backup routes are under `app/api/cases/`.
+Drive and GitHub operations require valid account grants and can fail when a provider refuses access or its token expires. GitHub import works for public repositories only. The UI does not promise continuous synchronisation with either provider. Sign-in is rendered by `components/auth/sign-in-form.tsx`; import UI is in `components/modals/_import-modal/`; Drive backup UI is in `components/modals/_share-modal/google-backup-section.tsx`. The case import and backup routes are under `app/api/cases/`.
