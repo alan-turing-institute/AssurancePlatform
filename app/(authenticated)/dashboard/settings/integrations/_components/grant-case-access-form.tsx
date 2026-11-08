@@ -47,11 +47,15 @@ export interface GrantCaseAccessFormProps {
  * `fetchAdministrableCases`, fetched when the form opens rather than whenever
  * the settings page loads, because nobody needs the list until then.
  *
- * The list holds the cases the grant route will accept: the ones the user
- * created and the ones shared with them at ADMIN, directly or through a team.
- * Patterns and trashed cases are not listed. The list is advisory: the grant
- * route checks ADMIN again, and its 404 (surfaced via `grantError`) covers a
- * case whose sharing changed after the list loaded.
+ * The list holds the ordinary cases the grant route will accept: the ones the
+ * user created and the ones shared with them at ADMIN, directly or through a
+ * team. Patterns and trashed cases are not listed. The list is advisory: the
+ * grant route checks ADMIN again, and its 404 (surfaced via `grantError`)
+ * covers a case whose sharing changed after the list loaded.
+ *
+ * A failed load (no session, a service failure, or a rejected request) shows
+ * its own message instead of either empty state, because an empty list would
+ * otherwise read as "you administer nothing".
  */
 export function GrantCaseAccessForm({
 	existingCaseIds,
@@ -62,6 +66,7 @@ export function GrantCaseAccessForm({
 }: GrantCaseAccessFormProps) {
 	const [cases, setCases] = useState<CaseOption[]>([]);
 	const [casesLoading, setCasesLoading] = useState(true);
+	const [casesFailed, setCasesFailed] = useState(false);
 	const [selectedCaseId, setSelectedCaseId] = useState("");
 	const [selectedPermission, setSelectedPermission] =
 		useState<CaseGrantPermission>("VIEW");
@@ -69,10 +74,21 @@ export function GrantCaseAccessForm({
 	useEffect(() => {
 		let cancelled = false;
 		setCasesLoading(true);
+		setCasesFailed(false);
 		fetchAdministrableCases()
 			.then((result) => {
+				if (cancelled) {
+					return;
+				}
+				if (result === null) {
+					setCasesFailed(true);
+					return;
+				}
+				setCases(result);
+			})
+			.catch(() => {
 				if (!cancelled) {
-					setCases(result ?? []);
+					setCasesFailed(true);
 				}
 			})
 			.finally(() => {
@@ -110,17 +126,25 @@ export function GrantCaseAccessForm({
 				<p className="text-muted-foreground text-xs">Loading your cases…</p>
 			)}
 
-			{!casesLoading && cases.length === 0 && (
+			{!casesLoading && casesFailed && (
+				<p className="text-destructive text-xs" role="alert">
+					Couldn't load your cases. Close the form and try again.
+				</p>
+			)}
+
+			{!(casesLoading || casesFailed) && cases.length === 0 && (
 				<p className="text-muted-foreground text-xs">
 					You don't administer any cases yet.
 				</p>
 			)}
 
-			{!casesLoading && cases.length > 0 && availableCases.length === 0 && (
-				<p className="text-muted-foreground text-xs">
-					Every case you administer already has this integration granted.
-				</p>
-			)}
+			{!(casesLoading || casesFailed) &&
+				cases.length > 0 &&
+				availableCases.length === 0 && (
+					<p className="text-muted-foreground text-xs">
+						Every case you administer already has this integration granted.
+					</p>
+				)}
 
 			{!casesLoading && availableCases.length > 0 && (
 				<div className="flex flex-wrap items-center gap-2">

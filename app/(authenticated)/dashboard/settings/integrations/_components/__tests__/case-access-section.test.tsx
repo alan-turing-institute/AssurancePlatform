@@ -27,6 +27,8 @@ const GRANTING_BUTTON_REGEX = /^granting…$/i;
 const NO_ADMINISTERED_CASES_REGEX = /you don't administer any cases yet/i;
 const ALL_CASES_GRANTED_REGEX =
 	/every case you administer already has this integration granted/i;
+const LOAD_FAILED_REGEX =
+	/couldn't load your cases\. close the form and try again/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
 	fetchAdministrableCases: vi.fn().mockResolvedValue([
@@ -455,6 +457,45 @@ describe("CaseAccessSection", () => {
 				await screen.findByText(ALL_CASES_GRANTED_REGEX)
 			).toBeInTheDocument();
 			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(
+				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			).toBeNull();
+		});
+
+		it("says the list could not be loaded, not that there are no cases, when the action returns null", async () => {
+			vi.mocked(fetchAdministrableCases).mockResolvedValueOnce(null);
+			renderWithoutProviders(<CaseAccessSection {...baseProps} grants={[]} />);
+
+			await openGrantForm();
+
+			expect(await screen.findByText(LOAD_FAILED_REGEX)).toBeInTheDocument();
+			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(screen.queryByText(ALL_CASES_GRANTED_REGEX)).toBeNull();
+			expect(
+				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			).toBeNull();
+		});
+
+		it("says the list could not be loaded, without an unhandled error, when the request rejects", async () => {
+			vi.mocked(fetchAdministrableCases).mockRejectedValueOnce(
+				new Error("offline")
+			);
+			const unhandled = vi.fn();
+			process.on("unhandledRejection", unhandled);
+			renderWithoutProviders(<CaseAccessSection {...baseProps} grants={[]} />);
+
+			try {
+				await openGrantForm();
+				expect(await screen.findByText(LOAD_FAILED_REGEX)).toBeInTheDocument();
+				// Let a rejection nobody handled reach the process before asserting.
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			} finally {
+				process.off("unhandledRejection", unhandled);
+			}
+
+			expect(unhandled).not.toHaveBeenCalled();
+			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(screen.queryByText(ALL_CASES_GRANTED_REGEX)).toBeNull();
 			expect(
 				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 			).toBeNull();
