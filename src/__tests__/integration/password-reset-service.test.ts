@@ -110,6 +110,41 @@ describe("requestPasswordReset", () => {
 		);
 	});
 
+	it("does nothing when two accounts differ only in capitals and a third capitalisation is typed", async () => {
+		const capitalised = await createTestUser({
+			authProvider: "LOCAL",
+			email: "Pat@Example.com",
+		});
+		const lowercase = await createTestUser({
+			authProvider: "LOCAL",
+			email: "pat@example.com",
+		});
+		vi.mocked(sendPasswordResetEmail).mockClear();
+
+		expect(await requestPasswordReset("PAT@EXAMPLE.COM", TEST_IP)).toEqual({
+			data: null,
+		});
+
+		expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+		expect(await getTestPasswordResetTokenHash(capitalised.id)).toBeNull();
+		expect(await getTestPasswordResetTokenHash(lowercase.id)).toBeNull();
+	});
+
+	it("does not match İnfo@example.com to a stored info@example.com", async () => {
+		const user = await createTestUser({
+			authProvider: "LOCAL",
+			email: "info@example.com",
+		});
+		vi.mocked(sendPasswordResetEmail).mockClear();
+
+		expect(await requestPasswordReset("İnfo@example.com", TEST_IP)).toEqual({
+			data: null,
+		});
+
+		expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+		expect(await getTestPasswordResetTokenHash(user.id)).toBeNull();
+	});
+
 	it("returns success for a non-existent email (anti-enumeration)", async () => {
 		// Must succeed silently — must not reveal whether the address exists
 		expectSuccess(await requestPasswordReset("nobody@example.com", TEST_IP));

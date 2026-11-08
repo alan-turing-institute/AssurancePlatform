@@ -396,7 +396,7 @@ describe("authenticateWithPrisma — email matching ignores capitals", () => {
 			).toBeNull();
 
 			const entry = logs.entries.find(
-				(e) => e.msg === "sign_in_identifier_ambiguous"
+				(e) => e.msg === "email_lookup_ambiguous"
 			);
 			expect(entry).toMatchObject({ level: "warn" });
 			expect(JSON.stringify(entry).toLowerCase()).not.toContain("pat@");
@@ -414,6 +414,29 @@ describe("authenticateWithPrisma — email matching ignores capitals", () => {
 		await createTestUser({ passwordHash, email: "demo@example.com" });
 
 		expect(await authenticateWithPrisma(identifier, TEST_PASSWORD)).toBeNull();
+	});
+
+	it("refuses İnfo@example.com for a stored info@example.com, whatever the database locale does with İ", async () => {
+		const passwordHash = await hashPassword(TEST_PASSWORD);
+		await createTestUser({ passwordHash, email: "info@example.com" });
+
+		expect(
+			await authenticateWithPrisma("İnfo@example.com", TEST_PASSWORD)
+		).toBeNull();
+	});
+
+	it("matches an identifier without an @ exactly only, never by an email search ignoring capitals", async () => {
+		// Registration never stores an email without an "@"; the stored value
+		// here is what lets an unwanted capitals-ignoring search show itself.
+		const passwordHash = await hashPassword(TEST_PASSWORD);
+		const user = await createTestUser({ passwordHash, email: "Legacy-Import" });
+
+		expect(
+			(await authenticateWithPrisma("Legacy-Import", TEST_PASSWORD))?.id
+		).toBe(user.id);
+		expect(
+			await authenticateWithPrisma("legacy-import", TEST_PASSWORD)
+		).toBeNull();
 	});
 
 	it("matches an email containing an underscore typed in other capitals", async () => {

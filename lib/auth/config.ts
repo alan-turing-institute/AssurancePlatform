@@ -124,7 +124,9 @@ export async function authenticateWithPrisma(
 	} as const;
 
 	// The exact text first (username or email, as stored). Only when that finds
-	// nothing is the email compared ignoring capitals; usernames stay exact.
+	// nothing and the text contains "@" is the email compared ignoring
+	// capitals: a username never matches an email, and that comparison has no
+	// index. Usernames stay exact.
 	const exactMatch = await prisma.user.findFirst({
 		where: {
 			OR: [{ username }, { email: username }],
@@ -132,7 +134,10 @@ export async function authenticateWithPrisma(
 		select: userSelect,
 	});
 	const user =
-		exactMatch ?? (await findUserByEmailIgnoringCase(username, userSelect));
+		exactMatch ??
+		(username.includes("@")
+			? await findUserByEmailIgnoringCase(username, userSelect)
+			: null);
 
 	if (!user?.passwordHash) {
 		return null;

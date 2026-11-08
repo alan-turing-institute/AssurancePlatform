@@ -14,6 +14,12 @@ const log = logger.child({ component: "user-email-lookup" });
  * so `%` and `_` in the typed value are ordinary characters (Prisma's
  * `mode: "insensitive"` is a `LIKE`, where they are wildcards).
  *
+ * Both sides are lowercased in the `"C"` collation, which folds only ASCII
+ * `A` to `Z`. The database's own locale decides how `lower()` treats other
+ * capitals (some locales fold `İ` to `i`; JavaScript's `toLowerCase()` does
+ * not), so matching must not depend on it: an email with a non-ASCII capital
+ * matches only when typed with the same capital.
+ *
  * Two or more matches mean two accounts differ only in capitals. Neither is
  * returned, so a sign-in or reset never lands on the wrong person's account;
  * the event is logged without the typed value.
@@ -23,11 +29,11 @@ export async function findUserByEmailIgnoringCase<S extends Prisma.UserSelect>(
 	select: S
 ): Promise<Prisma.UserGetPayload<{ select: S }> | null> {
 	const matches = await prisma.$queryRaw<Array<{ id: string }>>`
-		SELECT id FROM users WHERE lower(email) = lower(${email}) LIMIT 2
+		SELECT id FROM users WHERE lower(email COLLATE "C") = lower(${email}::text COLLATE "C") LIMIT 2
 	`;
 
 	if (matches.length > 1) {
-		log.warn("sign_in_identifier_ambiguous");
+		log.warn("email_lookup_ambiguous");
 		return null;
 	}
 
