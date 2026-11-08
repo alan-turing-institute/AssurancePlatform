@@ -20,7 +20,7 @@ export const dashboardTour: Tour = {
 		tourStep({
 			title: "Import a case",
 			content:
-				"If you already have a case as a JSON export, a file in a GitHub repository or a Google Drive backup, import it here rather than rebuilding it.",
+				"If you already have a case as a JSON export, a file in a public GitHub repository or a Google Drive backup, import it here rather than rebuilding it.",
 			target: "import-case",
 			side: "bottom-right",
 		}),
