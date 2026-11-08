@@ -198,6 +198,21 @@ export function useCaseImport({
 		}
 	}, [isOpen, githubConnected]);
 
+	/**
+	 * Asks again whether GitHub is connected. Used after a refused GitHub
+	 * import, because the server may have removed the stored token while the
+	 * dialog was open. A failed check leaves the current state alone.
+	 */
+	const refreshGitHubConnection = useCallback(async () => {
+		try {
+			const { checkGitHubAccess } = await import("@/actions/integrations");
+			const result = await checkGitHubAccess();
+			setGithubConnected(result.connected);
+		} catch {
+			// A failed check says nothing about the token, so keep what we know.
+		}
+	}, []);
+
 	// Check Google connection status when modal opens.
 	useEffect(() => {
 		if (isOpen && googleConnected === null) {
@@ -264,6 +279,12 @@ export function useCaseImport({
 
 				if (!response.ok) {
 					setError(extractErrorMessage(data));
+					// A 403 covers "no usable GitHub token", which includes a token the
+					// server has just discarded. Checking again swaps the URL form for
+					// the connect button when the token is gone.
+					if (response.status === 403) {
+						await refreshGitHubConnection();
+					}
 					setLoading(false);
 					return;
 				}
@@ -275,7 +296,7 @@ export function useCaseImport({
 				setLoading(false);
 			}
 		},
-		[applyImportResult]
+		[applyImportResult, refreshGitHubConnection]
 	);
 
 	/**

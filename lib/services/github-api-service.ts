@@ -150,7 +150,7 @@ function noTokenError(): GitHubServiceError {
 	return {
 		code: "NO_TOKEN",
 		message:
-			"No GitHub token found. Connect your GitHub account to import from public GitHub repositories.",
+			"No GitHub token found. Connect your GitHub account to import from public GitHub repositories. If this keeps happening, remove TEA under Settings, Applications on GitHub, then connect again.",
 	};
 }
 
@@ -207,7 +207,7 @@ function handleOctokitError(
 		return {
 			code: "TOKEN_EXPIRED",
 			message:
-				"GitHub token is invalid or expired. Please sign in again with GitHub.",
+				"GitHub token is invalid or expired. Please connect your GitHub account again.",
 			status: 401,
 		};
 	}
