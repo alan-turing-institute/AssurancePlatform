@@ -49,7 +49,7 @@ Check the [Docker deployment guide](/docs/technical-guide/deployment/docker-prod
 The `Release` workflow runs when a successful `Build` workflow completes on `main`. It runs semantic-release, which uses conventional commit history for versioning and release notes, then merges the release commit back into `staging`. It is not triggered by a manually created version tag. The [versioning guide](/docs/technical-guide/ci-cd-pipeline/versioning-strategy) explains the release rules.
 
 `Seed staging database` runs after a successful staging `Build` run whose staging deployment ran, or on manual dispatch.
-A `Build` run that skipped its deployment because staging already runs a newer commit does not trigger it, and neither does the `Build` run of a pull request from `staging` to `main`.
+A `Build` run that skipped its deployment because staging already runs a newer commit does not reseed staging, and neither does the `Build` run of a pull request from `staging` to `main`.
 The workflow checks out `staging`, resets and migrates the staging database, grants the application database user access and runs the seed script.
 This is a staging reset, so do not treat it as a general production migration procedure.
 
