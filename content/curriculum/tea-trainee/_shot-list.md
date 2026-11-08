@@ -1,10 +1,13 @@
 # Screenshot shot list
 
-Capture these from the running staging application with practice data. The code establishes controls and routes, but precise layout needs a visual check.
+Capture these from a local production build on a throwaway database, with practice data.
+The code establishes controls and routes, but precise layout needs a visual check.
 
-The current pictures were taken from a production build on a throwaway database, at 1280 pixels wide in the light theme.
+The current pictures were taken at 1280 pixels wide in the light theme, at device scale 2.
+Each file is therefore twice the pixel size of what it shows on screen.
 They use one practice account (`practice_trainee`) and a second one (`practice_reviewer`) for the shared-case frames.
-Dialogs taller than the screen were captured with a taller window so nothing is scrolled out of frame.
+Dialogs taller than the screen were captured with a taller window, except the Export Case dialog, which still scrolls (see m2-09).
+Requests to anything other than the local server were blocked during capture.
 
 ### m2-01
 - Page: curriculum/tea-trainee/02-brewing-your-own-tea/exploration.md, step 1
