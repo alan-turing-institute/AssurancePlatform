@@ -24,7 +24,8 @@ const FIELD_NAMES = [
  * The full set of files under `lib/` and `app/` allowed to reference the
  * field names, as of this test's writing:
  * - `lib/auth/config.ts` — encrypts on write (sign-in / account linking)
- * - `lib/services/github-api-service.ts` — decrypts on read
+ * - `lib/services/github-api-service.ts` — decrypts on read, and clears the
+ *   stored token when it carries more than the import needs
  * - `lib/services/google-drive-service.ts` — encrypts on refresh, decrypts
  *   on read
  * - `lib/auth/google-account-status.ts`,
