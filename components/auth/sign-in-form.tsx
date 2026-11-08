@@ -9,6 +9,7 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
 import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
@@ -20,6 +21,27 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
+
+const RATE_LIMITED_PREFIX = `${SIGN_IN_RATE_LIMITED}:`;
+
+/**
+ * The sentence shown for the error next-auth reports when a sign-in fails.
+ * A paused sign-in arrives as `SignInRateLimited:<minutes>`. Any other error
+ * the form does not know is not shown as it came.
+ */
+function signInFailureMessage(error: string | null | undefined): string {
+	if (error === "CredentialsSignin") {
+		return "Invalid credentials. Please check your email/username and password.";
+	}
+	if (error?.startsWith(RATE_LIMITED_PREFIX)) {
+		const minutes = Math.max(
+			1,
+			Number.parseInt(error.slice(RATE_LIMITED_PREFIX.length), 10) || 1
+		);
+		return `Too many sign-in attempts. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}, or reset your password.`;
+	}
+	return "Unable to log in. Please try again.";
+}
 
 const SignInForm = () => {
 	const [errors, setErrors] = useState<string[]>([]);
@@ -69,12 +91,7 @@ const SignInForm = () => {
 				router.replace(redirectTo);
 			} else {
 				setLoading(false);
-				// Provide user-friendly error messages
-				const errorMessage =
-					result?.error === "CredentialsSignin"
-						? "Invalid credentials. Please check your email/username and password."
-						: result?.error || "Unable to log in. Please try again.";
-				setErrors([errorMessage]);
+				setErrors([signInFailureMessage(result?.error)]);
 			}
 		} catch (_error) {
 			setLoading(false);

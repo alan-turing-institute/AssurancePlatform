@@ -3,14 +3,20 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
+import { extractClientIp } from "@/lib/auth/extract-client-ip";
 import { verifyLinkIntent } from "@/lib/auth/link-intent";
 import {
 	assertSessionVersionCurrent,
 	getSessionVersion,
 } from "@/lib/auth/session-version";
-import { normaliseSignInIdentifier } from "@/lib/auth/sign-in-identifier";
+import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
+import {
+	normaliseSignInIdentifier,
+	signInIdentifierKey,
+} from "@/lib/auth/sign-in-identifier";
 import { encryptForStorage } from "@/lib/auth/token-encryption";
 import { logger } from "@/lib/logger";
+import type { RateLimitCheckResult } from "@/lib/services/rate-limit-service";
 
 const log = logger.child({ component: "auth-config" });
 
@@ -483,6 +489,124 @@ async function resolveLinkIntentUserId({
 }
 
 /**
+ * The address sign-in attempts are counted against, or undefined when the
+ * request carries none that can be trusted (never on Azure; always when
+ * running locally). The address limit is skipped then, so unrelated visitors
+ * do not share one count.
+ */
+function signInAddress(headers: Headers): string | undefined {
+	const ipAddress = extractClientIp(headers);
+	if (ipAddress === "unknown") {
+		log.warn("Sign-in address not readable; address limit skipped");
+		return;
+	}
+	return ipAddress;
+}
+
+/**
+ * Hands back the slots a successful sign-in took and forgets the failures
+ * before it. Best effort: a correct password must not fail because this
+ * bookkeeping did.
+ */
+async function refundSignInSlots(
+	identifier: string,
+	ipAddress: string | undefined
+): Promise<void> {
+	try {
+		const { clearSignInFailures } = await import(
+			"@/lib/services/rate-limit-service"
+		);
+		await clearSignInFailures([identifier], ipAddress);
+	} catch (error) {
+		log.error("Failed to clear sign-in failures", {
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
+}
+
+/**
+ * Writes the audit entry for a refused sign-in, and returns the error that
+ * tells the form how long to wait. The name appears only as its hash.
+ */
+async function pauseSignIn(
+	refusal: RateLimitCheckResult,
+	identifier: string,
+	ipAddress: string | undefined,
+	headers: Headers
+): Promise<Error> {
+	const { recordSecurityEvent } = await import(
+		"@/lib/services/security-audit-service"
+	);
+	await recordSecurityEvent({
+		event: "sign_in_rate_limited",
+		severity: "medium",
+		ipAddress,
+		userAgent: headers.get("user-agent"),
+		metadata: {
+			reason: refusal.reason,
+			identifier: signInIdentifierKey(identifier),
+		},
+	});
+	const minutes = Math.max(1, Math.ceil((refusal.retryAfterMs ?? 0) / 60_000));
+	return new Error(`${SIGN_IN_RATE_LIMITED}:${minutes}`);
+}
+
+/**
+ * Signs a person in from what the form posted. Sign-in is paused for an email
+ * or username after 10 failures, and for a network address after 20, each
+ * over 15 minutes. The slots are taken before the password is checked, so
+ * attempts that arrive together cannot all go through, and handed back when
+ * the password is right. While paused even the correct password is refused,
+ * and a made-up name is paused exactly like a real one. A pause is thrown as
+ * `SignInRateLimited:<minutes>`, which next-auth passes to the form; every
+ * other failure returns null.
+ */
+export async function authorizeCredentials(
+	credentials: Record<"username" | "password", string> | undefined,
+	requestHeaders: HeadersInit | undefined
+) {
+	// The identifier is trimmed here as well as in the form, because
+	// anyone can post to this endpoint directly. The password is
+	// passed on exactly as sent.
+	const identifier = normaliseSignInIdentifier(credentials?.username);
+	const password = credentials?.password;
+
+	if (!(identifier && password)) {
+		return null;
+	}
+
+	const headers = new Headers(requestHeaders);
+	const ipAddress = signInAddress(headers);
+	let refusal: RateLimitCheckResult | null = null;
+	let user: Awaited<ReturnType<typeof authenticateWithPrisma>> = null;
+
+	try {
+		const { RATE_LIMIT_CONFIGS, takeRateLimitSlot } = await import(
+			"@/lib/services/rate-limit-service"
+		);
+		const slots = await takeRateLimitSlot(RATE_LIMIT_CONFIGS.signIn, {
+			email: signInIdentifierKey(identifier),
+			ipAddress,
+		});
+		if (slots.allowed) {
+			user = await authenticateWithPrisma(identifier, password);
+			if (user) {
+				await refundSignInSlots(identifier, ipAddress);
+			}
+		} else {
+			refusal = slots;
+		}
+	} catch (_error) {
+		return null;
+	}
+
+	if (refusal) {
+		throw await pauseSignIn(refusal, identifier, ipAddress, headers);
+	}
+	return user;
+}
+
+/**
  * Configuration options for NextAuth authentication.
  *
  * This object sets up authentication for a Next.js app using GitHub and Google as authentication providers.
@@ -542,22 +666,8 @@ export const authOptions: NextAuthOptions = {
 				username: { label: "Username", type: "text" },
 				password: { label: "Password", type: "password" },
 			},
-			async authorize(credentials, _req) {
-				// The identifier is trimmed here as well as in the form, because
-				// anyone can post to this endpoint directly. The password is
-				// passed on exactly as sent.
-				const identifier = normaliseSignInIdentifier(credentials?.username);
-				const password = credentials?.password;
-
-				if (!(identifier && password)) {
-					return null;
-				}
-
-				try {
-					return await authenticateWithPrisma(identifier, password);
-				} catch (_error) {
-					return null;
-				}
+			authorize(credentials, req) {
+				return authorizeCredentials(credentials, req?.headers);
 			},
 		}),
 	],

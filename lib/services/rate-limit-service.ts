@@ -1,3 +1,4 @@
+import { signInIdentifierKey } from "@/lib/auth/sign-in-identifier";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 
@@ -31,6 +32,7 @@ export interface RateLimitCheckResult {
 // ============================================
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 
 export const RATE_LIMIT_CONFIGS = {
 	register: {
@@ -77,6 +79,27 @@ export const RATE_LIMIT_CONFIGS = {
 				identifierType: "ip" as const,
 				maxAttempts: 20,
 				windowMs: 15 * 60 * 1000,
+			},
+		],
+	},
+	/**
+	 * Password sign-ins. A slot is taken before the password is checked and handed
+	 * back when it is right, so only failed attempts stay counted
+	 * (`clearSignInFailures`). The "email" limit counts per typed email or
+	 * username, under `signInIdentifierKey` rather than the text itself.
+	 */
+	signIn: {
+		endpoint: "sign_in",
+		limits: [
+			{
+				identifierType: "email" as const,
+				maxAttempts: 10,
+				windowMs: FIFTEEN_MINUTES_MS,
+			},
+			{
+				identifierType: "ip" as const,
+				maxAttempts: 20,
+				windowMs: FIFTEEN_MINUTES_MS,
 			},
 		],
 	},
@@ -289,6 +312,42 @@ export async function takeRateLimitSlot(
 		});
 		return { allowed: true };
 	});
+}
+
+/**
+ * Forgets the failed sign-ins counted against each of these emails or
+ * usernames, so a person who has signed in or reset their password starts
+ * again from zero. When an address is given, one attempt counted against it is
+ * handed back as well: the slot the successful sign-in took, since only
+ * failures count. The address's other attempts stay.
+ */
+export async function clearSignInFailures(
+	identifiers: readonly string[],
+	ipAddress?: string
+): Promise<void> {
+	const { endpoint } = RATE_LIMIT_CONFIGS.signIn;
+	await prisma.rateLimitAttempt.deleteMany({
+		where: {
+			endpoint,
+			identifierType: "email",
+			identifier: { in: identifiers.map(signInIdentifierKey) },
+		},
+	});
+	if (ipAddress) {
+		// One row is chosen and locked in a single statement, so two sign-ins
+		// finishing together each hand back a different one.
+		await prisma.$executeRaw`
+			DELETE FROM rate_limit_attempts WHERE id = (
+				SELECT id FROM rate_limit_attempts
+				WHERE endpoint = ${endpoint}
+					AND identifier_type = 'ip'
+					AND identifier = ${ipAddress}
+				ORDER BY attempted_at DESC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+		`;
+	}
 }
 
 /**
