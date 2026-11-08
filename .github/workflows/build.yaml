@@ -1429,7 +1429,7 @@ jobs:
       # Compares this commit with the commit recorded on the image `staging`
       # points at now. ahead or identical: deploy. behind: skip, leaving
       # staging as it is (a newer commit's own run deploys). diverged, or the
-      # current revision cannot be read: deploy, with a warning.
+      # current revision cannot be read or compared: deploy, with a warning.
       - name: Check staging image order
         if: github.ref == 'refs/heads/staging'
         id: staging-gate
@@ -1453,7 +1453,7 @@ jobs:
           STATUS=""
           if [[ "$CURRENT" =~ ^[0-9a-f]{40}$ ]]; then
             CUR7="${CURRENT::7}"
-            STATUS=$(gh api "repos/$REPO/compare/$CURRENT...$GITHUB_SHA" --jq .status || true)
+            STATUS=$(gh api "repos/$REPO/compare/$CURRENT...$GITHUB_SHA?per_page=1" --jq .status || true)
           fi
 
           case "$STATUS" in
@@ -1477,8 +1477,13 @@ jobs:
               ;;
             *)
               DEPLOY=true
-              RELATION="current revision unreadable"
-              echo "::warning::staging revision unreadable; deploying ${SHA7}"
+              if [ -n "$CUR7" ]; then
+                RELATION="comparison with $CUR7 failed"
+                echo "::warning::comparing ${SHA7} with staging revision ${CUR7} failed; deploying ${SHA7}"
+              else
+                RELATION="current revision unreadable"
+                echo "::warning::staging revision unreadable; deploying ${SHA7}"
+              fi
               ;;
           esac
 
@@ -1487,9 +1492,10 @@ jobs:
             echo "relation=$RELATION"
           } >> "$GITHUB_OUTPUT"
 
-      # Moves `staging` to the image this run built, then reads the tag back:
-      # the job fails, leaving staging as it was, unless the tag now carries
-      # this commit.
+      # Moves `staging` to the image this run built, then reads the tag back.
+      # If the retag succeeds but the read-back does not show this commit, the
+      # tag has already moved forward; the job fails before the webhook, so the
+      # running app is unchanged.
       - name: Point staging at this build
         if: github.ref == 'refs/heads/staging' && steps.staging-gate.outputs.deploy == 'true'
         id: staging-retag
