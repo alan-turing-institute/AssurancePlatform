@@ -172,6 +172,15 @@ describe("sign-in attempt limit: a name", () => {
 		expect(await attempt("alice", WRONG)).toBe(PAUSED_FOR_15);
 	});
 
+	it("clears the failures when a padded email signs in as the only account", async () => {
+		await demoUser({ email: "person@example.com" });
+		await failTimes(4, "person@example.com");
+
+		expect(await attempt("  person@example.com  ", PASSWORD)).toBe("signed-in");
+
+		expect(await countRows("email")).toBe(0);
+	});
+
 	it("leaves nothing counted after a sign-in that never failed", async () => {
 		await demoUser();
 
@@ -376,6 +385,8 @@ describe("sign-in attempt limit: password reset", () => {
 			expect(await completeResetFor(user.id)).toEqual({ data: null });
 
 			expect(logs.entries.some((entry) => entry.level === "error")).toBe(true);
+			expect(JSON.stringify(logs.entries)).not.toContain(user.email);
+			expect(JSON.stringify(logs.entries)).not.toContain(user.username);
 		} finally {
 			logs.restore();
 			vi.unstubAllEnvs();

@@ -76,6 +76,19 @@ describe("sign-in limit: a completed password reset", () => {
 		);
 	});
 
+	it("ends the pause on a username that holds an @ when no account has that email", async () => {
+		const user = await account({ username: "Jane@Example.com" });
+		await failures("Jane@Example.com", 10, nth);
+		expect(await attempt("Jane@Example.com", PASSWORD, nth(50))).toBe(
+			"paused:15"
+		);
+		await requestPasswordReset(user.email, RESET_ADDRESS);
+
+		await resetPassword(mailedToken(), NEW_PASSWORD, RESET_ADDRESS);
+
+		expect(await attempt("Jane@Example.com", NEW_PASSWORD, nth(51))).toBe("ok");
+	});
+
 	it("keeps the pause when a reset was only requested, or tried with a wrong token", async () => {
 		const { user } = await pausedAccount();
 

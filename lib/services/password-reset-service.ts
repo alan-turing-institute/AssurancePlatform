@@ -326,7 +326,7 @@ export async function resetPassword(
 	});
 
 	// A paused person's way back in: sign-in counts failures per email and per
-	// username, and both start again from zero (an email that two accounts
+	// username, and both start again from zero (a name that two accounts
 	// share keeps its count). The password is already changed, so a failure
 	// here is logged and the reset still completes.
 	try {

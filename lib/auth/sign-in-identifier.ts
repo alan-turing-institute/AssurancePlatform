@@ -26,8 +26,12 @@ export function normaliseSignInIdentifier(value: unknown): string | null {
 	return trimmed === "" ? null : trimmed;
 }
 
-/** The normalised name cut to the length that is counted. */
-function countedName(identifier: string): string {
+/**
+ * The normalised name cut to the length that is counted: the text
+ * `signInIdentifierKey` builds its key from, and the text to compare against
+ * accounts when asking whose failures that key holds.
+ */
+export function countedName(identifier: string): string {
 	return (normaliseSignInIdentifier(identifier) ?? "").slice(
 		0,
 		MAX_COUNTED_IDENTIFIER_LENGTH

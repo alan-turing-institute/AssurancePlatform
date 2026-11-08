@@ -140,3 +140,39 @@ describe("sign-in limit: two accounts whose emails differ only in capitals", () 
 		expect(await attempt(failing, WRONG_PASSWORD, nth(22))).toBe("paused:15");
 	});
 });
+
+/**
+ * Accounts brought over from an earlier platform kept their usernames as
+ * typed, so a username can hold an "@" and capitals. Its name is counted with
+ * its capitals folded, like an email, so the accounts that share the folded
+ * name are counted as emails and as usernames alike.
+ */
+describe("sign-in limit: a username that holds an @", () => {
+	const IMPORTED_USERNAME = "Jane@Example.com";
+
+	it("keeps its failures when an account whose email is the lower-case spelling signs in", async () => {
+		await account({ username: IMPORTED_USERNAME });
+		await account({ email: "jane@example.com" }, OTHER_PASSWORD);
+		await failures(IMPORTED_USERNAME, 9, nth);
+
+		expect(await attempt("jane@example.com", OTHER_PASSWORD, nth(20))).toBe(
+			"ok"
+		);
+
+		expect(await attempt(IMPORTED_USERNAME, WRONG_PASSWORD, nth(21))).toBe(
+			"wrong"
+		);
+		expect(await attempt(IMPORTED_USERNAME, WRONG_PASSWORD, nth(22))).toBe(
+			"paused:15"
+		);
+	});
+
+	it("clears its own failures when it signs in and no account has that email", async () => {
+		await account({ username: IMPORTED_USERNAME });
+		await failures(IMPORTED_USERNAME, 9, nth);
+
+		expect(await attempt(IMPORTED_USERNAME, PASSWORD, nth(20))).toBe("ok");
+
+		expect(await attemptRows("email")).toBe(0);
+	});
+});

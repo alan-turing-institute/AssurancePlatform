@@ -507,7 +507,7 @@ function signInAddress(headers: Headers): string | undefined {
 
 /**
  * Hands back the slots a successful sign-in took and, when the name's failures
- * are this account's alone, forgets them too (an email shared by two accounts
+ * are this account's alone, forgets them too (a name shared by two accounts
  * that differ only in capitals keeps its failures). Best effort: a correct
  * password must not fail because this bookkeeping did.
  */

@@ -1,10 +1,11 @@
 import {
+	countedName,
 	isEmailName,
 	signInIdentifierKey,
 } from "@/lib/auth/sign-in-identifier";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
-import { countUsersByEmailIgnoringCase } from "@/lib/services/user-email-lookup-service";
+import { countUsersByEmailOrUsernameIgnoringCase } from "@/lib/services/user-email-lookup-service";
 
 // ============================================
 // TYPES
@@ -342,29 +343,34 @@ async function handBackSlot(
 
 /**
  * Whether the failures counted under this name belong to one account: always
- * for a username, which is unique as typed, and for an email only when exactly
- * one account has it once capitals are ignored. Two accounts whose emails
- * differ only in capitals share one count, and neither may clear the other's.
+ * for a name without "@", which is a username and unique as typed. A name with
+ * "@" is counted with its ASCII capitals folded, so it is one account's only
+ * when exactly one account has it, as its email or as its username, once
+ * capitals are ignored (a username can hold an "@" too). Accounts that share
+ * the folded name share one count, and none of them may clear the others'. The
+ * accounts are counted for the same trimmed, length-capped text the count is
+ * keyed from.
  */
 async function failuresBelongToOneAccount(
 	identifier: string
 ): Promise<boolean> {
 	return (
 		!isEmailName(identifier) ||
-		(await countUsersByEmailIgnoringCase(identifier)) === 1
+		(await countUsersByEmailOrUsernameIgnoringCase(countedName(identifier))) ===
+			1
 	);
 }
 
 /**
  * Forgets the failed sign-ins counted against each of these emails or
  * usernames, so a person who has signed in or reset their password starts
- * again from zero. An email that two accounts share (they differ only in
+ * again from zero. A name that two accounts share (they differ only in
  * capitals) is left alone, because its failures are not one person's.
  *
  * Pass `signIn` when a sign-in has just succeeded: the attempt's own slots are
  * handed back as well, since only failures count. That is the newest attempt
- * counted against the address when one is given, and, for a shared email, the
- * newest counted against the email. The other attempts stay.
+ * counted against the address when one is given, and, for a shared name, the
+ * newest counted against the name. The other attempts stay.
  */
 export async function clearSignInFailures(
 	identifiers: readonly string[],
