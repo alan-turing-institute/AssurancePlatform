@@ -31,10 +31,11 @@ export const passwordSchema = z
 // ============================================
 
 /**
- * Sign-in form — accepts email or username as identifier
+ * Sign-in form — accepts email or username as identifier. Spaces around the
+ * identifier are trimmed (capitals are kept); the password is not.
  */
 export const signInFormSchema = z.strictObject({
-	identifier: z.string().min(2, "Please enter your email or username"),
+	identifier: z.string().trim().min(2, "Please enter your email or username"),
 	password: z.string().min(8, "Password must be at least 8 characters"),
 });
 

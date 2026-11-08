@@ -93,6 +93,23 @@ describe("requestPasswordReset", () => {
 		expect(storedHash).not.toBe(token);
 	});
 
+	it("finds a user whose stored email has capitals, whatever capitals are typed, and mails the stored address", async () => {
+		const user = await createTestUser({
+			authProvider: "LOCAL",
+			email: "Jane.Smith@Example.com",
+		});
+
+		expectSuccess(
+			await requestPasswordReset(" jane.smith@example.com ", TEST_IP)
+		);
+
+		const token = getCapturedResetToken();
+		expect(await getTestPasswordResetTokenHash(user.id)).toBe(sha256Hex(token));
+		expect(vi.mocked(sendPasswordResetEmail).mock.calls.at(-1)?.[0].to).toBe(
+			"Jane.Smith@Example.com"
+		);
+	});
+
 	it("returns success for a non-existent email (anti-enumeration)", async () => {
 		// Must succeed silently — must not reveal whether the address exists
 		expectSuccess(await requestPasswordReset("nobody@example.com", TEST_IP));
