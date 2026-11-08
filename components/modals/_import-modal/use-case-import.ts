@@ -93,6 +93,26 @@ export function extractErrorMessage(data: ImportResponse): string {
 	return data.message ?? data.error ?? "Failed to import";
 }
 
+// ─── Connection check ─────────────────────────────────────────────────────────
+
+/**
+ * Asks again whether GitHub is connected and passes the answer to
+ * `setConnected`. Used after a refused GitHub import, because the server may
+ * have removed the stored token while the dialog was open. A failed check
+ * leaves the current state alone.
+ */
+async function refreshGitHubConnection(
+	setConnected: (connected: boolean) => void
+): Promise<void> {
+	try {
+		const { checkGitHubAccess } = await import("@/actions/integrations");
+		const result = await checkGitHubAccess();
+		setConnected(result.connected);
+	} catch {
+		// A failed check says nothing about the token, so keep what we know.
+	}
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 interface DriveFile {
@@ -198,21 +218,6 @@ export function useCaseImport({
 		}
 	}, [isOpen, githubConnected]);
 
-	/**
-	 * Asks again whether GitHub is connected. Used after a refused GitHub
-	 * import, because the server may have removed the stored token while the
-	 * dialog was open. A failed check leaves the current state alone.
-	 */
-	const refreshGitHubConnection = useCallback(async () => {
-		try {
-			const { checkGitHubAccess } = await import("@/actions/integrations");
-			const result = await checkGitHubAccess();
-			setGithubConnected(result.connected);
-		} catch {
-			// A failed check says nothing about the token, so keep what we know.
-		}
-	}, []);
-
 	// Check Google connection status when modal opens.
 	useEffect(() => {
 		if (isOpen && googleConnected === null) {
@@ -283,7 +288,7 @@ export function useCaseImport({
 					// server has just discarded. Checking again swaps the URL form for
 					// the connect button when the token is gone.
 					if (response.status === 403) {
-						await refreshGitHubConnection();
+						await refreshGitHubConnection(setGithubConnected);
 					}
 					setLoading(false);
 					return;
@@ -296,7 +301,7 @@ export function useCaseImport({
 				setLoading(false);
 			}
 		},
-		[applyImportResult, refreshGitHubConnection]
+		[applyImportResult]
 	);
 
 	/**
