@@ -120,10 +120,13 @@ export function PluginCard({
 						{`Turn ${plugin.name} ${checked ? "off" : "on"}`}
 					</Label>
 					{/* aria-disabled, not disabled, while saving: a focused button that
-					becomes disabled drops focus to the page body. */}
+					becomes disabled drops focus to the page body. The cursor mirrors
+					the native `disabled:` one; opacity is left alone so the focus ring
+					keeps its contrast while saving. */}
 					<Switch
 						aria-disabled={pending || undefined}
 						checked={checked}
+						className="aria-disabled:cursor-not-allowed"
 						disabled={locked}
 						id={toggleId}
 						onCheckedChange={handleCheckedChange}
