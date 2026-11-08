@@ -7,6 +7,7 @@ import {
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
 import type { CaseKind } from "@/lib/schemas/case-export";
+import type { AdministrableCaseSummary } from "@/lib/services/case-fetch-service";
 import { validateInput } from "@/lib/validation/input-validation";
 
 interface AssuranceCase {
@@ -31,6 +32,24 @@ export const fetchAssuranceCases = async (): Promise<
 
 	const { listUserCases } = await import("@/lib/services/case-fetch-service");
 	const result = await listUserCases(validated.userId);
+	if ("error" in result) {
+		return null;
+	}
+	return result.data;
+};
+
+export const fetchAdministrableCases = async (): Promise<
+	AdministrableCaseSummary[] | null
+> => {
+	const validated = await validateSession();
+	if (!validated) {
+		return null;
+	}
+
+	const { listAdministrableCases } = await import(
+		"@/lib/services/case-fetch-service"
+	);
+	const result = await listAdministrableCases(validated.userId);
 	if ("error" in result) {
 		return null;
 	}

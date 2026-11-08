@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { fetchAssuranceCases } from "@/actions/assurance-cases";
+import { fetchAdministrableCases } from "@/actions/assurance-cases";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -43,26 +43,15 @@ export interface GrantCaseAccessFormProps {
 
 /**
  * The inline "grant access to a case" form — rendered by `CaseAccessSection`
- * once "+ Grant access to a case…" is clicked. Sources its case options from
- * `fetchAssuranceCases`, the same server action the main dashboard list
- * uses, fetched lazily here on mount rather than eagerly whenever the
- * settings page loads — nobody needs the full cases list until they
- * actually open this form.
+ * once "+ Grant access to a case…" is clicked. Its case options come from
+ * `fetchAdministrableCases`, fetched when the form opens rather than whenever
+ * the settings page loads, because nobody needs the list until then.
  *
- * Deliberately restricted to the caller's OWNED cases, not
- * `fetchAssuranceCases`'s shared-cases sibling: a case a user owns always
- * carries implicit case-ADMIN (the creator short-circuit in
- * `getCasePermissionFromPrisma`, `lib/permissions.ts`), so every option
- * offered here is guaranteed to pass the API's own ADMIN check. Cases
- * merely SHARED to the user (even at ADMIN level) are left out on purpose:
- * `listUserCases`'s `permissions` field labels every non-owner row "view"
- * regardless of its real level (a pre-existing gap in
- * `case-fetch-service.ts` — not this ticket's to fix), so this component
- * cannot reliably tell a shared-ADMIN case apart from a shared-VIEW one from
- * that data. Showing only owned cases keeps every option correct-by-
- * construction instead of leaning on that unreliable label; the API's own
- * 404 (surfaced via `grantError`) remains the backstop for any case this
- * picker still gets wrong.
+ * The list holds the cases the grant route will accept: the ones the user
+ * created and the ones shared with them at ADMIN, directly or through a team.
+ * Patterns and trashed cases are not listed. The list is advisory: the grant
+ * route checks ADMIN again, and its 404 (surfaced via `grantError`) covers a
+ * case whose sharing changed after the list loaded.
  */
 export function GrantCaseAccessForm({
 	existingCaseIds,
@@ -80,12 +69,10 @@ export function GrantCaseAccessForm({
 	useEffect(() => {
 		let cancelled = false;
 		setCasesLoading(true);
-		fetchAssuranceCases()
+		fetchAdministrableCases()
 			.then((result) => {
 				if (!cancelled) {
-					setCases(
-						(result ?? []).map((c) => ({ id: String(c.id), name: c.name }))
-					);
+					setCases(result ?? []);
 				}
 			})
 			.finally(() => {
@@ -123,7 +110,13 @@ export function GrantCaseAccessForm({
 				<p className="text-muted-foreground text-xs">Loading your cases…</p>
 			)}
 
-			{!casesLoading && availableCases.length === 0 && (
+			{!casesLoading && cases.length === 0 && (
+				<p className="text-muted-foreground text-xs">
+					You don't administer any cases yet.
+				</p>
+			)}
+
+			{!casesLoading && cases.length > 0 && availableCases.length === 0 && (
 				<p className="text-muted-foreground text-xs">
 					Every case you administer already has this integration granted.
 				</p>

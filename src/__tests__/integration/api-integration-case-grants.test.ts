@@ -4,9 +4,12 @@ import prisma from "@/lib/prisma";
 import { reassignIntegrationOwner } from "@/lib/services/integration-registry-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
+	addTeamMember,
 	createTestCase,
 	createTestIntegrationWithSystemUser,
 	createTestPermission,
+	createTestTeam,
+	createTestTeamPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -357,6 +360,37 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 		).toBe(true);
 	});
 
+	it("owner+admin-via-team-share (not the case creator): grants access to a member of a team the case is shared with at ADMIN", async () => {
+		const creator = await createTestUser();
+		const member = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(member.id);
+		const testCase = await createTestCase(creator.id);
+		const team = await createTestTeam(creator.id);
+		await addTeamMember(team.id, member.id, "MEMBER");
+		await createTestTeamPermission(testCase.id, team.id, creator.id, "ADMIN");
+		await mockAuth(member.id, member.username, member.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "VIEW",
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(201);
+		expect(
+			await canAccessCase(
+				{ userId: systemUser.id, caseId: testCase.id },
+				"VIEW"
+			)
+		).toBe(true);
+	});
+
 	it("duplicate grant is idempotent success (200, alreadyGranted: true), not an error", async () => {
 		const owner = await createTestUser();
 		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
@@ -561,6 +595,40 @@ describe("POST /api/integrations/[id]/case-grants", () => {
 
 		expect(response.status).toBe(404);
 		expect((await response.json()).error).toBe(CASE_NOT_FOUND);
+	});
+
+	it.each([
+		"VIEW",
+		"COMMENT",
+	] as const)("a direct %s share on the case fails as not-found and stores no grant", async (level) => {
+		const owner = await createTestUser();
+		const caseCreator = await createTestUser();
+		const { integration, systemUser } =
+			await createTestIntegrationWithSystemUser(owner.id);
+		const testCase = await createTestCase(caseCreator.id);
+		await createTestPermission(testCase.id, owner.id, caseCreator.id, level);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/case-grants/route"
+		);
+		const response = await POST(
+			jsonRequest(`/api/integrations/${integration.id}/case-grants`, "POST", {
+				caseId: testCase.id,
+				permission: "VIEW",
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(404);
+		expect((await response.json()).error).toBe(CASE_NOT_FOUND);
+		expect(
+			await prisma.casePermission.findUnique({
+				where: {
+					caseId_userId: { caseId: testCase.id, userId: systemUser.id },
+				},
+			})
+		).toBeNull();
 	});
 
 	it("rejects an invalid permission value with 400", async () => {

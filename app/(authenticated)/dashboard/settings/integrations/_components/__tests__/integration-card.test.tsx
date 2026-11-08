@@ -39,7 +39,7 @@ const ROTATE_BUTTON_REGEX = /^rotate$/i;
 const REVOKE_TOKEN_BUTTON_REGEX = /revoke this token/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
-	fetchAssuranceCases: vi
+	fetchAdministrableCases: vi
 		.fn()
 		.mockResolvedValue([{ id: "case-9", name: "Assurance" }]),
 }));
