@@ -155,7 +155,8 @@ function getEmailClient(): EmailClient | null {
  *
  * When no client is configured (`ACS_CONNECTION_STRING` unset):
  * - In production, this is a misconfiguration, not a dev preview — fail
- *   closed with an error result and log only `to`/`subject`, never the body.
+ *   closed with an error result and log only the `subject`, never the
+ *   recipient or the body.
  * - Otherwise (the dev preview), log `to`/`subject` and a redacted form of
  *   the plain-text body: any token-like value inside a URL is replaced by
  *   its last 4 characters, so a reset/verification link is still readable
@@ -171,7 +172,7 @@ async function sendEmail(
 
 	if (!client) {
 		if (process.env.NODE_ENV === "production") {
-			log.error("Email provider not configured", { to, subject });
+			log.error("Email provider not configured", { subject });
 			return { error: "Email provider not configured" };
 		}
 

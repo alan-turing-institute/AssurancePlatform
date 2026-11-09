@@ -159,7 +159,7 @@ describe("email-service — no client configured", () => {
 		return { mod, entries };
 	}
 
-	it("in production, returns an error result and logs no body or token", async () => {
+	it("in production, returns an error result and logs no recipient, body or token", async () => {
 		const { mod, entries } =
 			await importEmailServiceWithCapturedLogs("production");
 
@@ -173,13 +173,17 @@ describe("email-service — no client configured", () => {
 		const serialised = JSON.stringify(entries);
 		expect(serialised).not.toContain("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6");
 		expect(serialised).not.toContain("reset-password");
-		expect(entries).toContainEqual(
+		expect(serialised).not.toContain("user@example.test");
+		const failure = entries.find(
+			(entry) => entry.msg === "Email provider not configured"
+		);
+		expect(failure).toEqual(
 			expect.objectContaining({
 				level: "error",
-				to: "user@example.test",
 				subject: expect.stringContaining("Reset your"),
 			})
 		);
+		expect(failure).not.toHaveProperty("to");
 	});
 
 	it("outside production, logs the reset URL with the token reduced to its last 4 characters", async () => {
