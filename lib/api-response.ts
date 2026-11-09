@@ -343,6 +343,13 @@ const ERROR_MAPPINGS: Array<{
 			/^\d+ elements? still to fill in(; \d+ variables? with no value)?$|^\d+ variables? with no value$/,
 		factory: () => validationError(""),
 	},
+	// `password-reset-service.ts`'s `resetPassword` and `validateResetToken`: a
+	// reset link that is used, expired or unknown gets this one message, so
+	// nobody can tell which links exist — a validation failure (400), not a 500.
+	{
+		pattern: /^Invalid or expired reset token$/,
+		factory: () => validationError(""),
+	},
 ];
 
 /**
