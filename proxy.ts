@@ -1,8 +1,85 @@
-import { NextResponse } from "next/server";
-import { withAuth } from "next-auth/middleware";
+import {
+	type NextFetchEvent,
+	type NextRequest,
+	NextResponse,
+} from "next/server";
+import { type NextRequestWithAuth, withAuth } from "next-auth/middleware";
 import { isPublicRoute } from "./lib/routes";
 
-export default withAuth(
+const PAGE_METHODS = new Set(["GET", "HEAD"]);
+const FILE_EXTENSION = /\.[A-Za-z0-9]+$/;
+
+/**
+ * A GET or HEAD request for a page: not an `/api/` call, not under
+ * `/_next/`, and not a file (a last path segment with an extension).
+ */
+function isPageRequest(req: NextRequest): boolean {
+	if (!PAGE_METHODS.has(req.method)) {
+		return false;
+	}
+	const pathname = req.nextUrl.pathname;
+	if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) {
+		return false;
+	}
+	return !FILE_EXTENSION.test(pathname);
+}
+
+/**
+ * The origin of `NEXTAUTH_URL`, or null when it is unset, unparsable or not
+ * an http(s) address.
+ */
+function mainOrigin(): URL | null {
+	const configured = process.env.NEXTAUTH_URL;
+	if (!configured) {
+		return null;
+	}
+	try {
+		const parsed = new URL(configured);
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+			return null;
+		}
+		return new URL(parsed.origin);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Sends a page visit on any host other than the one in `NEXTAUTH_URL` to the
+ * same path and query on that host (308), so the sign-in library's single
+ * return address and its host-bound cookies always match the address the
+ * visitor is on. API calls, other methods and files are never redirected, so
+ * integrations keep working on every address that reaches the app.
+ *
+ * The visitor's host is read from the `Host` header: `req.nextUrl.host` is
+ * the host this server listens on, not the one the visitor used, and Azure
+ * passes the visitor's `Host` through. The target is built only from
+ * `NEXTAUTH_URL`: its origin is copied and the request's path is assigned to
+ * it, never resolved against it, so a path such as `//other.example/x` stays
+ * a path on the main host. Returns null (no redirect) when `NEXTAUTH_URL` is
+ * not usable, the request carries no `Host`, or `NEXTAUTH_URL` names the
+ * origin this server itself listens on: Next.js sends a redirect to its own
+ * origin as a bare path, which the visitor's browser would follow back to the
+ * same host in a loop.
+ */
+function redirectToMainHost(req: NextRequest): NextResponse | null {
+	if (!isPageRequest(req)) {
+		return null;
+	}
+	const requestHost = req.headers.get("host")?.trim().toLowerCase();
+	const target = mainOrigin();
+	if (!(requestHost && target) || requestHost === target.host) {
+		return null;
+	}
+	if (target.origin === req.nextUrl.origin) {
+		return null;
+	}
+	target.pathname = req.nextUrl.pathname;
+	target.search = req.nextUrl.search;
+	return NextResponse.redirect(target, 308);
+}
+
+const authProxy = withAuth(
 	function proxy(req) {
 		const pathname = req.nextUrl.pathname;
 		const token = req.nextauth.token;
@@ -91,6 +168,12 @@ export default withAuth(
 		},
 	}
 );
+
+// The host redirect runs before `withAuth`, which would otherwise send a
+// signed-out visitor on any host to the sign-in page of that same host.
+export default function proxy(req: NextRequestWithAuth, event: NextFetchEvent) {
+	return redirectToMainHost(req) ?? authProxy(req, event);
+}
 
 // Specify which routes this middleware should run on
 export const config = {
