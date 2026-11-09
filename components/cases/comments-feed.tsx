@@ -32,6 +32,7 @@ interface CommentsFeedProps {
 
 interface CommentItemProps {
 	canEdit: boolean;
+	canResolveAny: boolean;
 	comment: CommentResponse;
 	currentUsername: string | null | undefined;
 	depth?: number;
@@ -125,6 +126,7 @@ function CommentMeta({
  */
 function CommentActions({
 	isTopLevel,
+	canResolve,
 	isResolved,
 	isOwnComment,
 	onReply,
@@ -133,6 +135,7 @@ function CommentActions({
 	onDelete,
 }: {
 	isTopLevel: boolean;
+	canResolve: boolean;
 	isResolved: boolean;
 	isOwnComment: boolean;
 	onReply: () => void;
@@ -155,7 +158,7 @@ function CommentActions({
 					</Button>
 				)}
 
-				{isTopLevel && (
+				{canResolve && (
 					<Button
 						className="hover:bg-primary/30"
 						onClick={onResolve}
@@ -203,6 +206,7 @@ function CommentItem({
 	node,
 	currentUsername,
 	canEdit,
+	canResolveAny,
 	depth = 0,
 	onDelete,
 	onResolve,
@@ -218,6 +222,7 @@ function CommentItem({
 	const isResolved = comment.resolved === true;
 	const isTopLevel = depth === 0;
 	const isOwnComment = currentUsername === comment.author;
+	const canResolve = isTopLevel && (isOwnComment || canResolveAny);
 
 	const nestedClass = depth > 0 ? "ml-6 border-border border-l-2 pl-4" : "";
 
@@ -261,6 +266,7 @@ function CommentItem({
 
 				{!edit && canEdit && (
 					<CommentActions
+						canResolve={canResolve}
 						isOwnComment={isOwnComment}
 						isResolved={isResolved}
 						isTopLevel={isTopLevel}
@@ -287,6 +293,7 @@ function CommentItem({
 					{comment.replies?.map((reply) => (
 						<CommentItem
 							canEdit={canEdit}
+							canResolveAny={canResolveAny}
 							comment={reply}
 							currentUsername={currentUsername}
 							depth={depth + 1}
@@ -311,6 +318,11 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
 	const currentUsername = session?.user?.name || session?.user?.email;
 	const canEdit = assuranceCase?.permissions !== "view";
+	// A commenter may resolve only their own threads; edit and manage access
+	// may resolve any thread.
+	const canResolveAny =
+		assuranceCase?.permissions === "edit" ||
+		assuranceCase?.permissions === "manage";
 
 	const handleDelete = async (id: number | string) => {
 		try {
@@ -412,6 +424,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 				{nodeComments.map((comment) => (
 					<CommentItem
 						canEdit={canEdit}
+						canResolveAny={canResolveAny}
 						comment={comment}
 						currentUsername={currentUsername}
 						key={comment.id}

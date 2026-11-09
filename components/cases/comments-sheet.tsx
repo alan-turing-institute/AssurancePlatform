@@ -33,10 +33,7 @@ export default function CommentsSheet() {
 	} = useStore();
 	const [loading, setLoading] = useState(false);
 
-	const readOnly = !!(
-		assuranceCase?.permissions === "view" ||
-		assuranceCase?.permissions === "comment"
-	);
+	const readOnly = assuranceCase?.permissions === "view";
 
 	const handleClose = () => {
 		setCommentsSheetOpen(false);
