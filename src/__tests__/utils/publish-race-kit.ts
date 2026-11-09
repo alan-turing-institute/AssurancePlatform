@@ -367,8 +367,11 @@ export type Operation = (scene: PublishedScene) => Promise<unknown>;
 
 /**
  * Starts the operations in order, each one only after the one before it is
- * blocked behind the case row, then lets them go. The holder is rolled back
- * so the queue takes the row in the order the operations joined it.
+ * blocked behind the case row, then lets them go. The holder is rolled back,
+ * so the queue takes the row in the order the operations joined it. That order
+ * is certain for the first writer, and for the second only when there are two.
+ * With three, once the first has changed the row, the second and third both
+ * move on to its new version and the database may serve them in either order.
  */
 export async function runQueued(
 	caseId: string,
