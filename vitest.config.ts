@@ -72,6 +72,8 @@ export default defineConfig({
 				"lib/**",
 				"actions/**",
 				"providers/**",
+				// The request hook lives at the repo root, outside the directories above.
+				"proxy.ts",
 			],
 			all: true,
 			clean: true,
