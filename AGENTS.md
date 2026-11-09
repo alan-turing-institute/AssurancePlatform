@@ -191,4 +191,5 @@ The pre-push hook regenerates the Prisma client, then runs lint and typecheck, o
 Work is tracked in GitHub Issues.
 The plugin system is real but partial: the manifest, slots and two official plugins (claim and evidence health, and the Case Assistant) exist; a marketplace does not.
 Staging deploys and the staging reseed workflow share one concurrency queue (`staging-database`), so a deploy and a reseed never run at the same time.
+Re-running an older Build run no longer rolls staging back, because its deploy is skipped as behind the running image; re-running the newest run still redeploys.
 Recover a broken staging database with one manual run of the reseed workflow (`gh workflow run seed-staging.yml --ref staging`), then restart the staging app if its health check does not return 200 within a few minutes.
