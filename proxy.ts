@@ -76,7 +76,12 @@ function redirectToMainHost(req: NextRequest): NextResponse | null {
 	}
 	target.pathname = req.nextUrl.pathname;
 	target.search = req.nextUrl.search;
-	return NextResponse.redirect(target, 308);
+	const response = NextResponse.redirect(target, 308);
+	// A 308 is cacheable by default; `no-store` keeps browsers from holding on
+	// to it, so putting the old address back as the main one takes effect for
+	// returning visitors instead of looping them to the address just left.
+	response.headers.set("Cache-Control", "no-store");
+	return response;
 }
 
 const authProxy = withAuth(
