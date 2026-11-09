@@ -34,6 +34,7 @@ Supply secrets through the deployment environment. These variable names come fro
 | `CRON_SECRET` | Authenticates scheduled maintenance routes |
 | `LOG_LEVEL` | Sets the structured logger's threshold |
 | `DB_POOL_TIMEOUT_MS` | Database connection wait limit; defaults to 5000 ms |
+| `CLOUDFLARE_ORIGIN_SECRET` | Optional. When set, and Cloudflare is configured to send the same value in the `x-origin-verify` request header, rate limits and the security log use the visitor's address from `cf-connecting-ip` (an IPv6 visitor by their /64 network). When unset, that header is ignored |
 
 The table covers common settings rather than every application variable. `SKIP_ELEMENT_VALIDATION` bypasses write-time element validation and must never be set in production. GitHub sign-in also reads `GITHUB_APP_CLIENT_ID_STAGING` and `GITHUB_APP_CLIENT_SECRET_STAGING` fallbacks. The compose file exposes only a subset of the application's optional integrations. Set Google, email and cron variables in the hosting environment if you use those features. A deployment should use its own secret values and a database password rather than the compose development defaults. The [scheduled jobs page](/docs/technical-guide/deployment/scheduled-jobs) explains the cron routes.
 
@@ -43,6 +44,8 @@ The [Case Assistant page](/docs/technical-guide/architecture/case-assistant) des
 ## Security and operations
 
 Terminate HTTPS at a proxy or hosting platform and keep PostgreSQL reachable only by the application and administrators who need it. The code implements rate limiting for several sensitive routes and records security audit events; check the [rate limiting and audit page](/docs/technical-guide/deployment/rate-limiting-and-audit-log) for the covered operations. Monitor `/api/health` as an application endpoint. The supplied compose file health-checks PostgreSQL but does not define an application container health check.
+
+If Cloudflare sits in front of the application, set `CLOUDFLARE_ORIGIN_SECRET` and have Cloudflare send the same value in an `x-origin-verify` header, so that rate limits and the security log see each visitor's own address and not Cloudflare's.
 
 The application sends a `Content-Security-Policy` header on every response, so a reverse proxy in front of it should pass the header through and not overwrite it.
 
