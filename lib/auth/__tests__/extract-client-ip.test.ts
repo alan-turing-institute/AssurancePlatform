@@ -110,4 +110,96 @@ describe("extractClientIp", () => {
 
 		expect(extractClientIp(headers)).toBe("2001:db8::1");
 	});
+
+	describe("behind Cloudflare", () => {
+		it("returns the visitor's cf-connecting-ip when x-client-ip is a Cloudflare IPv4 address", () => {
+			const headers = headersOf({
+				"x-client-ip": "172.71.130.5",
+				"x-forwarded-for": "172.71.130.5:4000",
+				"cf-connecting-ip": "203.0.113.20",
+			});
+
+			expect(extractClientIp(headers)).toBe("203.0.113.20");
+		});
+
+		it("returns an IPv6 visitor's cf-connecting-ip when x-client-ip is a Cloudflare IPv6 address", () => {
+			const headers = headersOf({
+				"x-client-ip": "2a06:98c0:3600::103",
+				"cf-connecting-ip": "2001:db8::20",
+			});
+
+			expect(extractClientIp(headers)).toBe("2001:db8::20");
+		});
+
+		it("matches a Cloudflare address given as an IPv4-mapped IPv6 address", () => {
+			const headers = headersOf({
+				"x-client-ip": "::ffff:172.71.130.5",
+				"cf-connecting-ip": "203.0.113.21",
+			});
+
+			expect(extractClientIp(headers)).toBe("203.0.113.21");
+		});
+
+		it("ignores a forged cf-connecting-ip when x-client-ip is not a Cloudflare address", () => {
+			const headers = headersOf({
+				"x-client-ip": "203.0.113.5",
+				"cf-connecting-ip": "198.51.100.77",
+			});
+
+			expect(extractClientIp(headers)).toBe("203.0.113.5");
+		});
+
+		it("ignores cf-connecting-ip when there is no x-client-ip, however x-forwarded-for reads", () => {
+			const headers = headersOf({
+				"x-forwarded-for": "198.51.100.1, 172.71.130.5",
+				"cf-connecting-ip": "198.51.100.77",
+			});
+
+			expect(extractClientIp(headers)).toBe("172.71.130.5");
+		});
+
+		it("falls back to the Cloudflare address when cf-connecting-ip is missing", () => {
+			const headers = headersOf({ "x-client-ip": "172.71.130.5" });
+
+			expect(extractClientIp(headers)).toBe("172.71.130.5");
+		});
+
+		it.each([
+			["not an address", "not-an-ip"],
+			["a list of addresses", "203.0.113.20, 198.51.100.1"],
+			["an address with a port", "203.0.113.20:4000"],
+			["blank", "   "],
+		])("falls back to the Cloudflare address when cf-connecting-ip is %s", (_label, value) => {
+			const headers = headersOf({
+				"x-client-ip": "172.71.130.5",
+				"cf-connecting-ip": value,
+			});
+
+			expect(extractClientIp(headers)).toBe("172.71.130.5");
+		});
+
+		it("trims whitespace around cf-connecting-ip", () => {
+			const headers = headersOf({
+				"x-client-ip": "172.71.130.5",
+				"cf-connecting-ip": "  203.0.113.22 ",
+			});
+
+			expect(extractClientIp(headers)).toBe("203.0.113.22");
+		});
+
+		it("treats addresses just outside a Cloudflare range as not Cloudflare", () => {
+			// 173.245.48.0/20 ends at 173.245.63.255.
+			const inside = headersOf({
+				"x-client-ip": "173.245.63.255",
+				"cf-connecting-ip": "203.0.113.23",
+			});
+			const outside = headersOf({
+				"x-client-ip": "173.245.64.0",
+				"cf-connecting-ip": "203.0.113.23",
+			});
+
+			expect(extractClientIp(inside)).toBe("203.0.113.23");
+			expect(extractClientIp(outside)).toBe("173.245.64.0");
+		});
+	});
 });

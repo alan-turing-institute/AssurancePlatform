@@ -1,13 +1,26 @@
+import { isIP } from "node:net";
+import { isCloudflareAddress } from "./cloudflare-ips";
+
 /**
  * Trustworthy client-IP extraction — the ONE sanctioned way to read a
  * client IP anywhere in this codebase. Do not read `x-forwarded-for`'s
  * first hop or `x-real-ip` directly; both are attacker-controllable in
  * our deployment.
  *
- * Trust chain (Azure App Service, no CDN/Front Door in front of it):
- * 1. `x-client-ip` — set by Azure App Service's front end with the true
- *    client IP, and OVERWRITTEN if a client tries to supply it. Not
- *    spoofable in this deployment.
+ * Trust chain (Azure App Service, with or without Cloudflare in front):
+ * 1. `x-client-ip` — set by Azure App Service's front end with the address
+ *    that connected to it, and OVERWRITTEN if a client tries to supply it.
+ *    Not spoofable in this deployment.
+ *    When that connecting address is inside Cloudflare's published ranges
+ *    (`cloudflare-ips.ts`), the request came through Cloudflare, which sets
+ *    `cf-connecting-ip` to the visitor's own address and overwrites any copy
+ *    the visitor sent. In that case a valid `cf-connecting-ip` is returned in
+ *    place of the Cloudflare address, so each visitor is counted separately.
+ *    A request from any other connecting address never has its
+ *    `cf-connecting-ip` read, so calling the App Service address directly
+ *    cannot choose the address that is counted. A missing or malformed
+ *    `cf-connecting-ip` behind Cloudflare falls back to the connecting
+ *    address itself.
  * 2. `x-forwarded-for` — Azure appends the true client IP as the LAST
  *    (rightmost) entry; every entry to its left can be attacker-supplied.
  *    Entries are formatted `IP:port` (or `[IPv6]:port`); the port is
@@ -19,14 +32,15 @@
  *    deployment's Azure assumptions don't hold.
  * 3. `"unknown"` if neither header is present (or both are empty/blank).
  *
- * If a CDN or Front Door is ever placed in front of App Service, this
- * trust chain must be revisited — a CDN can change which hop is safe to
- * trust, or introduce its own trusted-IP header.
+ * Cloudflare is the only CDN this trust chain knows about. If another CDN or
+ * Front Door is ever placed in front of App Service, this trust chain must be
+ * revisited — it can change which hop is safe to trust, or introduce its own
+ * trusted-IP header.
  */
 export function extractClientIp(headers: Headers): string {
 	const clientIp = headers.get("x-client-ip")?.trim();
 	if (clientIp) {
-		return clientIp;
+		return visitorBehindCloudflare(clientIp, headers) ?? clientIp;
 	}
 
 	const forwardedFor = headers.get("x-forwarded-for");
@@ -39,6 +53,22 @@ export function extractClientIp(headers: Headers): string {
 	}
 
 	return "unknown";
+}
+
+/**
+ * The visitor's own address from `cf-connecting-ip`, or null when the request
+ * did not come through Cloudflare (the connecting address is outside its
+ * published ranges) or the header is absent or not a valid address.
+ */
+function visitorBehindCloudflare(
+	connectingAddress: string,
+	headers: Headers
+): string | null {
+	if (!isCloudflareAddress(connectingAddress)) {
+		return null;
+	}
+	const visitor = headers.get("cf-connecting-ip")?.trim();
+	return visitor && isIP(visitor) !== 0 ? visitor : null;
 }
 
 /**
