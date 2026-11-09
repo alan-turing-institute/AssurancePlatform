@@ -7,6 +7,7 @@ import {
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { logger } from "@/lib/logger";
 import {
+	administrableCaseWhere,
 	canAccessCase,
 	getCasePermission,
 	viewableCaseWhere,
@@ -817,6 +818,34 @@ export async function listUserCases(
 		return { data: await listOwnAndDirectlySharedCases(userId, "CASE") };
 	} catch (error) {
 		log.error("listUserCases", { userId, error });
+		return { error: "Failed to fetch cases" };
+	}
+}
+
+/** A case a user can administer, as the integrations grant form lists it. */
+export interface AdministrableCaseSummary {
+	id: string;
+	name: string;
+}
+
+/**
+ * Fetches the ordinary cases the user can administer, newest first: ones they
+ * created and ones shared with them at ADMIN, directly or through a team.
+ * Excludes soft-deleted cases and patterns. These are the cases the user can
+ * grant an integration access to; the grant itself still checks ADMIN.
+ */
+export async function listAdministrableCases(
+	userId: string
+): ServiceResult<AdministrableCaseSummary[]> {
+	try {
+		const cases = await prisma.assuranceCase.findMany({
+			where: { kind: "CASE", AND: [administrableCaseWhere(userId)] },
+			select: { id: true, name: true },
+			orderBy: { createdAt: "desc" },
+		});
+		return { data: cases };
+	} catch (error) {
+		log.error("listAdministrableCases", { userId, error });
 		return { error: "Failed to fetch cases" };
 	}
 }
