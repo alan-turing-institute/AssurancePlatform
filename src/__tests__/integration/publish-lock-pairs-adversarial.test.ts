@@ -20,6 +20,7 @@ import {
 	discoverProblems,
 	errorOf,
 	imageCopyProblems,
+	type Observed,
 	type Operation,
 	observe,
 	type PublishedScene,
@@ -36,7 +37,9 @@ import {
  * after another on a second, identical case must leave the same stored state:
  * whichever order two writers meet in, nobody waits on a lock in reverse, no
  * writer fails with a generic error, and nothing a later writer decided on
- * was already out of date.
+ * was already out of date. With three writers the database fixes only which
+ * goes first, so the second and third may run in either order and the result
+ * may match either.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -129,15 +132,55 @@ function imageKinds(problems: string[]): string[] {
 	return problems.map((problem) => problem.replace(IMAGE_KEY, "<key>")).sort();
 }
 
+/** What a run leaves: the stored case and rows, and the problems with the image copies. */
+interface Outcome {
+	images: string[];
+	state: Observed;
+}
+
+/**
+ * Runs the operations one after another, on a new case, and reports what that
+ * leaves.
+ */
+async function outcomeInSequence(
+	makeScene: () => Promise<PublishedScene>,
+	operations: Operation[]
+): Promise<Outcome> {
+	const filesBefore = await publishedFileKeys();
+	const scene = await makeScene();
+	await runInSequence(scene, operations);
+	return {
+		state: await observe(scene.caseId),
+		images: imageKinds(await imageCopyProblems(filesBefore)),
+	};
+}
+
+/**
+ * The orders a queue can serve the operations in. The first writer always goes
+ * first and two writers always go in the order they queued. Once the first of
+ * three has changed the row, the other two both move on to its new version,
+ * and the database may serve either one first.
+ */
+function servingOrders(operations: Operation[]): Operation[][] {
+	const [first, second, third] = operations;
+	if (operations.length !== 3 || !(first && second && third)) {
+		return [operations];
+	}
+	return [operations, [first, third, second]];
+}
+
 /**
  * Declares a test that queues the operations on one case and holds it to the
  * rules every case must keep: nobody waits on a lock in reverse, and the case
  * and its published rows, the image copies and Discover all agree afterwards.
  * Unless `sequenceDecides` is false it also runs the operations one after
  * another on a second case and requires the same stored state, no logged
- * error and no generic failure. A pair keeps `sequenceDecides` off when one
- * writer's decision before it reached the row (who owns the case, whether it
- * is still in Trash) is what differs between the two runs, not the lock order.
+ * error and no generic failure; with three operations it runs them in each
+ * order the queue may serve them, on a new case each, and the stored state
+ * and the image copies must both match the same order. A pair keeps
+ * `sequenceDecides` off when one writer's decision before it reached the row
+ * (who owns the case, whether it is still in Trash) is what differs between
+ * the two runs, not the lock order.
  */
 function itQueuesLikeASequence(
 	title: string,
@@ -169,14 +212,15 @@ function itQueuesLikeASequence(
 				.filter((error) => GENERIC_FAILURE.test(error))
 		).toEqual([]);
 
-		const filesBeforeSequence = await publishedFileKeys();
-		const sequenceScene = await makeScene();
-		await runInSequence(sequenceScene, operations);
-		const sequence = await observe(sequenceScene.caseId);
-		const sequenceImages = await imageCopyProblems(filesBeforeSequence);
+		const sequences: Outcome[] = [];
+		for (const order of servingOrders(operations)) {
+			sequences.push(await outcomeInSequence(makeScene, order));
+		}
 
-		expect(queued).toEqual(sequence);
-		expect(imageKinds(queuedImages)).toEqual(imageKinds(sequenceImages));
+		expect(sequences).toContainEqual({
+			state: queued,
+			images: imageKinds(queuedImages),
+		});
 	});
 }
 
