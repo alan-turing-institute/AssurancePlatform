@@ -34,6 +34,7 @@ interface CommentItemProps {
 	canEdit: boolean;
 	canResolveAny: boolean;
 	comment: CommentResponse;
+	currentUserId: string | undefined;
 	currentUsername: string | null | undefined;
 	depth?: number;
 	node: CommentsFeedProps["node"];
@@ -42,6 +43,24 @@ interface CommentItemProps {
 	onResolve: (id: string, resolved: boolean) => Promise<void>;
 	replyingTo: string | null;
 	setReplyingTo: (id: string | null) => void;
+}
+
+/**
+ * Whether the signed-in person wrote the comment. User ids decide when both
+ * sides have one; otherwise the names are compared, because an edited comment
+ * comes back without an author id until the next refresh. A Google or GitHub
+ * sign-in carries the provider's display name rather than the stored username,
+ * so the name alone never matches their own comments.
+ */
+function wroteComment(
+	comment: CommentResponse,
+	currentUserId: string | undefined,
+	currentUsername: string | null | undefined
+): boolean {
+	if (currentUserId && comment.authorId) {
+		return comment.authorId === currentUserId;
+	}
+	return currentUsername === comment.author;
 }
 
 /**
@@ -204,6 +223,7 @@ function CommentActions({
 function CommentItem({
 	comment,
 	node,
+	currentUserId,
 	currentUsername,
 	canEdit,
 	canResolveAny,
@@ -221,7 +241,7 @@ function CommentItem({
 	const isReplyingToThis = replyingTo === String(comment.id);
 	const isResolved = comment.resolved === true;
 	const isTopLevel = depth === 0;
-	const isOwnComment = currentUsername === comment.author;
+	const isOwnComment = wroteComment(comment, currentUserId, currentUsername);
 	const canResolve = isTopLevel && (isOwnComment || canResolveAny);
 
 	const nestedClass = depth > 0 ? "ml-6 border-border border-l-2 pl-4" : "";
@@ -295,6 +315,7 @@ function CommentItem({
 							canEdit={canEdit}
 							canResolveAny={canResolveAny}
 							comment={reply}
+							currentUserId={currentUserId}
 							currentUsername={currentUsername}
 							depth={depth + 1}
 							key={reply.id}
@@ -316,6 +337,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const { assuranceCase, nodeComments, setNodeComments } = useStore();
 	const { data: session } = useSession();
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
+	const currentUserId = session?.user?.id;
 	const currentUsername = session?.user?.name || session?.user?.email;
 	const canEdit = assuranceCase?.permissions !== "view";
 	// A commenter may resolve only their own threads; edit and manage access
@@ -426,6 +448,7 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 						canEdit={canEdit}
 						canResolveAny={canResolveAny}
 						comment={comment}
+						currentUserId={currentUserId}
 						currentUsername={currentUsername}
 						key={comment.id}
 						node={node}
