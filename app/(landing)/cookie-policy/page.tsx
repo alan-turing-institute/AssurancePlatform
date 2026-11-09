@@ -19,9 +19,9 @@ const CookiePolicyPage = () => {
 					uses cookies on our website,{" "}
 					<a
 						className="text-primary underline"
-						href="https://assuranceplatform.turing.ac.uk/"
+						href="https://assuranceplatform.azurewebsites.net/"
 					>
-						https://assuranceplatform.turing.ac.uk/
+						https://assuranceplatform.azurewebsites.net/
 					</a>{" "}
 					(the &quot;Platform&quot;). This notice is designed to help you
 					understand what cookies are, why we use them, and your choices

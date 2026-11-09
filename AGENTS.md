@@ -17,7 +17,7 @@ Next.js ships documentation matched to the installed version in `node_modules/ne
 |---|---|
 | Local | `http://localhost:3000` |
 | Staging | `https://staging-assuranceplatform.azurewebsites.net` |
-| Production | `https://assuranceplatform.turing.ac.uk`; `https://assuranceplatform.azurewebsites.net` still answers API calls and health checks |
+| Production | `https://assuranceplatform.azurewebsites.net` |
 
 - `app/`: pages, layouts and API routes; `actions/`: internal UI server actions.
 - `lib/schemas/`: Zod input schemas; `lib/services/`: business logic and database operations.
@@ -91,7 +91,7 @@ Database setup, seed and test infrastructure necessarily access the database dir
   Derive user identity from authentication, never from client-supplied user IDs.
 - Read a client IP only through `extractClientIp` in `lib/auth/extract-client-ip.ts`.
   Never read `x-forwarded-for` or `x-real-ip` directly; both are attacker-controllable in this deployment.
-  The helper trusts `cf-connecting-ip` only when the connecting address is inside Cloudflare's published ranges (`lib/auth/cloudflare-ips.ts`); any other CDN or Front Door in front of App Service needs its trusted-hop policy revisited.
+  If a CDN or Front Door is ever placed in front of App Service, the helper's trusted-hop policy must be revisited.
 - Machine endpoints under `/api/machine/` use `requireApiToken` from `lib/auth/require-api-token.ts` with the scopes appropriate to the operation.
   Keep intentionally public routes and authentication-entry routes distinct from session-protected mutations.
 - Check case access in services using `canAccessCase` and the helpers in `lib/permissions.ts`.
