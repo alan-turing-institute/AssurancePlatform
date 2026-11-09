@@ -8,9 +8,49 @@ on:
     types: [completed]
 
 jobs:
-  seed:
+  # A build-triggered reseed runs only if the Build run's "Deploy to Azure
+  # (Staging)" step succeeded. That step is skipped when the deploy is skipped
+  # because staging already runs a newer commit, and a Build run with no
+  # deploy at all (a pull request, including the one that promotes staging to
+  # main) never reaches it, so neither wipes staging. A manual run always
+  # reseeds.
+  deploy-gate:
+    name: Check that the build deployed
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      actions: read
+    outputs:
+      reseed: ${{ steps.check.outputs.reseed }}
+    steps:
+      - name: Check the build's staging deploy step
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "reseed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CONCLUSION=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?filter=latest&per_page=100" \
+            --jq '[.jobs[].steps[]? | select(.name == "Deploy to Azure (Staging)") | .conclusion] | first // "none"')
+          echo "Deploy to Azure (Staging) in build run $RUN_ID: $CONCLUSION"
+
+          if [ "$CONCLUSION" = "success" ]; then
+            echo "reseed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "reseed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Staging reseed skipped::Build run $RUN_ID did not deploy; reseed skipped"
+          fi
+
+  seed:
+    needs: deploy-gate
+    runs-on: ubuntu-latest
+    if: ${{ needs.deploy-gate.outputs.reseed == 'true' }}
     # Staging deploys (build.yaml's deploy job) share this group, so a reset
     # never runs while another reset or a staging deploy job is in progress.
     # queue: max means no waiting run is cancelled: every reset and every
