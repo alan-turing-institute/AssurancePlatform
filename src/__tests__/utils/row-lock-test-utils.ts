@@ -34,10 +34,12 @@ export interface HeldRowLock {
 	release: () => Promise<void>;
 	/**
 	 * Signals the holder to roll back instead, so none of its writes land, and
-	 * resolves once it has. Writers queued behind the lock take the row strictly
-	 * in the order they queued, because the row they were waiting for is
-	 * unchanged. Use this when the holder only needs to hold the lock, and the
-	 * test depends on which queued writer goes first.
+	 * resolves once it has. The first queued writer takes the row first, and so
+	 * does the second when there are only two, because the row they were waiting
+	 * for is unchanged. Once the first has changed the row, later writers move on
+	 * to its new version and may be served in any order. Use this when the
+	 * holder only needs to hold the lock, and the test depends on which writer
+	 * goes first.
 	 */
 	rollback: () => Promise<void>;
 }

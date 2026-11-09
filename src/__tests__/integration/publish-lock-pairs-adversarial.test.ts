@@ -157,16 +157,15 @@ async function outcomeInSequence(
 
 /**
  * The orders a queue can serve the operations in. The first writer always goes
- * first and two writers always go in the order they queued. Once the first of
- * three has changed the row, the other two both move on to its new version,
- * and the database may serve either one first.
+ * first. Once it has changed the row, the rest all move on to its new version,
+ * and the database may serve them in any order. With two writers that leaves
+ * one order, and with three it leaves two.
  */
 function servingOrders(operations: Operation[]): Operation[][] {
-	const [first, second, third] = operations;
-	if (operations.length !== 3 || !(first && second && third)) {
-		return [operations];
-	}
-	return [operations, [first, third, second]];
+	const [first, ...rest] = operations;
+	return first
+		? permutations(rest).map((order) => [first, ...order])
+		: [operations];
 }
 
 /**
