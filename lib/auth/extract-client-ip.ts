@@ -1,5 +1,7 @@
 import { isIP } from "node:net";
 import { isCloudflareAddress } from "./cloudflare-ips";
+import { timingSafeCompare } from "./timing-safe";
+import { visitorNetwork } from "./visitor-network";
 
 /**
  * Trustworthy client-IP extraction — the ONE sanctioned way to read a
@@ -11,15 +13,23 @@ import { isCloudflareAddress } from "./cloudflare-ips";
  * 1. `x-client-ip` — set by Azure App Service's front end with the address
  *    that connected to it, and OVERWRITTEN if a client tries to supply it.
  *    Not spoofable in this deployment.
- *    When that connecting address is inside Cloudflare's published ranges
- *    (`cloudflare-ips.ts`), the request came through Cloudflare, which sets
- *    `cf-connecting-ip` to the visitor's own address and overwrites any copy
- *    the visitor sent. In that case a valid `cf-connecting-ip` is returned in
- *    place of the Cloudflare address, so each visitor is counted separately.
- *    A request from any other connecting address never has its
- *    `cf-connecting-ip` read, so calling the App Service address directly
- *    cannot choose the address that is counted. A missing or malformed
- *    `cf-connecting-ip` behind Cloudflare falls back to the connecting
+ *    `cf-connecting-ip`, the visitor's own address as Cloudflare saw it, is
+ *    returned in place of the connecting address only when BOTH hold:
+ *    - the connecting address is inside Cloudflare's published ranges
+ *      (`cloudflare-ips.ts`), and
+ *    - the request header `x-origin-verify` equals the app setting
+ *      `CLOUDFLARE_ORIGIN_SECRET`, compared in constant time. The secret is
+ *      added by a request-header rule in Turing's Cloudflare zone for this
+ *      site's host only.
+ *    Being inside Cloudflare's ranges does not prove the request passed
+ *    through that zone: a Cloudflare Worker calling this app's App Service
+ *    address connects from a Cloudflare address and sets `cf-connecting-ip`
+ *    itself, but cannot know the secret. When the setting is unset or empty,
+ *    `cf-connecting-ip` is never read. The setting is read on every call.
+ *    A trusted IPv6 visitor is returned as their /64 network
+ *    (`visitor-network.ts`), since an IPv6 connection holds a whole /64; an
+ *    IPv4-mapped IPv6 visitor is returned as the IPv4 address it wraps. A
+ *    missing or malformed `cf-connecting-ip` falls back to the connecting
  *    address itself.
  * 2. `x-forwarded-for` — Azure appends the true client IP as the LAST
  *    (rightmost) entry; every entry to its left can be attacker-supplied.
@@ -56,19 +66,34 @@ export function extractClientIp(headers: Headers): string {
 }
 
 /**
- * The visitor's own address from `cf-connecting-ip`, or null when the request
- * did not come through Cloudflare (the connecting address is outside its
- * published ranges) or the header is absent or not a valid address.
+ * The identity of the visitor named by `cf-connecting-ip` (see
+ * `visitorNetwork`), or null when the request cannot be trusted to have come
+ * through Turing's Cloudflare zone (the connecting address is outside
+ * Cloudflare's published ranges, or the origin secret is not configured or
+ * not presented) or the header is absent or not a valid address.
  */
 function visitorBehindCloudflare(
 	connectingAddress: string,
 	headers: Headers
 ): string | null {
-	if (!isCloudflareAddress(connectingAddress)) {
+	if (
+		!(isCloudflareAddress(connectingAddress) && presentsOriginSecret(headers))
+	) {
 		return null;
 	}
 	const visitor = headers.get("cf-connecting-ip")?.trim();
-	return visitor && isIP(visitor) !== 0 ? visitor : null;
+	return visitor && isIP(visitor) !== 0 ? visitorNetwork(visitor) : null;
+}
+
+/**
+ * True when `CLOUDFLARE_ORIGIN_SECRET` is set to a non-empty value and the
+ * request's `x-origin-verify` header equals it. The setting is read on each
+ * call, because it is an App Service setting applied while the app runs.
+ */
+function presentsOriginSecret(headers: Headers): boolean {
+	const secret = process.env.CLOUDFLARE_ORIGIN_SECRET?.trim();
+	const presented = headers.get("x-origin-verify");
+	return Boolean(secret && presented && timingSafeCompare(presented, secret));
 }
 
 /**
