@@ -17,7 +17,7 @@ Next.js ships documentation matched to the installed version in `node_modules/ne
 |---|---|
 | Local | `http://localhost:3000` |
 | Staging | `https://staging-assuranceplatform.azurewebsites.net` |
-| Production | `https://assuranceplatform.azurewebsites.net` |
+| Production | `https://assuranceplatform.turing.ac.uk`; `https://assuranceplatform.azurewebsites.net` still answers API calls and health checks |
 
 - `app/`: pages, layouts and API routes; `actions/`: internal UI server actions.
 - `lib/schemas/`: Zod input schemas; `lib/services/`: business logic and database operations.
