@@ -152,7 +152,11 @@ const SignInForm = () => {
 									<FormLabel>Email or Username</FormLabel>
 									<FormControl>
 										<Input
+											autoCapitalize="none"
+											autoComplete="username"
+											autoCorrect="off"
 											placeholder="alan.turing@example.com or aturing"
+											spellCheck={false}
 											type="text"
 											{...field}
 										/>
@@ -170,6 +174,7 @@ const SignInForm = () => {
 									<FormControl>
 										<div className="relative">
 											<Input
+												autoComplete="current-password"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>

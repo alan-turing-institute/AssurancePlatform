@@ -8,6 +8,7 @@ import {
 	assertSessionVersionCurrent,
 	getSessionVersion,
 } from "@/lib/auth/session-version";
+import { normaliseSignInIdentifier } from "@/lib/auth/sign-in-identifier";
 import { encryptForStorage } from "@/lib/auth/token-encryption";
 import { logger } from "@/lib/logger";
 
@@ -109,20 +110,34 @@ export async function authenticateWithPrisma(
 	const { verifyPassword, hashPassword } = await import(
 		"@/lib/auth/password-service"
 	);
+	const { findUserByEmailIgnoringCase } = await import(
+		"@/lib/services/user-email-lookup-service"
+	);
 	type PasswordAlgorithm = "django_pbkdf2" | "argon2id";
 
-	const user = await prisma.user.findFirst({
+	const userSelect = {
+		id: true,
+		username: true,
+		email: true,
+		passwordHash: true,
+		passwordAlgorithm: true,
+	} as const;
+
+	// The exact text first (username or email, as stored). Only when that finds
+	// nothing and the text contains "@" is the email compared ignoring
+	// capitals: a username never matches an email, and that comparison has no
+	// index. Usernames stay exact.
+	const exactMatch = await prisma.user.findFirst({
 		where: {
 			OR: [{ username }, { email: username }],
 		},
-		select: {
-			id: true,
-			username: true,
-			email: true,
-			passwordHash: true,
-			passwordAlgorithm: true,
-		},
+		select: userSelect,
 	});
+	const user =
+		exactMatch ??
+		(username.includes("@")
+			? await findUserByEmailIgnoringCase(username, userSelect)
+			: null);
 
 	if (!user?.passwordHash) {
 		return null;
@@ -531,14 +546,18 @@ export const authOptions: NextAuthOptions = {
 				password: { label: "Password", type: "password" },
 			},
 			async authorize(credentials, _req) {
-				const { username, password } = credentials ?? {};
+				// The identifier is trimmed here as well as in the form, because
+				// anyone can post to this endpoint directly. The password is
+				// passed on exactly as sent.
+				const identifier = normaliseSignInIdentifier(credentials?.username);
+				const password = credentials?.password;
 
-				if (!(username && password)) {
+				if (!(identifier && password)) {
 					return null;
 				}
 
 				try {
-					return await authenticateWithPrisma(username, password);
+					return await authenticateWithPrisma(identifier, password);
 				} catch (_error) {
 					return null;
 				}

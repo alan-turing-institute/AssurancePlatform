@@ -3,6 +3,7 @@ import { hashPassword } from "@/lib/auth/password-service";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
+import { findUserByEmailIgnoringCase } from "@/lib/services/user-email-lookup-service";
 import { validatePassword } from "@/lib/validation/validators";
 
 // Configuration
@@ -113,7 +114,8 @@ export async function requestPasswordReset(
 	ipAddress: string,
 	userAgent?: string
 ): Promise<RequestResetResult> {
-	const normalizedEmail = email.toLowerCase().trim();
+	const typedEmail = email.trim();
+	const normalizedEmail = typedEmail.toLowerCase();
 
 	// Check rate limit first
 	const rateLimitCheck = await checkRateLimit(normalizedEmail, ipAddress);
@@ -134,11 +136,20 @@ export async function requestPasswordReset(
 	// Record the attempt
 	await recordAttempt(normalizedEmail, ipAddress, false);
 
-	// Look up the user
-	const user = await prisma.user.findUnique({
-		where: { email: normalizedEmail },
-		select: { id: true, username: true, authProvider: true },
-	});
+	// Look up the user: the email as typed first, then ignoring capitals (a
+	// stored email can carry capitals; the limits above stay keyed on the
+	// lowercased address).
+	const userSelect = {
+		id: true,
+		username: true,
+		email: true,
+		authProvider: true,
+	} as const;
+	const user =
+		(await prisma.user.findUnique({
+			where: { email: typedEmail },
+			select: userSelect,
+		})) ?? (await findUserByEmailIgnoringCase(typedEmail, userSelect));
 
 	// If user doesn't exist or uses OAuth, pretend success to prevent enumeration
 	if (!user || user.authProvider !== "LOCAL") {
@@ -173,7 +184,7 @@ export async function requestPasswordReset(
 
 	// Send the email
 	const emailResult = await sendPasswordResetEmail({
-		to: normalizedEmail,
+		to: user.email,
 		username: user.username,
 		resetToken,
 		expiresInMinutes: RESET_TOKEN_EXPIRY_MINUTES,
