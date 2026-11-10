@@ -91,7 +91,9 @@ Database setup, seed and test infrastructure necessarily access the database dir
   Derive user identity from authentication, never from client-supplied user IDs.
 - Read a client IP only through `extractClientIp` in `lib/auth/extract-client-ip.ts`.
   Never read `x-forwarded-for` or `x-real-ip` directly; both are attacker-controllable in this deployment.
-  If a CDN or Front Door is ever placed in front of App Service, the helper's trusted-hop policy must be revisited.
+  The helper returns `cf-connecting-ip` only when the connecting address is inside Cloudflare's published ranges (`lib/auth/cloudflare-ips.ts`) and the request's `x-origin-verify` header equals the `CLOUDFLARE_ORIGIN_SECRET` setting; with the setting unset or blank, `cf-connecting-ip` is never read.
+  It counts an IPv6 visitor read from `cf-connecting-ip` by their /64 network; an IPv6 `x-client-ip` or `x-forwarded-for` address is used whole.
+  Any other CDN or Front Door in front of App Service needs its trusted-hop policy revisited.
 - Machine endpoints under `/api/machine/` use `requireApiToken` from `lib/auth/require-api-token.ts` with the scopes appropriate to the operation.
   Keep intentionally public routes and authentication-entry routes distinct from session-protected mutations.
 - Check case access in services using `canAccessCase` and the helpers in `lib/permissions.ts`.
