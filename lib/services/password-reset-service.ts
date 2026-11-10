@@ -1,10 +1,14 @@
 import crypto from "node:crypto";
 import { hashPassword } from "@/lib/auth/password-service";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
+import { clearSignInFailures } from "@/lib/services/rate-limit-service";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
 import { findUserByEmailIgnoringCase } from "@/lib/services/user-email-lookup-service";
 import { validatePassword } from "@/lib/validation/validators";
+
+const log = logger.child({ component: "password-reset" });
 
 // Configuration
 const RESET_TOKEN_EXPIRY_MINUTES = 60;
@@ -320,6 +324,22 @@ export async function resetPassword(
 			successful: true,
 		},
 	});
+
+	// A paused person's way back in: sign-in counts failures per email and per
+	// username, and both start again from zero (a name that two accounts
+	// share keeps its count). The password is already changed, so a failure
+	// here is logged and the reset still completes.
+	try {
+		const account = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { username: true },
+		});
+		await clearSignInFailures(account ? [email, account.username] : [email]);
+	} catch (error) {
+		log.error("Failed to clear sign-in failures after a password reset", {
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
 
 	await recordSecurityEvent({
 		event: "password_reset_completed",
