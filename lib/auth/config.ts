@@ -501,10 +501,13 @@ export const authOptions: NextAuthOptions = {
 			clientSecret:
 				process.env.GITHUB_APP_CLIENT_SECRET ||
 				(process.env.GITHUB_APP_CLIENT_SECRET_STAGING as string),
-			// Request repo scope to access private repositories for import feature
+			// Ask GitHub only for the profile and email address. The scope is
+			// written out so a change to the library's default cannot widen it,
+			// and so a request never goes out with no scope: GitHub answers
+			// such a request with every scope the person authorised earlier.
 			authorization: {
 				params: {
-					scope: "read:user user:email repo",
+					scope: "read:user user:email",
 				},
 			},
 		}),

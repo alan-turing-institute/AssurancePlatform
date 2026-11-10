@@ -73,7 +73,7 @@ function resolveGitHubLocation(body: GitHubImportInput): GitHubLocation {
 /**
  * POST /api/cases/import/github
  *
- * Imports an assurance case from a GitHub repository.
+ * Imports an assurance case from a file in a public GitHub repository.
  * Requires the user to have connected their GitHub account via OAuth.
  *
  * @body GitHubImportSchema
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 		if (!hasToken) {
 			return apiError(
 				forbidden(
-					"GitHub not connected. Please sign in with GitHub to connect your account before importing from GitHub."
+					"GitHub not connected. Connect your GitHub account before importing from a public GitHub repository."
 				)
 			);
 		}
