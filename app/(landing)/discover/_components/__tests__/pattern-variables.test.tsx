@@ -45,6 +45,11 @@ describe("PatternVariables", () => {
 		expect(screen.getByText("owner")).toBeVisible();
 		expect(screen.getByText("Who is responsible")).toBeVisible();
 		expect(screen.getAllByText(DEFAULT_VALUE)).toHaveLength(1);
+		const note = document.body.textContent ?? "";
+		expect(note).toContain(
+			"A case started from this pattern takes these values"
+		);
+		expect(note).not.toContain("asks you for a value");
 	});
 
 	it("shows markup in a name, meaning or value as text", () => {

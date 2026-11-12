@@ -32,7 +32,6 @@ import {
 	createTestElement,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { setContext, variableEntry } from "../utils/variables-kit";
 
 /**
  * The order of an exported case's children, whatever order the database
@@ -579,16 +578,6 @@ describe("the readers built on the export", () => {
 	it("start a case from a pattern in the pattern's order", async () => {
 		const owner = await createTestUser();
 		const fx = await siblingCase(owner, "PATTERN");
-		const entries: [string, string, string][] = [
-			[fx.p10, "v10", "aaaaaaaa10"],
-			[fx.p2, "v2", "aaaaaaaaa2"],
-			[fx.p1, "v1", "aaaaaaaaa1"],
-		];
-		for (const [elementId, name, id] of entries) {
-			await setContext(elementId, [
-				variableEntry("x", name, id, `meaning ${name}`),
-			]);
-		}
 		const source = await exported(owner.id, fx.caseId);
 		const expected = descriptionsInOrder(source.tree);
 
