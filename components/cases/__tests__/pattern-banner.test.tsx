@@ -36,6 +36,7 @@ describe("PatternBanner", () => {
 
 	it.each([
 		["view"],
+		["comment"],
 		["review"],
 		[undefined],
 	])("says you are viewing a pattern with %s permission", (permissions) => {

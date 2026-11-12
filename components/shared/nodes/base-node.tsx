@@ -86,7 +86,7 @@ export interface BaseNodeProps {
 	name: string;
 	/** The type of node (goal, strategy, property, evidence) */
 	nodeType: DiagramNodeType;
-	/** The author's guidance for a placeholder; a case's placeholder with no text shows it in place of the text. */
+	/** The author's guidance for a placeholder; a placeholder with no text shows it in place of the text, in a case or a pattern. */
 	placeholderHint?: string;
 	/** Whether the node is currently selected */
 	selected?: boolean;
@@ -166,9 +166,8 @@ const NO_TERMS: readonly DefinedTerm[] = [];
  * The text a card draws and the terms it resolves references with. A card
  * given terms leaves its references for the text component to resolve; one
  * given none writes each as `{name}`, so no word is highlighted. A card with
- * no text draws `hint` in its place when it has one (a placeholder's hint, in
- * a pattern as in a case) (`isHint` says so),
- * otherwise a note that there is none.
+ * no text draws `hint` in its place when it has one, and sets `isHint`;
+ * otherwise it draws a note that there is none.
  */
 function cardText(
 	description: string | undefined,
