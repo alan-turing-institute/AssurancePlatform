@@ -6,11 +6,14 @@ import useStore from "@/store/store";
 /**
  * A notice at the top left of the editor, under the header, that says the case
  * on screen is a pattern. It takes only the width of its text, so it leaves
- * the root of the argument, which sits at the top centre, uncovered. Renders
- * nothing for an ordinary case.
+ * the root of the argument, which sits at the top centre, uncovered. It says
+ * "editing" to a viewer with edit or manage permission and "viewing" to anyone
+ * else. Renders nothing for an ordinary case.
  */
 export function PatternBanner() {
 	const kind = useStore((state) => state.assuranceCase?.kind);
+	const permissions = useStore((state) => state.assuranceCase?.permissions);
+	const canEdit = permissions === "edit" || permissions === "manage";
 
 	if (kind !== "PATTERN") {
 		return null;
@@ -22,7 +25,9 @@ export function PatternBanner() {
 			data-testid="pattern-banner"
 		>
 			<Shapes aria-hidden="true" className="h-4 w-4" />
-			<p>This is a pattern.</p>
+			<p>
+				{canEdit ? "You are editing a pattern." : "You are viewing a pattern."}
+			</p>
 		</div>
 	);
 }
