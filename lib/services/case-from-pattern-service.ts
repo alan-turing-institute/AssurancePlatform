@@ -1,5 +1,4 @@
 import {
-	type PatternVariable,
 	patternVariables,
 	setVariableValues,
 } from "@/lib/case/pattern-variables";
@@ -222,35 +221,6 @@ async function readPattern(
 	return "patternCaseId" in source
 		? await readPatternCase(userId, source.patternCaseId)
 		: await readPublishedPattern(source.publishedSlug);
-}
-
-/**
- * Lists the variables of a pattern the user may read, for the new-case
- * dialog's fields: each with its name and meaning, and any value the pattern
- * gives it. The pattern is found in the same way, and refused in the same
- * words, as when a case is started from it.
- */
-export async function readPatternVariables(
-	userId: string,
-	source: PatternSource
-): ServiceResult<PatternVariable[]> {
-	const parsedSource = patternSourceSchema.safeParse(source);
-	if (!parsedSource.success) {
-		return {
-			error: parsedSource.error.issues[0]?.message ?? "Invalid pattern source",
-		};
-	}
-
-	try {
-		const pattern = await readPattern(userId, parsedSource.data);
-		if ("error" in pattern) {
-			return pattern;
-		}
-		return { data: patternVariables(pattern.data.file) };
-	} catch (error) {
-		log.error("readPatternVariables", { userId, error });
-		return { error: "Failed to read the pattern's variables" };
-	}
 }
 
 /**
