@@ -31,7 +31,6 @@ import {
 	drawnContentAttribute,
 } from "@/lib/case/plugin-display-capture";
 import type { ElementAppearance } from "@/lib/plugins/slots";
-import type { CaseKind } from "@/lib/schemas/case-export";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
@@ -164,23 +163,11 @@ function ExpandedContent({
 const NO_TERMS: readonly DefinedTerm[] = [];
 
 /**
- * The hint a card draws where its text will go. Only a placeholder in a case
- * has one: in a pattern the hint is the author's note to whoever uses the
- * pattern, and the edit dialog shows it.
- */
-function hintInPlaceOfText(
-	isPlaceholder: boolean,
-	kind: CaseKind | undefined,
-	hint: string | undefined
-): string | undefined {
-	return isPlaceholder && kind !== "PATTERN" ? hint : undefined;
-}
-
-/**
  * The text a card draws and the terms it resolves references with. A card
  * given terms leaves its references for the text component to resolve; one
  * given none writes each as `{name}`, so no word is highlighted. A card with
- * no text draws `hint` in its place when it has one (`isHint` says so),
+ * no text draws `hint` in its place when it has one (a placeholder's hint, in
+ * a pattern as in a case) (`isHint` says so),
  * otherwise a note that there is none.
  */
 function cardText(
@@ -216,11 +203,11 @@ export default function BaseNode({
 	expandTour,
 	terms: termsInReach,
 }: BaseNodeProps) {
-	const { layoutNodes, layoutDirection, assuranceCase } = useStore();
+	const { layoutNodes, layoutDirection } = useStore();
 	const { descriptionText, isHint, terms } = cardText(
 		description,
 		termsInReach,
-		hintInPlaceOfText(isPlaceholder, assuranceCase?.kind, placeholderHint)
+		isPlaceholder ? placeholderHint : undefined
 	);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { fitView, getNodes, getEdges } = useReactFlow();

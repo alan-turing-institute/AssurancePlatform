@@ -113,7 +113,7 @@ describe("BaseNode — placeholders", () => {
 		expect(screen.getByText("No description available")).toBeInTheDocument();
 	});
 
-	it("keeps the usual note for a pattern's placeholder: the hint is for whoever uses the pattern", () => {
+	it("shows a pattern's placeholder hint in italics, as a case does", () => {
 		useStore.setState({
 			assuranceCase: { kind: "PATTERN" } as AssuranceCaseResponse,
 		});
@@ -127,7 +127,37 @@ describe("BaseNode — placeholders", () => {
 			/>
 		);
 
+		expect(screen.getByText("A hint")).toHaveClass("italic");
+		expect(screen.queryByText("No description available")).toBeNull();
+	});
+
+	it("keeps the usual note for a pattern's non-placeholder with no text, and shows written text", () => {
+		useStore.setState({
+			assuranceCase: { kind: "PATTERN" } as AssuranceCaseResponse,
+		});
+		const empty = renderWithReactFlow(
+			<BaseNode
+				description=""
+				name="P1"
+				nodeType="property"
+				placeholderHint="A hint"
+			/>
+		);
+
 		expect(screen.getByText("No description available")).toBeInTheDocument();
+		expect(screen.queryByText("A hint")).toBeNull();
+		empty.unmount();
+		renderWithReactFlow(
+			<BaseNode
+				description="Written"
+				isPlaceholder
+				name="P2"
+				nodeType="property"
+				placeholderHint="A hint"
+			/>
+		);
+
+		expect(screen.getByText("Written")).toBeInTheDocument();
 		expect(screen.queryByText("A hint")).toBeNull();
 	});
 });
