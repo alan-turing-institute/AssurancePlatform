@@ -27,6 +27,7 @@
  * appear — the same observable behaviour as the plugin being disabled).
  */
 
+import { Activity } from "lucide-react";
 import { logger } from "@/lib/logger";
 import {
 	casePanelSlot,
@@ -78,6 +79,7 @@ export function registerHealthPlugin(): void {
 			pluginId: PLUGIN_ID,
 			panelId: PLUGIN_ID,
 			label: "Evidence health",
+			icon: Activity,
 			Component: EvidenceHealthPanel,
 		});
 	} catch (error) {
