@@ -35,13 +35,13 @@ The first half maps controls you can use in the current platform. The second hal
 
 ### Teams and roles
 
-At `/dashboard/teams`, use **New Team** to create a team for people who will work together over time. A team admin manages membership and settings; a member participates as a member. The creator starts as an admin. A team role does not automatically grant admin rights on a case. The team still needs an explicit case grant.
+On the [Teams page](/dashboard/teams), use **New Team** to create a team for people who will work together over time. A team admin manages membership and settings; a member participates as a member. The creator starts as an admin. A team role does not automatically grant admin rights on a case. The team still needs an explicit case grant.
 
 ![The teams dashboard and New Team control](/images/docs/shots/m4-01.png)
 
 ### Share the working case
 
-If you own a case or have Admin access, open `/case/<caseId>` and choose **Share**. In **Share Case**, you can grant an existing account access by email or grant one of your teams access. Choose **Can view**, **Can comment**, **Can edit** or **Admin** for the work they need to do. For an unknown email, the dialog gives you an invite link to copy and send yourself. It works only for an account with that email; the platform does not send the invitation email. A collaborator finds cases shared with them at `/dashboard/shared`. Remove a direct or team grant in the dialog when it is no longer needed. A person may still have access through another grant, so check both lists.
+If you own a case or have Admin access, open the case and choose **Share**. In **Share Case**, you can grant an existing account access by email or grant one of your teams access. Choose **Can view**, **Can comment**, **Can edit** or **Admin** for the work they need to do. For an unknown email, the dialog gives you an invite link to copy and send yourself. It works only for an account with that email; the platform does not send the invitation email. A collaborator finds cases shared with them under [Shared With Me](/dashboard/shared). Remove a direct or team grant in the dialog when it is no longer needed. A person may still have access through another grant, so check both lists.
 
 ![The Share Case dialog with people, teams and permission levels](/images/docs/shots/m4-02.png)
 
@@ -65,7 +65,7 @@ When the case is ready for wider reading, complete the required case information
 
 ### Integrate a machine client
 
-Under `/dashboard/settings/integrations`, register an integration, select its scopes, grant case access and issue a token. A service can then use the documented machine surface for identity and health evidence operations. The token secret is shown once. Revoke a token or remove a case grant when the service should stop. A machine integration is for automated work; it is not a substitute for inviting a reviewer as a person.
+In the [integrations settings](/dashboard/settings/integrations), register an integration, select its scopes, grant case access and issue a token. A service can then use the documented machine surface for identity and health evidence operations. The token secret is shown once. Revoke a token or remove a case grant when the service should stop. A machine integration is for automated work; it is not a substitute for inviting a reviewer as a person.
 
 ![An integration card with scopes, tokens and case access](/images/docs/shots/m4-06.png)
 
