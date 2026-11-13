@@ -308,7 +308,6 @@ function NamedEntryRow({
 		focus: () => boxWithProblem()?.focus(),
 		select: () => boxWithProblem()?.select(),
 	};
-	const hasValue = !!entry.value?.trim();
 	const label = `Context entry ${idx + 1}`;
 	const problems = entryProblems(form, idx);
 	return (
@@ -319,6 +318,10 @@ function NamedEntryRow({
 			name={`context.${idx}`}
 			render={({ field }) => {
 				const current = isNamedEntryValue(field.value) ? field.value : entry;
+				// Whether the entry has a value is read from the form's own copy, which
+				// follows each keystroke; `entry` is only the list as it stood when the
+				// name or the list last changed.
+				const hasValue = !!current.value?.trim();
 				const update = (patch: Partial<NamedContextEntry>) =>
 					field.onChange({ ...current, ...patch });
 				return (
@@ -387,7 +390,7 @@ function NamedEntryRow({
 						/>
 						<VariableSwitch
 							checked={current.variable === true}
-							hasValue={!!current.value?.trim()}
+							hasValue={hasValue}
 							label={label}
 							onChange={(checked) =>
 								update({ variable: checked ? true : undefined })
