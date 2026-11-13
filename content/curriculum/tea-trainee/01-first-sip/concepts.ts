@@ -21,8 +21,7 @@ export const coreElementsConcepts: Concept[] = [
 			"Must be clear and concise",
 			"Sets the direction for the entire argument",
 		],
-		example:
-			"The AI recruitment system makes fair hiring recommendations.",
+		example: "The AI recruitment system makes fair hiring recommendations.",
 	},
 	{
 		id: "concept-strategy",

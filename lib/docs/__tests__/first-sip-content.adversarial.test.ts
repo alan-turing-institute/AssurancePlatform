@@ -77,9 +77,10 @@ describe("first-sip stage files (adversarial)", () => {
 				.join(",");
 		expect(seq("P")).toBe("P1,P2,P3,P4,P5,P6,P7");
 		expect(seq("E")).toBe("E1,E2,E3,E4,E5");
-		const byName = (name: string) => nodes.find((n) => n.name === name) as
-			| (RawNode & { description?: string; context?: string[] })
-			| undefined;
+		const byName = (name: string) =>
+			nodes.find((n) => n.name === name) as
+				| (RawNode & { description?: string; context?: string[] })
+				| undefined;
 		expect(byName("G1")?.description).toBe(
 			"The AI recruitment system makes fair hiring recommendations."
 		);
