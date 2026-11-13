@@ -626,11 +626,16 @@ describe("claimHealthPrompt", () => {
 	it("tells the model to lead with out of date and to call an out-of-date result the last result", () => {
 		const prompt = claimHealthPrompt("available");
 
+		expect(prompt).toContain("give that before the result");
+		expect(prompt).toContain("give the result as the claim's last result");
 		expect(prompt).toContain(
-			"When a result is out of date, say so first, with the reason and since when, and give the result as the claim's last result"
+			"Never present an out-of-date result as the claim's current result"
 		);
 		expect(prompt).toContain(
-			"never present an out-of-date result as the claim's current result"
+			"When outOfDateSince is null, say that the time is not known."
+		);
+		expect(prompt).toContain(
+			"Say plainly when a result was judged with settings different from the accepted ones"
 		);
 	});
 
