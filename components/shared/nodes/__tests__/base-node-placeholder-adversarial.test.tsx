@@ -89,7 +89,7 @@ describe("a card for a placeholder in a case", () => {
 });
 
 describe("a card for a placeholder in a pattern", () => {
-	it("keeps the hint off the card, which the edit dialog shows to the author", () => {
+	it("draws the hint in italics where the text will go", () => {
 		showCase("PATTERN");
 
 		renderWithReactFlow(
@@ -102,8 +102,8 @@ describe("a card for a placeholder in a pattern", () => {
 			/>
 		);
 
-		expect(screen.queryByText(HINT)).toBeNull();
-		expect(screen.getByText("No description available")).toBeInTheDocument();
+		expect(screen.getByText(HINT)).toHaveClass("italic");
+		expect(screen.queryByText("No description available")).toBeNull();
 	});
 });
 
