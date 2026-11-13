@@ -30,7 +30,7 @@ const getProgressDotClass = (
 	isAccessible: boolean
 ): string => {
 	const baseClasses =
-		"relative flex items-center justify-center transition-all";
+		"relative flex items-center justify-center rounded-full transition-all";
 
 	if (stageId === currentStage) {
 		// Current stage - highlighted
