@@ -208,7 +208,7 @@ const StageSelector = ({
 				    viewports, so the prev/next buttons stay outside it and
 				    always reachable even if a viewport is narrower than the
 				    shrunk dots still need. */}
-				<div className="flex min-w-0 flex-1 items-center justify-center overflow-x-auto">
+				<div className="flex min-w-0 flex-1 items-center justify-center overflow-x-auto px-1 py-2">
 					{stages.map((stage, index) => {
 						const isCompleted = completedStages.has(stage.id);
 						const isCurrent = stage.id === currentStage;
