@@ -28,7 +28,7 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Setting the Context",
 		shortTitle: "Context",
 		guidance:
-			"Expand G1 again. Its context — a bulleted list inside the goal's own card — defines the scope and assumptions of the argument. Notice how the context specifies what 'fairness' means in this case and describes the operational environment. These boundaries are essential for interpreting the rest of the argument.",
+			"Expand G1 again. Its context — a bulleted list inside the goal's own card — defines the scope and assumptions of the argument. Notice how the context says who uses the system and describes the operational environment. These boundaries are essential for interpreting the rest of the argument.",
 		prompts: [
 			{
 				id: "select-g1",
@@ -60,12 +60,12 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Diving into Discrimination Prevention",
 		shortTitle: "Claims",
 		guidance:
-			"Property claims are specific, testable statements that support a strategy. Select the property claims P1 and P2 in the discrimination prevention branch. Notice how these claims are more concrete than the goal: P1 addresses training data quality, while P2 focuses on statistical testing. Each claim will need evidence to support it. Expand P1 and P2 to find an assumption on P1 and a justification on P2.",
+			"Property claims are specific, testable statements that support a strategy. Select the property claims P1, P2 and P3 in the discrimination prevention branch. Notice how these claims are more concrete than the goal: P1 addresses the balance of the training data, P2 its cleansing, and P3 focuses on statistical testing. Each claim will need evidence to support it. Expand P1 and P3 to find an assumption on P1 and a justification on P3.",
 		prompts: [
 			{
 				id: "select-claims",
-				text: "Select the property claims P1 and P2.",
-				select: ["P1", "P2"],
+				text: "Select the property claims P1, P2 and P3.",
+				select: ["P1", "P2", "P3"],
 			},
 		],
 		caseFile: "curriculum/first-sip/stage-4-claims.json",
@@ -76,12 +76,12 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Grounding in Evidence",
 		shortTitle: "Evidence",
 		guidance:
-			"Evidence provides the concrete proof supporting each claim. Select the evidence E1 and E2 to see what artefacts support the discrimination prevention claims. E1 is an audit report demonstrating balanced training data, while E2 presents statistical fairness metrics. Consider whether this evidence is sufficient to support the claims.",
+			"Evidence provides the concrete proof supporting each claim. Select the evidence E1, E2 and E3 to see what artefacts support the discrimination prevention claims. E1 is an audit report demonstrating balanced training data, E2 is a log of the data cleansing, and E3 presents statistical fairness metrics. Consider whether this evidence is sufficient to support the claims.",
 		prompts: [
 			{
 				id: "select-evidence",
-				text: "Select the evidence E1 and E2.",
-				select: ["E1", "E2"],
+				text: "Select the evidence E1, E2 and E3.",
+				select: ["E1", "E2", "E3"],
 			},
 		],
 		caseFile: "curriculum/first-sip/stage-5-evidence.json",
@@ -92,12 +92,12 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "Transparency and Explainability",
 		shortTitle: "Transparency",
 		guidance:
-			"Now explore the transparency branch under Strategy S2. Select P3 and P4 to see how explainability and appeals are addressed, then examine their supporting evidence (E3 and E4). Compare this branch to the discrimination prevention branch—notice how different aspects of fairness require different types of evidence.",
+			"Now explore the transparency branch under Strategy S2. Select P4 and P5 to see how explainability and appeals are addressed, then examine their supporting evidence (E4 and E5). Compare this branch to the discrimination prevention branch—notice how different aspects of fairness require different types of evidence.",
 		prompts: [
 			{
 				id: "select-claims-and-evidence",
-				text: "Select the claims P3 and P4, then their evidence, E3 and E4.",
-				select: ["P3", "P4", "E3", "E4"],
+				text: "Select the claims P4 and P5, then their evidence, E4 and E5.",
+				select: ["P4", "P5", "E4", "E5"],
 			},
 		],
 		caseFile: "curriculum/first-sip/stage-6-transparency.json",
@@ -108,12 +108,12 @@ export const fairRecruitmentStages: StageDefinition[] = [
 		title: "The Complete Picture",
 		shortTitle: "Complete",
 		guidance:
-			"The full assurance case is now visible. Explore the monitoring branch (S3) with its claims P5 and P6. Notice that these claims have no evidence attached—this represents a gap in the argument. Navigate freely through all branches using the viewer controls. Consider the overall structure: does the argument convincingly support the goal?",
+			"The full assurance case is now visible. Explore the monitoring branch (S3) with its claims P6 and P7. Notice that these claims have no evidence attached—this represents a gap in the argument. Navigate freely through all branches using the viewer controls. Consider the overall structure: does the argument convincingly support the goal?",
 		prompts: [
 			{
 				id: "select-monitoring-claims",
-				text: "Select the monitoring claims, P5 and P6.",
-				select: ["P5", "P6"],
+				text: "Select the monitoring claims, P6 and P7.",
+				select: ["P6", "P7"],
 			},
 		],
 		caseFile: "curriculum/first-sip/stage-7-complete.json",

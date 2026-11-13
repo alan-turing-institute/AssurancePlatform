@@ -55,15 +55,45 @@ describe("first-sip stage files (adversarial)", () => {
 		const stageNumber = Number(file.match(STAGE_NUMBER)?.[1]);
 		const nodes = collect(load(file).tree);
 		const p1 = nodes.find((n) => n.name === "P1");
-		const p2 = nodes.find((n) => n.name === "P2");
+		const p3 = nodes.find((n) => n.name === "P3");
 		const has = (v?: string) => (v ?? "").trim().length > 0;
 		if (stageNumber >= 4) {
 			expect(has(p1?.assumption)).toBe(true);
-			expect(has(p2?.justification)).toBe(true);
+			expect(has(p3?.justification)).toBe(true);
 		} else {
 			expect(has(p1?.assumption)).toBe(false);
-			expect(has(p2?.justification)).toBe(false);
+			expect(has(p3?.justification)).toBe(false);
 		}
+	});
+
+	it("shows the split example with sequential, unique names in the complete case", () => {
+		const nodes = collect(load("stage-7-complete.json").tree);
+		const names = nodes.map((n) => n.name);
+		expect(new Set(names).size).toBe(names.length);
+		const seq = (prefix: string) =>
+			names
+				.filter((n) => n?.startsWith(prefix))
+				.sort()
+				.join(",");
+		expect(seq("P")).toBe("P1,P2,P3,P4,P5,P6,P7");
+		expect(seq("E")).toBe("E1,E2,E3,E4,E5");
+		const byName = (name: string) => nodes.find((n) => n.name === name) as
+			| (RawNode & { description?: string; context?: string[] })
+			| undefined;
+		expect(byName("G1")?.description).toBe(
+			"The AI recruitment system makes fair hiring recommendations."
+		);
+		expect(byName("G1")?.context?.[0]).toBe(
+			"The system is used by the HR recruitment team, who review its recommendations and make every hiring decision."
+		);
+		expect(byName("S1")?.children?.map((c) => c.name)).toEqual([
+			"P1",
+			"P2",
+			"P3",
+		]);
+		expect(byName("P2")?.description).toBe(
+			"The training dataset has been cleansed of historically discriminatory patterns."
+		);
 	});
 
 	it("only prompts for elements that exist in that stage's file", () => {
