@@ -21,8 +21,7 @@ export const coreElementsConcepts: Concept[] = [
 			"Must be clear and concise",
 			"Sets the direction for the entire argument",
 		],
-		example:
-			"The AI recruitment system makes fair and non-discriminatory hiring recommendations.",
+		example: "The AI recruitment system makes fair hiring recommendations.",
 	},
 	{
 		id: "concept-strategy",
@@ -36,7 +35,7 @@ export const coreElementsConcepts: Concept[] = [
 			"Makes the argument structure explicit and transparent",
 		],
 		example:
-			"Demonstrate fairness through discrimination prevention mechanisms and effective mitigation strategies implemented throughout the AI system's lifecycle.",
+			"Demonstrate fairness by showing that neither the training data nor the system's recommendations discriminate on any protected characteristic under the UK Equality Act 2010.",
 	},
 	{
 		id: "concept-property-claim",
@@ -50,7 +49,7 @@ export const coreElementsConcepts: Concept[] = [
 			"Directly linked to evidence",
 		],
 		example:
-			"The training dataset has been audited and balanced to ensure representation across all demographic groups and cleansed of historically discriminatory patterns.",
+			"The training dataset represents every demographic group in balanced proportions.",
 	},
 	{
 		id: "concept-evidence",
@@ -78,7 +77,7 @@ export const coreElementsConcepts: Concept[] = [
 			"Makes explicit what is excluded from scope",
 		],
 		example:
-			"Fairness is defined according to UK Equality Act 2010 protected characteristics (age, disability, gender reassignment, marriage, pregnancy, race, religion, sex, and sexual orientation).",
+			"The system is used by the HR recruitment team, who review its recommendations and make every hiring decision.",
 	},
 	{
 		id: "concept-justification",

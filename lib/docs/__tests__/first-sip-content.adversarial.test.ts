@@ -13,6 +13,8 @@ const DIR = path.join(ROOT, "public/data/curriculum/first-sip");
 interface RawNode {
 	assumption?: string;
 	children?: RawNode[];
+	context?: string[];
+	description?: string;
 	justification?: string;
 	name?: string;
 }
@@ -55,15 +57,61 @@ describe("first-sip stage files (adversarial)", () => {
 		const stageNumber = Number(file.match(STAGE_NUMBER)?.[1]);
 		const nodes = collect(load(file).tree);
 		const p1 = nodes.find((n) => n.name === "P1");
-		const p2 = nodes.find((n) => n.name === "P2");
+		const p3 = nodes.find((n) => n.name === "P3");
 		const has = (v?: string) => (v ?? "").trim().length > 0;
 		if (stageNumber >= 4) {
 			expect(has(p1?.assumption)).toBe(true);
-			expect(has(p2?.justification)).toBe(true);
+			expect(has(p3?.justification)).toBe(true);
 		} else {
 			expect(has(p1?.assumption)).toBe(false);
-			expect(has(p2?.justification)).toBe(false);
+			expect(has(p3?.justification)).toBe(false);
 		}
+	});
+
+	it.each(
+		files
+	)("%s shows the split example with sequential, unique names", (file) => {
+		const stageNumber = Number(file.match(STAGE_NUMBER)?.[1]);
+		const nodes = collect(load(file).tree);
+		const names = nodes.map((n) => n.name);
+		expect(new Set(names).size).toBe(names.length);
+		const byName = (name: string) => nodes.find((n) => n.name === name);
+		expect(byName("G1")?.description).toBe(
+			"The AI recruitment system makes fair hiring recommendations."
+		);
+		if (stageNumber >= 2) {
+			expect(byName("G1")?.context?.[0]).toBe(
+				"The system is used by the HR recruitment team, who review its recommendations and make every hiring decision."
+			);
+		}
+		if (stageNumber >= 3) {
+			expect(byName("S1")?.description).toBe(
+				"Demonstrate fairness by showing that neither the training data nor the system's recommendations discriminate on any protected characteristic under the UK Equality Act 2010."
+			);
+		}
+		if (stageNumber >= 4) {
+			expect(byName("S1")?.children?.map((c) => c.name)).toEqual([
+				"P1",
+				"P2",
+				"P3",
+			]);
+			expect(byName("P2")?.description).toBe(
+				"The training dataset has been cleansed of historically discriminatory patterns."
+			);
+		}
+	});
+
+	it("numbers the claims P1 to P7 and the evidence E1 to E5 in the complete case", () => {
+		const names = collect(load("stage-7-complete.json").tree).map(
+			(n) => n.name
+		);
+		const seq = (prefix: string) =>
+			names
+				.filter((n) => n?.startsWith(prefix))
+				.sort()
+				.join(",");
+		expect(seq("P")).toBe("P1,P2,P3,P4,P5,P6,P7");
+		expect(seq("E")).toBe("E1,E2,E3,E4,E5");
 	});
 
 	it("only prompts for elements that exist in that stage's file", () => {
