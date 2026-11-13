@@ -3,13 +3,13 @@ title: "Publishing and Discover"
 description: "Publish a frozen snapshot of an assurance case or a pattern, update it and remove its public listing."
 ---
 
-Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public Discover page at `/discover` lists published cases and published patterns. A visitor can open a published case or pattern by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
+Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public [Discover page](/discover) lists published cases and published patterns. A visitor can open a published case or pattern by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
 
 The same frozen snapshot is also available without sign-in as JSON at `/api/public/discover/<slug>`. Review all case and plugin data included in the export before publishing.
 
 ## Prepare the case
 
-Open the case at `/case/<caseId>` and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
+Open the case and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
 
 A case with elements still to fill in cannot be published either.
 An element marked **To fill in** on the diagram is a placeholder that nobody has written yet, for example one that came from a [pattern](/docs/platform-guide/templates).
@@ -55,7 +55,7 @@ Publishing does not grant visitors edit rights, copy private comments into the s
 ## Cases and patterns on Discover
 
 A pattern is published in the same way as a case.
-Open it in the editor at `/case/<caseId>`, select its status control and choose **Publish**.
+Open it in the editor, select its status control and choose **Publish**.
 The same checks apply, including the description, authors and sector in Case Information.
 A pattern may still hold elements to fill in and variables with no value, which a case may not.
 The slug, **Update published version**, **Unpublish**, Trash and archived copies work as they do for a case.
