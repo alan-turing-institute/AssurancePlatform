@@ -21,7 +21,7 @@
         "id": "a2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d",
         "type": "STRATEGY",
         "name": "S1",
-        "description": "Demonstrate fairness by showing the system does not discriminate on any protected characteristic under the UK Equality Act 2010.",
+        "description": "Demonstrate fairness by showing that neither the training data nor the system's recommendations discriminate on any protected characteristic under the UK Equality Act 2010.",
         "inSandbox": false,
         "children": [
           {

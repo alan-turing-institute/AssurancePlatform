@@ -35,7 +35,7 @@ export const coreElementsConcepts: Concept[] = [
 			"Makes the argument structure explicit and transparent",
 		],
 		example:
-			"Demonstrate fairness by showing the system does not discriminate on any protected characteristic under the UK Equality Act 2010.",
+			"Demonstrate fairness by showing that neither the training data nor the system's recommendations discriminate on any protected characteristic under the UK Equality Act 2010.",
 	},
 	{
 		id: "concept-property-claim",
