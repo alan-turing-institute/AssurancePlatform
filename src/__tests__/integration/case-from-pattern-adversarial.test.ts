@@ -297,6 +297,26 @@ describe.each(
 
 			expect(existing).toEqual(missing);
 		});
+
+		it("gives a stranger the same answer for a pattern with published flags set as for a case that does not exist", async () => {
+			const owner = await createTestUser();
+			const pattern = await makePattern(owner);
+			await prisma.assuranceCase.update({
+				where: { id: pattern.id },
+				data: { publishStatus: "PUBLISHED", published: true },
+			});
+			const user = await createTestUser();
+
+			const existing = await starter.start(user, {
+				patternCaseId: pattern.id,
+			});
+			const missing = await starter.start(user, {
+				patternCaseId: randomUUID(),
+			});
+
+			expect(existing).toEqual(missing);
+			expect(existing).toEqual({ ok: false, error: NOT_FOUND });
+		});
 	});
 
 	describe("what the new case holds", () => {

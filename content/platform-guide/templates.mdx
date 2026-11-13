@@ -76,22 +76,15 @@ Mention the name in the descriptions of the elements beneath it by typing `{` an
 Evidence beneath a claim can mention it too.
 The value can stay empty, or hold an example for the person using the pattern to replace.
 
-### Give values when you start a case
+### Values in a case started from a pattern
 
-Choose a pattern in the new case dialog, and a **Variables** list appears under **Description**.
-It has one field for each variable the pattern defines, on any element of its argument, showing the variable's name and what it means.
-An element detached from the argument, in the sandbox, is not part of the pattern's argument, so a variable defined only there is not listed.
-If the pattern gives a variable a value, the field starts with that value; keep it, change it, or clear it.
-Every field is optional.
-A variable left empty, or cleared, shows its name in square brackets in the new case.
+The new case dialog does not ask for values.
+A case started from a pattern takes the pattern's own values, so every mention shows the value the pattern gives it.
+Each mention shows the variable's value; none of the case's text is rewritten, and the pattern is not changed.
+A variable the pattern gives no value shows its name in square brackets in the new case.
 It holds back publishing the new case only while the case's text mentions it; a variable that nothing mentions does not.
-A value can be up to 500 characters, and a field shows a count as it nears that limit.
-It is saved with the spaces and invisible zero-width characters at either end removed, so a value of nothing else is left empty.
-It is saved as text: it is not read for references or markup.
-If the pattern is changed while the dialog is open, so that a field no longer matches one of its variables, the platform refuses the request, reloads the variables and says so; what you typed for the variables that remain is kept.
-The values fill in the variables themselves, so every mention in the new case shows them and none of the case's text is rewritten.
-The pattern is not changed.
-A pattern published on Discover asks for its values in the same way, from its own page; see [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).
+To change a value, open the element that defines the variable and edit the entry; see [Set a variable in a case](#set-a-variable-in-a-case).
+A pattern published on Discover works in the same way; see [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).
 
 ### Set a variable in a case
 
@@ -187,5 +180,5 @@ A pattern published on Discover can also be used from its own page.
 
 `lib/services/case-kind-service.ts` holds the conversion, the read behind the confirmation dialog and the My Patterns list, and `actions/case-kind.ts` exposes them to the interface.
 `components/cases/case-kind-menu.tsx`, `components/cases/convert-case-kind-dialog.tsx` and `components/cases/pattern-banner.tsx` draw the menu item, the dialog and the banner, and `app/(authenticated)/dashboard/patterns/page.tsx` is the My Patterns page.
-`lib/case/pattern-variables.ts` reads a pattern's variables and sets their values when a case is started, and `components/modals/_case-create-modal/variables-section.tsx` draws the fields in the new case dialog.
+`lib/case/pattern-variables.ts` reads a pattern's variables and sets their values when a case is started.
 `lib/case/placeholders.ts` holds the rules for when a placeholder is cleared and how many a case has left, `components/shared/nodes/placeholder-badge.tsx` draws the badge, and `components/cases/node-edit-dialog.tsx` holds the switch and the hint box.
