@@ -11,7 +11,7 @@ The application runs as a Next.js service backed by PostgreSQL. The repository s
 
 The production compose file defines `tea_app` and `postgres`. PostgreSQL uses a named volume and has a health check. The application waits for that database health check before starting. Its image entrypoint runs `prisma migrate deploy`, then starts the Next.js server. The compose file publishes the application on port 3000 by default and stores local uploads in a second named volume.
 
-<Callout type="warn">
+<Callout type="info">
 The `Build` workflow pushes images to `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Set the `tea_app.image` line in the compose file to that path and the tag you intend to run, or use the commented `build` block to build from source.
 </Callout>
 

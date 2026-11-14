@@ -11,7 +11,7 @@ sidebar_label: 'Docker Production'
 
 Choose a host with Docker Compose, persistent storage and an HTTPS entry point. The compose file uses a named `postgres_data` volume for the database and an `uploads_data` volume for local files. It maps the application's port 3000 to `APP_PORT`, which defaults to 3000. Only PostgreSQL has a compose health check; `/api/health` is an application endpoint that you can monitor separately.
 
-<Callout type="warn">
+<Callout type="info">
 The Build workflow pushes images to `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Set the `tea_app.image` line in `docker-compose.yml` to that path and the tag you intend to run, or use the commented `build` block to build from source.
 </Callout>
 

@@ -37,7 +37,7 @@ docker compose -f docker-compose.local.yml up -d postgres-test
 pnpm test:integration
 ```
 
-This setup reduces the risk of test data reaching a developer's working database. The test container publishes port 5433 and keeps its data in memory, so nothing persists between runs. The tooling does not replace a code review or a migration review.
+This setup reduces the risk of test data reaching a developer's working database. The test container publishes port 5433 and keeps its data in memory, so nothing survives the container stopping. The tooling does not replace a code review or a migration review.
 
 ## Limits and code location
 
