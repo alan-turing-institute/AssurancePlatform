@@ -14,7 +14,7 @@ Check the consent screen before authorising either connection.
 
 ## Import a case
 
-From the dashboard, open **Import File**. The import dialog supports a local JSON file, a JSON file in a public GitHub repository, and a Google Drive backup. On the GitHub tab, enter a URL to a JSON file in a public repository or the supported `owner/repo/file.json` shorthand, then select **Import from GitHub**. The connection prompt appears when the account has no usable GitHub token. On the Google Drive tab, select a file from the **TEA Platform Backups** folder and choose **Import from Google Drive**. The Drive tab prompts for Google connection if needed.
+From the dashboard, open **Import File**. The import dialog supports a local JSON file, a JSON file in a public GitHub repository, and a Google Drive backup. On the GitHub tab, enter a URL to a JSON file in a public repository or the supported `owner/repo/file.json` shorthand, then select **Import from GitHub**. The connection prompt appears when the account has no usable GitHub token. On the **Drive** tab, select a file from the **TEA Platform Backups** folder and choose **Import from Google Drive**. The **Drive** tab prompts for Google connection if needed.
 
 An import creates a working case from case data. It does not merge a file into the case you currently have open. The import logic accepts supported case formats and can return warnings. Read those warnings before continuing to the imported case.
 An away goal or module in the file that cites another case keeps that reference only if you can view the cited case.
@@ -24,7 +24,7 @@ To import a file from a private repository, download it and use the File tab.
 
 ## Back up to Drive
 
-In the case's share and export controls, the Google backup section offers **Backup to Google Drive** when Drive is connected. It exports the case as JSON and uploads it to the user's **TEA Platform Backups** folder. The API accepts an `includeComments` option, but the current browser control does not send it. The response identifies the saved file. This is a user-initiated copy, so repeat it after later case changes if you need a newer backup. It is separate from publishing to Discover and from the case Trash recovery period.
+In the **Export Case** dialog, the Google backup section offers **Backup to Google Drive** when Drive is connected. It exports the case as JSON and uploads it to the user's **TEA Platform Backups** folder. The API accepts an `includeComments` option, but the current browser control does not send it. The response identifies the saved file. This is a user-initiated copy, so repeat it after later case changes if you need a newer backup. It is separate from publishing to Discover and from the case Trash recovery period.
 
 ## Limits and code location
 
