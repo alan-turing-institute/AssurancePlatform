@@ -1,6 +1,6 @@
 ---
 title: "Docker production deployment"
-description: "Deploy the supplied PostgreSQL and TEA Platform compose stack with its known configuration limits."
+description: "Deploy the supplied PostgreSQL and TEA Platform compose stack."
 sidebar_position: 2
 sidebar_label: 'Docker Production'
 ---
@@ -12,14 +12,14 @@ sidebar_label: 'Docker Production'
 Choose a host with Docker Compose, persistent storage and an HTTPS entry point. The compose file uses a named `postgres_data` volume for the database and an `uploads_data` volume for local files. It maps the application's port 3000 to `APP_PORT`, which defaults to 3000. Only PostgreSQL has a compose health check; `/api/health` is an application endpoint that you can monitor separately.
 
 <Callout type="warn">
-`docker-compose.yml` pulls `ghcr.io/alan-turing-institute/assuranceplatform:latest`, but the Build workflow pushes `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Set the image to a verified published path before deploying.
+The Build workflow pushes images to `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Set the `tea_app.image` line in `docker-compose.yml` to that path and the tag you intend to run, or use the commented `build` block to build from source.
 </Callout>
 
 ## Configure the stack
 
 Supply `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` for the database, and `NEXTAUTH_SECRET` and `NEXTAUTH_URL` for authentication. The compose defaults for the database are `tea`, `tea_user` and `tea_password`; replace the password for a real deployment. Compose builds `DATABASE_URL` from those values and uses the internal host name `postgres`.
 
-`USE_LOCAL_STORAGE` defaults to `true`; uploads are stored in the `uploads_data` volume, mounted at `/app/uploads` (`UPLOADS_DIR`'s default inside the container). The compose file shows Azure Blob storage variables as commented alternatives. The authentication configuration reads GitHub and Google client variables; the compose file currently passes GitHub client values but does not pass Google client values. OAuth token storage and saved model connection keys also read `TOKEN_ENCRYPTION_KEY`, a base64 encoding of 32 bytes, which the compose file does not pass. If you enable those integrations, add the required variables to your deployment configuration rather than assuming they are already forwarded.
+`USE_LOCAL_STORAGE` defaults to `true`; uploads are stored in the `uploads_data` volume, mounted at `/app/uploads` (`UPLOADS_DIR`'s default inside the container). The compose file shows Azure Blob storage variables as commented alternatives. The authentication configuration reads GitHub and Google client variables; the compose file passes the GitHub client values but not the Google client values. OAuth token storage and saved model connection keys also read `TOKEN_ENCRYPTION_KEY`, a base64 encoding of 32 bytes, which the compose file does not pass. If you enable those integrations, add the required variables to your deployment configuration rather than assuming they are already forwarded.
 
 To withhold a plugin from every user, list its id in `TEA_PLUGINS_DISABLED` (for example `tea.assistant`).
 The compose file does not pass this variable to the application container: it is not in the `tea_app` service's `environment` block, and the service has no `env_file`, so a value in `.env` alone has no effect.
@@ -30,7 +30,7 @@ Email uses `ACS_CONNECTION_STRING` and `ACS_SENDER_ADDRESS` when configured. The
 
 ## Start and update
 
-After correcting the image reference and supplying the deployment settings, start the stack with the production compose file:
+After setting the image and the deployment settings, start the stack with the production compose file:
 
 ```bash
 docker compose -f docker-compose.yml up -d

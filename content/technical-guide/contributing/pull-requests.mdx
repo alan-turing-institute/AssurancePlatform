@@ -11,7 +11,7 @@ The repository's contribution flow is feature branch to `staging`, then `staging
 
 Read the [code style guide](/docs/technical-guide/contributing/code-style) and the relevant architecture page. Keep a pull request focused on one change. Add or update tests for behaviour that can be verified, and update documentation when the user or developer contract changes. For an interface change, include a screenshot or recording that shows the result and any relevant states.
 
-`pnpm install` activates the repository's `.githooks/pre-push` through the `prepare` script. That hook runs `pnpm lint` and `pnpm typecheck` when pushing to `staging` or `main`. The separate `.pre-commit-config.yaml` is available for on-demand checks and pre-commit.ci. As `CONTRIBUTING.md` explains, the configured Git hooks path prevents `pre-commit install` from installing the pre-commit hook in the usual way. Run them on demand with `uv tool run pre-commit run --all-files` instead of assuming they are installed for every local commit.
+`pnpm install` activates the repository's `.githooks/pre-push` through the `prepare` script. On every push, that hook regenerates the Prisma client, then runs `pnpm lint` and `pnpm typecheck`; a push that only deletes branches skips them. The separate `.pre-commit-config.yaml` is available for on-demand checks and pre-commit.ci. As `CONTRIBUTING.md` explains, the configured Git hooks path prevents `pre-commit install` from installing the pre-commit hook in the usual way. Run them on demand with `uv tool run pre-commit run --all-files` instead of assuming they are installed for every local commit.
 
 ## Run checks
 
