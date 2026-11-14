@@ -11,6 +11,7 @@ The application and its Fumadocs documentation share one Next.js App Router proj
 The stack is Next.js 16, React 19, TypeScript, PostgreSQL, Prisma 7, NextAuth 4, Tailwind 4, React Flow and Zustand.
 The Django backend was removed in December 2025; everything is TypeScript.
 Use `package.json` and `pnpm-lock.yaml` for exact dependency versions.
+Next.js ships documentation matched to the installed version in `node_modules/next/dist/docs/`; read the relevant guide before using an API you are not sure of.
 
 | Environment | URL |
 |---|---|
@@ -23,7 +24,7 @@ Use `package.json` and `pnpm-lock.yaml` for exact dependency versions.
 - `lib/api-response.ts`, `lib/errors.ts`, `types/service.ts`: response and error contracts.
 - `lib/auth/`: session validation, API tokens, client-IP extraction, token encryption.
 - `lib/logger.ts`: the structured logger.
-- `lib/plugins/`: the plugin manifest, slot registries, client bootstrap and the `tea.health` plugin.
+- `lib/plugins/`: the plugin manifest, slot registries, client bootstrap and the `tea.health` and `tea.assistant` plugins.
 - `components/ui/`: shadcn primitives; `components/cases/` and `components/shared/nodes/`: case canvas UI.
 - `store/`: canvas and history state (Zustand); `hooks/` and `providers/`: UI state and context.
 - `prisma/`: schema, reviewed migrations and the development seed; `src/generated/prisma/`: generated client, untracked, never edit by hand.
@@ -58,6 +59,8 @@ Host development against Docker Postgres:
 The app is at `http://localhost:3000`; the dev database is exposed on port 5432.
 With `SEED_USER_PASSWORD` provisioned, seed via `pnpm exec tsx prisma/seed/dev-seed.ts`.
 Seed users are `chris`, `alice`, `bob` and `charlie`; alice and bob share Test Team, charlie is an external viewer.
+To see the first-visit tours locally, register a new user, or run `UPDATE users SET completed_tours = '{}' WHERE username = 'chris'` on the dev database and reload.
+Seed users have every tour marked complete, because the end-to-end tests depend on it.
 For LAN review, `next dev` blocks cross-origin HMR and static-chunk requests by default; set `NEXT_DEV_ALLOWED_ORIGINS` (comma-separated hosts, no protocol) to the reviewer's address before starting the server.
 
 The full local stack starts with `docker compose -f docker-compose.local.yml up -d --build`.
@@ -88,7 +91,9 @@ Database setup, seed and test infrastructure necessarily access the database dir
   Derive user identity from authentication, never from client-supplied user IDs.
 - Read a client IP only through `extractClientIp` in `lib/auth/extract-client-ip.ts`.
   Never read `x-forwarded-for` or `x-real-ip` directly; both are attacker-controllable in this deployment.
-  If a CDN or Front Door is ever placed in front of App Service, the helper's trusted-hop policy must be revisited.
+  The helper returns `cf-connecting-ip` only when the connecting address is inside Cloudflare's published ranges (`lib/auth/cloudflare-ips.ts`) and the request's `x-origin-verify` header equals the `CLOUDFLARE_ORIGIN_SECRET` setting; with the setting unset or blank, `cf-connecting-ip` is never read.
+  It counts an IPv6 visitor read from `cf-connecting-ip` by their /64 network; an IPv6 `x-client-ip` or `x-forwarded-for` address is used whole.
+  Any other CDN or Front Door in front of App Service needs its trusted-hop policy revisited.
 - Machine endpoints under `/api/machine/` use `requireApiToken` from `lib/auth/require-api-token.ts` with the scopes appropriate to the operation.
   Keep intentionally public routes and authentication-entry routes distinct from session-protected mutations.
 - Check case access in services using `canAccessCase` and the helpers in `lib/permissions.ts`.
@@ -126,7 +131,7 @@ Keep secrets out of log entries.
   Use kebab-case filenames, PascalCase components and `{ComponentName}Props`.
 - Keep components presentational; data access goes through routes and actions, and state through the existing Zustand stores and hooks.
   Do not add imports from `store/` into node components; that cycle is being inverted.
-- Plugins: consult `lib/plugins/manifest.ts`, `lib/plugins/slots/`, `lib/plugins/bootstrap.ts` and the `tea.health` implementation under `lib/plugins/health/` before changing extension behaviour.
+- Plugins: consult `lib/plugins/manifest.ts`, `lib/plugins/slots/`, `lib/plugins/bootstrap.ts` and the `tea.health` and `tea.assistant` implementations under `lib/plugins/health/` and `lib/plugins/assistant/` before changing extension behaviour.
   Keep plugin semantics out of core; register plugin UI through the slot registries and the client bootstrap.
   Disabling a plugin leaves its data stored; do not purge it as a side effect.
   Machine integrations under `/api/machine/` are distinct from in-process plugins.
@@ -186,6 +191,7 @@ The pre-push hook regenerates the Prisma client, then runs lint and typecheck, o
 `.pre-commit-config.yaml` is for manual runs and pre-commit.ci; `pre-commit install` refuses to install while `core.hooksPath` is set.
 
 Work is tracked in GitHub Issues.
-The plugin system is real but partial: the manifest, slots and one official plugin exist; a marketplace does not.
+The plugin system is real but partial: the manifest, slots and two official plugins (claim and evidence health, and the Case Assistant) exist; a marketplace does not.
 Staging deploys and the staging reseed workflow share one concurrency queue (`staging-database`), so a deploy and a reseed never run at the same time.
+Re-running an older Build run no longer rolls staging back, because its deploy is skipped as behind the running image; re-running the newest run still redeploys.
 Recover a broken staging database with one manual run of the reseed workflow (`gh workflow run seed-staging.yml --ref staging`), then restart the staging app if its health check does not return 200 within a few minutes.

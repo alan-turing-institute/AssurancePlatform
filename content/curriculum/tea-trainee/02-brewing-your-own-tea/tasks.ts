@@ -32,7 +32,7 @@ export const brewingTasks: TaskDefinition[] = [
 	createTask({
 		id: "review-core-elements",
 		title: "Review the core elements",
-		description: "Click through the concept cards to review each element type",
+		description: "Expand each concept card to review each element type",
 		type: TaskType.INTERACT,
 		page: "reflection",
 		section: "core-elements",

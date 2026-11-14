@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
+import {
+	countPlaceholders,
+	countUnsetVariables,
+	fillInCountMessage,
+	treeNodes,
+} from "@/lib/case/placeholders";
 import { logger } from "@/lib/logger";
 import {
 	isCaseFeatureImageKey,
@@ -8,6 +14,7 @@ import {
 } from "@/lib/media-key";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import type { TreeNode } from "@/lib/schemas/case-export";
 import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
 import { exportCase } from "@/lib/services/case-export-service";
 import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
@@ -23,7 +30,11 @@ import type {
 	UnpublishResult,
 } from "@/lib/services/publish-service.types";
 import { generateUniqueSlug } from "@/lib/services/slug-service";
-import type { Prisma } from "@/src/generated/prisma";
+import type {
+	CaseKind,
+	Prisma,
+	PublishableItemType,
+} from "@/src/generated/prisma";
 
 const log = logger.child({ component: "publish-service" });
 
@@ -39,16 +50,34 @@ type TransactionClient = TransactionCallback extends (
 	: never;
 
 /**
- * Thrown from inside a publish/republish transaction when the case-row
- * update matches zero rows — the case was moved to Trash after this
+ * Thrown from inside a publish/republish/unpublish transaction when the
+ * case-row update matches zero rows — the case was moved to Trash after this
  * function's own permission check ran but before the transaction committed.
  * Caught by the caller and translated to the same "Case not found" error a
- * missing case already returns, so a case in Trash can never be published
- * or republished, even when the two actions overlap.
+ * missing case already returns, so a case in Trash can never be published,
+ * republished or unpublished, even when the two actions overlap.
  */
 class CaseTrashedDuringTransactionError extends Error {}
 
-/** The five publish-state fields, reset to their draft values — shared by `removePublishedCopies` and `case-trash-service.ts`'s `removeArchivedCopy`. */
+/**
+ * Thrown from inside a publish/republish transaction when the case is still
+ * out of Trash but no longer matches what the snapshot was composed from: a
+ * conversion changed its kind, or (for a republish) it stopped being
+ * published, between the read and the write. The snapshot is stale, so
+ * nothing is written and the caller is asked to try again.
+ */
+class CaseChangedDuringPublishError extends Error {}
+
+const CASE_CHANGED_WHILE_PUBLISHING =
+	"The case changed while it was being published. Try again.";
+
+/** The type a published row takes for each kind of case it is published from. */
+const PUBLISHED_TYPE_FOR_KIND: Record<CaseKind, PublishableItemType> = {
+	CASE: "ASSURANCE_CASE",
+	PATTERN: "ARGUMENT_PATTERN",
+};
+
+/** The five publish-state fields, reset to their draft values — shared by `unpublishAssuranceCase`, `removePublishedCopies` and `case-trash-service.ts`'s `removeArchivedCopy`. */
 export const DRAFT_PUBLISH_FIELDS = {
 	published: false,
 	publishedAt: null,
@@ -174,6 +203,12 @@ function extractStoredFeatureImageUrl(content: unknown): string | null {
  * transaction; a no-op for an empty list. Storage isn't transactional, so
  * this returns the `published/` copy keys the deleted rows held — the
  * caller deletes those files once its transaction has committed.
+ *
+ * The case rows are written before the published rows are read, so the case
+ * row's lock is taken first and the read sees every version committed ahead
+ * of it. Callers have already written the case rows themselves (the trash
+ * and the unpublish both do), so this adds no lock for them; it keeps the
+ * order right for any caller that has not.
  */
 export async function removePublishedCopies(
 	tx: TransactionClient,
@@ -182,6 +217,10 @@ export async function removePublishedCopies(
 	if (caseIds.length === 0) {
 		return [];
 	}
+	await tx.assuranceCase.updateMany({
+		where: { id: { in: caseIds } },
+		data: DRAFT_PUBLISH_FIELDS,
+	});
 	const rows = await tx.publishedAssuranceCase.findMany({
 		where: { assuranceCaseId: { in: caseIds } },
 		select: { content: true },
@@ -192,10 +231,6 @@ export async function removePublishedCopies(
 
 	await tx.publishedAssuranceCase.deleteMany({
 		where: { assuranceCaseId: { in: caseIds } },
-	});
-	await tx.assuranceCase.updateMany({
-		where: { id: { in: caseIds } },
-		data: DRAFT_PUBLISH_FIELDS,
 	});
 	return keys;
 }
@@ -258,6 +293,13 @@ export async function archivePublishedCopies(
 // Shared helpers — publish / republish
 // ============================================
 
+/** A composed snapshot: its content, the typed tree it was composed from, and the kind it records. */
+interface ComposedSnapshot {
+	data: Record<string, unknown>;
+	kind: CaseKind;
+	tree: TreeNode;
+}
+
 /**
  * Composes the JSON snapshot content shared by every publish flow: the
  * exported case tree plus captured plugin data (ADR 0002 v2 §3) and case
@@ -274,6 +316,10 @@ export async function archivePublishedCopies(
  * for authenticated export use elsewhere (e.g. `actions/export-document.ts`,
  * `app/api/cases/export/route.ts`) — only this publish-time call opts out.
  *
+ * Also returns the typed tree the snapshot was composed from and the kind
+ * the snapshot records (absent means a case), so the checks that must hold
+ * for what is written are made on the same export, not on a read of their own.
+ *
  * Shared verbatim between `publishAssuranceCase` (first publish) and
  * `updatePublishedCase` (republish) — both must freeze identical content
  * shapes, so this is the single place that composition happens.
@@ -281,7 +327,7 @@ export async function archivePublishedCopies(
 async function composeSnapshotContent(
 	userId: string,
 	caseId: string
-): Promise<{ data: Record<string, unknown> } | { error: string }> {
+): Promise<ComposedSnapshot | { error: string }> {
 	const exportResult = await exportCase(userId, caseId, {
 		includeComments: false,
 	});
@@ -305,7 +351,28 @@ async function composeSnapshotContent(
 			...(pluginData && { pluginData }),
 			...(caseInformation && { caseInformation }),
 		},
+		kind: exportResult.data.case.kind ?? "CASE",
+		tree: exportResult.data.tree,
 	};
+}
+
+/**
+ * Raises the error for a guarded case-row write that matched nothing. A case
+ * now in Trash (or gone) raises `CaseTrashedDuringTransactionError`; a case
+ * still out of Trash raises `CaseChangedDuringPublishError`, because it was
+ * converted, or unpublished, after the snapshot was composed.
+ */
+async function throwForUnmatchedCaseWrite(
+	tx: TransactionClient,
+	caseId: string
+): Promise<never> {
+	const current = await tx.assuranceCase.findUnique({
+		where: { id: caseId },
+		select: { deletedAt: true },
+	});
+	throw current && current.deletedAt === null
+		? new CaseChangedDuringPublishError()
+		: new CaseTrashedDuringTransactionError();
 }
 
 /**
@@ -322,6 +389,18 @@ async function composeSnapshotContent(
  * directly via `POST /api/cases/[id]/publish`, outside `transitionStatus`'s
  * DRAFT-only gate); republish has exactly one.
  *
+ * The new row's `type` follows the case's kind, read here inside the
+ * transaction: `ARGUMENT_PATTERN` for a pattern, `ASSURANCE_CASE` for a case.
+ * Both callers write to the case row first, which holds its lock until the
+ * transaction ends, so the kind read here is the kind their write matched.
+ * That first write also keeps this call clear of a deadlock: an unpublish, a
+ * trash, a restore, the removal of an archived copy and an account deletion
+ * write the case row before any published row too, so a published row is
+ * never locked by a transaction that is still waiting for the case row.
+ * A republish keeps the type of the row it replaces because `convertCaseKind`
+ * refuses any case that has a published row, live or archived, so a case's
+ * kind cannot change while a row exists for it.
+ *
  * Shared verbatim between `publishAssuranceCase` and `updatePublishedCase`;
  * each layers its own extra side effects (case status flip vs case-study
  * link migration) around this call.
@@ -337,6 +416,14 @@ async function swapCurrentPublishedVersion(
 		createdAt: Date;
 	}
 ) {
+	const source = await tx.assuranceCase.findUnique({
+		where: { id: input.caseId },
+		select: { kind: true },
+	});
+	if (!source) {
+		throw new CaseTrashedDuringTransactionError();
+	}
+
 	await tx.publishedAssuranceCase.updateMany({
 		where: { assuranceCaseId: input.caseId, isCurrent: true },
 		data: { isCurrent: false },
@@ -344,6 +431,7 @@ async function swapCurrentPublishedVersion(
 
 	return tx.publishedAssuranceCase.create({
 		data: {
+			type: PUBLISHED_TYPE_FOR_KIND[source.kind],
 			title: input.title,
 			slug: input.slug,
 			content: input.content,
@@ -355,26 +443,43 @@ async function swapCurrentPublishedVersion(
 }
 
 /**
- * Shared body for `publishAssuranceCase` and `updatePublishedCase`: copies
- * the case's current feature image into its own publish-time key before
- * anything is written to the database (so a republish or a live edit
+ * Shared body for `publishAssuranceCase` and `updatePublishedCase`: refuses a
+ * case whose snapshot still has placeholders or unset variables to fill in,
+ * copies the case's current feature image into its own publish-time key
+ * before anything is written to the database (so a republish or a live edit
  * afterwards can never touch this snapshot's picture), runs the caller's own
  * transaction, and on any failure deletes the copy it just made — the copy
  * happens outside the transaction, so a failure after it but before commit
  * would otherwise leave it orphaned. Translates a case trashed
  * mid-transaction into "Case not found"; anything else into `failureMessage`.
+ *
+ * The fill-in check counts the tree the snapshot was composed from, so it
+ * judges exactly the content that is written, whatever happens to the case
+ * afterwards. A pattern is never held back. The kind it goes by, and passes to
+ * the transaction for its guarded write, is the one the snapshot records, so
+ * the content and the row's type cannot disagree.
  */
 async function publishSnapshot(
 	caseId: string,
-	contentResult: { data: Record<string, unknown> } | { error: string },
+	contentResult: ComposedSnapshot | { error: string },
 	runTransaction: (
 		content: Prisma.InputJsonValue,
-		now: Date
+		now: Date,
+		kind: CaseKind
 	) => Promise<{ id: string }>,
 	failureMessage: string
 ): Promise<PublishResult> {
 	if ("error" in contentResult) {
 		return { error: contentResult.error };
+	}
+	if (contentResult.kind === "CASE") {
+		const remaining = fillInCountMessage({
+			placeholders: countPlaceholders(treeNodes(contentResult.tree)),
+			unsetVariables: countUnsetVariables(contentResult.tree),
+		});
+		if (remaining) {
+			return { error: remaining };
+		}
 	}
 	const { content: preparedContent, copiedKey } =
 		await copyFeatureImageForSnapshot(caseId, contentResult.data);
@@ -384,12 +489,12 @@ async function publishSnapshot(
 	// even though every value it can hold is a valid `InputJsonValue`.
 	// Routing through `unknown` is TS's own prescribed escape hatch for
 	// exactly this "no sufficient overlap" case (same pattern as
-	// `health-scoring-service.ts`) — not a blind `any`.
+	// `health-evidence-service.ts`) — not a blind `any`.
 	const content = preparedContent as unknown as Prisma.InputJsonValue;
 	const now = new Date();
 
 	try {
-		const row = await runTransaction(content, now);
+		const row = await runTransaction(content, now, contentResult.kind);
 		return { data: { publishedId: row.id, publishedAt: now } };
 	} catch (error) {
 		if (copiedKey) {
@@ -397,6 +502,9 @@ async function publishSnapshot(
 		}
 		if (error instanceof CaseTrashedDuringTransactionError) {
 			return { error: "Case not found" };
+		}
+		if (error instanceof CaseChangedDuringPublishError) {
+			return { error: CASE_CHANGED_WHILE_PUBLISHING };
 		}
 		log.error(failureMessage, { error });
 		return { error: failureMessage };
@@ -493,16 +601,25 @@ export async function publishAssuranceCase(
 	return publishSnapshot(
 		caseId,
 		contentResult,
-		(content, now) =>
-			// The case-row update runs FIRST, before any published-row write, so
-			// every transaction that can both trash and publish/republish a case
-			// locks the case row in the same order — `softDeleteCase` locks the
-			// case row first too, so the two can never deadlock waiting on each
-			// other's locks in reverse. Matches only a case still OUT of Trash —
-			// closes the race against a concurrent trash of this case between the
-			// permission check above and this transaction committing. Zero rows
-			// means the case was trashed in between; `publishSnapshot` maps that
-			// to "Case not found", and nothing about the published row is written.
+		(content, now, kind) =>
+			// The case-row update runs FIRST, before any published-row write. Every
+			// transaction that writes both a case and its published rows takes the
+			// case row first: this one, a republish, an unpublish, a trash, a
+			// restore, the removal of an archived copy, a permanent delete (the
+			// cascade clears the published rows) and an account deletion. So no two
+			// of them can wait on each other's locks in reverse.
+			//
+			// The update matches only a case still OUT of Trash — closes the race
+			// against a concurrent trash of this case between the permission check
+			// above and this transaction committing. Zero rows means the case was
+			// trashed in between; `publishSnapshot` maps that to "Case not found",
+			// and nothing about the published row is written.
+			//
+			// The same condition names the kind the snapshot records, so a
+			// conversion that committed after the snapshot was composed leaves no
+			// matching row: the snapshot would be of the other kind. A second read
+			// tells the two causes apart — a case still out of Trash was converted,
+			// and the caller is asked to try again with nothing written.
 			//
 			// Generating the slug and creating the row must share this same
 			// transaction — otherwise a concurrent first-publish of a same-named
@@ -512,7 +629,7 @@ export async function publishAssuranceCase(
 			// numeric-suffix behaviour ADR 0003 §6 promises).
 			prisma.$transaction(async (tx) => {
 				const updateResult = await tx.assuranceCase.updateMany({
-					where: { id: caseId, deletedAt: null },
+					where: { id: caseId, deletedAt: null, kind },
 					data: {
 						published: true,
 						publishedAt: now,
@@ -520,7 +637,7 @@ export async function publishAssuranceCase(
 					},
 				});
 				if (updateResult.count === 0) {
-					throw new CaseTrashedDuringTransactionError();
+					await throwForUnmatchedCaseWrite(tx, caseId);
 				}
 				const slug = await generateUniqueSlug(assuranceCase.name, tx);
 				return await swapCurrentPublishedVersion(tx, {
@@ -567,13 +684,30 @@ export async function unpublishAssuranceCase(
 	}
 
 	try {
-		const removedKeys = await prisma.$transaction((tx) =>
-			removePublishedCopies(tx, [caseId])
-		);
+		const removedKeys = await prisma.$transaction(async (tx) => {
+			// The case row is written FIRST, as in every other transaction that
+			// writes both it and the published rows (see `publishAssuranceCase`),
+			// so an unpublish that meets a republish waits for it and then deletes
+			// the version it wrote too. Matches only a case still OUT of Trash: an
+			// unpublish queued behind a trash must neither reset the binned case
+			// to draft nor delete the copy the trash archived. `published` is not
+			// part of the condition, so a second unpublish stays a harmless success.
+			const updateResult = await tx.assuranceCase.updateMany({
+				where: { id: caseId, deletedAt: null },
+				data: DRAFT_PUBLISH_FIELDS,
+			});
+			if (updateResult.count === 0) {
+				throw new CaseTrashedDuringTransactionError();
+			}
+			return removePublishedCopies(tx, [caseId]);
+		});
 		await deleteMediaKeys(removedKeys);
 
 		return { data: { success: true as const } };
 	} catch (error) {
+		if (error instanceof CaseTrashedDuringTransactionError) {
+			return { error: "Case not found" };
+		}
 		log.error("Failed to unpublish case", { error });
 		return { error: "Failed to unpublish case" };
 	}
@@ -752,19 +886,31 @@ export async function updatePublishedCase(
 	return publishSnapshot(
 		caseId,
 		contentResult,
-		(content, now) =>
+		(content, now, kind) =>
 			// Create the new version in a transaction. The case-row update runs
 			// FIRST — see `publishAssuranceCase` above for why: every transaction
-			// that can both trash and publish/republish a case must lock the case
-			// row before touching the published row, matching the order
-			// `softDeleteCase` locks them in.
+			// that writes both a case and its published rows, an unpublish and a
+			// trash among them, must lock the case row before touching a
+			// published row.
+			//
+			// The condition also names `published: true` and the kind the snapshot
+			// records: an unpublish or a conversion that committed after the
+			// snapshot was composed leaves no matching row, so no published row is
+			// written for a case that is no longer published or is of the other
+			// kind. A case still out of Trash is then refused with the same
+			// "changed while it was being published" message as a first publish.
 			prisma.$transaction(async (tx) => {
 				const updateResult = await tx.assuranceCase.updateMany({
-					where: { id: caseId, deletedAt: null },
+					where: {
+						id: caseId,
+						deletedAt: null,
+						published: true,
+						kind,
+					},
 					data: { publishedAt: now },
 				});
 				if (updateResult.count === 0) {
-					throw new CaseTrashedDuringTransactionError();
+					await throwForUnmatchedCaseWrite(tx, caseId);
 				}
 
 				// Carrying the EXISTING slug forward verbatim (ADR 0003 §6: stable

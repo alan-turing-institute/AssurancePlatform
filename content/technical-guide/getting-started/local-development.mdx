@@ -47,7 +47,7 @@ pnpm test:integration
 pnpm build
 ```
 
-`pnpm format` applies formatting changes. `pnpm test:coverage:check` is the coverage run used by CI. The integration suite needs its dedicated PostgreSQL test service and setup.
+`pnpm format` applies formatting changes. `pnpm test:coverage:check` runs the unit suite with the same coverage floors CI enforces. The integration suite needs its dedicated PostgreSQL test service and setup.
 
 <Callout type="warn">
 Outside CI, `pnpm test:e2e` runs `prisma migrate reset --force` and reseeds whatever database `DATABASE_URL` names. Run it only against a disposable database, after checking that URL.

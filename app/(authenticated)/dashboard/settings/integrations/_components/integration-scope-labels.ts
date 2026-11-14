@@ -10,6 +10,8 @@ import type { Scope } from "@/lib/auth/scopes";
  */
 const SCOPE_LABELS: Partial<Record<Scope, string>> = {
 	"case:read": "Read cases",
+	"health:checks:write": "Publish the list of checks the pipeline can run",
+	"health:criteria:read": "Read the evidence settings accepted for claims",
 	"health:evidence:read": "Read claim/evidence health data",
 	"health:evidence:write": "Write claim/evidence health data",
 };

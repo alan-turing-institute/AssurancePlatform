@@ -5,17 +5,16 @@ import { requireApiToken } from "@/lib/auth/require-api-token";
 /**
  * Diagnostic identity check for a machine integration.
  *
- * @description Returns the identity of the integration whose bearer token
- * authenticated this request — name, current scopes, and the prefix of the
- * token used. No scope is required beyond a valid, non-suspended/revoked
- * token: this is the end-to-end reachability proof for `/api/machine/*`
- * (a valid token reaches the handler; an invalid one gets the API error
- * envelope, never a login-page redirect) and a genuinely useful "am I
- * talking to the platform correctly" check for integration operators.
+ * Returns the name, current scopes and token prefix of the integration whose
+ * bearer token authenticated the request.
+ * Any valid token for an active integration works, whatever its scopes.
+ * A request with an invalid token gets a JSON error, never a redirect to the
+ * sign-in page.
  *
+ * @description Returns the name, current scopes and token prefix of the integration whose bearer token authenticated the request; any valid token for an active integration works, whatever its scopes, so it is the quickest way to check that a token and the connection to TEA are working.
  * @response 200 - { name, scopes, tokenPrefix }
- * @response 401 - Unauthorised (missing, malformed, unknown, revoked, or expired token; non-ACTIVE integration)
- * @response 429 - Rate limited (too many failed attempts from this IP)
+ * @response 401 - Unauthorised (missing, malformed, unknown, revoked or expired token, or an integration that is not active)
+ * @response 429 - Rate limited (too many failed attempts from this IP address)
  * @auth bearer
  * @tag Machine
  */

@@ -129,7 +129,7 @@ export function AttachElementDialog({
 										{typeof orphan.description === "string" &&
 											orphan.description !== "" && (
 												<p className="truncate text-muted-foreground text-xs">
-													{String(orphan.description)}
+													{orphan.description}
 												</p>
 											)}
 									</div>

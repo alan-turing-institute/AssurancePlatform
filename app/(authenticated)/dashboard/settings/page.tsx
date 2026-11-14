@@ -10,6 +10,7 @@ import { PasswordForm } from "./_components/password-form";
 import { PersonalInfoForm } from "./_components/personal-info-form";
 import { PluginsLinkSection } from "./_components/plugins-link-section";
 import SettingsNav from "./_components/settings-nav";
+import { UnsupportedMarkersForm } from "./_components/unsupported-markers-form";
 
 const SettingsPage = async () => {
 	const session = await validateSession();
@@ -33,6 +34,9 @@ const SettingsPage = async () => {
 
 			<div className="min-h-screen divide-y divide-foreground/5">
 				<AppearanceForm />
+				<UnsupportedMarkersForm
+					initialValue={currentUser?.showUnsupportedMarkers ?? null}
+				/>
 				<PersonalInfoForm data={currentUser} />
 				<ConnectedAccountsForm data={connectedAccounts} />
 				<PluginsLinkSection />

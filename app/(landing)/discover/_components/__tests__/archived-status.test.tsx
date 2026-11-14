@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ArchivedBadge, ArchivedOnNotice } from "../archived-status";
 
-const NO_LONGER_UPDATES_PATTERN = /This case no longer receives updates\./;
+const NO_LONGER_UPDATES_PATTERN = /This copy no longer receives updates\./;
 
 describe("ArchivedBadge", () => {
 	it("renders nothing for a live copy", () => {

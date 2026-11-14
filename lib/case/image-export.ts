@@ -14,6 +14,11 @@ import {
 	waitForRender,
 } from "@/lib/case/document-export";
 import type { LayoutDirection } from "@/lib/case/layout-helper";
+import {
+	isAuthoredContent,
+	removePluginDisplayMarkers,
+	stripPluginAppearance,
+} from "@/lib/case/plugin-display-capture";
 import { logger } from "@/lib/logger";
 
 const log = logger.child({ component: "image-export" });
@@ -73,6 +78,9 @@ async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 function shouldInclude(domNode: HTMLElement): boolean {
 	if (!(domNode instanceof Element)) {
 		return true;
+	}
+	if (!isAuthoredContent(domNode)) {
+		return false;
 	}
 	const classList = domNode.classList;
 	if (!classList) {
@@ -193,10 +201,13 @@ async function captureAndDownload(
 
 	// Apply inline styles for export (CSS variables won't work in cloned DOM)
 	const restoreStyles = applyExportStyles(viewport);
+	const restoreAppearance = stripPluginAppearance(viewport);
 
 	try {
 		if (format === "svg") {
-			const dataUrl = await toSvg(viewport, exportOptions);
+			const dataUrl = removePluginDisplayMarkers(
+				await toSvg(viewport, exportOptions)
+			);
 			const blob = await dataUrlToBlob(dataUrl);
 			saveAs(blob, filename);
 		} else {
@@ -209,6 +220,7 @@ async function captureAndDownload(
 		throw error;
 	} finally {
 		// Always restore original styles
+		restoreAppearance();
 		restoreStyles();
 	}
 }

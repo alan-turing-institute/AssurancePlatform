@@ -27,12 +27,6 @@ Also provides composite helpers:
 - `getTestPasswordResetTokenHash()` — queries the stored reset-token hash after requesting a password reset
 - `createNestedCaseJSON()` / `createNestedCaseWithChainJSON()` — plain JSON objects for import testing
 
-### `mock-data.ts` (unit tests)
-
-In-memory fixtures for unit tests that don't touch the database. Used with component tests and pure function tests where you need realistic data shapes without DB overhead.
-
-**These are NOT duplicates** — factories create real DB records for integration tests, mock-data provides static fixtures for unit tests.
-
 ## Patterns
 
 ### ServiceResult Assertion Helpers

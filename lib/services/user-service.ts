@@ -273,6 +273,7 @@ export interface CurrentUserData {
 	hasSeenMigrationNotice: boolean;
 	id: string;
 	lastName?: string;
+	showUnsupportedMarkers: boolean;
 	username: string;
 }
 
@@ -294,6 +295,7 @@ export async function getCurrentUser(
 				avatarUrl: true,
 				hasSeenMigrationNotice: true,
 				completedTours: true,
+				showUnsupportedMarkers: true,
 				teamMemberships: {
 					select: {
 						team: {
@@ -325,6 +327,7 @@ export async function getCurrentUser(
 				})),
 				hasSeenMigrationNotice: user.hasSeenMigrationNotice,
 				completedTours: user.completedTours,
+				showUnsupportedMarkers: user.showUnsupportedMarkers,
 			},
 		};
 	} catch (error) {

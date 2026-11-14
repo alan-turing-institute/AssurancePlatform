@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import {
+	forgetEnabledPluginIdsForTests,
+	rememberEnabledPluginIds,
+} from "@/hooks/remembered-plugin-ids";
 import { parseErrorMessage, useFetchOnMount } from "@/hooks/use-fetch-on-mount";
 import type { PluginSettingsListItem } from "@/lib/schemas/plugin";
 import useStore from "@/store/store";
@@ -17,6 +21,7 @@ async function requestPlugins(): Promise<PluginSettingsListItem[]> {
 		throw new Error(await parseErrorMessage(response));
 	}
 	const body = (await response.json()) as PluginsResponseBody;
+	rememberEnabledPluginIds(body.plugins);
 	return body.plugins;
 }
 
@@ -61,6 +66,7 @@ export function fetchPlugins(): Promise<PluginSettingsListItem[]> {
  */
 export function resetPluginFetchDedupeForTests(): void {
 	inFlightFetch = null;
+	forgetEnabledPluginIdsForTests();
 }
 
 export interface UseEnabledPluginIdsResult {

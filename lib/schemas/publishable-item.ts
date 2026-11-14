@@ -5,9 +5,9 @@ import { z } from "zod";
  * `PublishableItemType` Prisma enum as a plain string union — kept
  * independent of the generated client, matching the convention in
  * `lib/services/case-response-types.ts` (see `PublishStatusType`) of
- * UI-facing types staying Prisma-free. Only `ASSURANCE_CASE` ships in 1.0;
- * `ARGUMENT_PATTERN` is a discriminator placeholder for the fast-follow
- * issue that publishes reusable pattern templates.
+ * UI-facing types staying Prisma-free. `ASSURANCE_CASE` is a published case;
+ * `ARGUMENT_PATTERN` is a published pattern, offered on Discover as a reusable
+ * template.
  */
 export const publishableItemTypeSchema = z.enum([
 	"ASSURANCE_CASE",

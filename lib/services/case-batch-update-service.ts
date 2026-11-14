@@ -5,6 +5,12 @@
  * Used by the JSON editor to apply multiple changes in a single transaction.
  */
 
+import { parseContextEntries } from "@/lib/case/defined-terms";
+import {
+	type PatternMarkerChanges,
+	patternMarkersForEdit,
+	storedElementText,
+} from "@/lib/case/placeholders";
 import type {
 	CreateElementData,
 	ElementChange,
@@ -12,13 +18,22 @@ import type {
 } from "@/lib/case/tree-diff";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { isWriteConflict } from "@/lib/prisma-errors";
+import {
+	type ContextEntry,
+	isNamedContextEntry,
+} from "@/lib/schemas/context-entry";
 import { validateElementName } from "@/lib/schemas/element-validation";
+import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
 	enforceAssertionStatusRules,
+	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
+	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
 	validateCitedElementId,
+	validateModuleReferenceId,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
 import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
@@ -29,6 +44,29 @@ import type {
 } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-batch-update-service" });
+
+/** The refusal of a batch that changes one element more than once. */
+const ELEMENT_CHANGED_ONCE = "A batch can change an element only once";
+
+/**
+ * Thrown inside the batch's transaction when fewer elements were deleted than
+ * the batch lists: another change to the case removed some of them after the
+ * batch was checked. Nothing is written, and the answer is the same conflict
+ * as for any other change that got in first.
+ */
+class ListedElementsMissingError extends Error {
+	constructor() {
+		super("The case changed while the batch was applied");
+	}
+}
+
+/** Whether the batch's transaction ended because another change to the case got in first. */
+function endedByAnotherChange(error: unknown): boolean {
+	return isWriteConflict(error) || error instanceof ListedElementsMissingError;
+}
+
+/** The answer, flagged as a conflict, when another person's change to the case got in first. */
+const CASE_MODIFIED = "Case has been modified by another user";
 
 /**
  * ADR 0004 D3 write rule (author-declared, machine-proposable, never
@@ -79,41 +117,96 @@ async function validateAssertionStatusChanges(
 	return null;
 }
 
+/** An element's stored case reference and cited element, before a batch changes them. */
+interface StoredReference {
+	citedElementId: string | null;
+	moduleReferenceId: string | null;
+}
+
 /**
- * ADR 0004 D5 (batch/JSON-editor parity, follow-up from vincent's review of
- * the canvas slice, 2026-09-16): `buildUpdateData` writes `moduleReferenceId`
- * with no citation check of its own — this batch path cannot write
- * `citedElementId` directly (it isn't part of `UpdateElementData`), so a
- * change that touches only `moduleReferenceId` could otherwise leave an
- * existing `citedElementId` pointing at the OLD case, unvalidated. Mirrors
- * element-service.ts's `updateElement` round-2 security fix exactly, scoped
- * to the batch shape: only updates that actually change `moduleReferenceId`
- * are checked, against the EXISTING `citedElementId` (one batched fetch, not
- * one query per update), reusing `validateCitedElementId` — the same
- * function, same anti-enumeration error message — as the single-element
- * route, and rejecting the whole batch on a violation rather than degrading
- * (batch is an explicit author edit, not import).
+ * The first case reference a batch newly sets or changes that the editor
+ * cannot view, as the error to refuse the batch with. A create's reference is
+ * always new; an update's is new only when it differs from the stored one, so
+ * an element whose existing reference the editor cannot view can still be
+ * edited. A case that does not exist, one in the bin and one the editor cannot
+ * view get the same answer, as does any other string that names no case,
+ * including an empty one. Each case is looked up once.
+ */
+async function findUnviewableModuleReference(
+	userId: string,
+	creates: CreateChange[],
+	moduleRefUpdates: UpdateChange[],
+	storedById: Map<string, StoredReference>
+): Promise<string | null> {
+	const caseIds = new Set<string>();
+	for (const change of creates) {
+		if (change.data.moduleReferenceId !== undefined) {
+			caseIds.add(change.data.moduleReferenceId);
+		}
+	}
+	for (const change of moduleRefUpdates) {
+		const caseId = change.data.moduleReferenceId;
+		if (
+			caseId !== undefined &&
+			caseId !== storedById.get(change.elementId)?.moduleReferenceId
+		) {
+			caseIds.add(caseId);
+		}
+	}
+
+	for (const caseId of caseIds) {
+		const error = await validateModuleReferenceId(caseId, userId);
+		if (error) {
+			return error;
+		}
+	}
+	return null;
+}
+
+/**
+ * Case references a batch writes: each one newly set or changed must name a
+ * case the editor can view (see `findUnviewableModuleReference`), and a
+ * change to `moduleReferenceId` must not orphan an existing `citedElementId`.
+ * `buildUpdateData` writes `moduleReferenceId` with no citation check of its
+ * own and this batch path cannot write `citedElementId` directly (it isn't
+ * part of `UpdateElementData`), so a change that touches only
+ * `moduleReferenceId` could otherwise leave an existing `citedElementId`
+ * pointing at the OLD case, unvalidated. Mirrors element-service.ts's
+ * `updateElement` exactly, scoped to the batch shape: the stored values come
+ * from one batched fetch (not one query per update), `validateCitedElementId`
+ * is the same function with the same anti-enumeration error message as the
+ * single-element route, and a violation rejects the whole batch rather than
+ * degrading (batch is an explicit author edit, not import).
  */
 async function validateModuleReferenceChanges(
+	userId: string,
+	creates: CreateChange[],
 	updates: UpdateChange[]
 ): Promise<string | null> {
 	const moduleRefUpdates = updates.filter(
 		(c) => c.data.moduleReferenceId !== undefined
 	);
-	if (moduleRefUpdates.length === 0) {
-		return null;
+	const storedRows =
+		moduleRefUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: moduleRefUpdates.map((c) => c.elementId) } },
+					select: { id: true, citedElementId: true, moduleReferenceId: true },
+				})
+			: [];
+	const storedById = new Map(storedRows.map((r) => [r.id, r]));
+
+	const unviewable = await findUnviewableModuleReference(
+		userId,
+		creates,
+		moduleRefUpdates,
+		storedById
+	);
+	if (unviewable) {
+		return unviewable;
 	}
 
-	const existingRows = await prisma.assuranceElement.findMany({
-		where: { id: { in: moduleRefUpdates.map((c) => c.elementId) } },
-		select: { id: true, citedElementId: true },
-	});
-	const citedElementIdById = new Map(
-		existingRows.map((r) => [r.id, r.citedElementId])
-	);
-
 	for (const change of moduleRefUpdates) {
-		const citedElementId = citedElementIdById.get(change.elementId);
+		const citedElementId = storedById.get(change.elementId)?.citedElementId;
 		if (!citedElementId) {
 			continue;
 		}
@@ -266,6 +359,220 @@ type TransactionClient = TransactionCallback extends (
 	: never;
 
 /**
+ * Named context entries: every element's names unique, and every id used once
+ * in the case, judged on the state the case will be in after the whole batch.
+ * A batch that deletes an element (or removes an entry) and creates the same
+ * entry again therefore passes. A batch that carries no named entry cannot add
+ * a clash, so it does not read the case's context at all.
+ */
+async function validateContextEntries(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	const carriesNamedEntry = [...creates, ...updates].some((change) =>
+		(change.data.context ?? []).some(isNamedContextEntry)
+	);
+	if (!carriesNamedEntry) {
+		return null;
+	}
+	// Every element of the case, including those in the bin, whose entries
+	// would come back on a restore.
+	const rows = await prisma.assuranceElement.findMany({
+		where: { caseId },
+		select: { id: true, context: true },
+	});
+	const finalContext = new Map<string, ContextEntry[]>(
+		rows.map((row) => [row.id, parseContextEntries(row.context)])
+	);
+	for (const change of deletes) {
+		finalContext.delete(change.elementId);
+	}
+	for (const change of creates) {
+		finalContext.set(change.elementId, change.data.context ?? []);
+	}
+	for (const change of updates) {
+		if (change.data.context !== undefined) {
+			finalContext.set(change.elementId, change.data.context);
+		}
+	}
+	return checkContextEntriesForCase(finalContext.values()) ?? null;
+}
+
+/** A goal as it is stored, before a batch changes it. */
+interface StoredGoal {
+	isDefeater: boolean;
+	parentId: string | null;
+}
+
+/**
+ * The id of the first goal defeater (counter-goal) the batch leaves without a
+ * parent: one it creates that way, or one it clears the parent of or makes a
+ * counter-goal while it has none. Goals the batch does not move or re-flag are
+ * not looked at.
+ */
+function findParentlessGoalDefeater(
+	goalCreates: CreateChange[],
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>
+): string | undefined {
+	const created = goalCreates.find(
+		(change) => change.data.isDefeater && !change.parentId
+	);
+	if (created) {
+		return created.elementId;
+	}
+	return movedUpdates.find((change) => {
+		const stored = storedById.get(change.elementId);
+		if (!stored) {
+			return false;
+		}
+		const parentId =
+			change.data.parentId === undefined
+				? stored.parentId
+				: change.data.parentId;
+		return (change.data.isDefeater ?? stored.isDefeater) && !parentId;
+	})?.elementId;
+}
+
+/**
+ * Whether the batch leaves the case with more than one ordinary goal. It only
+ * looks when the batch adds one, as a new ordinary goal or as a counter-goal
+ * made ordinary; the goals that count are those stored and not deleted or made
+ * counter-goals by the batch.
+ */
+async function leavesSecondOrdinaryGoal(
+	caseId: string,
+	goalCreates: CreateChange[],
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>,
+	deletes: DeleteChange[]
+): Promise<boolean> {
+	const madeOrdinary = movedUpdates.filter(
+		(change) =>
+			change.data.isDefeater === false &&
+			storedById.get(change.elementId)?.isDefeater === true
+	);
+	const added =
+		goalCreates.filter((change) => !change.data.isDefeater).length +
+		madeOrdinary.length;
+	if (added === 0) {
+		return false;
+	}
+	const leaving = new Set([
+		...deletes.map((change) => change.elementId),
+		...movedUpdates
+			.filter((change) => change.data.isDefeater === true)
+			.map((change) => change.elementId),
+	]);
+	const ordinary = await prisma.assuranceElement.findMany({
+		where: {
+			caseId,
+			elementType: "GOAL",
+			isDefeater: false,
+			deletedAt: null,
+		},
+		select: { id: true },
+	});
+	return ordinary.filter((goal) => !leaving.has(goal.id)).length + added > 1;
+}
+
+/**
+ * The goal rules, as the single-element create and update routes apply them:
+ * a goal defeater (counter-goal) has a parent, and a case has one ordinary
+ * goal. Judged on the goals as the batch leaves them.
+ */
+async function validateGoalChanges(
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	const goalCreates = creates.filter(
+		(change) => mapElementType(change.data.type) === "GOAL"
+	);
+	const movedUpdates = updates.filter(
+		(change) =>
+			change.data.isDefeater !== undefined || change.data.parentId !== undefined
+	);
+	if (goalCreates.length === 0 && movedUpdates.length === 0) {
+		return null;
+	}
+
+	const storedGoals =
+		movedUpdates.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: {
+						id: { in: movedUpdates.map((change) => change.elementId) },
+						elementType: "GOAL",
+					},
+					select: { id: true, isDefeater: true, parentId: true },
+				})
+			: [];
+	const storedById = new Map(storedGoals.map((goal) => [goal.id, goal]));
+
+	const parentless = findParentlessGoalDefeater(
+		goalCreates,
+		movedUpdates,
+		storedById
+	);
+	if (parentless) {
+		return `${GOAL_DEFEATER_NEEDS_PARENT} (element ${parentless})`;
+	}
+	return (await leavesSecondOrdinaryGoal(
+		caseId,
+		goalCreates,
+		movedUpdates,
+		storedById,
+		deletes
+	))
+		? ONE_GOAL_PER_CASE
+		: null;
+}
+
+/**
+ * A batch can change an element once: in one update, or in one delete. The
+ * checks of the goal rules judge each change against the stored element, so
+ * two changes to one element would each pass and together break a rule. The
+ * JSON editor never repeats an element, so a batch that does (two updates, an
+ * update and a delete, or two deletes) is refused instead of merged.
+ */
+function validateEachElementChangedOnce(
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): string | null {
+	const seen = new Set<string>();
+	for (const change of [...updates, ...deletes]) {
+		if (seen.has(change.elementId)) {
+			return `${ELEMENT_CHANGED_ONCE} (element ${change.elementId})`;
+		}
+		seen.add(change.elementId);
+	}
+	return null;
+}
+
+/**
+ * Every check of the values a batch writes into element fields: that no
+ * element is changed twice, the element names, the named context entries, then
+ * the goal rules.
+ */
+async function validateElementFields(
+	userId: string,
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<string | null> {
+	return (
+		validateEachElementChangedOnce(updates, deletes) ??
+		(await validateElementNames(userId, creates, updates)) ??
+		(await validateContextEntries(caseId, creates, updates, deletes)) ??
+		(await validateGoalChanges(caseId, creates, updates, deletes))
+	);
+}
+
+/**
  * Validates user has EDIT permission on the case
  */
 async function validateEditAccess(
@@ -294,9 +601,10 @@ async function validateEditAccess(
  *   `elementId` in this batch — otherwise a batch containing both
  *   `{type:"delete", elementId:X}` and `{type:"create", elementId:X, ...}`
  *   for a foreign X would pass ownership (X "will exist" by the time the
- *   create runs), and since `applyDeletes` runs before `applyCreates` and
- *   deletes by bare PK with no case filter, the victim's row would be
- *   hard-deleted and silently recreated under the attacker's case.
+ *   create runs), and since `applyDeletes` runs before `applyCreates`, the
+ *   victim's row could be hard-deleted and silently recreated under the
+ *   attacker's case. This check refuses it first, and `applyDeletes` itself
+ *   only deletes rows of the case being written.
  * - MAY-BE-SATISFIED-BY-A-SIBLING-CREATE ids — parent references
  *   (`parentId` on a create/update) and FK-style references to another
  *   element (`defeatsElementId` on a create/update, both sides of a
@@ -598,25 +906,36 @@ function buildCreateData(
 		moduleReferenceId: data.moduleReferenceId,
 		moduleEmbedType: data.moduleEmbedType as "COPY" | "REFERENCE" | null,
 		modulePublicSummary: data.modulePublicSummary,
-		fromPattern: data.fromPattern ?? false,
-		modifiedFromPattern: data.modifiedFromPattern ?? false,
 		isDefeater: data.isDefeater ?? false,
 		defeatsElementId: data.defeatsElementId,
+		isPlaceholder: data.isPlaceholder ?? false,
+		placeholderHint: data.placeholderHint,
 		createdById: userId,
 	};
 }
 
 /**
- * Applies delete operations
+ * Applies delete operations in one statement, on the rows of this case.
+ * Deleting an element also deletes everything beneath it, and the batch lists
+ * those elements too, so deleting them one by one would fail on the first one
+ * the parent's delete had already taken with it. Every listed element must be
+ * found: if fewer rows go than were listed, the batch is rolled back rather
+ * than deleting less than it was asked to.
  */
 async function applyDeletes(
 	tx: TransactionClient,
+	caseId: string,
 	deletes: DeleteChange[]
 ): Promise<void> {
-	for (const change of deletes) {
-		await tx.assuranceElement.delete({
-			where: { id: change.elementId },
-		});
+	if (deletes.length === 0) {
+		return;
+	}
+	const ids = deletes.map((change) => change.elementId);
+	const { count } = await tx.assuranceElement.deleteMany({
+		where: { id: { in: ids }, caseId },
+	});
+	if (count < ids.length) {
+		throw new ListedElementsMissingError();
 	}
 }
 
@@ -741,8 +1060,8 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 		"moduleReferenceId",
 		"moduleEmbedType",
 		"modulePublicSummary",
-		"fromPattern",
-		"modifiedFromPattern",
+		"isPlaceholder",
+		"placeholderHint",
 		"isDefeater",
 		"defeatsElementId",
 	];
@@ -1106,10 +1425,70 @@ async function applyCascadeLevelUpdates(
 }
 
 /**
+ * The pattern markers each update changes by itself: writing the description
+ * of a placeholder in a case takes the marker off, and text changed on an
+ * element from a pattern marks it as modified. Judged against the text the
+ * elements hold now, and not for an update that sets `isPlaceholder` itself.
+ * Reads nothing when no update carries text.
+ */
+async function resolvePatternMarkers(
+	tx: TransactionClient,
+	caseId: string,
+	updates: UpdateChange[]
+): Promise<Map<string, PatternMarkerChanges>> {
+	const textUpdates = updates.filter(
+		({ data }) =>
+			data.description !== undefined ||
+			data.assumption !== undefined ||
+			data.justification !== undefined ||
+			data.context !== undefined
+	);
+	if (textUpdates.length === 0) {
+		return new Map();
+	}
+	const caseRow = await tx.assuranceCase.findUnique({
+		where: { id: caseId },
+		select: { kind: true },
+	});
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: textUpdates.map((change) => change.elementId) } },
+		select: {
+			id: true,
+			description: true,
+			assumption: true,
+			justification: true,
+			context: true,
+			fromPattern: true,
+		},
+	});
+	const storedById = new Map(rows.map((row) => [row.id, row]));
+	const markers = new Map<string, PatternMarkerChanges>();
+	for (const { data, elementId } of textUpdates) {
+		const stored = storedById.get(elementId);
+		if (!(caseRow && stored)) {
+			continue;
+		}
+		markers.set(
+			elementId,
+			patternMarkersForEdit({
+				kind: caseRow.kind,
+				stored: storedElementText(stored),
+				// Trimmed, as the element route reads a description, so trailing
+				// spaces alone do not count as writing the element.
+				edit: { ...data, description: data.description?.trim() },
+				placeholderSetByEdit: data.isPlaceholder !== undefined,
+			})
+		);
+	}
+	return markers;
+}
+
+/**
  * Applies update operations
  */
 async function applyUpdates(
 	tx: TransactionClient,
+	caseId: string,
 	updates: UpdateChange[]
 ): Promise<void> {
 	const relevantForLevel = updates.filter(
@@ -1169,9 +1548,13 @@ async function applyUpdates(
 	// regenerateNamesForDefeaterFlips's own docstring for the known
 	// same-batch-count limitation.
 	const regeneratedNames = await regenerateNamesForDefeaterFlips(updates);
+	const patternMarkers = await resolvePatternMarkers(tx, caseId, updates);
 
 	for (const change of updates) {
-		const updateData = buildUpdateData(change.data);
+		const updateData: Record<string, unknown> = {
+			...buildUpdateData(change.data),
+			...patternMarkers.get(change.elementId),
+		};
 
 		if (finalLevels.has(change.elementId)) {
 			updateData.level = finalLevels.get(change.elementId);
@@ -1260,10 +1643,7 @@ export async function applyBatchUpdate(
 	if (options.expectedVersion) {
 		const hasConflict = await checkForConflict(caseId, options.expectedVersion);
 		if (hasConflict) {
-			return {
-				error: "Case has been modified by another user",
-				conflictDetected: true,
-			};
+			return { error: CASE_MODIFIED, conflictDetected: true };
 		}
 	}
 
@@ -1305,10 +1685,14 @@ export async function applyBatchUpdate(
 		return { error: assertionStatusError };
 	}
 
-	// ADR 0004 D5 (citation integrity follow-up, 2026-09-16): a moduleReferenceId
-	// change must not orphan an existing citedElementId against the OLD case —
+	// A new or changed moduleReferenceId must name a case the editor can view,
+	// and must not orphan an existing citedElementId against the OLD case —
 	// see validateModuleReferenceChanges's docstring.
-	const moduleReferenceError = await validateModuleReferenceChanges(updates);
+	const moduleReferenceError = await validateModuleReferenceChanges(
+		userId,
+		creates,
+		updates
+	);
 	if (moduleReferenceError) {
 		return { error: moduleReferenceError };
 	}
@@ -1328,18 +1712,24 @@ export async function applyBatchUpdate(
 	// point shape as the single-element route (element-service.ts's
 	// createElement/updateElement), applied here so a rename or create
 	// through the JSON editor can't bypass it.
-	const nameFormatError = await validateElementNames(userId, creates, updates);
-	if (nameFormatError) {
-		return { error: nameFormatError };
+	const fieldError = await validateElementFields(
+		userId,
+		caseId,
+		creates,
+		updates,
+		deletes
+	);
+	if (fieldError) {
+		return { error: fieldError };
 	}
 
 	try {
 		await prisma.$transaction(async (tx) => {
 			// Order: unlinks first, then deletes, creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
-			await applyDeletes(tx, deletes);
+			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
-			await applyUpdates(tx, updates);
+			await applyUpdates(tx, caseId, updates);
 			await applyLinkEvidence(tx, links);
 
 			// Update the case's updatedAt timestamp
@@ -1359,6 +1749,13 @@ export async function applyBatchUpdate(
 			},
 		};
 	} catch (error) {
+		if (endedByAnotherChange(error)) {
+			// Another transaction holds rows this one needs while waiting for rows
+			// this one holds, and the database ended this one, or it removed
+			// elements this one was to delete. Nothing was written.
+			log.warn("Batch update ended by a write conflict", { error });
+			return { error: CASE_MODIFIED, conflictDetected: true };
+		}
 		log.error("Batch update failed", { error });
 		return {
 			error:

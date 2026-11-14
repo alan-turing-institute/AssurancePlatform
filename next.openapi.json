@@ -83,10 +83,34 @@
           "ERROR_MESSAGE": "Resource not found"
         }
       },
+      "409": {
+        "description": "Conflict",
+        "variables": {
+          "ERROR_MESSAGE": "The request conflicts with the current state"
+        }
+      },
+      "422": {
+        "description": "Unprocessable Entity",
+        "variables": {
+          "ERROR_MESSAGE": "The request could not be processed"
+        }
+      },
+      "429": {
+        "description": "Too Many Requests",
+        "variables": {
+          "ERROR_MESSAGE": "Too many requests"
+        }
+      },
       "500": {
         "description": "Internal Server Error",
         "variables": {
           "ERROR_MESSAGE": "An unexpected error occurred"
+        }
+      },
+      "503": {
+        "description": "Service Unavailable",
+        "variables": {
+          "ERROR_MESSAGE": "The service is temporarily unavailable"
         }
       }
     }

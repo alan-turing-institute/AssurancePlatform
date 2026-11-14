@@ -20,13 +20,15 @@ The case creator has implicit `ADMIN` access. A person can receive a direct gran
 
 ## Share a case
 
-Open the case at `/case/<caseId>` and choose **Share** from the editor toolbar. The **Share Case** dialog is available to someone who can manage the case. In **Share by Email**, enter an address, choose a **Permission Level** and select **Share**. If the address belongs to an existing account, the platform creates a direct case permission. If no account exists, it creates an invitation and shows a link for you to copy and send. That invitation expires after seven days and must be accepted by an account with the invited email address. It is not an anonymous access link.
+Open the case and choose **Share** from the editor toolbar. The **Share Case** dialog is available to someone who can manage the case. In **Share by Email**, enter an address, choose a **Permission Level** and select **Share**. If the address belongs to an existing account, the platform creates a direct case permission. If no account exists, it creates an invitation and shows a link for you to copy and send. That invitation expires after seven days and must be accepted by an account with the invited email address. It is not an anonymous access link.
 
 Use **Share with Team** to grant a permission to one of your teams. The dialog lists teams you belong to that do not already have a grant for the case. Every member of a granted team inherits that case permission, including people its team admin adds later. To change or remove a grant later, use the permission selector or **Remove access** beside a person or team in the dialog. Case sharing and permission changes require `ADMIN` case access.
+When someone's last route to the case goes, and that person has the case open, they see an **Access removed** message in place of it straight away.
+A person who still has another route to the case, such as a direct grant or a second team, keeps it open.
 
 ## Manage a team
 
-The dashboard's `/dashboard/teams` page lists your teams and has a **New Team** action. A team's detail page lists its members. A team admin can add an existing user by email, assign `Member` or `Admin`, change another member's role, or remove a member. The creator of a new team is an `ADMIN`. The schema also has an `OWNER` role, but current team creation and member-management paths use `ADMIN` and `MEMBER`; you cannot promote a member to `OWNER` through this service. A team admin can change team settings and delete the team. Team members can leave, except that the last admin must promote another member first.
+The dashboard's [Teams page](/dashboard/teams) lists your teams and has a **New Team** action. A team's detail page lists its members. A team admin can add an existing user by email, assign `Member` or `Admin`, change another member's role, or remove a member. The creator of a new team is an `ADMIN`. The schema also has an `OWNER` role, but current team creation and member-management paths use `ADMIN` and `MEMBER`; you cannot promote a member to `OWNER` through this service. A team admin can change team settings and delete the team. Team members can leave, except that the last admin must promote another member first.
 
 A team role controls management of the team. It does not automatically grant case `ADMIN`. The team receives only the case permission explicitly granted in **Share with Team**. Similarly, being a case admin does not make you an admin of every team you share the case with.
 

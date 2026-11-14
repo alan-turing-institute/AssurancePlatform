@@ -2,18 +2,23 @@
 
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import {
+	BaseNode,
+	getPlaceholderIndicator,
+	NodeActionGroup,
+} from "@/components/shared/nodes";
 import CitedCaseLink from "./cited-case-link";
 import NodeEditDialog from "./node-edit-dialog";
 
 /**
  * Module card (ADR 0005 D3): a reference to a whole other case. Shows the
- * referenced case's name (resolved server-side by `case-fetch-service.ts`)
- * and links to it when the viewer can access it. When the referenced case
- * isn't available in this environment (`moduleReferenceDangling` — Chris's
- * ruling, 2026-09-16), the card says so instead of "Unknown case", and shows
- * no link (`moduleReferenceId` is null in that state). Read-only beyond the
- * description: no add-child menu (modules are leaves in 1.0 core).
+ * referenced case's name (resolved server-side by `case-fetch-service.ts`, and
+ * only for a viewer who can view that case) with a link to it. A viewer who
+ * cannot view it sees "Cited case not available" and no link; so does a
+ * reference that was cleared on import (`moduleReferenceId` is null in that
+ * state). The name line is left out of the dashboard thumbnail, which other
+ * people see. Read-only beyond the description: no add-child menu (modules are
+ * leaves in 1.0 core).
  */
 function ModuleNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -22,7 +27,6 @@ function ModuleNode({ data, ...props }: NodeProps) {
 	const moduleCaseName = (data.moduleCaseName as string | null) ?? null;
 	const moduleCaseAccessible = !!data.moduleCaseAccessible;
 	const moduleReferenceId = data.moduleReferenceId as string | undefined;
-	const moduleReferenceDangling = !!data.moduleReferenceDangling;
 
 	return (
 		<>
@@ -42,18 +46,24 @@ function ModuleNode({ data, ...props }: NodeProps) {
 				// The referenced case is the card's whole point — unlike a
 				// description preview, it shouldn't be hidden behind a click.
 				initialExpanded
+				isPlaceholder={!!data.isPlaceholder}
 				name={data.name}
 				nodeType="module"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
+				topRightActions={getPlaceholderIndicator(data)}
 			>
 				<div className="space-y-1">
 					<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
 						References
 					</span>
-					<p className="text-sm">
-						{moduleReferenceDangling
-							? "Cited case not available"
-							: (moduleCaseName ?? "Unknown case")}
+					<p
+						className="text-sm"
+						data-left-out-of-shared-thumbnail={
+							moduleCaseAccessible ? "" : undefined
+						}
+					>
+						{moduleCaseAccessible ? moduleCaseName : "Cited case not available"}
 					</p>
 					{moduleReferenceId && (
 						<CitedCaseLink

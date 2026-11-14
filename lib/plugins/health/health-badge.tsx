@@ -6,93 +6,124 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatRelativeToNow } from "@/lib/date";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
 import { cn } from "@/lib/utils";
-import type { HealthBand } from "./health-bands";
-import { deriveHealthBand, isHealthStale } from "./health-bands";
-import { useHealthBandScores } from "./use-health-band-scores";
+import {
+	describeBadge,
+	isStatusStale,
+	VERDICT_DOT_CLASSES,
+} from "./health-format";
+import { LiveNodeBadge } from "./live-node-badge";
 import { useHealthState } from "./use-health-state";
-
-const BAND_DOT_CLASSES: Record<HealthBand, string> = {
-	pass: "bg-success",
-	degraded: "bg-warning",
-	fail: "bg-destructive",
-};
-
-const BAND_LABELS: Record<HealthBand, string> = {
-	pass: "Health: passing",
-	degraded: "Health: degraded",
-	fail: "Health: failing",
-};
-
-/** The band word alone, for composing into the stale label below. */
-const BAND_WORDS: Record<HealthBand, string> = {
-	pass: "passing",
-	degraded: "degraded",
-	fail: "failing",
-};
+import { useLiveEvidenceNodes } from "./use-live-evidence-nodes";
+import { useRerenderAtExpiry } from "./use-rerender-at-expiry";
 
 /**
- * Stale marker (ADR 0002 v2 §3 — "green-but-stale is preserved"): health and
- * freshness are orthogonal, so staleness must never REPLACE the band colour,
- * only annotate it. A ring keeps the dot's fill on its band colour and adds
- * a second, concentric shape around it — a geometry cue, not a colour one,
- * so it reads even without colour vision. `ring-offset-background` keeps the
- * gap between dot and ring visible against either theme.
+ * Stale marker: health and freshness are separate, so staleness never
+ * replaces the verdict colour, only annotates it. A ring keeps the dot's
+ * fill and adds a second, concentric shape around it, a cue that reads
+ * without colour vision. `ring-offset-background` keeps the gap visible in
+ * either theme.
  */
 const STALE_RING_CLASSES =
 	"ring-2 ring-muted-foreground/70 ring-offset-1 ring-offset-background";
 
 /**
- * The `element-badge` slot's health state dot (ADR 0002 v2 §3 — "the state
- * dot"). Renders nothing for anything `useHealthState` can't turn into a
- * confident answer: not a claim, no health data yet, or a fetch error —
- * fail-closed rather than guess (delegation brief, item 2). Plugin-disabled
- * is already handled one layer up: `useElementBadgeSlot` filters this
- * registration out of the list entirely before it would ever mount.
+ * A property claim's health dot. The colour comes from the status's verdict
+ * alone: green, amber, red or grey. A stale status keeps its colour and gains
+ * a ring; a claim whose records have all been withdrawn shows an unfilled dot
+ * with the ring. A claim with no status, or bound to a check but without a
+ * record yet, shows nothing, as does a failed fetch.
+ *
+ * A claim whose current result was judged with other settings than the ones
+ * accepted, or which has no accepted settings, also shows a small "≠"
+ * beside the dot. The mark is hidden from assistive technology; the dot's
+ * label says the same in words.
  *
  * Colour is never the only signal: the dot is an `<output>` element (an
- * implicit `status` live region — apt, since this genuinely updates live
- * over SSE) with an `aria-label` naming the band/staleness in words, so the
- * state reaches assistive tech independent of the tooltip, which repeats it
- * for sighted hover users.
+ * implicit live region, apt since the state updates over SSE) whose
+ * `aria-label` says the verdict, any staleness and any settings mismatch in
+ * words.
+ *
+ * While the claim has a live evidence node that is drawn (its children are not
+ * collapsed), the node carries the result and the dot is left out. Until the
+ * case's live nodes have been read the dot waits, so it does not appear and
+ * then vanish. A claim without a live node shows its dot as before.
  */
-export function HealthBadge({
+function ClaimHealthBadge({
 	caseId,
+	childrenHidden,
 	elementId,
 	elementType,
 }: ElementSlotContext) {
-	const { health, status } = useHealthState({ caseId, elementId, elementType });
-	const bandScores = useHealthBandScores();
+	const { healthStatus, status } = useHealthState({
+		caseId,
+		elementId,
+		elementType,
+	});
+	useRerenderAtExpiry(healthStatus?.expires_at ?? null);
+	const liveNodes = useLiveEvidenceNodes(caseId, elementType === "property");
 
-	if (status !== "ready" || !health) {
+	if (status !== "ready" || !healthStatus) {
+		return null;
+	}
+	if (!liveNodes.loaded) {
+		return null;
+	}
+	if (liveNodes.byClaimId.has(elementId) && !childrenHidden) {
 		return null;
 	}
 
-	const stale = isHealthStale(health);
-	const band = deriveHealthBand(health.score, bandScores);
+	const { verdict } = healthStatus;
+	if (verdict === null && healthStatus.stale_reason !== "all-revoked") {
+		return null;
+	}
+
+	const stale = isStatusStale(healthStatus, Date.now());
+	const label = describeBadge(healthStatus, stale);
+
 	const dotClassName = cn(
 		"inline-block size-2 rounded-full",
-		BAND_DOT_CLASSES[band],
+		verdict === null
+			? "border border-muted-foreground bg-transparent"
+			: VERDICT_DOT_CLASSES[verdict],
 		stale && STALE_RING_CLASSES
 	);
-	const label = stale
-		? `Health: ${BAND_WORDS[band]} — stale (last evaluated ${formatRelativeToNow(health.lastEvaluatedAt)})`
-		: BAND_LABELS[band];
 
 	return (
 		<TooltipProvider>
 			<Tooltip delayDuration={200}>
 				<TooltipTrigger asChild>
-					<output
-						aria-label={label}
-						className={dotClassName}
-						data-testid="health-badge-dot"
-					/>
+					<span className="inline-flex items-center gap-0.5">
+						<output
+							aria-label={label}
+							className={dotClassName}
+							data-testid="health-badge-dot"
+						/>
+						{healthStatus.mismatch && (
+							<span
+								aria-hidden="true"
+								className="font-semibold text-muted-foreground text-xs leading-none"
+								data-testid="health-badge-mismatch-mark"
+							>
+								{"≠"}
+							</span>
+						)}
+					</span>
 				</TooltipTrigger>
 				<TooltipContent>{label}</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>
 	);
+}
+
+/**
+ * The `element-badge` slot's health display: the dot on a property claim, the
+ * result badge on a live evidence node, nothing on any other element.
+ */
+export function HealthBadge(context: ElementSlotContext) {
+	if (context.elementType === "evidence") {
+		return <LiveNodeBadge {...context} />;
+	}
+	return <ClaimHealthBadge {...context} />;
 }

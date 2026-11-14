@@ -192,6 +192,7 @@ e2e/.auth/
 test-results/
 playwright-report/
 blob-report/
+vitest-blob/
 
 # documentation builds - all generated documentation files
 public/documentation/

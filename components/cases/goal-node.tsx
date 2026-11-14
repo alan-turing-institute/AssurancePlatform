@@ -13,10 +13,17 @@ function GoalNode({ data, ...props }: NodeProps) {
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
-	const topRightActions = useNodeTopRightActions(data, "goal");
+	const topRightActions = useNodeTopRightActions(data, "goal", props.id);
 
 	const isDemoGoal = data.isDemo && data.name === "G1";
-	const dataTour = isDemoGoal ? "demo-goal" : undefined;
+	// A goal with no parent node is the root of its tree.
+	const isTopGoal = !data.parentId;
+	let dataTour: string | undefined;
+	if (isDemoGoal) {
+		dataTour = "demo-goal";
+	} else if (isTopGoal) {
+		dataTour = "top-goal";
+	}
 
 	return (
 		<>
@@ -40,10 +47,13 @@ function GoalNode({ data, ...props }: NodeProps) {
 				expandTour={isDemoGoal ? "demo-expand" : undefined}
 				initialExpanded={isDemoGoal}
 				isDefeater={!!data.isDefeater}
+				isPlaceholder={!!data.isPlaceholder}
 				justification={data.justification}
 				name={data.name}
 				nodeType="goal"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 

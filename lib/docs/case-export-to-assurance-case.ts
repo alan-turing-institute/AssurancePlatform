@@ -1,5 +1,5 @@
 /**
- * Adapts a curriculum case file (`CaseExportNested`, the same v1.0 tree
+ * Adapts a curriculum case file (`CaseExportNested`, the same v1.0/v1.1 tree
  * format the real export/import pipeline uses) into the
  * `AssuranceCaseResponse` shape `convertAssuranceCase` (the real case
  * canvas's data-to-ReactFlow-nodes converter, `lib/case/convert-case.ts`)

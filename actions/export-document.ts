@@ -1,18 +1,21 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
+import { type PlainCase, toPlainCase } from "@/lib/case/defined-terms";
 import { uuidSchema } from "@/lib/schemas/base";
-import type { CaseExportNested } from "@/lib/schemas/case-export";
 
 interface DocumentExportOptions {
 	includeComments: boolean;
 }
 
-type DocumentExportResult = { data: CaseExportNested } | { error: string };
+type DocumentExportResult = { data: PlainCase } | { error: string };
 
 /**
  * Server action to get case data for document export.
  * Validates user authentication and VIEW permission before returning data.
+ * The data is the plain-text copy of the case: every context entry a string and
+ * every reference written as `{name}`, so the exporters never see the stored
+ * shape.
  */
 export async function getDocumentExportData(
 	caseId: string,
@@ -38,5 +41,5 @@ export async function getDocumentExportData(
 		return { error: result.error };
 	}
 
-	return { data: result.data };
+	return { data: toPlainCase(result.data) };
 }

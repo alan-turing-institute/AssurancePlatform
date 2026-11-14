@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { fetchAssuranceCases } from "@/actions/assurance-cases";
+import { fetchAdministrableCases } from "@/actions/assurance-cases";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -41,28 +41,70 @@ export interface GrantCaseAccessFormProps {
 	) => Promise<boolean>;
 }
 
+interface CaseListStatusProps {
+	/** How many of the listed cases are not yet granted to the integration. */
+	available: number;
+	/** True when the case list could not be loaded. */
+	failed: boolean;
+	/** True while the case list is loading. */
+	loading: boolean;
+	/** How many cases the list holds, before already-granted ones are removed. */
+	total: number;
+}
+
+/**
+ * The one message that explains why the picker has nothing to offer: loading,
+ * a failed load, no administered cases, or every administered case already
+ * granted. Renders nothing once the list is usable.
+ */
+function CaseListStatus({
+	available,
+	failed,
+	loading,
+	total,
+}: CaseListStatusProps) {
+	if (loading) {
+		return <p className="text-muted-foreground text-xs">Loading your cases…</p>;
+	}
+	if (failed) {
+		return (
+			<p className="text-destructive text-xs" role="alert">
+				Couldn't load your cases. Close the form and try again.
+			</p>
+		);
+	}
+	if (total === 0) {
+		return (
+			<p className="text-muted-foreground text-xs">
+				You don't administer any cases yet.
+			</p>
+		);
+	}
+	if (available === 0) {
+		return (
+			<p className="text-muted-foreground text-xs">
+				Every case you administer already has this integration granted.
+			</p>
+		);
+	}
+	return null;
+}
+
 /**
  * The inline "grant access to a case" form — rendered by `CaseAccessSection`
- * once "+ Grant access to a case…" is clicked. Sources its case options from
- * `fetchAssuranceCases`, the same server action the main dashboard list
- * uses, fetched lazily here on mount rather than eagerly whenever the
- * settings page loads — nobody needs the full cases list until they
- * actually open this form.
+ * once "+ Grant access to a case…" is clicked. Its case options come from
+ * `fetchAdministrableCases`, fetched when the form opens rather than whenever
+ * the settings page loads, because nobody needs the list until then.
  *
- * Deliberately restricted to the caller's OWNED cases, not
- * `fetchAssuranceCases`'s shared-cases sibling: a case a user owns always
- * carries implicit case-ADMIN (the creator short-circuit in
- * `getCasePermissionFromPrisma`, `lib/permissions.ts`), so every option
- * offered here is guaranteed to pass the API's own ADMIN check. Cases
- * merely SHARED to the user (even at ADMIN level) are left out on purpose:
- * `listUserCases`'s `permissions` field labels every non-owner row "view"
- * regardless of its real level (a pre-existing gap in
- * `case-fetch-service.ts` — not this ticket's to fix), so this component
- * cannot reliably tell a shared-ADMIN case apart from a shared-VIEW one from
- * that data. Showing only owned cases keeps every option correct-by-
- * construction instead of leaning on that unreliable label; the API's own
- * 404 (surfaced via `grantError`) remains the backstop for any case this
- * picker still gets wrong.
+ * The list holds the ordinary cases the grant route will accept: the ones the
+ * user created and the ones shared with them at ADMIN, directly or through a
+ * team. Patterns and trashed cases are not listed. The list is advisory: the
+ * grant route checks ADMIN again, and its 404 (surfaced via `grantError`)
+ * covers a case whose sharing changed after the list loaded.
+ *
+ * A failed load (no session, a service failure, or a rejected request) shows
+ * its own message instead of either empty state, because an empty list would
+ * otherwise read as "you administer nothing".
  */
 export function GrantCaseAccessForm({
 	existingCaseIds,
@@ -73,6 +115,7 @@ export function GrantCaseAccessForm({
 }: GrantCaseAccessFormProps) {
 	const [cases, setCases] = useState<CaseOption[]>([]);
 	const [casesLoading, setCasesLoading] = useState(true);
+	const [casesFailed, setCasesFailed] = useState(false);
 	const [selectedCaseId, setSelectedCaseId] = useState("");
 	const [selectedPermission, setSelectedPermission] =
 		useState<CaseGrantPermission>("VIEW");
@@ -80,12 +123,21 @@ export function GrantCaseAccessForm({
 	useEffect(() => {
 		let cancelled = false;
 		setCasesLoading(true);
-		fetchAssuranceCases()
+		setCasesFailed(false);
+		fetchAdministrableCases()
 			.then((result) => {
+				if (cancelled) {
+					return;
+				}
+				if (result === null) {
+					setCasesFailed(true);
+					return;
+				}
+				setCases(result);
+			})
+			.catch(() => {
 				if (!cancelled) {
-					setCases(
-						(result ?? []).map((c) => ({ id: String(c.id), name: c.name }))
-					);
+					setCasesFailed(true);
 				}
 			})
 			.finally(() => {
@@ -119,15 +171,12 @@ export function GrantCaseAccessForm({
 				</p>
 			)}
 
-			{casesLoading && (
-				<p className="text-muted-foreground text-xs">Loading your cases…</p>
-			)}
-
-			{!casesLoading && availableCases.length === 0 && (
-				<p className="text-muted-foreground text-xs">
-					Every case you administer already has this integration granted.
-				</p>
-			)}
+			<CaseListStatus
+				available={availableCases.length}
+				failed={casesFailed}
+				loading={casesLoading}
+				total={cases.length}
+			/>
 
 			{!casesLoading && availableCases.length > 0 && (
 				<div className="flex flex-wrap items-center gap-2">

@@ -1,24 +1,184 @@
 ---
-title: "Templates and argument patterns"
-description: "Distinguish case creation, import and export templates from planned reusable argument patterns."
+title: "Patterns"
+description: "Understand what a pattern is, mark the elements the person using it writes, set details once with variables, convert a case to a pattern and back, find your patterns and publish one on Discover."
 ---
 
-The platform uses the word *template* in more than one place. A document export template controls the structure of a generated report. A case data file can carry metadata that says an element came from a pattern. The data model also reserves an argument-pattern type for Discover. These pieces do not yet amount to a browser workflow for choosing and publishing reusable argument patterns.
+A pattern is an argument set aside for reuse.
+It is built in the same editor as an assurance case, from the same goals, strategies, claims and evidence, and it is shared and permissioned in the same way.
+What differs is where it appears: a pattern is left out of **My Assurance Cases**, is listed under **My Patterns**, and carries a **Pattern** badge wherever it is listed.
 
-## Start a case
+## How a pattern looks in the editor
 
-On a populated dashboard, choose **Create new case** to open **Create New Assurance Case**. The empty dashboard uses **New Case**. Enter **Name** and **Description**, then choose **Submit**. The modal creates a blank case and opens `/case/<id>`. The current modal has no template picker. If you have an existing case JSON file, **Import File** is a separate route to make a case from that data. It is not a choice inside the create dialog.
+When you open a pattern, a small notice at the top left of the canvas reads "You are editing a pattern." if you can edit it, and "You are viewing a pattern." if you cannot.
+Everything else in the editor works as it does for a case.
 
-There is an `/api/templates` route that looks for JSON files in a `caseTemplates` directory and returns `newTemplates` and `defaultCase`. That directory is absent at the checked commit. The route therefore returns an empty list and no default case. Do not write a training step that asks a learner to choose a starter template from the current browser dialog. The repository does include a sample pattern JSON file under `public/data/patterns/`, but it is not wired into that dialog.
+## Placeholders
 
-## Export templates
+A placeholder is an element that the person using the pattern writes.
+It marks a place where the pattern needs your own claim, strategy or evidence, and it is how a pattern says what is left to fill in.
 
-The case share and export dialog offers document export presets. The presets include a full report, summary and evidence list. They control which sections and rendering layout appear in an exported document; they do not add claims or evidence to a working case. Choose the preset that suits the intended reader, then review the resulting file. An evidence list is a way to present what the case already contains, not a judgement about evidence quality.
+### Mark a placeholder in a pattern
 
-## Pattern metadata and current boundary
+Open an element in a pattern and choose its edit button.
+Switch on **Placeholder: the person using this pattern writes this**.
+A **Hint for the person filling this in** box appears; use it to say what to write, in up to 500 characters.
+The element may keep sample text, or have none.
+Switch the placeholder off again to take the marker and its hint away.
+An element with no text needs its description written first; the dialog says so beside the switch.
 
-Assurance elements have `fromPattern` and `modifiedFromPattern` flags in the data model. Import and export preserve these fields. A future reusable pattern can therefore mark where material came from and whether a user changed it. The `PublishableItemType` enum includes `ARGUMENT_PATTERN`, and Discover has a generic type badge. The schema states that only `ASSURANCE_CASE` is implemented for 1.0. Current case publishing creates assurance-case items, not pattern catalogue entries. There is no user-facing pattern application flow in the checked code.
+A placeholder is drawn with a dashed outline and a **To fill in** badge, in a pattern and in a case alike.
+A placeholder with no text shows its hint, in italics, on the card in a pattern as well as in a case started from one.
+Hover over the badge, or tab to it, to read the hint.
+
+### Fill a placeholder in a case
+
+A case started from a pattern keeps each placeholder as a placeholder, with its hint, and every element in it counts as coming from the pattern.
+A placeholder with no text shows its hint, in italics, where the text will go.
+In the edit dialog the hint is shown above the description.
+
+Writing the description of a placeholder takes the marker off.
+That holds whichever way you write it: in the edit dialog, in the JSON editor, or by applying a suggestion from the Case Assistant.
+Changing only the assumption, justification or context leaves the marker on, and so does saving the description unchanged.
+Emptying the description does not count as writing it.
+**Undo** puts the marker back, and **Redo** takes it off again.
+
+A case with elements still to fill in cannot be published; see [Publishing and Discover](/docs/platform-guide/publishing-and-discover).
+
+### In a pattern, nothing clears by itself
+
+Writing text into a placeholder in a pattern does not take the marker off.
+The author decides, with the switch, whether the person using the pattern writes the element.
+The dashed outline shows which elements are still placeholders.
+A pattern is not held back from publishing by its own placeholders.
+
+### A new blank case or pattern
+
+A new blank case or pattern starts with one element, the top-level goal **G1**, as a placeholder with no text and the hint "Describe your top-level assurance goal".
+In a case, writing the goal takes the marker off.
+In a pattern, either write the goal and switch the placeholder off, or leave it for the person using the pattern.
+
+### Export and import
+
+An export keeps each placeholder's marker and hint, and an import restores them.
+A file that holds a placeholder is written as export version 1.1, and a file that says 1.0 but holds one is refused, because an older reader would drop the markers.
+
+## Variables
+
+A variable is a detail that a pattern leaves for the person using it to set once, such as the name of the system.
+It is a defined term with its variable switch on: wherever the term is mentioned, the case shows its value, and changing the value once updates every mention.
+[Building a case](/docs/platform-guide/building-a-case) describes defined terms.
+
+### Mark a variable in a pattern
+
+Open the goal, strategy or claim that should define the variable and choose its edit button.
+Name a context entry, as for any defined term, and switch on **Variable: show its value wherever it is mentioned**.
+Mention the name in the descriptions of the elements beneath it by typing `{` and choosing it from the list.
+Evidence beneath a claim can mention it too.
+The value can stay empty, or hold an example for the person using the pattern to replace.
+
+### Values in a case started from a pattern
+
+The new case dialog does not ask for values.
+A case started from a pattern takes the pattern's own values, so every mention shows the value the pattern gives it.
+Each mention shows the variable's value; none of the case's text is rewritten, and the pattern is not changed.
+A variable the pattern gives no value shows its name in square brackets in the new case.
+It holds back publishing the new case only while the case's text mentions it; a variable that nothing mentions does not.
+To change a value, open the element that defines the variable and edit the entry; see [Set a variable in a case](#set-a-variable-in-a-case).
+A pattern published on Discover works in the same way; see [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).
+
+### Set a variable in a case
+
+A case started from a pattern keeps each variable.
+A variable that has no value shows its name in square brackets, such as `[system]`, in a dashed outline like a placeholder.
+To set it, open the element that defines the variable, give the entry a value, and save.
+Every mention then shows the value at once, on claims, strategies and evidence alike.
+A value is text: it is shown as written on the card and is not read for references.
+The edit dialog's description box keeps showing the name, so that saving never writes a value into the text.
+
+### Variables and publishing
+
+A case cannot be published while its text mentions a variable that has no value.
+The status dialog counts them beside the elements still to fill in; see [Publishing and Discover](/docs/platform-guide/publishing-and-discover).
+A pattern can be published with its variables empty.
+
+### Export and import
+
+An export keeps each variable's marker, and an import restores it.
+A file that holds a variable is written as export version 1.1, and a file that says 1.0 but holds one is refused, as for any named context entry.
+
+## Convert a case to a pattern, and back
+
+A case becomes a pattern in place, and a pattern becomes a case the same way.
+Nothing is copied: the one case changes kind.
+
+Open the case and choose **More actions** (the three dots) in the toolbar at the bottom of the editor.
+The menu holds **Convert to pattern** on a case and **Convert to case** on a pattern.
+The button is shown to the case owner and to anyone with Admin access.
+People with View, Comment or Edit access do not see it, and the platform refuses the change if one of them sends the request another way.
+
+Choosing the item opens a confirmation dialog.
+The dialog states:
+
+- how many other people (not counting you) and teams the case is shared with, all of whom will see the new kind;
+- that health plugin checks and integration access grants stay attached to it;
+- how many other cases cite it through away goals or modules;
+- that no copy is kept.
+
+Converting changes only the kind.
+The elements, comments, sharing, plugin data and integration grants are not touched, and cases that cite it keep their citations.
+The away goal and module picker lists cases only, so a pattern does not appear in it.
+Because no copy is kept, export the case first if you want to keep both a case and a pattern.
+
+Anyone who has the case open sees a short notice saying who converted it, and their editor reloads to show the new kind.
+
+### When conversion is refused
+
+A conversion is refused, with a message in the dialog, in these situations:
+
+| Situation | What you see |
+| --- | --- |
+| The case is published on Discover | "Unpublish this case before converting it" |
+| The case has a copy on Discover that is still held, live or archived | A message asking you to remove the copy from Discover first |
+| The other kind was set a moment earlier, for example by a collaborator | "This is already a pattern" or "This is already a case" |
+| The case is in Trash | The case cannot be opened or converted until it is restored |
+
+To convert a published case, unpublish it first.
+Publishing and unpublishing are covered in [Publishing and Discover](/docs/platform-guide/publishing-and-discover).
+
+## My Patterns
+
+Choose [**My Patterns**](/dashboard/patterns) in the sidebar.
+The page lists the patterns you own and the patterns shared with you directly, in the same card layout as your cases, each marked with a **Pattern** badge.
+A pattern that reaches you only through a team is listed under **Shared With Me**.
+
+The page has no **Create new** card.
+A line at the top tells you how to make a pattern: start a blank pattern from the new case dialog, or open one of your cases and choose **Convert to pattern**.
+
+**Shared With Me** and **Trash** list patterns together with cases, so the **Pattern** badge is how you tell them apart there.
+Restoring a pattern from Trash returns it to **My Patterns**.
+
+## Publish a pattern
+
+A pattern can be published on Discover so that others can use it.
+Open the pattern, select its status control in the header and choose **Publish**, as for a case.
+Its Case Information needs a description, authors and sector, as for a case.
+Placeholders and variables with no value do not hold a pattern back.
+On Discover the pattern carries a **Reusable template** badge, and the **Filter by type** list can show patterns alone.
+Its page offers **Use this pattern** beside **Download JSON**, and lists the pattern's variables.
+Updating and unpublishing work as they do for a case, as described in [Publishing and Discover](/docs/platform-guide/publishing-and-discover#cases-and-patterns-on-discover).
+A published pattern cannot be converted to a case while its copy is on Discover.
+
+## Start a case from a pattern
+
+A pattern is used by starting a new case from a copy of it.
+Choose **A pattern** under **Start from** in the new case dialog, as described in [Starting a case from a pattern](/docs/platform-guide/building-a-case#starting-a-case-from-a-pattern).
+
+A pattern published on Discover can also be used from its own page.
+**Use this pattern** opens the same dialog with that pattern chosen, as described in [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).
 
 ## Limits and code location
 
-Use the blank case creator or JSON import for today's case setup. Use document presets only for output. `components/modals/case-create-modal.tsx` contains the creation form; `app/api/templates/route.ts` contains the unpopulated template endpoint; `components/modals/_share-modal/document-export-section.tsx` contains export presets. Pattern metadata is defined in `prisma/schema.prisma` and carried by `lib/services/case-import-service.ts` and `lib/services/case-export-service.ts`.
+`lib/services/case-kind-service.ts` holds the conversion, the read behind the confirmation dialog and the My Patterns list, and `actions/case-kind.ts` exposes them to the interface.
+`components/cases/case-kind-menu.tsx`, `components/cases/convert-case-kind-dialog.tsx` and `components/cases/pattern-banner.tsx` draw the menu item, the dialog and the banner, and `app/(authenticated)/dashboard/patterns/page.tsx` is the My Patterns page.
+`lib/case/pattern-variables.ts` reads a pattern's variables and sets their values when a case is started.
+`lib/case/placeholders.ts` holds the rules for when a placeholder is cleared and how many a case has left, `components/shared/nodes/placeholder-badge.tsx` draws the badge, and `components/cases/node-edit-dialog.tsx` holds the switch and the hint box.

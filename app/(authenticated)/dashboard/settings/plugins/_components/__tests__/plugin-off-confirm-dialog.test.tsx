@@ -34,6 +34,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={vi.fn()}
 				onOpenChange={vi.fn()}
 				open
@@ -50,7 +51,7 @@ describe("PluginOffConfirmDialog", () => {
 			"Turn off Claim/Evidence Health for your account?"
 		);
 		expect(dialog).toHaveTextContent(
-			"Health badges and the Evidence tab will disappear for you."
+			"Health badges, the Evidence tab and the Evidence health panel will disappear for you."
 		);
 		// The two variable lines only render once the mocked fetch above has
 		// resolved — `findByText` polls rather than asserting synchronously
@@ -58,7 +59,7 @@ describe("PluginOffConfirmDialog", () => {
 		// (vincent, review round 2026-09-22: passed alone, failed under the
 		// full-suite coverage run).
 		await screen.findByText(
-			"The 2 evidence records on 1 of your cases stay stored and are never deleted."
+			"The 2 evidence records on 1 of your cases stay stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on."
 		);
 		expect(
 			screen.getByText(
@@ -77,6 +78,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={vi.fn()}
 				onOpenChange={vi.fn()}
 				open
@@ -91,7 +93,7 @@ describe("PluginOffConfirmDialog", () => {
 		// the integration line is absent — otherwise this assertion could pass
 		// for the wrong reason, mid-loading, before the real content renders.
 		await screen.findByText(
-			"The 5 evidence records on 2 of your cases stay stored and are never deleted."
+			"The 5 evidence records on 2 of your cases stay stored. Each night, passing results more than a day old that repeat the results either side are thinned out, as they are while the plugin is on."
 		);
 		expect(dialog).not.toHaveTextContent(CURRENTLY_WRITE_REGEX);
 	});
@@ -107,6 +109,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={onConfirm}
 				onOpenChange={vi.fn()}
 				open
@@ -118,7 +121,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		const dialog = await screen.findByRole("alertdialog");
 		expect(dialog).toHaveTextContent(
-			"Health badges and the Evidence tab will disappear for you."
+			"Health badges, the Evidence tab and the Evidence health panel will disappear for you."
 		);
 		expect(dialog).toHaveTextContent("Other collaborators are not affected.");
 		expect(dialog).not.toHaveTextContent(EVIDENCE_RECORD_REGEX);
@@ -139,6 +142,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={onConfirm}
 				onOpenChange={onOpenChange}
 				open
@@ -158,6 +162,7 @@ describe("PluginOffConfirmDialog", () => {
 	it("renders nothing when closed", () => {
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={vi.fn()}
 				onOpenChange={vi.fn()}
 				open={false}

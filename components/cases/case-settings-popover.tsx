@@ -10,8 +10,9 @@ import {
 	Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
@@ -20,6 +21,8 @@ import {
 import { PresetSwatch } from "@/components/ui/preset-swatch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { useUnsupportedMarkerSwitch } from "@/hooks/use-unsupported-marker-switch";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useThemePreset } from "@/providers/theme-preset-provider";
@@ -40,9 +43,20 @@ const directionOptions = [
 export function CaseSettingsPopover() {
 	const { theme, setTheme, resolvedTheme } = useTheme();
 	const { preset, setPreset, availablePresets } = useThemePreset();
-	const { assuranceCase, layoutDirection, setLayoutDirection, triggerLayout } =
-		useStore();
+	const {
+		assuranceCase,
+		layoutDirection,
+		setLayoutDirection,
+		setShowUnsupportedMarkers,
+		showUnsupportedMarkers,
+		triggerLayout,
+	} = useStore();
+	const unsupportedMarkers = useUnsupportedMarkerSwitch(
+		showUnsupportedMarkers,
+		setShowUnsupportedMarkers
+	);
 	const [mounted, setMounted] = useState(false);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 
 	const handleDirectionChange = async (dir: "TB" | "LR") => {
 		if (dir === layoutDirection) {
@@ -102,13 +116,35 @@ export function CaseSettingsPopover() {
 		<Popover modal>
 			<ActionTooltip label="Settings">
 				<PopoverTrigger asChild>
-					<Button className="rounded-full p-3" size="icon" type="button">
+					<Button
+						className="rounded-full p-3"
+						ref={triggerRef}
+						size="icon"
+						type="button"
+					>
 						<Settings className="h-5 w-5" />
 						<span className="sr-only">Settings</span>
 					</Button>
 				</PopoverTrigger>
 			</ActionTooltip>
-			<PopoverContent className="w-80" side="top" sideOffset={12}>
+			{/* The toolbar re-enables pointer events for itself, so the trigger
+			 * still receives presses while `modal` has switched them off elsewhere.
+			 * Radix treats a press outside the content as a dismiss; ignoring it on
+			 * the trigger leaves the trigger's own toggle as the one thing that
+			 * closes the popover from there. */}
+			<PopoverContent
+				className="w-80"
+				onPointerDownOutside={(event) => {
+					if (
+						event.target instanceof Node &&
+						triggerRef.current?.contains(event.target)
+					) {
+						event.preventDefault();
+					}
+				}}
+				side="top"
+				sideOffset={12}
+			>
 				<div className="space-y-4">
 					{/* Mode selector */}
 					<section>
@@ -160,6 +196,33 @@ export function CaseSettingsPopover() {
 								</Button>
 							))}
 						</div>
+					</section>
+
+					<Separator />
+
+					{/* Unsupported markers: an account setting, unlike the layout direction above, which belongs to the case */}
+					<section>
+						<h4 className="mb-2 font-medium text-foreground text-sm">
+							Unsupported markers
+						</h4>
+						<div className="flex items-center justify-between gap-3">
+							<Label
+								className="font-normal text-sm"
+								htmlFor="show-unsupported-markers"
+							>
+								Show unsupported markers
+							</Label>
+							<Switch
+								checked={unsupportedMarkers.checked}
+								disabled={unsupportedMarkers.disabled}
+								id="show-unsupported-markers"
+								onCheckedChange={unsupportedMarkers.onCheckedChange}
+							/>
+						</div>
+						<p className="mt-1.5 text-muted-foreground text-xs">
+							Saved to your account. Marks a goal, strategy or claim with
+							nothing beneath it.
+						</p>
 					</section>
 
 					<Separator />

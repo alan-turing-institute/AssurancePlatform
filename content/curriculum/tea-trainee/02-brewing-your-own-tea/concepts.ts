@@ -10,7 +10,7 @@ export const brewingConcepts: Concept[] = [
 		name: "Working case",
 		definition:
 			"An editable assurance case kept in the signed-in workspace. Its current contents can change as the team learns more.",
-		example: "your Fair Recruitment AI practice case at `/case/<id>`.",
+		example: "your Fair Recruitment AI practice case in the case editor.",
 	},
 	{
 		id: "concept-top-level-goal",
@@ -23,7 +23,7 @@ export const brewingConcepts: Concept[] = [
 	},
 	{
 		id: "concept-context",
-		type: "general",
+		type: "context",
 		name: "Context",
 		definition:
 			"A boundary or definition needed to interpret a claim. It does not prove the claim.",

@@ -5,6 +5,23 @@
  * the concepts progressively.
  */
 
+export interface StagePrompt {
+	/** Stable identifier, unique within its stage */
+	id: string;
+	/** Selected element names that complete this prompt, e.g. ["S1", "S2", "S3"] */
+	select: string[];
+	/** What the learner is asked to do */
+	text: string;
+}
+
+/**
+ * A prompt is done once every element it names has been selected.
+ */
+export const isPromptDone = (
+	prompt: StagePrompt,
+	selectedNames: ReadonlySet<string>
+): boolean => prompt.select.every((name) => selectedNames.has(name));
+
 export interface StageDefinition {
 	/** Path to the JSON file for this stage (relative to /data/) */
 	caseFile: string;
@@ -12,6 +29,8 @@ export interface StageDefinition {
 	guidance: string;
 	/** Stage number (1-indexed) */
 	id: number;
+	/** Prompts that tick as the learner selects the named elements; all done completes the stage */
+	prompts?: StagePrompt[];
 	/** Short title for stepper UI */
 	shortTitle: string;
 	/** Task ID that corresponds to completing this stage */

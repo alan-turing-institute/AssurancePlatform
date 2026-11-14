@@ -8,7 +8,14 @@ import {
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { azureUploadBlob } from "./azure-blob-adapter";
+
+vi.mock("./azure-blob-adapter", () => ({
+	azureUploadBlob: vi.fn(),
+}));
+
+const SCREENSHOT_KEY_PATTERN = /^screenshots\/.+\.png$/;
 
 /**
  * `UPLOADS_DIR` is read once at import time by `blob-storage-service.ts`
@@ -20,7 +27,11 @@ import { afterAll, describe, expect, it } from "vitest";
 const uploadsDir = mkdtempSync(join(tmpdir(), "tea-blob-storage-service-"));
 process.env.UPLOADS_DIR = uploadsDir;
 
-const { uploadToLocalStorage } = await import("./blob-storage-service");
+const { uploadToBlob, uploadToLocalStorage } = await import(
+	"./blob-storage-service"
+);
+
+const { saveFile } = await import("./file-storage-service");
 
 afterAll(async () => {
 	await rm(uploadsDir, { recursive: true, force: true });
@@ -63,5 +74,152 @@ describe("uploadToLocalStorage", () => {
 
 		expect(result.success).toBe(false);
 		expect(existsSync(join(uploadsDir, "blocker/file.png"))).toBe(false);
+	});
+});
+
+afterEach(() => {
+	vi.unstubAllEnvs();
+	vi.clearAllMocks();
+});
+
+describe("uploadToBlob backend selection", () => {
+	it.each([
+		"development",
+		"production",
+	])("uses local storage in %s when enabled and Azure is absent", async (environment) => {
+		vi.stubEnv("NODE_ENV", environment);
+		vi.stubEnv(
+			"USE_LOCAL_STORAGE",
+			environment === "production" ? "true" : undefined
+		);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", undefined);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", undefined);
+		const buffer = Buffer.from("screenshot");
+		const key = `images/${environment}.png`;
+
+		expect(await uploadToBlob(buffer, key)).toEqual({ data: { key } });
+		expect(readFileSync(join(uploadsDir, key))).toEqual(buffer);
+		expect(azureUploadBlob).not.toHaveBeenCalled();
+	});
+
+	it("uses configured Azure in production with local storage unset", async () => {
+		vi.stubEnv("NODE_ENV", "production");
+		vi.stubEnv("USE_LOCAL_STORAGE", undefined);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", "test-account");
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", "test-key");
+		vi.mocked(azureUploadBlob).mockResolvedValue(true);
+		const buffer = Buffer.from("screenshot");
+		const key = "images/azure.png";
+
+		expect(await uploadToBlob(buffer, key)).toEqual({ data: { key } });
+		expect(azureUploadBlob).toHaveBeenCalledExactlyOnceWith(
+			key,
+			buffer,
+			"image/png"
+		);
+		expect(existsSync(join(uploadsDir, key))).toBe(false);
+	});
+
+	it("still refuses unconfigured production storage when local storage is unset", async () => {
+		vi.stubEnv("NODE_ENV", "production");
+		vi.stubEnv("USE_LOCAL_STORAGE", undefined);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", undefined);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", undefined);
+
+		expect(await uploadToBlob(Buffer.from("x"), "images/refused.png")).toEqual({
+			error: "Storage not configured",
+		});
+		expect(existsSync(join(uploadsDir, "images/refused.png"))).toBe(false);
+		expect(azureUploadBlob).not.toHaveBeenCalled();
+	});
+});
+
+describe("saveFile backend selection", () => {
+	const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+	it.each([
+		"development",
+		"production",
+	])("saves locally in %s when enabled and Azure is absent", async (environment) => {
+		vi.stubEnv("NODE_ENV", environment);
+		vi.stubEnv(
+			"USE_LOCAL_STORAGE",
+			environment === "production" ? "true" : undefined
+		);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", undefined);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", undefined);
+		const file = new File([Uint8Array.from(png)], "screenshot.png", {
+			type: "image/png",
+		});
+		file.arrayBuffer = async () => Uint8Array.from(png).buffer;
+
+		const result = await saveFile(file, "screenshots");
+		expect(result).toHaveProperty("data.key");
+		if (!("data" in result)) {
+			throw new Error(result.error);
+		}
+		expect(readFileSync(join(uploadsDir, result.data.key))).toEqual(png);
+		expect(azureUploadBlob).not.toHaveBeenCalled();
+	});
+
+	it("saves to configured Azure in production when local storage is unset", async () => {
+		vi.stubEnv("NODE_ENV", "production");
+		vi.stubEnv("USE_LOCAL_STORAGE", undefined);
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", "test-account");
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", "test-key");
+		vi.mocked(azureUploadBlob).mockResolvedValue(true);
+		const file = new File([Uint8Array.from(png)], "screenshot.png", {
+			type: "image/png",
+		});
+		file.arrayBuffer = async () => Uint8Array.from(png).buffer;
+
+		const result = await saveFile(file, "screenshots");
+		expect(result).toHaveProperty("data.key");
+		expect(azureUploadBlob).toHaveBeenCalledExactlyOnceWith(
+			expect.stringMatching(SCREENSHOT_KEY_PATTERN),
+			png,
+			"image/png"
+		);
+	});
+});
+
+describe("configured Azure with USE_LOCAL_STORAGE=true", () => {
+	it("still uploads to Azure through both uploadToBlob and saveFile", async () => {
+		vi.stubEnv("NODE_ENV", "production");
+		vi.stubEnv("USE_LOCAL_STORAGE", "true");
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_NAME", "test-account");
+		vi.stubEnv("AZURE_STORAGE_ACCOUNT_KEY", "test-key");
+		vi.mocked(azureUploadBlob).mockResolvedValue(true);
+		const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+		const file = new File([Uint8Array.from(png)], "screenshot.png", {
+			type: "image/png",
+		});
+		file.arrayBuffer = async () => Uint8Array.from(png).buffer;
+		const blobKey = "images/azure-first.png";
+
+		expect(await uploadToBlob(png, blobKey)).toEqual({
+			data: { key: blobKey },
+		});
+		const saved = await saveFile(file, "screenshots");
+
+		expect(saved).toHaveProperty("data.key");
+		if (!("data" in saved)) {
+			throw new Error(saved.error);
+		}
+		expect(azureUploadBlob).toHaveBeenCalledTimes(2);
+		expect(azureUploadBlob).toHaveBeenNthCalledWith(
+			1,
+			blobKey,
+			png,
+			"image/png"
+		);
+		expect(azureUploadBlob).toHaveBeenNthCalledWith(
+			2,
+			saved.data.key,
+			png,
+			"image/png"
+		);
+		expect(existsSync(join(uploadsDir, blobKey))).toBe(false);
+		expect(existsSync(join(uploadsDir, saved.data.key))).toBe(false);
 	});
 });

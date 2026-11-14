@@ -4,6 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import useStore from "@/store/store";
 import { CaseSettingsPopover } from "../case-settings-popover";
 
+const SAVED_TO_ACCOUNT = /Saved to your account/;
+
+const { fetchMarkersMock, saveMarkersMock } = vi.hoisted(() => ({
+	fetchMarkersMock: vi.fn(),
+	saveMarkersMock: vi.fn(),
+}));
+vi.mock("@/actions/unsupported-markers", () => ({
+	fetchShowUnsupportedMarkers: fetchMarkersMock,
+	saveShowUnsupportedMarkers: saveMarkersMock,
+}));
+
 // useThemePreset throws outside a ThemePresetProvider — stub it the same way
 // action-buttons.test.tsx stubs the whole component, but here we're testing
 // case-settings-popover itself, so only the preset context is stubbed.
@@ -172,5 +183,70 @@ describe("CaseSettingsPopover — dismiss on outside click / Escape", () => {
 		await waitFor(() => {
 			expect(screen.queryByText("Mode")).not.toBeInTheDocument();
 		});
+	});
+});
+
+describe("CaseSettingsPopover — unsupported markers switch", () => {
+	beforeEach(() => {
+		resetStore();
+		// The stored value cannot be read, so a failed save falls back on the last value known to be stored.
+		fetchMarkersMock.mockReset();
+		fetchMarkersMock.mockResolvedValue(null);
+		saveMarkersMock.mockReset();
+	});
+
+	async function openPopover() {
+		const user = userEvent.setup();
+		render(<CaseSettingsPopover />);
+		await user.click(await screen.findByRole("button", { name: "Settings" }));
+		return user;
+	}
+
+	it("offers the switch in a section that says it is saved to the account", async () => {
+		useStore.setState({ showUnsupportedMarkers: true });
+		await openPopover();
+
+		const marker = await screen.findByRole("switch", {
+			name: "Show unsupported markers",
+		});
+
+		expect(marker).toBeChecked();
+		expect(screen.getByText(SAVED_TO_ACCOUNT)).toBeInTheDocument();
+	});
+
+	it("turns the markers off in the store first, then saves the choice", async () => {
+		useStore.setState({ showUnsupportedMarkers: true });
+		saveMarkersMock.mockResolvedValue(false);
+		const user = await openPopover();
+
+		await user.click(
+			await screen.findByRole("switch", { name: "Show unsupported markers" })
+		);
+
+		expect(useStore.getState().showUnsupportedMarkers).toBe(false);
+		await waitFor(() => expect(saveMarkersMock).toHaveBeenCalledWith(false));
+	});
+
+	it("puts the markers back when the save fails", async () => {
+		useStore.setState({ showUnsupportedMarkers: true });
+		saveMarkersMock.mockResolvedValue(null);
+		const user = await openPopover();
+
+		await user.click(
+			await screen.findByRole("switch", { name: "Show unsupported markers" })
+		);
+
+		await waitFor(() =>
+			expect(useStore.getState().showUnsupportedMarkers).toBe(true)
+		);
+	});
+
+	it("cannot be pressed while the setting has not loaded", async () => {
+		useStore.setState({ showUnsupportedMarkers: null });
+		await openPopover();
+
+		expect(
+			await screen.findByRole("switch", { name: "Show unsupported markers" })
+		).toBeDisabled();
 	});
 });

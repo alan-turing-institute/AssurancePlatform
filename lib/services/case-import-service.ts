@@ -1,10 +1,20 @@
 import { logger } from "@/lib/logger";
+import { viewableCaseWhere } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import type { CaseExportV2, ElementV2 } from "@/lib/schemas/case-export";
+import type {
+	CaseExportV2,
+	CaseKind,
+	ElementV2,
+} from "@/lib/schemas/case-export";
 import { validateElementName } from "@/lib/schemas/element-validation";
 import { detectAndValidate } from "@/lib/schemas/version-detection";
+import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import { resetIdentifiers } from "@/lib/services/identifier-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
+import {
+	isGoalDefeater,
+	leftOutBeneathEvidenceWarning,
+} from "@/lib/transforms/build-tree";
 import { Prisma } from "@/src/generated/prisma";
 
 const log = logger.child({ component: "case-import-service" });
@@ -117,8 +127,132 @@ function topologicalSort(elements: ElementV2[]): ElementV2[] {
 // ---------------------------------------------------------------------------
 
 /**
+ * What a flat file holds beneath evidence that the nested format would leave
+ * out: every element whose parent is evidence and which is not a counter-goal,
+ * with what hangs from it by parent, and evidence that supports only elements
+ * left out.
+ */
+function findLeftOutBeneathEvidence(
+	file: CaseExportV2,
+	warnings: string[]
+): Set<string> {
+	const evidenceIds = new Set(
+		file.elements
+			.filter((element) => element.elementType === "EVIDENCE")
+			.map((element) => element.id)
+	);
+	const left = new Set<string>();
+	for (const element of file.elements) {
+		const hangsFromEvidence =
+			element.parentId !== null &&
+			element.parentId !== undefined &&
+			evidenceIds.has(element.parentId);
+		if (
+			hangsFromEvidence &&
+			!isGoalDefeater(element.elementType, element.isDefeater)
+		) {
+			left.add(element.id);
+			warnings.push(leftOutBeneathEvidenceWarning(element.name));
+		}
+	}
+	let grew = left.size > 0;
+	while (grew) {
+		const before = left.size;
+		for (const element of file.elements) {
+			if (!left.has(element.id) && isLeftOutWith(element, file, left)) {
+				left.add(element.id);
+			}
+		}
+		grew = left.size > before;
+	}
+	return left;
+}
+
+/**
+ * Whether an element goes with what a file leaves out: its parent was left
+ * out, or it is evidence whose every link is to an element left out.
+ */
+function isLeftOutWith(
+	element: ElementV2,
+	file: CaseExportV2,
+	left: Set<string>
+): boolean {
+	if (element.parentId && left.has(element.parentId)) {
+		return true;
+	}
+	if (element.elementType !== "EVIDENCE") {
+		return false;
+	}
+	const links = file.evidenceLinks.filter(
+		(link) => link.evidenceId === element.id
+	);
+	return links.length > 0 && links.every((link) => left.has(link.claimId));
+}
+
+/**
+ * Applies to a flat file the rule the nested format already follows: only
+ * counter-goals hang from evidence. What does not is left out and named in
+ * `warnings`.
+ */
+function leaveOutBeneathEvidence(
+	file: CaseExportV2,
+	warnings: string[]
+): CaseExportV2 {
+	const left = findLeftOutBeneathEvidence(file, warnings);
+	if (left.size === 0) {
+		return file;
+	}
+	return {
+		...file,
+		elements: file.elements.filter((element) => !left.has(element.id)),
+		evidenceLinks: file.evidenceLinks.filter(
+			(link) => !(left.has(link.claimId) || left.has(link.evidenceId))
+		),
+	};
+}
+
+/**
+ * The goal rules the element routes apply, checked on the rows of a file: a
+ * goal defeater (counter-goal) needs a parent that is part of the file, and a
+ * case has one ordinary goal. One message per offending row, in the
+ * "path: message" form the schema errors use.
+ */
+function checkGoalRules(elements: ElementV2[]): string[] {
+	const ids = new Set(elements.map((element) => element.id));
+	const problems: string[] = [];
+	let ordinaryGoals = 0;
+	elements.forEach((element, index) => {
+		if (element.elementType !== "GOAL") {
+			return;
+		}
+		if (element.isDefeater) {
+			if (!(element.parentId && ids.has(element.parentId))) {
+				problems.push(
+					`elements.${index}.parentId: a goal defeater needs a parent that is part of the file`
+				);
+			}
+			return;
+		}
+		ordinaryGoals += 1;
+		if (ordinaryGoals > 1) {
+			problems.push(
+				`elements.${index}.elementType: a case can only have one goal claim`
+			);
+		}
+	});
+	return problems;
+}
+
+/**
  * Validates and transforms imported JSON data.
  * Returns v2 format data regardless of input version.
+ *
+ * Named context entries are checked here, on the whole file: the row builder
+ * writes context as it finds it and does not go through the checks the element
+ * routes make, so a repeated name or id has to be caught before anything is
+ * written. An import makes a new case, so the ids only have to be unique
+ * within the file. The goal rules are checked in the same place, for the same
+ * reason.
  */
 async function processImportData(data: unknown): Promise<{
 	success: boolean;
@@ -136,25 +270,31 @@ async function processImportData(data: unknown): Promise<{
 		};
 	}
 
-	// If nested, flatten to flat format
+	// If nested, flatten to flat format; otherwise it is already v2
+	let v2Data: CaseExportV2;
+	const warnings: string[] = [];
 	if (result.version === "nested") {
 		const { flattenNestedToFlat } = await import(
 			"@/lib/transforms/nested-to-flat"
 		);
-		const v2Data = flattenNestedToFlat(result.data);
-		return {
-			success: true,
-			data: v2Data,
-			warnings: [],
-		};
+		v2Data = flattenNestedToFlat(result.data, warnings);
+	} else {
+		v2Data = leaveOutBeneathEvidence(result.data as CaseExportV2, warnings);
 	}
 
-	// Already v2
-	return {
-		success: true,
-		data: result.data as CaseExportV2,
-		warnings: [],
-	};
+	const contextProblem = checkContextEntriesForCase(
+		v2Data.elements.map((element) => element.context ?? [])
+	);
+	if (contextProblem) {
+		return { success: false, warnings: [], errors: [contextProblem] };
+	}
+
+	const goalProblems = checkGoalRules(v2Data.elements);
+	if (goalProblems.length > 0) {
+		return { success: false, warnings: [], errors: goalProblems };
+	}
+
+	return { success: true, data: v2Data, warnings };
 }
 
 /**
@@ -165,14 +305,39 @@ function generateUuid(): string {
 }
 
 /**
- * Builds the ID mapping from temp/original IDs to new UUIDs.
+ * Builds the ID mapping from temp/original IDs to new UUIDs, or to themselves
+ * when the caller asked to keep the file's ids.
+ *
+ * New ids are random, but they are handed out in ascending order along the
+ * elements as the file lists them. The export breaks a tie between siblings
+ * with the same name and kind by id, so this keeps such siblings in the order
+ * the file had them, however often the case is exported and imported again.
  */
-function buildIdMap(elements: ElementV2[]): Map<string, string> {
+function buildIdMap(
+	elements: ElementV2[],
+	keepIds: boolean
+): Map<string, string> {
 	const idMap = new Map<string, string>();
-	for (const el of elements) {
-		idMap.set(el.id, generateUuid());
+	if (keepIds) {
+		for (const el of elements) {
+			idMap.set(el.id, el.id);
+		}
+		return idMap;
+	}
+	const newIds = elements.map(() => generateUuid()).sort();
+	for (const [index, el] of elements.entries()) {
+		idMap.set(el.id, newIds[index] ?? generateUuid());
 	}
 	return idMap;
+}
+
+/** What an import sets on the new case beyond the file's name and description. */
+interface NewCaseSettings {
+	/** Becomes the case's id; without one the database generates it. */
+	caseId?: string;
+	kind: CaseKind;
+	/** The pattern the case is started from; unset for an ordinary import. */
+	sourcePatternId?: string;
 }
 
 /**
@@ -180,13 +345,17 @@ function buildIdMap(elements: ElementV2[]): Map<string, string> {
  */
 async function createCaseWithPermission(
 	tx: TransactionClient,
-	caseData: CaseExportV2["case"],
-	userId: string
+	caseData: Pick<CaseExportV2["case"], "name" | "description">,
+	userId: string,
+	settings: NewCaseSettings
 ): Promise<string> {
 	const newCase = await tx.assuranceCase.create({
 		data: {
+			id: settings.caseId,
 			name: caseData.name,
 			description: caseData.description,
+			kind: settings.kind,
+			sourcePatternId: settings.sourcePatternId,
 			createdById: userId,
 		},
 	});
@@ -232,6 +401,11 @@ async function createCaseWithPermission(
  * actually runs, re-calling this same function after that P2003 correctly
  * comes back without it — see createElements' docstring.
  *
+ * Only elements in a case the importing user can view resolve: a cited
+ * element in any other case comes back unresolved, exactly as if it did not
+ * exist, so the import cannot learn or keep a reference to a case its user
+ * has no access to.
+ *
  * Takes a `client` (global `prisma` for the pre-transaction call in
  * `importCase`, or the transaction-scoped `tx` for the in-transaction retry
  * inside `createElements`) rather than being duplicated per call site.
@@ -239,7 +413,8 @@ async function createCaseWithPermission(
 async function resolveExternalCitedElementIds(
 	client: PrismaLikeClient,
 	elements: ElementV2[],
-	idMap: Map<string, string>
+	idMap: Map<string, string>,
+	userId: string
 ): Promise<Map<string, string>> {
 	const externalIds = new Set<string>();
 	for (const el of elements) {
@@ -253,7 +428,11 @@ async function resolveExternalCitedElementIds(
 	}
 
 	const found = await client.assuranceElement.findMany({
-		where: { id: { in: [...externalIds] }, deletedAt: null },
+		where: {
+			id: { in: [...externalIds] },
+			deletedAt: null,
+			case: viewableCaseWhere(userId),
+		},
 		select: { id: true, caseId: true },
 	});
 
@@ -271,10 +450,16 @@ async function resolveExternalCitedElementIds(
  * moduleReferenceId that doesn't resolve here would otherwise hit the
  * createMany FK (assurance_elements_module_reference_id_fkey) and roll back
  * the whole import, the exact failure this ruling replaces.
+ *
+ * Only cases the importing user can view resolve. A case the user cannot
+ * view, one that is in the trash and one that does not exist all come back
+ * the same way, so an import never keeps a reference to a case its user has
+ * no access to and does not reveal whether such a case exists.
  */
 async function resolveExternalModuleReferenceIds(
 	client: PrismaLikeClient,
-	elements: ElementV2[]
+	elements: ElementV2[],
+	userId: string
 ): Promise<Set<string>> {
 	const caseIds = new Set<string>();
 	for (const el of elements) {
@@ -288,7 +473,7 @@ async function resolveExternalModuleReferenceIds(
 	}
 
 	const found = await client.assuranceCase.findMany({
-		where: { id: { in: [...caseIds] }, deletedAt: null },
+		where: { id: { in: [...caseIds] }, AND: [viewableCaseWhere(userId)] },
 		select: { id: true },
 	});
 
@@ -600,6 +785,8 @@ function buildElementRow(
 		inSandbox: el.inSandbox,
 		fromPattern: el.fromPattern ?? false,
 		modifiedFromPattern: el.modifiedFromPattern ?? false,
+		isPlaceholder: el.isPlaceholder ?? false,
+		placeholderHint: el.placeholderHint ?? null,
 		// Per-assertion status (ADR 0004 D3) — lead ruling: import
 		// PRESERVES a declared status rather than dropping it. This is a
 		// direct createMany write (not through createElement/updateElement),
@@ -743,7 +930,7 @@ async function createElements(
 		await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT "${savepoint}"`);
 
 		const reResolvedExternalCitedElementIds =
-			await resolveExternalCitedElementIds(tx, elements, idMap);
+			await resolveExternalCitedElementIds(tx, elements, idMap, userId);
 		const retry = buildElementRows(
 			sortedElements,
 			idMap,
@@ -923,15 +1110,51 @@ async function renumberIfDefeaterNamesNonConforming(
 	return "This case was imported from an older export with pre-GSN defeater names (e.g. P1.1 instead of CP1) — every identifier in the case has been renumbered to the current CP1/CG1/CE1 scheme.";
 }
 
+/** Options for `importCase`. Server code sets them; no request body does. */
+interface ImportCaseOptions {
+	/** Replaces the file's case description. */
+	description?: string;
+	/**
+	 * Keeps every element's id from the file and gives the new case this id,
+	 * instead of generating new ones. For seeding a case from a file held in
+	 * the repository, so that other systems can keep referring to its elements.
+	 * No import route sets it.
+	 */
+	fixedIds?: { caseId: string };
+	/**
+	 * The case's kind. Without it the file's `case.kind` is used, and a file
+	 * without one makes an ordinary case.
+	 */
+	kind?: CaseKind;
+	/**
+	 * Sets `fromPattern` on every element and clears `modifiedFromPattern`,
+	 * whatever the file says: a case just started from a pattern has not yet
+	 * been changed since it came from the pattern.
+	 */
+	markFromPattern?: boolean;
+	/** Replaces the file's case name. */
+	name?: string;
+	/**
+	 * Records the PATTERN-kind case the new case is started from. Set by server
+	 * code that has already checked the importing user may read that pattern;
+	 * nothing in the file or the request body can set it.
+	 */
+	sourcePatternId?: string;
+}
+
 /**
  * Imports a case from JSON data.
  *
- * Accepts nested (v1.0) and flat (v2.0) formats.
+ * Accepts nested (v1.0 and v1.1) and flat (v2.0) formats.
  * The importing user becomes the owner with ADMIN permission.
+ * Every element and the case get new ids unless `options.fixedIds` is given.
+ * The other options set the new case's kind, name, description and source
+ * pattern, and mark its elements as coming from a pattern.
  */
 export async function importCase(
 	userId: string,
-	jsonData: unknown
+	jsonData: unknown,
+	options: ImportCaseOptions = {}
 ): Promise<ImportResult> {
 	// Validate and transform input
 	const processed = await processImportData(jsonData);
@@ -945,22 +1168,45 @@ export async function importCase(
 
 	const v2Data = processed.data;
 
+	// What the new case takes from the options rather than from the file.
+	const caseData = {
+		name: options.name ?? v2Data.case.name,
+		description: options.description ?? v2Data.case.description,
+	};
+	const caseSettings: NewCaseSettings = {
+		caseId: options.fixedIds?.caseId,
+		kind: options.kind ?? v2Data.case.kind ?? "CASE",
+		sourcePatternId: options.sourcePatternId,
+	};
+	const elementsToCreate = options.markFromPattern
+		? v2Data.elements.map((element) => ({
+				...element,
+				fromPattern: true,
+				modifiedFromPattern: false,
+			}))
+		: v2Data.elements;
+
 	try {
 		// Build ID mapping
-		const idMap = buildIdMap(v2Data.elements);
+		const idMap = buildIdMap(v2Data.elements, options.fixedIds !== undefined);
 
 		// Review fix item 1: batch-resolve external citedElementIds against the
 		// target DB BEFORE opening the transaction — keeps the transaction
 		// short and means the createMany insert never has to guess.
 		const resolvedExternalCitedElementIds =
-			await resolveExternalCitedElementIds(prisma, v2Data.elements, idMap);
+			await resolveExternalCitedElementIds(
+				prisma,
+				v2Data.elements,
+				idMap,
+				userId
+			);
 
 		// TEA — Import fails outright when an away goal or module cites a case
 		// absent from the target environment (Chris's ruling, 2026-09-16):
 		// batch-resolve external moduleReferenceIds the same way, and BEFORE
 		// the transaction opens for the same reason.
 		const resolvedModuleReferenceCaseIds =
-			await resolveExternalModuleReferenceIds(prisma, v2Data.elements);
+			await resolveExternalModuleReferenceIds(prisma, v2Data.elements, userId);
 
 		// Use a transaction to ensure atomicity. The callback takes the
 		// transaction-scoped `tx` client and threads it through every helper
@@ -976,14 +1222,19 @@ export async function importCase(
 		// savepoint path) — regardless of import payload size, not O(elements).
 		const result = await prisma.$transaction(async (tx) => {
 			// Create case
-			const caseId = await createCaseWithPermission(tx, v2Data.case, userId);
+			const caseId = await createCaseWithPermission(
+				tx,
+				caseData,
+				userId,
+				caseSettings
+			);
 
 			// Create elements
 			const { count: elementCount, warnings: elementWarnings } =
 				await createElements(
 					tx,
 					caseId,
-					v2Data.elements,
+					elementsToCreate,
 					idMap,
 					resolvedExternalCitedElementIds,
 					resolvedModuleReferenceCaseIds,
@@ -1007,7 +1258,7 @@ export async function importCase(
 
 			return {
 				caseId,
-				caseName: v2Data.case.name,
+				caseName: caseData.name,
 				elementCount,
 				evidenceLinkCount,
 				commentCount,

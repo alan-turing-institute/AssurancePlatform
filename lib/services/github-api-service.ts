@@ -12,6 +12,11 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 const tokenEncryptionLog = logger.child({ component: "token-encryption" });
+const githubApiLog = logger.child({ component: "github-api" });
+
+// GitHub lists the scopes a token carries in this response header, as a
+// comma-separated list (for example "read:user, repo, user:email").
+const OAUTH_SCOPES_HEADER = "x-oauth-scopes";
 
 // Top-level regex patterns for URL parsing
 // Matches: raw.githubusercontent.com/owner/repo/branch/path (simple format)
@@ -41,6 +46,45 @@ export interface GitHubServiceError {
 		| "API_ERROR";
 	message: string;
 	status?: number;
+}
+
+/**
+ * True when a GitHub response reports that the token carries the full `repo`
+ * scope. Narrower scopes such as `public_repo` or `repo:status` do not count.
+ */
+function carriesRepoScope(scopesHeader: string | number | undefined): boolean {
+	if (scopesHeader === undefined) {
+		return false;
+	}
+	return String(scopesHeader)
+		.split(",")
+		.some((scope) => scope.trim() === "repo");
+}
+
+/**
+ * Removes the stored GitHub token so the person is asked to connect again.
+ * A failed update is logged rather than thrown: the caller refuses the
+ * request either way, so the token is never used for an import.
+ */
+async function discardStoredToken(
+	userId: string,
+	scopes: string | number | undefined
+): Promise<void> {
+	githubApiLog.warn("Discarding stored GitHub token that carries repo scope", {
+		userId,
+		scopes: String(scopes),
+	});
+	try {
+		await prisma.user.update({
+			where: { id: userId },
+			data: { githubAccessToken: null, githubTokenExpiresAt: null },
+		});
+	} catch (error) {
+		githubApiLog.error("Failed to clear stored GitHub token", {
+			userId,
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
 }
 
 /**
@@ -101,6 +145,15 @@ export const GITHUB_ERROR_MAP: Record<string, ErrorCode> = {
 	API_ERROR: "INTERNAL",
 };
 
+/** The error returned when there is no usable GitHub token to import with. */
+function noTokenError(): GitHubServiceError {
+	return {
+		code: "NO_TOKEN",
+		message:
+			"No GitHub token found. Connect your GitHub account to import from public GitHub repositories. If this keeps happening, remove TEA under Settings, Applications on GitHub, then connect again.",
+	};
+}
+
 /**
  * Creates an authenticated Octokit client for the specified user.
  * Returns null if the user doesn't have a valid GitHub token.
@@ -111,13 +164,7 @@ async function createOctokitClient(
 	const token = await getUserGitHubToken(userId);
 
 	if (!token) {
-		return {
-			serviceError: {
-				code: "NO_TOKEN",
-				message:
-					"No GitHub token found. Please sign in with GitHub to connect your account.",
-			},
-		};
+		return { serviceError: noTokenError() };
 	}
 
 	return { client: new Octokit({ auth: token }) };
@@ -135,7 +182,7 @@ function handleOctokitError(
 	if (error.status === 404) {
 		return {
 			code: "NOT_FOUND",
-			message: `File not found: ${owner}/${repo}/${path}`,
+			message: `No file found at ${owner}/${repo}/${path}. TEA can import only from public GitHub repositories. Check the address, or download the file and import it on the File tab.`,
 			status: 404,
 		};
 	}
@@ -160,7 +207,7 @@ function handleOctokitError(
 		return {
 			code: "TOKEN_EXPIRED",
 			message:
-				"GitHub token is invalid or expired. Please sign in again with GitHub.",
+				"GitHub token is invalid or expired. Please connect your GitHub account again.",
 			status: 401,
 		};
 	}
@@ -211,6 +258,16 @@ export async function fetchFileFromGitHub(
 			path,
 			...(branch && { ref: branch }),
 		});
+
+		// A token that carries the full `repo` scope is discarded and the file
+		// is not returned, so the person reconnects and gets only the narrower
+		// profile-and-email grant.
+		const scopes = response.headers[OAUTH_SCOPES_HEADER];
+		if (carriesRepoScope(scopes)) {
+			await discardStoredToken(userId, scopes);
+			const serviceError = noTokenError();
+			return { error: serviceError.message, serviceError };
+		}
 
 		// The API returns an array for directories, a single object for files
 		const data = response.data;

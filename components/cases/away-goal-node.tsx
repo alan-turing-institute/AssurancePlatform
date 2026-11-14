@@ -7,31 +7,34 @@ import {
 	BaseNode,
 	getAssertionStatusIndicator,
 	NodeActionGroup,
+	withPlaceholderIndicator,
 } from "@/components/shared/nodes";
 import CitedCaseLink from "./cited-case-link";
 import NodeEditDialog from "./node-edit-dialog";
 
 /**
- * The "Cites" line's text — three distinct states, checked in priority
- * order: the cited CASE itself is unavailable in this environment
- * (Chris's ruling, 2026-09-16); the case resolved but the cited ELEMENT
- * didn't (pre-existing ADR 0004 D5 behaviour); both resolved. Extracted to
- * avoid nesting ternaries in the JSX below.
+ * The "Cites" line's text, in priority order: the viewer cannot view the cited
+ * case (it is in the bin, deleted, never shared, no longer shared, or its
+ * reference was cleared), so no name is shown; the case is viewable but the
+ * cited ELEMENT did not resolve (none is cited, or it was not found under that
+ * case; an element with no name comes back as an empty string and resolves);
+ * both resolved. The name line is left out of the dashboard thumbnail, which
+ * other people see. Extracted to avoid nesting ternaries in the JSX below.
  */
 function citationLine(
-	moduleReferenceDangling: boolean,
+	citedCaseAccessible: boolean,
 	citedElementId: string | null | undefined,
 	citedCaseName: string | null,
 	citedElementName: string | null
 ): ReactNode {
-	if (moduleReferenceDangling) {
+	if (!citedCaseAccessible) {
 		return (
 			<p className="text-muted-foreground text-sm italic">
 				Cited case not available
 			</p>
 		);
 	}
-	if (!citedElementId) {
+	if (!citedElementId || citedElementName === null) {
 		return (
 			<p className="text-muted-foreground text-sm italic">
 				Cited element not resolved
@@ -39,8 +42,8 @@ function citationLine(
 		);
 	}
 	return (
-		<p className="text-sm">
-			{citedCaseName ?? "Unknown case"}
+		<p className="text-sm" data-left-out-of-shared-thumbnail="">
+			{citedCaseName}
 			{citedElementName ? ` — ${citedElementName}` : ""}
 		</p>
 	);
@@ -49,14 +52,13 @@ function citationLine(
 /**
  * Away goal card (ADR 0005 D3): a goal that cites a goal in another case.
  * Shows the cited case's name and cited goal's name (resolved server-side by
- * `case-fetch-service.ts`), links to the cited case when the viewer can
- * access it, and says so plainly when the citation didn't resolve
- * (`citedElementId` is null — the citation was dangling at import, ADR 0004 D5).
- * When the cited CASE itself isn't available in this environment
- * (`moduleReferenceDangling` — Chris's ruling, 2026-09-16), the card says
- * that instead, since a missing case is a different failure than a missing
- * element within an otherwise-present case. Read-only beyond the
- * description: no add-child menu (away goals are leaves in 1.0 core).
+ * `case-fetch-service.ts`, and only for a viewer who can view the cited case)
+ * with a link to the cited case. A viewer who cannot view it sees "Cited case
+ * not available" and no link; so does a reference that was cleared on import.
+ * When the case is viewable but the citation did not resolve (`citedElementId`
+ * is null — the citation was dangling at import, ADR 0004 D5), the card says
+ * so plainly. Read-only beyond the description: no add-child menu (away goals
+ * are leaves in 1.0 core).
  */
 function AwayGoalNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -67,9 +69,11 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 	const citedCaseAccessible = !!data.citedCaseAccessible;
 	const moduleReferenceId = data.moduleReferenceId as string | undefined;
 	const citedElementId = data.citedElementId as string | null | undefined;
-	const moduleReferenceDangling = !!data.moduleReferenceDangling;
 
-	const topRightActions = getAssertionStatusIndicator(data.assertionStatus);
+	const topRightActions = withPlaceholderIndicator(
+		data,
+		getAssertionStatusIndicator(data.assertionStatus)
+	);
 
 	return (
 		<>
@@ -89,8 +93,10 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 				// The cited case/goal is the card's whole point — unlike a
 				// description preview, it shouldn't be hidden behind a click.
 				initialExpanded
+				isPlaceholder={!!data.isPlaceholder}
 				name={data.name}
 				nodeType="awayGoal"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
 				topRightActions={topRightActions}
 			>
@@ -99,7 +105,7 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 						Cites
 					</span>
 					{citationLine(
-						moduleReferenceDangling,
+						citedCaseAccessible,
 						citedElementId,
 						citedCaseName,
 						citedElementName

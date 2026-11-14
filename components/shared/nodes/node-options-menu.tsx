@@ -33,6 +33,7 @@ import {
 	detachCaseElement,
 	getNodeMutationErrorMessage,
 	type ReactFlowNode,
+	refreshCaseIfShown,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
 import {
@@ -47,6 +48,7 @@ import useStore from "@/store/store";
 import { AttachElementDialog } from "./attach-element-dialog";
 import { MoveElementDialog } from "./move-element-dialog";
 import type { DiagramNodeType } from "./node-config";
+import { plainDescription } from "./reference-text-utils";
 
 const MORE_OPTIONS_LABEL = "More options";
 
@@ -63,7 +65,7 @@ function createOrphanElement(node: Node) {
 		id: node.data.id as string,
 		type: REACTFLOW_TO_CANONICAL[node.type ?? ""] ?? (node.data.type as string),
 		name: node.data.name as string,
-		description: (node.data.description as string) ?? "",
+		description: plainDescription(node.data),
 	};
 }
 
@@ -79,6 +81,25 @@ function getParentDataId(
 	}
 	const parentNode = allNodes.find((n) => n.id === parentEdge.source);
 	return parentNode ? String(parentNode.data.id as string | number) : "";
+}
+
+/**
+ * Reads the case again once an element has left it. The store drops the
+ * element and what hangs from it at once; what it cannot work out is what the
+ * server now draws elsewhere, such as the counter-goals of a piece of shared
+ * evidence that were drawn with the removed claim's copy. Reading the case
+ * does not wait for the live-update stream. A reply that arrives after the
+ * canvas has moved to another case is dropped.
+ */
+function refreshCase(
+	caseId: string,
+	setAssuranceCase: (ac: AssuranceCaseResponse) => void
+) {
+	refreshCaseIfShown(
+		caseId,
+		() => useStore.getState().assuranceCase?.id,
+		setAssuranceCase
+	);
 }
 
 /** Process detach result and update state */
@@ -100,6 +121,7 @@ function processDetachResult(
 
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
+		refreshCase(assuranceCase.id, setAssuranceCase);
 		const existingIds = new Set(orphanedElements.map((el) => el.id));
 		if (!existingIds.has(newOrphanElement.id)) {
 			setOrphanedElements([...orphanedElements, newOrphanElement]);
@@ -121,6 +143,7 @@ function processDeleteResult(
 	);
 	if (updatedAssuranceCase) {
 		setAssuranceCase(updatedAssuranceCase);
+		refreshCase(assuranceCase.id, setAssuranceCase);
 	}
 }
 

@@ -263,6 +263,35 @@ describe("createSnapshot", () => {
 		expect(snapshot.assertionStatus).toBe("NEEDS_SUPPORT");
 	});
 
+	it("keeps plain and named context entries and drops stray keys from the named ones", () => {
+		const snapshot = createSnapshot({
+			id: "elem-3",
+			type: "goal",
+			name: "Goal",
+			description: "A goal",
+			context: [
+				"Plain entry",
+				{
+					id: "k3f9x2m7qa",
+					name: "window",
+					text: "the interval",
+					value: "5 minutes",
+					hidden: false,
+				},
+			],
+		});
+
+		expect(snapshot.context).toEqual([
+			"Plain entry",
+			{
+				id: "k3f9x2m7qa",
+				name: "window",
+				text: "the interval",
+				value: "5 minutes",
+			},
+		]);
+	});
+
 	it("leaves assertionStatus undefined when the source data omits it", () => {
 		const snapshot = createSnapshot({
 			id: "elem-2",
@@ -306,6 +335,66 @@ describe("assertionStatus undo/redo round-trip", () => {
 			.calls[1]!;
 		const redoBody = JSON.parse(redoCall[1].body as string);
 		expect(redoBody.assertionStatus).toBe("DEFEATED");
+	});
+});
+
+// ---------------------------------------------------------------------------
+// recordUpdate + applyUndo/applyRedo -- placeholder marker round-trip
+// ---------------------------------------------------------------------------
+
+describe("placeholder marker undo/redo round-trip", () => {
+	beforeEach(() => {
+		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockOkResponse()));
+	});
+
+	/** Records an edit, replays undo then redo, and returns the two PUT bodies. */
+	async function replay(
+		before: Record<string, unknown>,
+		after: Record<string, unknown>
+	) {
+		recordUpdate("elem-1", "goal", before, after);
+		const command = useHistoryStore.getState().undoStack[0]!.commands[0]!;
+		await applyUndo(command);
+		await applyRedo(command);
+		const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
+		return calls.map((call) => JSON.parse(call[1].body as string));
+	}
+
+	it("undo puts the marker and hint back, and redo sends the marker as the edit left it", async () => {
+		const [undoBody, redoBody] = await replay(
+			{
+				name: "G1",
+				description: "",
+				isPlaceholder: true,
+				placeholderHint: "Say",
+			},
+			{
+				name: "G1",
+				description: "Written",
+				isPlaceholder: false,
+				placeholderHint: "Say",
+			}
+		);
+
+		expect(undoBody).toMatchObject({
+			description: "",
+			isPlaceholder: true,
+			placeholderHint: "Say",
+		});
+		expect(redoBody).toMatchObject({
+			description: "Written",
+			isPlaceholder: false,
+		});
+	});
+
+	it("sends no marker for an element that never had one", async () => {
+		const [undoBody] = await replay(
+			{ name: "G1", description: "Old" },
+			{ name: "G1", description: "New" }
+		);
+
+		expect(undoBody).not.toHaveProperty("isPlaceholder");
+		expect(undoBody).not.toHaveProperty("placeholderHint");
 	});
 });
 

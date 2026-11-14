@@ -225,7 +225,7 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 		disconnectModal.provider === "github" ? "GitHub" : "Google";
 	const disconnectMessage =
 		disconnectModal.provider === "github"
-			? "Disconnecting your GitHub account will remove the ability to sign in with GitHub and revoke access to import from private repositories."
+			? "Disconnecting your GitHub account will remove the ability to sign in with GitHub and revoke access to import from public GitHub repositories."
 			: "Disconnecting your Google account will remove the ability to sign in with Google and revoke access to Google Drive backups.";
 
 	return (
@@ -237,8 +237,8 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 					</h2>
 					<p className="mt-1 text-muted-foreground text-sm leading-6">
 						Link external accounts to your TEA Platform profile. These allow
-						sign-in and access to external services like GitHub repositories and
-						Google Drive.
+						sign-in and access to external services like public GitHub
+						repositories and Google Drive.
 					</p>
 				</div>
 

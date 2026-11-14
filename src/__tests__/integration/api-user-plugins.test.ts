@@ -40,7 +40,7 @@ describe("GET /api/user/plugins", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns the manifest plugin with its effective state for the session user", async () => {
+	it("returns the manifest plugin with its effective state for the session user, off until they turn it on", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
@@ -49,19 +49,19 @@ describe("GET /api/user/plugins", () => {
 		expect(response.status).toBe(200);
 
 		const body = await response.json();
-		expect(body.plugins).toHaveLength(1);
+		expect(body.plugins).toHaveLength(2);
 		expect(body.plugins[0]).toMatchObject({
 			pluginId: KNOWN_PLUGIN_ID,
 			name: "Claim/Evidence Health",
 			version: "0.1.0",
 			available: true,
-			enabled: true,
-			pinnedAt: null,
+			enabled: false,
+			pinnedAt: "USER",
 			settings: null,
 		});
 	});
 
-	it("includes the manifest's card copy (description, surfaces) for the Plugins page, and omits docsPath until a real docs page exists", async () => {
+	it("includes the manifest's card copy (description, docsPath, surfaces) for the Plugins page", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
 
@@ -70,9 +70,9 @@ describe("GET /api/user/plugins", () => {
 		const body = await response.json();
 
 		expect(body.plugins[0].description.length).toBeGreaterThan(0);
-		// D2 amendment (2026-09-22): tea.health's docs page is still a "Coming
-		// Soon" draft, so docsPath is absent rather than linking to it.
-		expect(body.plugins[0].docsPath).toBeUndefined();
+		expect(body.plugins[0].docsPath).toBe(
+			"/docs/technical-guide/architecture/health-plugin"
+		);
 		expect(body.plugins[0].surfaces).toEqual(
 			expect.arrayContaining(["plugin-tables", "settings-section"])
 		);

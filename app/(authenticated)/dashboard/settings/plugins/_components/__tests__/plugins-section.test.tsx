@@ -7,7 +7,20 @@ import {
 	renderWithoutProviders,
 	screen,
 } from "@/src/__tests__/utils/test-utils";
+import { installModelRoutes } from "../ai-models/__tests__/model-routes-fake";
 import { PluginsSection } from "../plugins-section";
+
+const ASSISTANT_PLUGIN = {
+	pluginId: "tea.assistant",
+	name: "Case Assistant",
+	version: "0.1.0",
+	description: "A chat panel beside the case canvas.",
+	surfaces: ["case-panel", "settings-section"],
+	available: true,
+	enabled: true,
+	pinnedAt: null,
+	settings: null,
+};
 
 const HEALTH_PLUGIN = {
 	pluginId: "tea.health",
@@ -90,6 +103,67 @@ describe("PluginsSection", () => {
 		);
 	});
 
+	it("shows the AI models block after the cards when a plugin that uses models is on", async () => {
+		installModelRoutes();
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({ plugins: [HEALTH_PLUGIN, ASSISTANT_PLUGIN] })
+			)
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+
+		const heading = await screen.findByRole("heading", { name: "AI models" });
+		const section = heading.closest("section");
+		expect(section).toHaveAttribute("id", "ai-models");
+		// The block follows the column that holds the plugin cards.
+		expect(section?.previousElementSibling).toContainElement(
+			screen.getByText("Case Assistant")
+		);
+	});
+
+	it("shows no AI models block, and asks for no models, when no plugin that uses models is on", async () => {
+		const modelRoutes = installModelRoutes();
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({
+					plugins: [HEALTH_PLUGIN, { ...ASSISTANT_PLUGIN, enabled: false }],
+				})
+			)
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+
+		await waitFor(() =>
+			expect(screen.getByText("Claim/Evidence Health")).toBeInTheDocument()
+		);
+		expect(
+			screen.queryByRole("heading", { name: "AI models" })
+		).not.toBeInTheDocument();
+		expect(modelRoutes.requests).toEqual([]);
+	});
+
+	it("leaves the Claim/Evidence Health card as it was, with no AI models block, when it is the only plugin", async () => {
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({ plugins: [HEALTH_PLUGIN] })
+			)
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+
+		await waitFor(() =>
+			expect(screen.getByText(HEALTH_PLUGIN.description)).toBeInTheDocument()
+		);
+		expect(screen.getAllByRole("switch")).toHaveLength(1);
+		expect(
+			screen.queryByRole("heading", { name: "AI models" })
+		).not.toBeInTheDocument();
+		expect(
+			screen.getByText("This plugin has no settings.")
+		).toBeInTheDocument();
+	});
+
 	it("turns a plugin off through the confirmation dialog, sends the PATCH, and reflects the refetched state", async () => {
 		const user = userEvent.setup();
 		let currentlyEnabled = true;
@@ -137,5 +211,87 @@ describe("PluginsSection", () => {
 
 		await waitFor(() => expect(screen.getByRole("switch")).not.toBeChecked());
 		expect(currentlyEnabled).toBe(false);
+	});
+});
+
+describe("PluginsSection: opening at the AI models anchor", () => {
+	const withAssistant = (enabled: () => boolean) =>
+		server.use(
+			http.get("/api/user/plugins", () =>
+				HttpResponse.json({
+					plugins: [{ ...ASSISTANT_PLUGIN, enabled: enabled() }],
+				})
+			)
+		);
+
+	afterEach(() => {
+		window.location.hash = "";
+	});
+
+	it("scrolls to the block once it shows when the page was opened at #ai-models", async () => {
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+		scroll.mockClear();
+		window.location.hash = "#ai-models";
+		installModelRoutes();
+		withAssistant(() => true);
+
+		renderWithoutProviders(<PluginsSection />);
+		await screen.findByRole("heading", { name: "AI models" });
+
+		await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+		expect(scroll.mock.contexts[0]).toHaveAttribute("id", "ai-models");
+	});
+
+	it("does not scroll without the anchor", async () => {
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+		scroll.mockClear();
+		window.location.hash = "";
+		installModelRoutes();
+		withAssistant(() => true);
+
+		renderWithoutProviders(<PluginsSection />);
+		await screen.findByRole("heading", { name: "AI models" });
+
+		expect(scroll).not.toHaveBeenCalled();
+	});
+
+	it("does not scroll again when the block comes back after the plugin is turned off and on", async () => {
+		const user = userEvent.setup();
+		const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
+		scroll.mockClear();
+		window.location.hash = "#ai-models";
+		installModelRoutes();
+		let enabled = true;
+		withAssistant(() => enabled);
+		server.use(
+			http.get("/api/user/plugins/tea.assistant/consequences", () =>
+				HttpResponse.json(EMPTY_CONSEQUENCES)
+			),
+			http.patch("/api/user/plugins", async ({ request }) => {
+				const body = (await request.json()) as { enabled: boolean };
+				enabled = body.enabled;
+				return HttpResponse.json({
+					pluginId: "tea.assistant",
+					enabled,
+					settings: null,
+				});
+			})
+		);
+
+		renderWithoutProviders(<PluginsSection />);
+		await screen.findByRole("heading", { name: "AI models" });
+		await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+
+		await user.click(screen.getByRole("switch"));
+		await user.click(await screen.findByRole("button", { name: "Turn off" }));
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("heading", { name: "AI models" })
+			).not.toBeInTheDocument()
+		);
+		await user.click(screen.getByRole("switch"));
+		await screen.findByRole("heading", { name: "AI models" });
+
+		expect(scroll).toHaveBeenCalledTimes(1);
 	});
 });

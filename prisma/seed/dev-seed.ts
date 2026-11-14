@@ -14,6 +14,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 import { Pool } from "pg";
 import { prisma as appPrisma } from "../../lib/prisma";
+import { healthCheckListSchema } from "../../lib/schemas/health-checks";
 import { sectors } from "../../lib/sectors";
 import { upsertCaseInformation } from "../../lib/services/case-information-service";
 import {
@@ -22,6 +23,8 @@ import {
 	ensureDarterIntegration,
 } from "../../lib/services/darter-integration-service";
 import { publishAssuranceCase } from "../../lib/services/publish-service";
+import { TOUR_IDS } from "../../lib/tours";
+import { buildHealthCheckList } from "../../src/__tests__/fixtures/health-checks";
 import { PrismaClient } from "../../src/generated/prisma";
 
 const HEALTH_AND_SOCIAL_CARE_SECTOR_ID = sectors.find(
@@ -32,6 +35,9 @@ if (!HEALTH_AND_SOCIAL_CARE_SECTOR_ID) {
 		"Seed data assumes a 'Health & Social Care' sector exists in lib/sectors.ts"
 	);
 }
+
+/** The id of the named context entry on Simple Case's G1, which P1 refers to. */
+const SIMPLE_CASE_INPUTS_ENTRY_ID = "w4n8q2h6xc";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -143,7 +149,7 @@ async function main() {
 			console.log("Creating users...");
 
 			// Skip onboarding tours and migration notice for seeded users so E2E tests aren't blocked
-			const allToursCompleted = ["dashboard", "case-canvas", "demo-case"];
+			const allToursCompleted = [...TOUR_IDS];
 
 			const chris = await tx.user.create({
 				data: {
@@ -207,6 +213,18 @@ async function main() {
 
 			console.log("Created users: chris, alice, bob, charlie");
 
+			// Claim/Evidence Health is off by default; the test accounts opt in
+			// so a reseeded environment has it on for testing.
+			await tx.pluginState.createMany({
+				data: [chris, alice, bob, charlie].map((person) => ({
+					pluginId: "tea.health",
+					scopeType: "USER" as const,
+					scopeId: person.id,
+					enabled: true,
+				})),
+			});
+			console.log("Turned on tea.health for: chris, alice, bob, charlie");
+
 			// ============================================
 			// 2. CREATE TEAM
 			// ============================================
@@ -267,6 +285,15 @@ async function main() {
 					role: "TOP_LEVEL",
 					name: "G1",
 					description: "The system is safe to use",
+					// A named entry that P1 below refers to, so the pages that check this
+					// case exercise defined terms.
+					context: [
+						{
+							id: SIMPLE_CASE_INPUTS_ENTRY_ID,
+							name: "inputs",
+							text: "all data that users or other systems send to the system",
+						},
+					],
 					createdById: chris.id,
 				},
 			});
@@ -278,7 +305,7 @@ async function main() {
 					role: "SUPPORTING",
 					parentId: simpleGoal.id,
 					name: "P1",
-					description: "All inputs are validated",
+					description: `All {inputs#${SIMPLE_CASE_INPUTS_ENTRY_ID}} are validated`,
 					createdById: chris.id,
 				},
 			});
@@ -736,7 +763,7 @@ async function main() {
 			// commits) can point at this case and its P1 claim by name. P1 is
 			// deliberately left WITHOUT a static EvidenceLink — it's the
 			// keystone claim whose badge flips live when the DARTER pipeline
-			// posts its first evidence-format-v0.1 item through the health
+			// posts its first evidence format 1.1 record through the health
 			// plugin's machine endpoint. Do not seed PluginHealthEvidence or
 			// PluginData for it; that would pre-empt the live demo.
 			const demoCase = await tx.assuranceCase.create({
@@ -996,7 +1023,7 @@ async function main() {
 	// visible, which they are by this point. Reuses the exact registration
 	// logic `scripts/seed-darter-integration.ts` uses (shared via
 	// `lib/services/darter-integration-service.ts`), actor = the chris seed
-	// user, scopes = case:read + health:evidence:write. Deliberately issues
+	// user, scopes = DARTER_EXPECTED_SCOPES. Deliberately issues
 	// NO token — shown-once semantics mean the token is issued through the
 	// management UI (PR #849) at demo time, never baked into the seed.
 	console.log("\nRegistering DARTER integration...");
@@ -1012,6 +1039,27 @@ async function main() {
 	);
 	console.log(
 		`Registered "${DARTER_INTEGRATION_NAME}" integration (${darter.data.status}) and granted EDIT on the DARTER demo case to its system user. No token issued — issue one via the management UI at demo time.`
+	);
+
+	// Publishes a small demo check list for the integration, so the evidence
+	// settings form has checks to offer before a real pipeline publishes one.
+	const checkList = healthCheckListSchema.parse(buildHealthCheckList());
+	await prisma.pluginHealthCheckCatalogue.upsert({
+		where: { integrationId: darter.data.integrationId },
+		create: {
+			integrationId: darter.data.integrationId,
+			pipeline: checkList.pipeline,
+			checks: checkList.checks,
+			publishedAt: new Date(),
+		},
+		update: {
+			pipeline: checkList.pipeline,
+			checks: checkList.checks,
+			publishedAt: new Date(),
+		},
+	});
+	console.log(
+		`Published a demo check list (${checkList.checks.length} checks) for "${DARTER_INTEGRATION_NAME}".`
 	);
 
 	// ============================================
@@ -1038,7 +1086,7 @@ async function main() {
 	);
 	console.log("  - 2 comments on Medium Case");
 	console.log(
-		`  - 1 machine integration: ${DARTER_INTEGRATION_NAME} (case:read + health:evidence:write, EDIT on the demo case, no token issued)`
+		`  - 1 machine integration: ${DARTER_INTEGRATION_NAME} (all five scopes, EDIT on the demo case, a demo check list, no token issued)`
 	);
 	console.log("\nLogin with any test user using the SEED_USER_PASSWORD");
 }

@@ -102,11 +102,11 @@ export const firstSipTasks: TaskDefinition[] = [
 		order: 7,
 	}),
 
-	// Page 2: Reflection - Core elements carousel + reflection prompts
+	// Page 2: Reflection - Core elements concept cards + reflection prompts
 	createTask({
 		id: "review-core-elements",
 		title: "Review the core elements",
-		description: "Click through the concept cards to review each element type",
+		description: "Expand each concept card to review each element type",
 		type: TaskType.INTERACT,
 		page: "reflection",
 		section: "core-elements",

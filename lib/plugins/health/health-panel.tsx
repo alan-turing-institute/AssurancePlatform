@@ -1,10 +1,22 @@
 "use client";
 
 import { FileText } from "lucide-react";
+import { Fragment, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
-import { EvidenceLogEntry } from "./evidence-log-entry";
+import {
+	describeDifferences,
+	NO_ACCEPTED_SETTINGS,
+} from "./echo-difference-words";
+import { EvidenceLogEntry, ThinnedRunLine } from "./evidence-log-entry";
+import { ChangeCheckDialog } from "./health-record-dialogs";
+import type { HealthStatus } from "./health-types";
+import { LiveNodePanel } from "./live-node-panel";
+import { SettingsView } from "./settings-view";
+import { useCriteria } from "./use-criteria";
 import { useHealthEvidence } from "./use-health-evidence";
 
 function EvidenceSkeleton() {
@@ -16,29 +28,232 @@ function EvidenceSkeleton() {
 	);
 }
 
+function refusedLine(count: number): string {
+	return count === 1
+		? "1 result was refused since the last accepted one. It named a different check."
+		: `${count} results were refused since the last accepted one. They named a different check.`;
+}
+
+/** The line or lines saying the claim's current result was judged with other settings, or with none. */
+function MismatchLines({ status }: { status: HealthStatus }) {
+	const { mismatch } = status;
+	if (!mismatch) {
+		return null;
+	}
+	const lines =
+		mismatch.state === "undeclared"
+			? [NO_ACCEPTED_SETTINGS]
+			: describeDifferences(mismatch.differences);
+	return (
+		<div className="space-y-0.5" data-testid="health-mismatch-lines">
+			{lines.map((line) => (
+				<p className="wrap-anywhere text-muted-foreground text-sm" key={line}>
+					{line}
+				</p>
+			))}
+		</div>
+	);
+}
+
+interface PanelHeaderProps {
+	canEdit: boolean;
+	claimId: string;
+	/** True when the claim's check is set by its accepted settings, so it is changed there. */
+	hasAcceptedSettings: boolean;
+	onChanged: () => void;
+	onOpenSettings: () => void;
+	status: HealthStatus;
+}
+
+function PanelHeader({
+	canEdit,
+	claimId,
+	hasAcceptedSettings,
+	onChanged,
+	onOpenSettings,
+	status,
+}: PanelHeaderProps) {
+	const [changing, setChanging] = useState(false);
+	const changeButton = useRef<HTMLButtonElement>(null);
+
+	return (
+		<div className="space-y-1" data-testid="health-panel-header">
+			<div className="flex items-center justify-between gap-2">
+				<p className="wrap-anywhere min-w-0 text-sm">
+					<span className="text-muted-foreground">Bound check: </span>
+					<span className="font-medium">{status.bound_check}</span>
+				</p>
+				{canEdit && (
+					<Button
+						className="shrink-0"
+						onClick={
+							hasAcceptedSettings ? onOpenSettings : () => setChanging(true)
+						}
+						ref={changeButton}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						{hasAcceptedSettings ? "Set in Settings" : "Change"}
+					</Button>
+				)}
+			</div>
+			{status.rejected_since_last_accept > 0 && (
+				<p className="text-muted-foreground text-sm">
+					{refusedLine(status.rejected_since_last_accept)}
+				</p>
+			)}
+			<MismatchLines status={status} />
+			{canEdit && !hasAcceptedSettings && (
+				<ChangeCheckDialog
+					claimId={claimId}
+					currentCheck={status.bound_check}
+					onDone={onChanged}
+					onOpenChange={setChanging}
+					onRefused={onChanged}
+					open={changing}
+					returnFocusTo={changeButton}
+				/>
+			)}
+		</div>
+	);
+}
+
+interface ResultsViewProps {
+	context: ElementSlotContext;
+	hasAcceptedSettings: boolean;
+	onOpenSettings: () => void;
+	/** Called when the claim's state changes, from this view's live-update subscription, which the panel shares with the settings read. */
+	onStateChanged: () => void;
+}
+
 /**
- * The `element-panel` slot's evidence-trace tab (ADR 0002 v2 §3): the
- * claim's append-only `tea.health` log, newest first. `useHealthEvidence`
- * returns the log in append (oldest-first, hash-chain) order — the reversal
- * here is display-only, never re-persisted.
+ * The Results view: the claim's bound check, then its evidence log newest
+ * first, 50 at a time with "Load older", with a line under each record that
+ * has identical passing results thinned out before it. A person who can edit also gets
+ * Change (or "Set in Settings" while the claim has accepted settings) on the
+ * header and Revoke or Reinstate on each record; the server enforces
+ * permission regardless.
+ */
+function ResultsView({
+	context,
+	hasAcceptedSettings,
+	onOpenSettings,
+	onStateChanged,
+}: ResultsViewProps) {
+	const { canEdit = false, elementId } = context;
+	const evidence = useHealthEvidence(context, onStateChanged);
+
+	if (evidence.status === "loading") {
+		return <EvidenceSkeleton />;
+	}
+
+	if (evidence.status === "error" || !evidence.evidence) {
+		return (
+			<EmptyState
+				icon={FileText}
+				message="Could not load the evidence log. Try reopening this element."
+				title="Evidence unavailable"
+			/>
+		);
+	}
+
+	const { healthStatus } = evidence;
+	const onChanged = () => {
+		evidence.refetch();
+	};
+	const header = healthStatus ? (
+		<PanelHeader
+			canEdit={canEdit}
+			claimId={elementId}
+			hasAcceptedSettings={hasAcceptedSettings}
+			onChanged={onChanged}
+			onOpenSettings={onOpenSettings}
+			status={healthStatus}
+		/>
+	) : null;
+
+	if (evidence.evidence.length === 0) {
+		return (
+			<div className="space-y-3">
+				{header}
+				<EmptyState
+					icon={FileText}
+					message="No evidence has been recorded against this claim yet."
+					title="No evidence yet"
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<div
+			className="max-h-[60vh] space-y-2 overflow-y-auto pr-1"
+			data-testid="health-evidence-log"
+		>
+			{header}
+			{evidence.evidence.map((item) => (
+				<Fragment key={item.id}>
+					<EvidenceLogEntry
+						canEdit={canEdit}
+						claimId={elementId}
+						item={item}
+						onChanged={onChanged}
+					/>
+					{item.thinned_before && <ThinnedRunLine run={item.thinned_before} />}
+				</Fragment>
+			))}
+			{evidence.olderFailed && (
+				<p className="text-destructive text-sm" role="alert">
+					Could not load older records. Try again.
+				</p>
+			)}
+			{evidence.hasMore && (
+				<Button
+					disabled={evidence.loadingOlder}
+					onClick={() => evidence.loadOlder()}
+					type="button"
+					variant="outline"
+				>
+					Load older
+				</Button>
+			)}
+		</div>
+	);
+}
+
+type PanelView = "results" | "settings";
+
+const VIEW_TRIGGER_CLASSES =
+	"rounded-none border-transparent border-b-2 px-1 pb-2 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none";
+
+/**
+ * The `element-panel` slot's Evidence tab, in two views: Results (the claim's
+ * bound check and its evidence log) and Settings (how the claim's evidence is
+ * produced and judged). Both stay mounted so unsaved settings survive a
+ * switch to Results and back.
  *
- * The `element-panel` slot has no per-element-type filtering of its own
- * (`node-edit-dialog.tsx` shows one registered tab strip for every element
- * type), so this component handles the "not a claim" case itself rather
- * than showing a misleading fetch error on every goal/strategy/evidence
- * node's dialog — `useHealthEvidence` never makes a request for a non-claim
- * element, and this renders a distinct "not applicable" state instead.
+ * The slot has no per-element-type filtering of its own, so this component
+ * shows the live node's own tab for evidence, and a "not applicable" state for
+ * any other type that is not a property claim; no hook makes a request for
+ * one of those. The panel is marked `nokey` as a whole: the
+ * element dialog is part of the canvas node's React tree, and the canvas
+ * would otherwise take arrow keys and Space typed in the form.
  */
 export function HealthPanel({
 	caseId,
 	elementId,
+	elementText,
 	elementType,
+	canEdit = false,
 }: ElementSlotContext) {
-	const { evidence, status } = useHealthEvidence({
-		caseId,
-		elementId,
-		elementType,
-	});
+	const context = { caseId, elementId, elementType, canEdit };
+	const [view, setView] = useState<PanelView>("results");
+	const criteria = useCriteria(context);
+
+	if (elementType === "evidence") {
+		return <LiveNodePanel {...context} />;
+	}
 
 	if (elementType !== "property") {
 		return (
@@ -50,37 +265,51 @@ export function HealthPanel({
 		);
 	}
 
-	if (status === "loading") {
-		return <EvidenceSkeleton />;
-	}
-
-	if (status === "error" || !evidence) {
-		return (
-			<EmptyState
-				icon={FileText}
-				message="Could not load the evidence log. Try reopening this element."
-				title="Evidence unavailable"
-			/>
-		);
-	}
-
-	if (evidence.length === 0) {
-		return (
-			<EmptyState
-				icon={FileText}
-				message="No evidence has been recorded against this claim yet."
-				title="No evidence yet"
-			/>
-		);
-	}
-
-	const newestFirst = [...evidence].reverse();
+	const hasAcceptedSettings = criteria.data?.criteria?.state === "accepted";
 
 	return (
-		<div className="space-y-2" data-testid="health-evidence-log">
-			{newestFirst.map((item) => (
-				<EvidenceLogEntry item={item} key={item.id} />
-			))}
+		<div className="nokey min-w-0">
+			<Tabs
+				onValueChange={(next) =>
+					setView(next === "settings" ? "settings" : "results")
+				}
+				value={view}
+			>
+				<TabsList className="h-auto w-full justify-start gap-4 rounded-none border-b bg-transparent p-0">
+					<TabsTrigger className={VIEW_TRIGGER_CLASSES} value="results">
+						Results
+					</TabsTrigger>
+					<TabsTrigger className={VIEW_TRIGGER_CLASSES} value="settings">
+						Settings
+					</TabsTrigger>
+				</TabsList>
+				<TabsContent
+					className="mt-3 data-[state=inactive]:hidden"
+					forceMount
+					value="results"
+				>
+					<ResultsView
+						context={context}
+						hasAcceptedSettings={hasAcceptedSettings}
+						onOpenSettings={() => setView("settings")}
+						onStateChanged={criteria.refetch}
+					/>
+				</TabsContent>
+				<TabsContent
+					className="mt-3 data-[state=inactive]:hidden"
+					forceMount
+					value="settings"
+				>
+					<SettingsView
+						active={view === "settings"}
+						canEdit={canEdit}
+						caseId={caseId}
+						claimId={elementId}
+						claimText={elementText}
+						criteria={criteria}
+					/>
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 }

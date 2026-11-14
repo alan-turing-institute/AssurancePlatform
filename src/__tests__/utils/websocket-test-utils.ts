@@ -188,7 +188,7 @@ export class MockWebSocketServer {
 
 	constructor(options: MockWebSocketServerOptions = {}) {
 		this.options = {
-			url: "ws://localhost:8000/ws",
+			url: "ws://localhost:3000/ws",
 			autoConnect: true,
 			connectionDelay: 0,
 			reconnectAttempts: 3,

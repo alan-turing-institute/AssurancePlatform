@@ -59,7 +59,7 @@ export const ASSERTION_STATUS_DESCRIPTIONS: Record<
 	AXIOMATIC: "Treated by the author as self-evidently true in this case.",
 	DEFEATED: "Marked by the author as refuted or withdrawn.",
 	AS_CITED:
-		"Computed automatically from the status of the claim this element cites — not set directly by an author.",
+		"Reserved: an author cannot set it, and it appears only on an element brought in by an import.",
 };
 
 /** Type guard for narrowing an unknown value (e.g. React Flow node data). */

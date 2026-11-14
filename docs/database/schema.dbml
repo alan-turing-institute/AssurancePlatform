@@ -32,6 +32,7 @@ Table users {
   passwordResetExpires DateTime
   defaultCaseMode CaseMode [not null, default: 'STANDARD', note: 'Default view mode for new cases: STANDARD (simplified) or ADVANCED (full GSN notation)']
   hasSeenMigrationNotice Boolean [not null, default: false, note: 'Whether user has dismissed the Django-to-Next.js migration notice']
+  showUnsupportedMarkers Boolean [not null, default: true, note: 'Whether the case diagram marks a goal, strategy or claim with nothing beneath it; on unless the user switches it off']
   completedTours String[] [not null, note: 'IDs of onboarding tours the user has completed']
   isSystemUser Boolean [not null, default: false, note: 'True for system/bot accounts (e.g., automated imports)']
   createdAt DateTime [default: `now()`, not null]
@@ -55,6 +56,8 @@ Table users {
   ownedIntegrations integrations [not null]
   integrationPrincipal integrations
   archivedPublishedCases published_assurance_cases [not null]
+  modelConnections user_model_connections [not null]
+  modelRoles user_model_roles
 
   Note: 'Platform user account. Supports local (email/password) and GitHub OAuth authentication.'
 }
@@ -133,10 +136,11 @@ Table assurance_cases {
   description String [not null, note: 'Summary describing the case\'s purpose and scope']
   createdById String [not null, note: 'User who created the case (for audit trail)']
   mode CaseMode [not null, default: 'STANDARD', note: 'STANDARD (simplified UI) or ADVANCED (full GSN notation)']
+  kind CaseKind [not null, default: 'CASE', note: 'CASE (an ordinary case) or PATTERN (a reusable template that cases are started from)']
   colourProfile String [not null, default: 'default', note: 'Colour scheme for the case diagram']
   isDemo Boolean [not null, default: false, note: 'True for auto-generated tutorial cases']
   layoutDirection String [not null, default: 'TB', note: 'ELK layout direction: TB (top-bottom) or LR (left-right)']
-  sourcePatternId String [note: 'If created from a pattern, the source pattern ID']
+  sourcePatternId String [note: 'If started from a pattern, the ID of the case it was started from, which was a pattern at the time; that case may have been converted back to an ordinary case since']
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   published Boolean [not null, default: false]
@@ -149,7 +153,8 @@ Table assurance_cases {
   createdBy users [not null]
   markedReadyBy users
   deletedByUser users
-  sourcePattern argument_patterns
+  sourcePattern assurance_cases
+  derivedCases assurance_cases [not null]
   elements assurance_elements [not null]
   userPermissions case_permissions [not null]
   teamPermissions case_team_permissions [not null]
@@ -228,7 +233,7 @@ Table assurance_elements {
   description String [not null, note: 'Main content/description of the element']
   assumption String [note: 'Assumptions upon which this element depends']
   justification String [note: 'Rationale for strategies explaining the decomposition approach']
-  context String[] [not null, note: 'Contextual information strings (replaces legacy CONTEXT element type)']
+  context Json [not null, default: '[]', note: 'Context entries (replaces legacy CONTEXT element type): plain text, or a named entry {id, name, text, value?}']
   url String [note: 'Primary URL (legacy). Auto-synced: when urls[] is set, url = urls[0]']
   urls String[] [not null, note: 'Multiple evidence URLs. Must be valid http/https URLs']
   moduleReferenceId String [note: 'For MODULE type: the referenced case ID']
@@ -237,6 +242,8 @@ Table assurance_elements {
   modulePublicSummary String [note: 'Public summary when module is not viewable']
   fromPattern Boolean [not null, default: false, note: 'True if element came from a pattern template']
   modifiedFromPattern Boolean [not null, default: false, note: 'True if element was modified after pattern application']
+  isPlaceholder Boolean [not null, default: false, note: 'True if the person using the case or pattern writes this element; writing its description takes this off in a case, and a case with any left cannot be published']
+  placeholderHint String [note: 'Guidance of up to 500 characters for whoever fills in a placeholder element; returned and exported only while isPlaceholder is true']
   inSandbox Boolean [not null, default: false, note: 'True if element is in draft/sandbox mode']
   isDefeater Boolean [not null, default: false, note: 'True if element is a counter-argument']
   defeatsElementId String [note: 'Element this defeater challenges']
@@ -266,6 +273,12 @@ Table assurance_elements {
   releaseComments release_comments [not null]
   pluginData plugin_data [not null]
   pluginHealthEvidence plugin_health_evidence [not null]
+  pluginHealthThinnedRuns plugin_health_thinned_runs [not null]
+  pluginHealthClaimState plugin_health_claim_states
+  pluginHealthBindingChanges plugin_health_binding_changes [not null]
+  pluginHealthCriteria plugin_health_criteria
+  pluginHealthCriteriaRevisions plugin_health_criteria_revisions [not null]
+  pluginHealthCriteriaAsEvidenceNode plugin_health_criteria
 
   Note: 'Node in the assurance case hierarchy: GOAL, STRATEGY, PROPERTY_CLAIM, EVIDENCE, CONTEXT, MODULE, etc.'
 }
@@ -316,7 +329,6 @@ Table argument_patterns {
   elements pattern_elements [not null]
   userPermissions pattern_permissions [not null]
   teamPermissions pattern_team_permissions [not null]
-  derivedCases assurance_cases [not null]
 
   Note: 'Reusable template for creating assurance cases with optional placeholder elements for customisation.'
 }
@@ -558,7 +570,7 @@ Table github_repositories {
 
 Table published_assurance_cases {
   id String [pk]
-  type PublishableItemType [not null, default: 'ASSURANCE_CASE', note: 'Discriminator (ADR 0003 §5) — only ASSURANCE_CASE is implemented; ready for a future pattern type with no rework.']
+  type PublishableItemType [not null, default: 'ASSURANCE_CASE', note: 'Discriminator (ADR 0003 §5): ARGUMENT_PATTERN when the source case is a pattern, ASSURANCE_CASE otherwise. Set when the row is created (`swapCurrentPublishedVersion` in `publish-service.ts`) and kept by every later republish.']
   slug String [not null, note: 'Stable, name-derived, deployment-unique public address (ADR 0003 §6). Generated once at first publish (see `slug-service.ts`) and carried forward verbatim — UNCHANGED — onto every later republish row of the same source case, never regenerated on rename. Collisions append a numeric suffix. NOT `@unique` here: every historical version of the same case shares one slug by design (that is what "stable" means), so true uniqueness is scoped to the CURRENT version only — see `isCurrent` and the hand-written partial index below (same DSL limitation as `PluginData`\'s case-level partial index; Prisma cannot express a partial unique constraint).']
   isCurrent Boolean [not null, default: true, note: 'True for exactly one row per `assuranceCaseId` at a time — the version Discover and the public API serve. Republishing flips the previous current row to `false` in the same transaction that inserts the new current row (`updatePublishedCase`). That "exactly one" invariant is enforced at the service layer, not the DB — the partial unique index below only stops two DIFFERENT cases\' current rows from colliding on the same slug.']
   title String [not null, note: 'Title at time of publishing']
@@ -643,6 +655,8 @@ Table integrations {
   owner users [not null]
   systemUser users [not null]
   tokens api_tokens [not null]
+  pluginHealthCriteria plugin_health_criteria [not null]
+  pluginHealthCheckCatalogue plugin_health_check_catalogues
 
   Note: 'External machine client holding scoped API tokens (renamed from
 PluginRegistration in ADR 0002 v1 — these are integrations, not in-app
@@ -669,29 +683,210 @@ rest; plaintext shown once at issuance.'
 
 Table plugin_health_evidence {
   id String [pk]
-  claimId String [not null, note: 'The PROPERTY_CLAIM AssuranceElement this evidence bears on']
-  metricName String [not null]
-  value Float
-  threshold Float
+  claimId String [not null, note: 'The PROPERTY_CLAIM AssuranceElement this record bears on']
+  record Json [not null, note: 'The validated record exactly as received (snake_case wire shape), apart from a null value stored as absent and the timestamp re-serialised from the parsed date.']
+  recordId String [unique, not null, note: 'The producer\'s record id; unique per deployment']
+  recordTimestamp DateTime [not null, note: 'The record\'s own timestamp (latest reading in its window), not the time it was stored']
   verdict PluginHealthEvidenceVerdict [not null]
-  oddDimensions String[] [not null]
-  sourceSystem String [not null]
-  provenance Json [not null]
-  evaluatedAt DateTime [not null, note: 'When the check ran (client-supplied) — NOT when we stored it']
-  formatVersion String [not null, note: 'Which evidence-format-v0.1(.x) version governed this item\'s capture.']
+  checkName String [not null]
+  session String [not null, note: 'provenance.session']
+  validFor String [not null, note: 'ISO 8601 duration, or "indefinite"']
+  expiresAt DateTime [note: 'recordTimestamp + validFor; null when validFor is "indefinite"']
+  formatVersion String [not null]
+  echoState PluginHealthEchoState [not null, note: 'No default: code that forgets to set it does not compile']
+  echoDifferences Json [note: 'A list of {field, declared, used}; null unless echoState is MISMATCH']
+  criteriaRevision Int [note: 'The settings revision the record was compared with']
   recordHash String [not null]
   previousRecordHash String
   chainSequence Int [increment, unique, not null, note: 'Server-assigned, globally monotonic ordering anchor for the hash chain.
-Deliberately NOT `createdAt`: two records for the same claim could in
-principle share a millisecond-resolution timestamp, which would make
-"walk the chain in order" ambiguous. An autoincrementing column has no
-such ambiguity. Internal only — never part of the evidence-format-v0.1
-wire contract in either direction.']
+Deliberately NOT `createdAt`: two records for the same claim could share
+a millisecond-resolution timestamp, which would make "walk the chain in
+order" ambiguous. An autoincrementing column has no such ambiguity.']
   createdById String [not null, note: 'The machine principal (an Integration\'s system User) that appended this record']
   createdAt DateTime [default: `now()`, not null]
   claim assurance_elements [not null]
+  revocations plugin_health_revocations [not null]
+  thinnedAfter plugin_health_thinned_runs [note: 'The note for the stretch removed straight after this record, if any']
+  thinnedBefore plugin_health_thinned_runs [note: 'The note for the stretch removed straight before this record, if any']
 
-  Note: 'One item of runtime evidence bearing on a PROPERTY_CLAIM (evidence-format-v0.1).'
+  Note: 'One accepted evidence record (format 1.1) bearing on a PROPERTY_CLAIM.'
+}
+
+Table plugin_health_claim_states {
+  claimId String [pk]
+  boundCheckName String [not null, note: 'The one check this claim accepts evidence from']
+  rejectedSinceLastAccept Int [not null, default: 0, note: 'Records refused for naming a different check since the last accepted one']
+  staleNotifiedAt DateTime [note: 'Set when the sweep has told open browsers the claim is stale; cleared when it is fresh again']
+  thinnedThroughSequence Int [note: 'The chain_sequence the nightly thinning job last examined up to for this claim; null before its first pass. Written only by the job.']
+  claim assurance_elements [not null]
+
+  Note: 'Per-claim bookkeeping, one row per claim that has ever had an accepted record.'
+}
+
+Table plugin_health_thinned_runs {
+  id String [pk]
+  claimId String [not null]
+  keptBeforeId String [unique, not null, note: 'The evidence row kept just before the removed stretch']
+  keptAfterId String [unique, not null, note: 'The evidence row kept just after it']
+  removedCount Int [not null]
+  firstRemovedSequence Int [not null, note: 'chain_sequence of the first removed record']
+  lastRemovedSequence Int [not null, note: 'chain_sequence of the last removed record']
+  firstRemovedAt DateTime [not null, note: 'record timestamp of the first removed record']
+  lastRemovedAt DateTime [not null, note: 'record timestamp of the last removed record']
+  ruleVersion Int [not null, note: 'Which version of the thinning rule removed them']
+  thinnedAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+  keptBefore plugin_health_evidence [not null]
+  keptAfter plugin_health_evidence [not null]
+
+  Note: 'A note of one stretch of repeated passing results removed from a claim\'s
+log by the nightly thinning job. It names the kept record before the
+stretch and the kept record after it, so a verifier walking the chain can
+account for the break in the links between them. Written only by the job.
+The two foreign keys to the evidence table refuse to let a kept record be
+removed while its note exists. Postgres checks them once the whole delete
+statement has run, so deleting a claim or case, whose cascade removes the
+evidence and the notes together, is not blocked.'
+}
+
+Table plugin_health_binding_changes {
+  id String [pk]
+  claimId String [not null]
+  fromCheckName String [note: 'Null for the first binding']
+  toCheckName String [not null]
+  source PluginHealthBindingSource [not null]
+  reason String [note: 'Required when a person changes the binding']
+  changedById String [not null, note: 'The machine principal or the person who made the change']
+  createdAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+
+  Note: 'Append-only history of which check a claim is bound to.'
+}
+
+Table plugin_health_revocations {
+  id String [pk]
+  evidenceId String [not null]
+  cause PluginHealthRevocationCause [not null]
+  reason String [not null]
+  revokedById String [not null]
+  revokedAt DateTime [default: `now()`, not null]
+  reinstatedById String
+  reinstatedAt DateTime
+  reinstatementReason String
+  evidence plugin_health_evidence [not null]
+
+  Note: 'A withdrawal of one evidence record. A record is revoked while it has a
+row with no reinstatement. A partial unique index on (evidence_id) WHERE
+reinstated_at IS NULL, hand-written in the migration because Prisma\'s
+schema DSL cannot express partial indexes, allows at most one open
+revocation per record. Revoking again after a reinstatement adds a new
+row; rows are never deleted.'
+}
+
+Table plugin_health_criteria {
+  claimId String [pk]
+  integrationId String [note: 'Whose check list the check came from; null once that integration is deleted']
+  state PluginHealthCriteriaState [not null]
+  checkName String [not null]
+  settings Json [not null, note: 'check, rule, reduction?, aggregation?, window, valid_for; no version labels']
+  ruleVersion Int [not null]
+  reductionVersion Int [not null]
+  aggregationVersion Int [not null]
+  source Json [not null, note: 'Where each block came from, worked out by the server']
+  checkDescription Json [not null, note: 'The check\'s entry in the check list, as published when the check was last found there']
+  revision Int [not null, note: 'Goes up by one on every save']
+  acceptedById String
+  acceptedAt DateTime
+  acceptedByOwnsIntegration Boolean [not null, default: false, note: 'Worked out when accepted, so a later change of owner does not rewrite it']
+  updatedById String [not null]
+  updatedAt DateTime [not null]
+  createdAt DateTime [default: `now()`, not null]
+  lastReadAt DateTime [note: 'When the pipeline last fetched these settings']
+  lastReadRevision Int
+  evidenceElementId String [unique, note: 'The ordinary evidence element added under the claim when the settings were accepted; written only by the health service, cleared by the database if that element is ever hard-deleted']
+  claim assurance_elements [not null]
+  integration integrations
+  evidenceElement assurance_elements
+
+  Note: 'One claim\'s evidence settings: which check to run, how each reading is
+judged, how readings are combined, and how long a result counts. The row
+is never deleted while the claim exists: retiring accepted settings and
+discarding a suggestion both set the state to INACTIVE, so `revision` and
+the version counters carry on. `updatedAt` is set by the service, not by
+Prisma, so recording a read does not look like an edit.'
+}
+
+Table plugin_health_criteria_revisions {
+  id String [pk]
+  claimId String [not null]
+  revision Int [not null]
+  action PluginHealthCriteriaAction [not null]
+  declaration Json [not null, note: 'The settings exactly as they would be served, with version labels']
+  reason String [note: 'Required to retire accepted settings']
+  integrationName String [note: 'Copied, so the history still reads after an integration is deleted']
+  pipelineName String
+  actorId String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  claim assurance_elements [not null]
+
+  indexes {
+    (claimId, revision) [unique]
+  }
+
+  Note: 'Append-only history of a claim\'s evidence settings. No code path updates
+or deletes a row; deleting the claim removes its history with it.'
+}
+
+Table plugin_health_check_catalogues {
+  integrationId String [pk]
+  pipeline String [not null, note: 'The pipeline\'s display name']
+  checks Json [not null]
+  publishedAt DateTime [not null]
+  integration integrations [not null]
+
+  Note: 'The checks a pipeline says it can run, replaced whole on each publish.'
+}
+
+Table user_model_connections {
+  id String [pk]
+  userId String [not null]
+  label String [not null]
+  type ModelConnectionType [not null]
+  baseUrl String
+  apiKeyEncrypted String
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+  user users [not null]
+  chatRoles user_model_roles [not null]
+  decisionRoles user_model_roles [not null]
+  embeddingRoles user_model_roles [not null]
+
+  Note: 'One model connection a user has added: a label, a type, an address (null for
+types whose address is fixed) and an optional key, encrypted at rest with the
+same AES-256-GCM envelope as the OAuth tokens (lib/auth/token-encryption.ts).
+Only lib/services/model-connection-service.ts reads or writes it, and no read
+returns the key except the server-side use path. Removed with the user.'
+}
+
+Table user_model_roles {
+  userId String [pk]
+  chatConnectionId String
+  chatModel String
+  decisionConnectionId String
+  decisionModel String
+  embeddingConnectionId String
+  embeddingModel String
+  embeddingVerifiedFor String [note: 'The catalogue model and test sentences the search check passed for']
+  embeddingVerifiedAt DateTime
+  user users [not null]
+  chatConnection user_model_connections
+  decisionConnection user_model_connections
+  embeddingConnection user_model_connections
+
+  Note: 'Which connection and model does each of a user\'s three jobs: chat, decision
+(ranking) and embedding (search). Deleting a connection empties the jobs that
+used it. The search check result is written only by the server after it has
+embedded the catalogue\'s test sentences through the chosen connection.'
 }
 
 Enum AuthProvider {
@@ -704,6 +899,11 @@ Enum AuthProvider {
 Enum CaseMode {
   STANDARD
   ADVANCED
+}
+
+Enum CaseKind {
+  CASE
+  PATTERN
 }
 
 Enum PublishStatus {
@@ -797,10 +997,53 @@ Enum IntegrationStatus {
   REVOKED
 }
 
+Enum PluginHealthEchoState {
+  MATCH
+  MISMATCH
+  UNDECLARED
+}
+
 Enum PluginHealthEvidenceVerdict {
   PASS
+  MARGINAL
   FAIL
-  DEGRADED
+  INDETERMINATE
+}
+
+Enum PluginHealthBindingSource {
+  FIRST_RECORD
+  PERSON
+  DECLARATION
+}
+
+Enum PluginHealthRevocationCause {
+  EVIDENCE_DEFECT
+  BINDING_DEFECT
+  DUPLICATE
+  SUPERSEDED
+  OTHER
+}
+
+Enum PluginHealthCriteriaState {
+  SUGGESTED
+  ACCEPTED
+  INACTIVE
+}
+
+Enum PluginHealthCriteriaAction {
+  SUGGESTED
+  ACCEPTED
+  EDITED
+  RETIRED
+  DISCARDED
+}
+
+Enum ModelConnectionType {
+  OPENROUTER
+  OLLAMA
+  OPENAI_COMPATIBLE
+  ANTHROPIC
+  OPENAI
 }
 
 Ref: teams.createdById > users.id
@@ -815,7 +1058,7 @@ Ref: assurance_cases.markedReadyById > users.id
 
 Ref: assurance_cases.deletedById > users.id
 
-Ref: assurance_cases.sourcePatternId > argument_patterns.id
+Ref: assurance_cases.sourcePatternId - assurance_cases.id [delete: Set Null]
 
 Ref: case_permissions.caseId > assurance_cases.id [delete: Cascade]
 
@@ -908,3 +1151,35 @@ Ref: integrations.systemUserId > users.id
 Ref: api_tokens.integrationId > integrations.id [delete: Cascade]
 
 Ref: plugin_health_evidence.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_claim_states.claimId - assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_thinned_runs.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_thinned_runs.keptBeforeId - plugin_health_evidence.id [delete: No Action]
+
+Ref: plugin_health_thinned_runs.keptAfterId - plugin_health_evidence.id [delete: No Action]
+
+Ref: plugin_health_binding_changes.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_revocations.evidenceId > plugin_health_evidence.id [delete: Cascade]
+
+Ref: plugin_health_criteria.claimId - assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_criteria.integrationId > integrations.id [delete: Set Null]
+
+Ref: plugin_health_criteria.evidenceElementId - assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_criteria_revisions.claimId > assurance_elements.id [delete: Cascade]
+
+Ref: plugin_health_check_catalogues.integrationId - integrations.id [delete: Cascade]
+
+Ref: user_model_connections.userId > users.id [delete: Cascade]
+
+Ref: user_model_roles.userId - users.id [delete: Cascade]
+
+Ref: user_model_roles.chatConnectionId > user_model_connections.id [delete: Set Null]
+
+Ref: user_model_roles.decisionConnectionId > user_model_connections.id [delete: Set Null]
+
+Ref: user_model_roles.embeddingConnectionId > user_model_connections.id [delete: Set Null]

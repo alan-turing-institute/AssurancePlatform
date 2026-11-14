@@ -5,6 +5,8 @@
  * and consumed by the frontend. IDs are strings (UUIDs from Prisma).
  */
 
+import type { CaseKind } from "@/lib/schemas/case-export";
+import type { ContextEntry } from "@/lib/schemas/context-entry";
 import type { CommentResponse } from "./comment-service";
 
 // The "Ready to Publish" intermediate step was retired (ADR 0003 §2) — DRAFT
@@ -25,16 +27,27 @@ export type AssertionStatusResponseType =
 	| "AS_CITED";
 
 /**
+ * The placeholder marker an element carries: the person using the case or
+ * pattern writes it. Both fields are left out for an element that is not a
+ * placeholder; the hint is left out when there is none.
+ */
+export interface PlaceholderFields {
+	isPlaceholder?: boolean;
+	placeholderHint?: string;
+}
+
+/**
  * An away goal (ADR 0005 D3): a goal that cites a goal in another case.
  * `moduleReferenceId` names the cited case; `citedElementId` names the
  * cited goal within it (ADR 0004 D5). The `cited*` fields are resolved by
  * `case-fetch-service.ts` — never carried on the Prisma row itself — so the
  * canvas card can show a name without a follow-up fetch. `citedCaseAccessible`
- * gates whether the card links to the cited case: false whenever the viewer
- * lacks permission on it, matching the same-error-for-missing-and-forbidden
- * rule used elsewhere in this file.
+ * is true only when the viewer can view the cited case now. `citedCaseName`
+ * and `citedElementName` are null whenever it is false, so a case in the bin,
+ * deleted, never shared or no longer shared looks the same to the viewer, and
+ * the card shows no link.
  */
-export interface AwayGoalResponse {
+export interface AwayGoalResponse extends PlaceholderFields {
 	citationDangling?: boolean;
 	citedCaseAccessible?: boolean;
 	citedCaseName?: string | null;
@@ -44,6 +57,8 @@ export interface AwayGoalResponse {
 	createdDate?: string;
 	description: string;
 	goalId?: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -61,13 +76,16 @@ export interface AwayGoalResponse {
 /**
  * A module (ADR 0005 D3): a reference to a whole other case. Same
  * name-resolution and accessibility rules as `AwayGoalResponse` above, minus
- * the element-level citation (a module cites a case, not an element within it).
+ * the element-level citation (a module cites a case, not an element within it):
+ * `moduleCaseName` is null unless `moduleCaseAccessible` is true.
  */
-export interface ModuleResponse {
+export interface ModuleResponse extends PlaceholderFields {
 	comments?: CommentResponse[];
 	createdDate?: string;
 	description: string;
 	goalId?: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -84,17 +102,19 @@ export interface ModuleResponse {
 	type: string;
 }
 
-export interface GoalResponse {
+export interface GoalResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	assuranceCaseId: string;
 	awayGoals?: AwayGoalResponse[];
 	comments?: CommentResponse[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;
 	description: string;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -111,15 +131,17 @@ export interface GoalResponse {
 	type: string;
 }
 
-export interface StrategyResponse {
+export interface StrategyResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
 	comments?: CommentResponse[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate?: string;
 	description: string;
 	goalId: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -133,19 +155,21 @@ export interface StrategyResponse {
 	type?: string;
 }
 
-export interface PropertyClaimResponse {
+export interface PropertyClaimResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
 	claimType: string;
 	comments?: CommentResponse[];
-	context?: string[];
+	context?: ContextEntry[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;
 	description: string;
 	evidence: EvidenceResponse[];
 	goalId: string | null;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -164,12 +188,14 @@ export interface PropertyClaimResponse {
 	type: string;
 }
 
-export interface EvidenceResponse {
+export interface EvidenceResponse extends PlaceholderFields {
 	comments?: CommentResponse[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */
 	defeatsElementId?: string | null;
 	description: string;
+	/** Goal-type defeaters attached beneath this element. */
+	goals?: GoalResponse[];
 	/** Set by frontend tree processing, not present in API response */
 	hidden?: boolean;
 	id: string;
@@ -214,6 +240,8 @@ export interface AssuranceCaseResponse {
 	isDemo?: boolean;
 	/** Whether the caller is the case's owner, rather than a collaborator with delete rights (both map to `permissions: "manage"`) */
 	isOwner?: boolean;
+	/** CASE for an ordinary case, PATTERN for a reusable pattern */
+	kind?: CaseKind;
 	/** ELK layout direction preference: TB (top-bottom) or LR (left-right) */
 	layoutDirection?: "TB" | "LR";
 	/** When the case was marked as ready to publish */

@@ -1,6 +1,7 @@
-import { waitFor } from "@testing-library/react";
+import { waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
+import { useState } from "react";
 import type { Node } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ElementSlotContext } from "@/lib/plugins/slots";
@@ -35,6 +36,12 @@ vi.mock("@/lib/services/history-service", async (importOriginal) => {
 	return { ...actual, recordUpdate: vi.fn() };
 });
 
+vi.mock("../reference-text-editor", async () => ({
+	default: (
+		await import("@/src/__tests__/utils/reference-text-editor-stand-in")
+	).default,
+}));
+
 vi.mock("@/lib/toast", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/toast")>();
 	return { ...actual, toast: vi.fn() };
@@ -52,6 +59,9 @@ const NODE: Node = {
 };
 
 const CONTEXT_ENTRY_LABEL_PATTERN = /^Context entry \d+$/;
+const ENTRY_ID_PATTERN = /^[a-z0-9]{10}$/;
+const NO_TERMS_PATTERN = /^None yet\./;
+const NAME_IN_BRACKETS_PATTERN = /shows its name in square brackets/;
 
 function FakePanel({ elementId }: ElementSlotContext) {
 	return <div data-testid="fake-panel-content">{`panel for ${elementId}`}</div>;
@@ -175,6 +185,160 @@ describe("NodeEditDialog — element-panel slot", () => {
 		);
 		expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
 		expect(screen.queryByText("Evidence")).not.toBeInTheDocument();
+	});
+});
+
+describe("NodeEditDialog — width follows the showing tab", () => {
+	it("is wider while a tab registered as wide is showing, and back to its width on Details", async () => {
+		const user = userEvent.setup();
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			wide: true,
+			Component: FakePanel,
+		});
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const dialog = await screen.findByRole("dialog");
+		expect(dialog.className).toContain("sm:max-w-lg");
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect(dialog.className).toContain("sm:max-w-2xl");
+		expect(dialog.className).not.toContain("sm:max-w-lg");
+		await user.click(screen.getByRole("tab", { name: "Details" }));
+		expect(dialog.className).toContain("sm:max-w-lg");
+	});
+
+	it("keeps the narrow width for a tab that does not ask for more", async () => {
+		const user = userEvent.setup();
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			Component: FakePanel,
+		});
+		mockPluginsResponse(true);
+
+		render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect((await screen.findByRole("dialog")).className).toContain(
+			"sm:max-w-lg"
+		);
+	});
+});
+
+describe("NodeEditDialog — a tab that has been shown stays mounted", () => {
+	function TypingPanel() {
+		const [text, setText] = useState("");
+		return (
+			<input
+				aria-label="Panel note"
+				onChange={(event) => setText(event.target.value)}
+				value={text}
+			/>
+		);
+	}
+
+	function register() {
+		elementPanelSlot.register({
+			pluginId: "tea.health",
+			tabId: "tea.health",
+			label: "Evidence",
+			Component: TypingPanel,
+		});
+		mockPluginsResponse(true);
+	}
+
+	function renderDialog(open: boolean) {
+		return render(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={open}
+			/>,
+			{ withProviders: false }
+		);
+	}
+
+	it("mounts nothing for a tab that has not been shown", async () => {
+		register();
+		renderDialog(true);
+		await screen.findByRole("tab", { name: "Evidence" });
+		expect(
+			screen.queryByLabelText("Panel note", { selector: "input" })
+		).toBeNull();
+	});
+
+	it("keeps what was typed in the tab after the person switches to Details and back", async () => {
+		const user = userEvent.setup();
+		register();
+		renderDialog(true);
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		await user.type(screen.getByLabelText("Panel note"), "kept");
+		await user.click(screen.getByRole("tab", { name: "Details" }));
+		expect(
+			screen
+				.getByLabelText("Panel note", { selector: "input" })
+				.closest("[role=tabpanel]")
+		).toHaveAttribute("data-state", "inactive");
+		await user.click(screen.getByRole("tab", { name: "Evidence" }));
+		expect(screen.getByLabelText("Panel note")).toHaveValue("kept");
+	});
+
+	it("starts the tab afresh after the dialog has been closed and opened again", async () => {
+		const user = userEvent.setup();
+		register();
+		const { rerender } = renderDialog(true);
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		await user.type(screen.getByLabelText("Panel note"), "gone");
+		rerender(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={false}
+			/>
+		);
+		rerender(
+			<NodeEditDialog
+				node={NODE}
+				nodeType="goal"
+				onOpenChange={() => {
+					// no-op for this assertion
+				}}
+				open={true}
+			/>
+		);
+		await user.click(await screen.findByRole("tab", { name: "Evidence" }));
+		expect(screen.getByLabelText("Panel note")).toHaveValue("");
 	});
 });
 
@@ -943,5 +1107,709 @@ describe("NodeEditDialog — read-only mode by case permission", () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(updateRequestCount).toBe(0);
 		expect(toast).not.toHaveBeenCalled();
+	});
+});
+
+describe("NodeEditDialog — placeholders", () => {
+	const SWITCH_LABEL = "Placeholder: the person using this pattern writes this";
+
+	const PLACEHOLDER_NODE: Node = {
+		id: "9",
+		type: "goal",
+		position: { x: 0, y: 0 },
+		data: {
+			id: 9,
+			name: "G1",
+			description: "",
+			isPlaceholder: true,
+			placeholderHint: "Say what the goal is",
+		},
+	};
+
+	function openIn(kind: "CASE" | "PATTERN", node: Node) {
+		const previous = useStore.getState().assuranceCase;
+		useStore.setState({ assuranceCase: { ...previous!, kind } });
+		mockPluginsResponse(true);
+		const captured: { body?: Record<string, unknown> } = {};
+		server.use(
+			http.put("/api/elements/9", async ({ request }) => {
+				captured.body = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+		const onOpenChange = vi.fn();
+		render(
+			<NodeEditDialog
+				node={node}
+				nodeType="goal"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+		return { captured, onOpenChange };
+	}
+
+	beforeEach(() => {
+		vi.mocked(recordUpdate).mockClear();
+	});
+
+	it("lets a pattern's author switch the marker on with a hint, and records the change for undo", async () => {
+		const user = userEvent.setup();
+		const plain: Node = {
+			...PLACEHOLDER_NODE,
+			data: { id: 9, name: "G1", description: "Sample text" },
+		};
+		const { captured, onOpenChange } = openIn("PATTERN", plain);
+
+		await user.click(await screen.findByRole("switch", { name: SWITCH_LABEL }));
+		await user.type(
+			screen.getByLabelText("Hint for the person filling this in"),
+			"  Name the system  "
+		);
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).toMatchObject({
+			isPlaceholder: true,
+			placeholderHint: "Name the system",
+		});
+		const [, , before, after] = vi.mocked(recordUpdate).mock.calls[0]!;
+		expect(before).toMatchObject({ isPlaceholder: false });
+		expect(after).toMatchObject({ isPlaceholder: true });
+	});
+
+	it("saves a pattern's placeholder with no text, and clears the hint when the marker is switched off", async () => {
+		const user = userEvent.setup();
+		const { captured, onOpenChange } = openIn("PATTERN", PLACEHOLDER_NODE);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Update Goal" })
+		);
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		const kept = captured.body;
+		onOpenChange.mockClear();
+
+		await user.click(screen.getByRole("switch", { name: SWITCH_LABEL }));
+		await user.type(
+			await screen.findByLabelText("Description"),
+			"Written by the author"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(kept).toMatchObject({
+			isPlaceholder: true,
+			placeholderHint: "Say what the goal is",
+		});
+		expect(captured.body).toMatchObject({
+			isPlaceholder: false,
+			placeholderHint: "",
+		});
+	});
+
+	it("shows a case's placeholder hint above the description, with no switch, and leaves the marker to the server", async () => {
+		const user = userEvent.setup();
+		const { captured, onOpenChange } = openIn("CASE", PLACEHOLDER_NODE);
+
+		expect(await screen.findByText("Say what the goal is")).toBeInTheDocument();
+		expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+		await user.type(
+			await screen.findByLabelText("Description"),
+			"The system is safe"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Goal" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).toHaveProperty("description", "The system is safe");
+		expect(captured.body).not.toHaveProperty("isPlaceholder");
+		const [, , before, after] = vi.mocked(recordUpdate).mock.calls[0]!;
+		expect(before).toMatchObject({ isPlaceholder: true });
+		expect(after).toMatchObject({ isPlaceholder: false });
+	});
+});
+
+describe("NodeEditDialog — defined terms", () => {
+	const NAMED_ENTRY = {
+		id: "k3f9x2m7qa",
+		name: "window",
+		text: "the moving interval",
+		value: "5 minutes",
+	};
+
+	function claimWith(data: Record<string, unknown>): Node {
+		return {
+			id: "7",
+			type: "property",
+			position: { x: 0, y: 0 },
+			data: { id: 7, name: "P1", description: "Separation holds", ...data },
+		};
+	}
+
+	function captureUpdate() {
+		const captured: { body?: Record<string, unknown> } = {};
+		server.use(
+			http.put("/api/elements/7", async ({ request }) => {
+				captured.body = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+		return captured;
+	}
+
+	function renderClaim(node: Node, onOpenChange = vi.fn()) {
+		mockPluginsResponse(true);
+		render(
+			<NodeEditDialog
+				node={node}
+				nodeType="property"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+		return onOpenChange;
+	}
+
+	it("leaves the description out of the update when it has not changed", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(
+			claimWith({ description: "all {window#k3f9x2m7qa} hold" })
+		);
+
+		await user.type(
+			await screen.findByLabelText("Assumption"),
+			"The window is fixed"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).not.toHaveProperty("description");
+		expect(captured.body).toHaveProperty("assumption", "The window is fixed");
+	});
+
+	it("sends the description when it has changed", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({}));
+
+		const description = await screen.findByLabelText("Description");
+		await user.clear(description);
+		await user.type(description, "Separation holds under load");
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body).toHaveProperty(
+			"description",
+			"Separation holds under load"
+		);
+	});
+
+	it("names a plain entry, gives it a value, and sends the named entry", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(
+			claimWith({ context: ["the moving interval"] })
+		);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.type(screen.getByLabelText("Context entry 1 name"), "window");
+		await user.type(
+			screen.getByLabelText("Context entry 1 value"),
+			"5 minutes"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([
+			{
+				id: expect.stringMatching(ENTRY_ID_PATTERN),
+				name: "window",
+				text: "the moving interval",
+				value: "5 minutes",
+			},
+		]);
+	});
+
+	it("keeps a named entry as it was on an untouched save", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		expect(await screen.findByLabelText("Context entry 1 name")).toHaveValue(
+			"window"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([NAMED_ENTRY]);
+	});
+
+	it("warns that the value will go before a name with a value is removed, and keeps it on cancel", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		await user.click(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		);
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"loses its value (5 minutes)"
+		);
+
+		await user.click(screen.getByRole("button", { name: "Keep name" }));
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1 name")).toHaveValue("window");
+
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
+		await user.click(
+			screen.getByRole("button", { name: "Remove name and value" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual(["the moving interval"]);
+	});
+
+	it("removes a name that has no value without asking", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: [{ ...NAMED_ENTRY, value: undefined }] }));
+
+		await user.click(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		);
+
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1")).toHaveValue(
+			"the moving interval"
+		);
+	});
+
+	async function nameAndValueFirstEntry(
+		user: ReturnType<typeof userEvent.setup>
+	) {
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.type(screen.getByLabelText("Context entry 1 name"), "window");
+		await user.type(
+			screen.getByLabelText("Context entry 1 value"),
+			"5 minutes"
+		);
+	}
+
+	it("warns before a name is removed whose value was typed in the same visit, and names that value", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: ["the moving interval"] }));
+		await nameAndValueFirstEntry(user);
+
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
+
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"loses its value (5 minutes)"
+		);
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"refers to window will show it as not found"
+		);
+	});
+
+	it("keeps the name and a value typed in the same visit on Keep name", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(
+			claimWith({ context: ["the moving interval"] })
+		);
+		await nameAndValueFirstEntry(user);
+
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
+		await user.click(screen.getByRole("button", { name: "Keep name" }));
+
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1 name")).toHaveValue("window");
+		expect(screen.getByLabelText("Context entry 1 value")).toHaveValue(
+			"5 minutes"
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([
+			{
+				id: expect.stringMatching(ENTRY_ID_PATTERN),
+				name: "window",
+				text: "the moving interval",
+				value: "5 minutes",
+			},
+		]);
+	});
+
+	it("turns an entry back into plain text on Remove name and value, dropping a value typed in the same visit", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(
+			claimWith({ context: ["the moving interval"] })
+		);
+		await nameAndValueFirstEntry(user);
+
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
+		await user.click(
+			screen.getByRole("button", { name: "Remove name and value" })
+		);
+
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1")).toHaveValue(
+			"the moving interval"
+		);
+		expect(
+			screen.queryByLabelText("Context entry 1 value")
+		).not.toBeInTheDocument();
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual(["the moving interval"]);
+	});
+
+	it("removes a name without asking once its value has been cleared or left as spaces", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		const value = await screen.findByLabelText("Context entry 1 value");
+		await user.clear(value);
+		await user.type(value, "   ");
+		await user.click(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		);
+
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		expect(screen.getByLabelText("Context entry 1")).toHaveValue(
+			"the moving interval"
+		);
+	});
+
+	it("lists the terms the description can use, those above as well as the entries in the form", async () => {
+		renderClaim(
+			claimWith({
+				context: [NAMED_ENTRY],
+				termsInReach: [
+					{
+						id: NAMED_ENTRY.id,
+						name: NAMED_ENTRY.name,
+						text: NAMED_ENTRY.text,
+						definedOn: { elementId: "7", elementName: "P1" },
+					},
+					{
+						id: "a1b2c3d4e5",
+						name: "rate",
+						text: "events per second",
+						value: "10",
+						definedOn: { elementId: "1", elementName: "G1" },
+					},
+				],
+			})
+		);
+
+		const list = (await screen.findByText("Terms you can use here")).closest(
+			"section"
+		);
+		if (!list) {
+			throw new Error("Expected the terms list to sit in a section");
+		}
+		const items = within(list).getAllByRole("listitem");
+		expect(items).toHaveLength(2);
+		expect(items[0]).toHaveTextContent("window defined on P1");
+		expect(items[1]).toHaveTextContent("rate defined on G1");
+		expect(items[1]).toHaveTextContent("events per second");
+		expect(items[1]).toHaveTextContent("Value: 10");
+	});
+
+	it("says what is missing when no term is in reach", async () => {
+		renderClaim(claimWith({}));
+
+		expect(await screen.findByText(NO_TERMS_PATTERN)).toBeInTheDocument();
+	});
+
+	it("does not save a named entry whose name is empty, and says so beside it", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(claimWith({ context: ["the moving interval"] }));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		expect(
+			await screen.findByText("Context entry names must not be empty")
+		).toBeInTheDocument();
+		expect(captured.body).toBeUndefined();
+	});
+
+	it("ties the message about a box to that box", async () => {
+		const user = userEvent.setup();
+		renderClaim(claimWith({ context: ["the moving interval"] }));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Name context entry 1" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		const message = await screen.findByText(
+			"Context entry names must not be empty"
+		);
+		const nameBox = screen.getByLabelText("Context entry 1 name");
+		expect(nameBox).toHaveAttribute("aria-invalid", "true");
+		expect(nameBox).toHaveAttribute("aria-describedby", message.id);
+		expect(message.id).not.toBe("");
+	});
+
+	it("moves focus to the box a problem is in, not always the name", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(
+			claimWith({
+				context: [{ ...NAMED_ENTRY, value: "v".repeat(501) }],
+			})
+		);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Update Property" })
+		);
+
+		await waitFor(() =>
+			expect(screen.getByLabelText("Context entry 1 value")).toHaveFocus()
+		);
+		expect(captured.body).toBeUndefined();
+	});
+
+	it("gives each Remove name button the name of its own entry", async () => {
+		renderClaim(
+			claimWith({
+				context: [
+					NAMED_ENTRY,
+					{ id: "b2c3d4e5f6", name: "rate", text: "events per second" },
+				],
+			})
+		);
+
+		expect(
+			await screen.findByRole("button", {
+				name: "Remove name of context entry 1",
+			})
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Remove name of context entry 2" })
+		).toBeInTheDocument();
+	});
+
+	it("does not save two entries with the same name, ignoring case, and says why", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		renderClaim(
+			claimWith({
+				context: [
+					NAMED_ENTRY,
+					{ id: "b2c3d4e5f6", name: "Window", text: "another meaning" },
+				],
+			})
+		);
+
+		const problem = await screen.findByRole("alert");
+		expect(problem).toHaveTextContent("names must be unique within an element");
+		expect(screen.getByLabelText("Context entry 1 name")).toHaveAttribute(
+			"aria-describedby",
+			problem.id
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(toast).toHaveBeenCalled());
+		expect(toast).toHaveBeenCalledWith(
+			expect.objectContaining({ title: "Check the context entries" })
+		);
+		expect(captured.body).toBeUndefined();
+	});
+	it("marks a named entry as a variable, sends the flag, and keeps it on an untouched save", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const onOpenChange = renderClaim(claimWith({ context: [NAMED_ENTRY] }));
+
+		await user.click(
+			await screen.findByRole("switch", {
+				name: "Variable: show its value wherever it is mentioned (context entry 1)",
+			})
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(captured.body?.context).toEqual([
+			{ ...NAMED_ENTRY, variable: true },
+		]);
+	});
+
+	it("keeps a variable on an untouched save, and drops the flag when the switch goes off", async () => {
+		const user = userEvent.setup();
+		const captured = captureUpdate();
+		const variable = { ...NAMED_ENTRY, variable: true };
+		const onOpenChange = renderClaim(claimWith({ context: [variable] }));
+
+		const toggle = await screen.findByRole("switch", {
+			name: "Variable: show its value wherever it is mentioned (context entry 1)",
+		});
+		expect(toggle).toBeChecked();
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(1));
+		expect(captured.body?.context).toEqual([variable]);
+
+		await user.click(toggle);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledTimes(2));
+		expect(captured.body?.context).toEqual([NAMED_ENTRY]);
+	});
+
+	it("says a variable without a value shows its name in square brackets", async () => {
+		renderClaim(
+			claimWith({
+				context: [{ ...NAMED_ENTRY, value: undefined, variable: true }],
+			})
+		);
+
+		expect(
+			await screen.findByText(NAME_IN_BRACKETS_PATTERN)
+		).toBeInTheDocument();
+	});
+
+	it("lists a variable's value beside its name, or that it is not set", async () => {
+		renderClaim(
+			claimWith({
+				termsInReach: [
+					{
+						id: "a1b2c3d4e5",
+						name: "system",
+						text: "the system",
+						value: "AcmeBot",
+						variable: true,
+						definedOn: { elementId: "1", elementName: "G1" },
+					},
+					{
+						id: "b2c3d4e5f6",
+						name: "rate",
+						text: "events per second",
+						variable: true,
+						definedOn: { elementId: "1", elementName: "G1" },
+					},
+				],
+			})
+		);
+
+		const list = (await screen.findByText("Terms you can use here")).closest(
+			"section"
+		);
+		if (!list) {
+			throw new Error("Expected the terms list to sit in a section");
+		}
+		const items = within(list).getAllByRole("listitem");
+		expect(items[0]).toHaveTextContent(
+			"system (variable: AcmeBot) defined on G1"
+		);
+		expect(items[1]).toHaveTextContent(
+			"rate (variable, not set) defined on G1"
+		);
+	});
+
+	it("sends a piece of evidence's description with {name#id} in it when it is saved, never the variable's value", async () => {
+		const user = userEvent.setup();
+		const onOpenChange = vi.fn();
+		let body: Record<string, unknown> | undefined;
+		server.use(
+			http.put("/api/elements/3", async ({ request }) => {
+				body = (await request.json()) as Record<string, unknown>;
+				return HttpResponse.json({}, { status: 200 });
+			})
+		);
+		mockPluginsResponse(true);
+		render(
+			<NodeEditDialog
+				node={{
+					id: "3",
+					type: "evidence",
+					position: { x: 0, y: 0 },
+					data: {
+						id: 3,
+						name: "E1",
+						description: "Tested on {system#a1b2c3d4e5}",
+						urls: [],
+						termsInReach: [
+							{
+								id: "a1b2c3d4e5",
+								name: "system",
+								text: "the system",
+								value: "AcmeBot",
+								variable: true,
+								definedOn: { elementId: "1", elementName: "G1" },
+							},
+						],
+					},
+				}}
+				nodeType="evidence"
+				onOpenChange={onOpenChange}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const description = await screen.findByLabelText("Description");
+		await user.type(description, " again");
+		await user.click(screen.getByRole("button", { name: "Update Evidence" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		expect(body?.description).toBe("Tested on {system#a1b2c3d4e5} again");
+		expect(JSON.stringify(body)).not.toContain("AcmeBot");
+	});
+
+	it("edits a piece of evidence's description with the terms in reach of its claim", async () => {
+		mockPluginsResponse(true);
+		render(
+			<NodeEditDialog
+				node={{
+					id: "3",
+					type: "evidence",
+					position: { x: 0, y: 0 },
+					data: {
+						id: 3,
+						name: "E1",
+						description: "Tested on {system#a1b2c3d4e5}",
+						urls: [],
+						termsInReach: [
+							{
+								id: "a1b2c3d4e5",
+								name: "system",
+								text: "the system",
+								variable: true,
+								definedOn: { elementId: "1", elementName: "G1" },
+							},
+						],
+					},
+				}}
+				nodeType="evidence"
+				onOpenChange={vi.fn()}
+				open={true}
+			/>,
+			{ withProviders: false }
+		);
+
+		const list = (await screen.findByText("Terms you can use here")).closest(
+			"section"
+		);
+		expect(list).toHaveTextContent("system (variable, not set)");
 	});
 });

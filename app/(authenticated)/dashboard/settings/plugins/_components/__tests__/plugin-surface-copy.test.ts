@@ -6,6 +6,7 @@ describe("whatItAddsCopy", () => {
 	it("maps every user-visible surface to its copy, in surface order", () => {
 		const surfaces: PluginSurface[] = [
 			"element-badge",
+			"element-appearance",
 			"element-panel",
 			"case-panel",
 			"canvas-decorator",
@@ -14,7 +15,8 @@ describe("whatItAddsCopy", () => {
 		];
 
 		expect(whatItAddsCopy(surfaces)).toEqual([
-			"A health badge on property claims on the canvas",
+			"A health badge on property claims and on the evidence nodes that show a claim's result",
+			"A tint on those evidence nodes, and a colour on the line from the claim to each one",
 			"An Evidence tab in the element dialog",
 			"A panel on the case page",
 			"Extra markings on the canvas",
@@ -43,7 +45,7 @@ describe("whatItAddsCopy", () => {
 		];
 
 		expect(whatItAddsCopy(surfaces)).toEqual([
-			"A health badge on property claims on the canvas",
+			"A health badge on property claims and on the evidence nodes that show a claim's result",
 			"Live updates when new evidence arrives",
 		]);
 	});

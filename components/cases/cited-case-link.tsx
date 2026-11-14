@@ -15,7 +15,9 @@ export interface CitedCaseLinkProps {
 /**
  * The "View cited case" / "View referenced case" link shared by
  * `away-goal-node.tsx` and `module-node.tsx` (ADR 0005 D3) — shown only
- * when the viewer can access the case it points to.
+ * when the viewer can access the case it points to. It is left out of the
+ * dashboard thumbnail with the line that names the case, so a thumbnail never
+ * shows the link without the name.
  */
 export default function CitedCaseLink({
 	caseId,
@@ -28,6 +30,7 @@ export default function CitedCaseLink({
 	return (
 		<Link
 			className="flex items-center gap-1.5 text-info text-sm hover:text-info/80 hover:underline"
+			data-left-out-of-shared-thumbnail=""
 			href={`/case/${caseId}`}
 			onClick={(e) => e.stopPropagation()}
 			onMouseDown={(e) => e.stopPropagation()}

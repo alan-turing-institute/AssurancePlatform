@@ -6,6 +6,8 @@
  * before/after snapshots, allowing operations to be reversed.
  */
 
+import type { ContextEntry } from "@/lib/schemas/context-entry";
+
 /** Operation type for history commands */
 export type OperationType =
 	| "create"
@@ -25,15 +27,19 @@ export interface ElementSnapshot {
 	// default ASSERTED.
 	assertionStatus?: string | null;
 	assumption?: string | null;
-	context?: string[];
+	context?: ContextEntry[];
 	description: string;
 	elementType: string;
 	id: string;
 	inSandbox?: boolean;
+	// Placeholder marker and its hint; undo and redo send them back so a
+	// restored element is as marked as it was.
+	isPlaceholder?: boolean;
 	justification?: string | null;
 	level?: number | null;
 	name: string;
 	parentId?: string | null;
+	placeholderHint?: string | null;
 	url?: string | null;
 	urls?: string[];
 	[key: string]: unknown;

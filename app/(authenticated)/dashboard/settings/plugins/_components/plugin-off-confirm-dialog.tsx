@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 import { buildPluginOffCopy } from "./plugin-off-copy";
 
 export interface PluginOffConfirmDialogProps {
+	/** Called as the dialog closes; the card decides where focus goes. */
+	onCloseAutoFocus: (event: Event) => void;
 	onConfirm: () => void;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
@@ -97,6 +99,7 @@ function PluginOffConfirmDialogBody({
  * dependent lines are dropped, never the switch itself.
  */
 export function PluginOffConfirmDialog({
+	onCloseAutoFocus,
 	onConfirm,
 	onOpenChange,
 	open,
@@ -106,7 +109,7 @@ export function PluginOffConfirmDialog({
 }: PluginOffConfirmDialogProps) {
 	return (
 		<AlertDialog onOpenChange={onOpenChange} open={open}>
-			<AlertDialogContent>
+			<AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
 				{open && (
 					<PluginOffConfirmDialogBody
 						key={pluginId}

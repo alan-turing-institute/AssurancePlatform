@@ -16,6 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useSharedItemName } from "./shared-item-name";
 
 export interface UserPermission {
 	id: string;
@@ -199,12 +200,14 @@ export function AvailableTeamsList({
 	userTeamsCount,
 	onShareWithTeam,
 }: AvailableTeamsListProps) {
+	const itemName = useSharedItemName();
+
 	if (teams.length === 0) {
 		return (
 			<p className="py-4 text-center text-muted-foreground text-sm">
 				{userTeamsCount === 0
 					? "You are not a member of any teams"
-					: "This case is already shared with all your teams"}
+					: `This ${itemName} is already shared with all your teams`}
 			</p>
 		);
 	}

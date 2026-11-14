@@ -12,6 +12,9 @@ import type {
 } from "@/lib/services/case-response-types";
 import type { NestedArrayItem } from "./types";
 
+/** The lists of cited elements, each of which can carry counter-goals. */
+const CITED_LISTS = ["awayGoals", "modules"] as const;
+
 /**
  * Recursively removes an item with a specific `id` and `type` from a deeply nested array structure.
  */
@@ -42,27 +45,34 @@ const removeItemFromNestedStructure = (
 				) as unknown as PropertyClaimResponse[];
 			}
 
-			// Remove from strategies
+			// Remove from strategies, and from what hangs from them
 			if ("strategies" in item && item.strategies) {
-				(item as GoalResponse).strategies = (item as GoalResponse).strategies
-					.map((strategy: StrategyResponse) => {
-						if (strategy.propertyClaims) {
-							strategy.propertyClaims = strategy.propertyClaims.filter(
-								(claim: PropertyClaimResponse) =>
-									!(claim.id === id && claim.type === type)
-							);
-							strategy.propertyClaims = removeItemFromNestedStructure(
-								strategy.propertyClaims as unknown as NestedArrayItem[],
-								id,
-								type
-							) as unknown as PropertyClaimResponse[];
-						}
-						return strategy;
-					})
-					.filter(
-						(strategy: StrategyResponse) =>
-							!(strategy.id === id && strategy.type === type)
-					);
+				(item as GoalResponse).strategies = removeItemFromNestedStructure(
+					(item as GoalResponse).strategies as unknown as NestedArrayItem[],
+					id,
+					type
+				) as unknown as StrategyResponse[];
+			}
+
+			// Remove from counter-goals, and from what supports them
+			if ("goals" in item && item.goals) {
+				(item as GoalResponse).goals = removeItemFromNestedStructure(
+					(item as GoalResponse).goals as unknown as NestedArrayItem[],
+					id,
+					type
+				) as unknown as GoalResponse[];
+			}
+
+			// Remove from away goals and modules: counter-goals hang from them too
+			const cited = item as unknown as Record<
+				string,
+				NestedArrayItem[] | undefined
+			>;
+			for (const key of CITED_LISTS) {
+				const list = cited[key];
+				if (list) {
+					cited[key] = removeItemFromNestedStructure(list, id, type);
+				}
 			}
 
 			// Note: context is now a string[] attribute, not an array of elements to remove

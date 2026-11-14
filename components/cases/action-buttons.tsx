@@ -17,12 +17,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useExportModal, useHelpModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import { caseItemName } from "@/lib/case-item-name";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import useStore from "@/store/store";
 import { AlertModal } from "../modals/alert-modal";
 import ActionTooltip from "../ui/action-tooltip";
 import { ErrorBoundary } from "../ui/error-boundary";
+import { CaseKindMenu } from "./case-kind-menu";
 import CaseNotes from "./case-notes";
+import { CasePanelButtons } from "./case-panel-buttons";
 import { CaseSettingsPopover } from "./case-settings-popover";
 import { DeleteCaseDialog } from "./delete-case-dialog";
 import { HistoryControls } from "./history-controls";
@@ -111,13 +114,13 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	};
 
 	return (
-		<div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 transform items-center justify-center">
+		<div className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex w-max max-w-full -translate-x-1/2 transform items-center justify-center">
 			<div
-				className="m-auto flex items-center justify-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg"
+				className="pointer-events-auto mx-12 flex scroll-px-14 items-center gap-2 overflow-x-auto rounded-full bg-primary/10 px-4 py-2 text-primary-foreground shadow-lg [scrollbar-width:thin]"
 				data-testid="action-buttons"
 				data-tour="toolbar"
 			>
-				<div className="flex items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
+				<div className="flex shrink-0 items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
 					{assuranceCase &&
 						assuranceCase.permissions !== "view" &&
 						assuranceCase.permissions !== "review" && <HistoryControls />}
@@ -183,7 +186,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						</Button>
 					</ActionTooltip>
 				</div>
-				<div className="flex items-center justify-center gap-2">
+				<div className="flex shrink-0 items-center justify-center gap-2">
 					{assuranceCase && assuranceCase.permissions === "manage" && (
 						<ActionTooltip label="Share">
 							<Button
@@ -242,23 +245,27 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							<span className="sr-only">Notes</span>
 						</Button>
 					</ActionTooltip>
+					<CasePanelButtons />
 					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>
 					{assuranceCase && assuranceCase.permissions === "manage" && (
-						<ActionTooltip label="Delete">
-							<Button
-								className="rounded-full p-3"
-								data-testid="toolbar-delete"
-								onClick={() => setDeleteOpen(true)}
-								size="icon"
-								type="button"
-								variant="destructive"
-							>
-								<Trash2 className="h-5 w-5" />
-								<span className="sr-only">Delete</span>
-							</Button>
-						</ActionTooltip>
+						<>
+							<CaseKindMenu />
+							<ActionTooltip label="Delete">
+								<Button
+									className="rounded-full p-3"
+									data-testid="toolbar-delete"
+									onClick={() => setDeleteOpen(true)}
+									size="icon"
+									type="button"
+									variant="destructive"
+								>
+									<Trash2 className="h-5 w-5" />
+									<span className="sr-only">Delete</span>
+								</Button>
+							</ActionTooltip>
+						</>
 					)}
 				</div>
 				<CaseNotes isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
@@ -278,6 +285,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					<DeleteCaseDialog
 						isOpen={deleteOpen}
 						isOwner={assuranceCase?.isOwner ?? false}
+						itemName={caseItemName(assuranceCase?.kind)}
 						loading={loading}
 						onCancel={() => setDeleteOpen(false)}
 						onConfirm={onDelete}
@@ -287,7 +295,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 						confirmButtonText={"Move to Trash"}
 						isOpen={deleteOpen}
 						loading={loading}
-						message="This case will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash."
+						message={`This ${caseItemName(assuranceCase?.kind)} will be moved to the trash. You can restore it within 30 days or permanently delete it from the trash.`}
 						onClose={() => setDeleteOpen(false)}
 						onConfirm={() => onDelete()}
 					/>

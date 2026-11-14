@@ -11,13 +11,40 @@ An assurance case is a structured argument. `AssuranceCase` stores its identity 
 
 | Model | What it holds |
 | --- | --- |
-| `AssuranceCase` | Name, description, mode, creator, layout, publish status, deletion state and relations to elements and access grants |
-| `AssuranceElement` | Type, optional name, description, parent and case references, type-specific fields, assertion status and deletion state |
+| `AssuranceCase` | Name, description, kind, mode, creator, layout, publish status, deletion state, the pattern it was started from and relations to elements and access grants |
+| `AssuranceElement` | Type, optional name, description, parent and case references, type-specific fields, assertion status, placeholder marking and deletion state |
 | `CaseInformation` | Case metadata held separately from the element tree |
 | `EvidenceLink` | A many-to-many link from evidence to the claims it supports |
 | `Comment` | Internal discussion on case elements |
 
 A case has `STANDARD` or `ADVANCED` mode. Its current publishing states are `DRAFT` and `PUBLISHED`. `deletedAt` marks a case moved to trash. The creator is recorded for attribution and receives access through the permission rules; other users can gain access directly or through a team.
+
+A case also has a `kind`: `CASE` for an ordinary case, or `PATTERN` for a reusable pattern that cases are started from.
+A pattern is a row of the same table, with the same elements and permissions as any other case, and every case that existed before kinds were added is a `CASE`.
+`sourcePatternId` records the case that a case was started from, which was a pattern at the time; that case may have been converted back to an ordinary case since.
+It is empty unless server code sets it when the case is created, and the database clears it if the source case is deleted permanently.
+`listUserCases` returns ordinary cases only, so a pattern does not appear in the dashboard list or in the integrations access form, and the away goal and module picker leaves out patterns shared with the user.
+`listUserPatterns` returns the patterns the user owns or has been given directly, for the My Patterns page.
+A case changes kind only through `convertCaseKind` in `lib/services/case-kind-service.ts`, which needs `ADMIN` permission.
+The kind is not part of the ordinary case-update schema, which anyone with `EDIT` permission can reach.
+One conditional update does the conversion and changes a row only for a case that is not in the trash, is a draft and has no published copy, live or archived.
+The conversion changes nothing else: elements, access grants, plugin data and integration grants stay as they are.
+
+An element has two placeholder columns, `isPlaceholder` and `placeholderHint`.
+`isPlaceholder` marks an element that the person using the case or pattern writes, and is false by default.
+`placeholderHint` is optional guidance of up to 500 characters for whoever fills the element in; the element response and the export carry it only while the element is a placeholder.
+Anyone with `EDIT` permission can set both through the element routes and the batch route, since marking an element only holds a case back from publishing until it is written.
+
+Writing text changes the markers on the server.
+In a case, an update whose description is not empty and differs from the stored one sets `isPlaceholder` to false, unless the same request sets `isPlaceholder` itself, and `modifiedFromPattern` is set when the description, assumption, justification or context differs from the stored value on an element with `fromPattern`.
+The edit dialog sends the assumption, justification and context every time, so the comparison is with the stored values.
+In a pattern, nothing clears `isPlaceholder`.
+`updateElement` and the batch service apply these rules; `updateElementWithin`, which the health plugin uses for its own nodes, does not.
+Only the server sets `fromPattern` and `modifiedFromPattern`.
+The element routes refuse a request that carries them, and the batch route accepts a change that carries them, so a document saved from an earlier export still applies, and ignores them.
+`lib/case/placeholders.ts` holds the rules, which the browser also uses to record the state an undo or redo sends back.
+
+A new blank case or pattern, created by `createCase`, starts with its top-level goal as a placeholder with no text and the hint "Describe your top-level assurance goal".
 
 Elements use `parentId` to form the argument hierarchy. A root goal has no parent and can have the `TOP_LEVEL` role. Other elements can have the `SUPPORTING` role. `name` is nullable, so consumers must not assume it is present. `description` is the main text. `context` is an array on an element, and `assumption` and `justification` are optional fields. Evidence has a `urls` array; the single `url` field remains for compatibility and tracks its first URL. Both cases and elements can be soft deleted.
 
@@ -29,13 +56,134 @@ The `ElementType` enum contains `GOAL`, `STRATEGY`, `PROPERTY_CLAIM`, `EVIDENCE`
 
 `assertionStatus` records the status of a claim or strategy. The enum includes `ASSERTED`, `NEEDS_SUPPORT`, `ASSUMED`, `AXIOMATIC`, `DEFEATED` and `AS_CITED`. The first five can be selected by an author in the edit dialog; `AS_CITED` is reserved and is not computed automatically in this build. A null value is treated as the default `ASSERTED` during interpretation or export. See the quick reference for the author-facing meanings.
 
+## Defined terms
+
+An entry in an element's `context` list is either plain text or a named entry.
+A plain entry is a string, as it always was.
+A named entry is a record with four keys, and a fifth that marks a variable:
+
+```json
+{
+  "id": "k3f9x2m7qa",
+  "name": "window",
+  "text": "the moving 5-minute interval over which separation is measured",
+  "value": "5 minutes"
+}
+```
+
+`text` is what the name means, and `value` is optional.
+`variable` is optional and a boolean.
+The schema takes `false` and stores the entry without the key, so a variable is unmarked by changing `true` to `false` (in the JSON editor, for example); an entry without the key is an ordinary defined term.
+The `id` is ten lowercase letters or digits and is unique within a case, counting elements in the bin.
+A name is 1 to 40 characters, starts with a letter, and uses letters, digits, spaces, hyphens and underscores.
+A value is at most 500 characters.
+Names on one element are unique when compared without regard to case.
+Every write path applies these rules: the element routes, the JSON editor's batch and case import.
+The `context` column is `jsonb`, and `parseContextEntries` in `lib/case/defined-terms.ts` is the one place that turns a stored value into entries, picking out only those keys, and keeping `variable` only when it is exactly `true`.
+
+Text refers to a named entry with a reference of the form `{name#id}`.
+The id decides what the reference points at.
+The name inside the braces is only the word shown when the entry cannot be found.
+Text that merely contains braces, such as `{like this}`, is ordinary text.
+
+Which entries a reference can reach is worked out when the case is read and is never stored.
+An element's text can refer to the named entries on that element and on every element above it in the parent chain, nearest first.
+`convertAssuranceCase` puts the result on each card's data as `termsInReach`, and the goal, strategy and property claim cards read it from there.
+Evidence cards read it the same way, so they resolve the terms of the claim they are drawn under; away goal and module cards are given no terms, so they resolve nothing and show any reference they hold as `{name}`.
+Moving an element or deleting an entry therefore changes what a reference resolves to without any stored flag to update.
+A reference with no definition in reach is shown as not found.
+
+Readers other than the editor and the diagram receive a plain-text copy of the case, produced by `toPlainCase`.
+In it every reference is written `{name}` using the entry's current name, and every named entry is the single string `name: meaning (value: ...)`.
+Document exports, the Case Assistant and the rules check read that copy, so they see the same shapes as before named entries existed.
+Machine formats keep the stored form: the export file, the Google Drive backup, GitHub import, published snapshots and the public Discover API.
+
+### Variables
+
+An entry with `"variable": true` is a variable.
+One helper, `referenceDisplay` in `lib/case/defined-terms.ts`, decides how a reference to a term reads.
+It is called by `previewParts`, which draws the card's text; by `plainReferenceText`, which every plain-text reader uses (`plainDescription` for the search results and the move and options lists, the attribute lines, `toPlainCase` for document exports, the rules check and the Case Assistant, and the away-goal picker); and by `unsetVariablesMentioned`, which the publish gate and the status dialog use.
+A reference to an ordinary term, or to a term out of reach, reads as its name.
+A reference to a variable reads as its value, trimmed, or as `[name]` when the value is empty or only blanks; the card draws `[name]` in the placeholder style.
+The value is inserted as text and is not parsed for references.
+Text that has been made plain is not converted a second time, so a value that looks like `{name#id}` stays as typed: the health settings view takes the edit dialog's plain text as it is, and the attach list holds each detached element's description in plain form, converted once when the list is loaded or when the element is detached.
+The Markdown report writes descriptions as they are, a variable's value included.
+`previewParts` cuts a value like ordinary text when it counts the visible characters, and leaves a name or `[name]` out whole when it does not fit.
+Search matches a variable by its value and by its name.
+
+The definition line of a variable ends in `(variable: value)`, or `(variable, not set)`, in the plain copy (`name: meaning (variable: AcmeBot)`) and on the expanded card.
+
+`toPlainCase` takes a `marked` option, which the Case Assistant uses for what the model reads.
+In it a variable is written `{name = "value"}`, or `{name = (not set)}`, and the description of an element that is still a placeholder ends with `{to fill in}` or `{to fill in: "hint"}`.
+The value and the hint are written as JSON strings, so that quotation marks, braces and line breaks in them cannot be taken for the end of the marker.
+The rules check receives the unmarked copy, with the value where a card shows it.
+
+The flag is kept in four places: `pickNamedEntry` and `termsInReach` (onto `DefinedTerm`) in `lib/case/defined-terms.ts`, `finaliseNamedEntry` in the edit dialog's form, and the entry comparison in `lib/case/tree-diff.ts`, which decides what the JSON editor and undo send.
+The reference editor shows names and writes `{name#id}`; it is given the terms for their names and never writes a value.
+Evidence is edited in that editor, with the terms of the claim it sits under.
+
+Publishing counts variables as well as placeholders.
+`publishAssuranceCase` and `updatePublishedCase` count, over the exported tree the snapshot is composed from, the distinct variables with no value that the text of any element mentions where the variable is in reach (`countUnsetVariables` in `lib/case/placeholders.ts`), and the status dialog counts the same from the cards on the diagram.
+The refusal message gives each count that is left, joined by a semicolon: "1 element still to fill in; 2 variables with no value".
+A pattern is not held back by either.
+Change detection for "Update published version" also compares the variables each element defines (id, name and value), so changing a value counts as a change although no element's own text changed.
+
+### The export file
+
+A case export carries `"version": "1.1"` when the case holds a named entry (a variable is a named entry) or a reference, when the case is a pattern, or when an element is a placeholder, and `"version": "1.0"` otherwise.
+`exportCase` makes that choice from one check, so anything else added to 1.1 extends it there.
+Writing 1.0 where nothing needs 1.1 keeps those files readable by a TEA that predates named entries, kinds and placeholders.
+Import accepts both versions.
+A file that says `"1.0"` but holds a named entry, holds a placeholder or marks the case as a pattern is rejected with a message saying so.
+A `"1.0"` file with `"kind": "CASE"` is accepted.
+The generated JSON Schema is `lib/schemas/json-schema-v1.1.json`; a context entry in it is a string or a named entry, which can carry `"variable": true`.
+
+An element that is a placeholder carries `"isPlaceholder": true` and, when it has one, a `"placeholderHint"`; an element that is not a placeholder carries neither key.
+Importing the file restores both, so a case started from a pattern, which is an export of the pattern imported with `markFromPattern`, keeps the pattern's placeholders.
+
+The `case` object carries `"kind": "PATTERN"` when the case is a pattern.
+An ordinary case omits `kind`, so its file has the shape it always had, and a file without `kind` imports as an ordinary case.
+The nested and flat formats both accept `kind`, with the values `CASE` and `PATTERN`.
+
+`buildTreeFromElements` writes the children of each element in the order the diagram shows them, whatever order the database returns the rows in.
+Evidence linked to a claim counts among the claim's children.
+Children sort by kind first: goals, counter-goals, strategies, claims and contracts together, then evidence, then away goals and modules.
+The ranks are in `lib/case/node-type-resolver.ts`, and the diagram's layout reads the same table.
+Within a kind, children sort by name in natural numeric order (`compareElementNames` in `lib/case/identifier-utils.ts`), so `P2` comes before `P10` and `P1.2` before `P1.10`.
+The comparison uses no locale, and a missing or empty name comes first.
+A difference in letter case or leading zeros counts only when the names are otherwise equal, so `p2` comes before `P10` and `P1.1` before `P01.2`.
+Children with the same name, or none, sort by id, so the order is the same on every export.
+Siblings with identical names keep the order they were imported in, because an import gives its elements new ids that rise along the file.
+Because the order depends on names, renaming an element can move it, as it moves on the diagram, and an import keeps names, so the order survives export and import.
+A piece of evidence linked to several claims is written under each of them; what hangs from it is written with the first copy in this order.
+The same order picks the root when a case holds more than one goal with no parent: the goal marked as top level if there is one, otherwise the first goal that is not a defeater.
+
+`importCase` takes options that only server code sets.
+`kind` overrides the file's kind, `name` and `description` replace the file's, `sourcePatternId` records the pattern the new case was started from, and `markFromPattern` sets `fromPattern` on every element and clears `modifiedFromPattern`, because a case just started from a pattern has not yet been changed.
+No import route reads these from a request, and a `sourcePatternId` written inside a file is ignored.
+
 ## Access
 
 `CasePermission` grants an individual `VIEW`, `COMMENT`, `EDIT` or `ADMIN` access. `CaseTeamPermission` grants one of those levels to a team, and members inherit it. `TeamMember` separately records the member's `OWNER`, `ADMIN` or `MEMBER` team role. A team role and a case permission answer different questions: who manages the team, and what that team may do with this case. `lib/permissions.ts` combines applicable case grants with the creator's access.
 
 ## Published records
 
+Publishing and republishing refuse a case whose snapshot still holds placeholders, with the message "N elements still to fill in", or whose text mentions a variable with no value, with "N variables with no value"; when both are left the message carries both, separated by a semicolon.
+The check runs in `publishAssuranceCase` and `updatePublishedCase`, on the exported tree the snapshot is composed from, so it judges exactly the content that is written and nothing that changes after the export can get past it.
+It goes by the kind the snapshot records, which is also the kind the guarded write of the case row pins, so the snapshot and the row's type cannot disagree.
+It counts each element once and leaves out detached sandbox elements, which the tree does not contain, and it counts a variable once however often it is mentioned.
+It does not count a pattern's placeholders or empty variables.
+Before publishing, the publish route and the status route call `requireCaseInformationComplete`, which checks the case information only.
+A person without edit access is refused for permission rather than told what is left to fill in.
+
 Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.
+The row's `type` is `ARGUMENT_PATTERN` when the case is a pattern and `ASSURANCE_CASE` when it is a case.
+`swapCurrentPublishedVersion` in `lib/services/publish-service.ts` sets it from the case's kind when it creates the row, and a republish keeps it.
+A publish or republish is refused, with "The case changed while it was being published. Try again.", if the case was converted after the snapshot was composed, or, for a republish, unpublished after it.
+Every transaction that writes a case and its published rows takes the case row first: publish, republish, unpublish, moving a case to Trash, restoring it, removing an archived copy, a permanent delete and an account deletion.
+No two of them can wait on each other's locks in opposite orders, so none can deadlock with another.
+An unpublish that meets a republish waits for it, then takes the version it wrote down as well, so the case ends as a draft with no published version.
+An unpublish that was waiting for a move to Trash is refused with "Case not found" and leaves the archived copy alone.
 
 ## Working with the schema
 

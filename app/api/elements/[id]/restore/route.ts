@@ -5,6 +5,7 @@ import {
 	requireAuthSession,
 	serviceErrorToAppError,
 } from "@/lib/api-response";
+import { noticeElementName } from "@/lib/case/defined-terms";
 import { restoreElement } from "@/lib/services/element-service";
 
 /**
@@ -40,7 +41,7 @@ export async function POST(
 			const username = session.username || session.email || "Someone";
 			emitSSEEvent("element:restored", element.caseId, {
 				elementId,
-				elementName: element.name || element.description,
+				elementName: noticeElementName(element),
 				username,
 				userId: session.userId,
 			});

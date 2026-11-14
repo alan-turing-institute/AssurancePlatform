@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
+import {
+	countPlaceholders,
+	countUnsetVariablesOnCards,
+} from "@/lib/case/placeholders";
+import { caseItemName } from "@/lib/case-item-name";
 import type { RequiredCaseInformationField } from "@/lib/schemas/case-information";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -17,11 +22,31 @@ import { StatusModal } from "./status-modal";
 export function StatusModalWrapper() {
 	const {
 		assuranceCase,
+		nodes,
 		setAssuranceCase,
 		setCaseDetailsOpen,
 		setCaseInformationFocusField,
 	} = useStore();
 	const statusModal = useStatusModal();
+	// The elements on the diagram that are still to fill in, and the variables
+	// they mention that have no value. A pattern is never held back by its own
+	// placeholders or empty variables.
+	const isPattern = assuranceCase?.kind === "PATTERN";
+	const placeholderCount = isPattern
+		? 0
+		: countPlaceholders(
+				nodes.map((node) => ({
+					id: String(node.data?.id),
+					isPlaceholder: node.data?.isPlaceholder === true,
+				}))
+			);
+	// Counted only while the dialog is open: the wrapper is always mounted, and
+	// reading every card's text for references on each change to the diagram is
+	// work nobody sees.
+	const unsetVariableCount =
+		isPattern || !statusModal.isOpen
+			? 0
+			: countUnsetVariablesOnCards(nodes.map((node) => node.data));
 	const [loading, setLoading] = useState(false);
 	const [publishLoading, setPublishLoading] = useState(false);
 	const [unpublishLoading, setUnpublishLoading] = useState(false);
@@ -202,6 +227,7 @@ export function StatusModalWrapper() {
 		<StatusModal
 			caseId={statusModal.caseId}
 			hasChanges={hasChanges || statusModal.hasChanges}
+			itemName={caseItemName(assuranceCase?.kind)}
 			onOpenChange={(open) => {
 				if (!open) {
 					statusModal.onClose();
@@ -212,10 +238,12 @@ export function StatusModalWrapper() {
 			onUnpublish={handleUnpublish}
 			onUpdatePublished={loading ? undefined : handleUpdatePublished}
 			open={statusModal.isOpen}
+			placeholderCount={placeholderCount}
 			publishedAt={statusModal.publishedAt}
 			publishLoading={publishLoading}
 			status={statusModal.status}
 			unpublishLoading={unpublishLoading}
+			unsetVariableCount={unsetVariableCount}
 		/>
 	);
 }

@@ -6,14 +6,12 @@
  * withhold a manifest entry, never invent one out of thin air.
  *
  * This is more than lifecycle metadata: `description` and `docsPath` are the
- * copy the Plugins management page renders on each plugin's card (TEA —
- * Plugin management surface, D2) — keeping it here means the card and the
- * docs link can't drift from what the enablement/lifecycle code already
- * knows about a plugin.
+ * copy the Plugins management page renders on each plugin's card, so the card
+ * and its docs link stay with what the enablement and lifecycle code already
+ * know about a plugin.
  *
- * This list is deliberately closed and hand-edited — extend it only when a
- * new official plugin actually ships (1.1: `tea.techniques`, `tea.gsn-ui`),
- * never ad hoc at a call site.
+ * This list is deliberately closed and hand-edited: extend it only when a new
+ * official plugin ships, never ad hoc at a call site.
  */
 
 /** The four extension surfaces a plugin may use (ADR 0002 v2 §2.2/§2.3). */
@@ -21,6 +19,7 @@ export type PluginSurface =
 	| "extension-data" // tier-1 PluginData
 	| "plugin-tables" // tier-2 plugin-owned tables
 	| "machine-endpoints" // /api/machine/* routes this plugin exposes
+	| "element-appearance"
 	| "element-badge"
 	| "element-panel"
 	| "case-panel"
@@ -30,6 +29,16 @@ export type PluginSurface =
 
 export interface PluginManifestEntry {
 	/**
+	 * Whether a user who has never set this plugin gets it on. Absent means
+	 * on. When `false`, the plugin is off until the user's own USER-scope row
+	 * turns it on; an off row at any higher scope still wins. For a plugin
+	 * that lists the `machine-endpoints` surface, an integration's machine
+	 * account is treated as having turned it on, so pipelines keep working; a
+	 * row turning it off, or the deployment withholding it, still applies to
+	 * that account. A plugin without that surface gets no such exception.
+	 */
+	readonly defaultEnabled?: boolean;
+	/**
 	 * Two or three plain sentences for the Plugins page card (TEA — Plugin
 	 * management surface D2). Written for the person deciding whether to turn
 	 * the plugin on or off, not for a developer.
@@ -37,46 +46,60 @@ export interface PluginManifestEntry {
 	readonly description: string;
 	/**
 	 * Site-relative docs URL for the card's "Learn more" link, e.g.
-	 * `/docs/technical-guide/architecture/plugin-ecosystem`. Omitted (not an
-	 * empty string) until a real docs page exists for this plugin — D2
-	 * amendment, cid 2026-09-22: `tea.health`'s docs page is still `draft:
-	 * true` and reads "Coming Soon", so linking to it would tell a user a
-	 * live plugin doesn't exist yet. The Plugins page card omits "Learn more"
-	 * entirely when this is absent.
+	 * `/docs/technical-guide/architecture/plugin-ecosystem`. The card shows the
+	 * link when this is set and omits it when it is absent.
 	 */
 	readonly docsPath?: string;
 	/** Namespace, e.g. "tea.health" — matches `PluginData.pluginId` / `PluginState.pluginId`. */
 	readonly id: string;
 	readonly name: string;
 	readonly surfaces: readonly PluginSurface[];
+	/**
+	 * Whether the plugin calls the model providers a user connects in their
+	 * settings. The model routes under `/api/user/models` work for a user who
+	 * has at least one such plugin on, and for no one else. Absent means no.
+	 */
+	readonly usesModels?: boolean;
 	readonly version: string;
 }
 
 /**
- * 1.0 ships one official plugin: claim/evidence health (ADR 0002 v2 §3).
- * Its implementation (storage, scoring, machine endpoints) is a later issue —
- * this entry is metadata only, enough for the lifecycle/enablement/PluginData
- * plumbing to have a real namespace to prove itself against.
- *
- * No external callers yet (fallow dead-export finding) — staged for the
- * settings pane, a later work item. Not dead code; do not remove.
+ * The official plugins: claim/evidence health (`tea.health`) and the Case
+ * Assistant (`tea.assistant`). An entry is metadata only. It gives the
+ * lifecycle, enablement and PluginData code a namespace, and each plugin's own
+ * code registers its UI through the slot registries.
  */
 export const PLUGIN_MANIFEST: readonly PluginManifestEntry[] = [
 	{
 		id: "tea.health",
 		name: "Claim/Evidence Health",
 		version: "0.1.0",
+		defaultEnabled: false,
 		surfaces: [
 			"extension-data",
 			"plugin-tables",
 			"machine-endpoints",
 			"element-badge",
+			"element-appearance",
 			"element-panel",
+			"case-panel",
 			"settings-section",
 			"events",
 		],
 		description:
-			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Nothing in your case changes unless you act on what it shows.",
+			"Shows whether the evidence behind each property claim is still holding. Automated checks — for example a monitoring pipeline running against a digital twin — send results to TEA; the plugin turns them into a badge on the claim and a log you can inspect. Results never change your case: it changes only when you accept a check for a claim, which can add one evidence node under the claim that shows its current result.",
+		docsPath: "/docs/technical-guide/architecture/health-plugin",
+	},
+	{
+		id: "tea.assistant",
+		name: "Case Assistant",
+		version: "0.1.0",
+		defaultEnabled: false,
+		usesModels: true,
+		surfaces: ["case-panel", "settings-section"],
+		description:
+			"A chat panel beside the case canvas. Ask questions about the open case and the assistant reads it to answer. It never changes the case itself: when you ask for a change, it suggests one and you choose whether to apply it. You choose the models it uses in the AI models section of these settings.",
+		docsPath: "/docs/platform-guide/case-assistant",
 	},
 ];
 

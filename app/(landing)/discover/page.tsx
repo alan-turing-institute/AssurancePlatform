@@ -3,7 +3,7 @@ import { fetchPublishedItems } from "@/actions/discover";
 import PublishedItems from "./_components/published-items";
 
 export const metadata: Metadata = {
-	title: "Community Case Studies | TEA Platform",
+	title: "Community Cases and Patterns | TEA Platform",
 };
 
 const DiscoverPage = async () => {
@@ -16,12 +16,12 @@ const DiscoverPage = async () => {
 					<p className="font-semibold text-base/7 text-primary">
 						Get the help you need
 					</p>
-					<h2 className="mt-2 font-semibold text-5xl text-foreground tracking-tight">
-						Community Case Studies
+					<h2 className="mt-2 text-balance font-semibold text-5xl text-foreground tracking-tight">
+						Community Cases and Patterns
 					</h2>
 					<p className="mt-8 text-pretty font-medium text-lg text-muted-foreground sm:text-xl/8">
-						Browse published assurance cases from our community — each one a
-						frozen, citable snapshot.
+						Browse the assurance cases and reusable patterns our community has
+						published — each one a frozen, citable snapshot.
 					</p>
 				</div>
 			</div>

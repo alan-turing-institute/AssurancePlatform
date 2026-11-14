@@ -18,7 +18,7 @@ import {
 	View,
 } from "@react-pdf/renderer";
 import type { ReactNode } from "react";
-import type { TreeNode } from "@/lib/schemas/case-export";
+import type { PlainTreeNode } from "@/lib/case/defined-terms";
 import type {
 	ContentBlock,
 	RenderedDocument,
@@ -644,7 +644,7 @@ function PDFElement({
 	depth,
 	styles,
 }: {
-	node: TreeNode;
+	node: PlainTreeNode;
 	depth: number;
 	styles: PDFStyles;
 }) {

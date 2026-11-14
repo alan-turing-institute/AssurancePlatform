@@ -5,11 +5,8 @@
  * diagram, executive summary, all element types, comments, and metadata.
  */
 
-import type {
-	CaseExportNested,
-	ExportComment,
-	TreeNode,
-} from "@/lib/schemas/case-export";
+import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
+import type { ExportComment } from "@/lib/schemas/case-export";
 import type { BrandingConfig } from "../../schemas/branding-config";
 import { DEFAULT_SECTIONS_FULL } from "../../schemas/section-config";
 import type { TemplateConfig } from "../../schemas/template-config";
@@ -71,7 +68,7 @@ export class FullReportTemplate extends BaseTemplate {
 	}
 
 	protected renderSections(
-		caseData: CaseExportNested,
+		caseData: PlainCase,
 		diagramImage?: DiagramImage,
 		branchDiagrams?: LabelledDiagramImage[]
 	): RenderedSection[] {
@@ -112,7 +109,7 @@ export class FullReportTemplate extends BaseTemplate {
 
 	private addElementSections(
 		sections: RenderedSection[],
-		tree: TreeNode
+		tree: PlainTreeNode
 	): void {
 		// Hierarchical structure (preferred for full-report)
 		if (this.isSectionEnabled("assuranceCaseStructure")) {
@@ -153,7 +150,7 @@ export class FullReportTemplate extends BaseTemplate {
 		}
 	}
 
-	private renderAssuranceCaseStructure(tree: TreeNode): RenderedSection {
+	private renderAssuranceCaseStructure(tree: PlainTreeNode): RenderedSection {
 		const title = this.getSectionTitle(
 			"assuranceCaseStructure",
 			"Assurance Case Structure"
@@ -180,7 +177,7 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderTitlePage(caseData: CaseExportNested): RenderedSection {
+	private renderTitlePage(caseData: PlainCase): RenderedSection {
 		const blocks: ContentBlock[] = [
 			this.heading(1, caseData.case.name),
 			this.paragraph(caseData.case.description),
@@ -203,7 +200,7 @@ export class FullReportTemplate extends BaseTemplate {
 	}
 
 	private renderDiagram(
-		caseData: CaseExportNested,
+		caseData: PlainCase,
 		diagramImage: DiagramImage
 	): RenderedSection {
 		return {
@@ -220,7 +217,7 @@ export class FullReportTemplate extends BaseTemplate {
 	}
 
 	private renderBranchDiagram(
-		caseData: CaseExportNested,
+		caseData: PlainCase,
 		branch: LabelledDiagramImage
 	): RenderedSection {
 		return {
@@ -236,7 +233,7 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderExecutiveSummary(caseData: CaseExportNested): RenderedSection {
+	private renderExecutiveSummary(caseData: PlainCase): RenderedSection {
 		const counts = countElementsByType(caseData.tree);
 		const totalElements = this.countElements(caseData.tree);
 
@@ -261,7 +258,7 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderGoalsSection(tree: TreeNode): RenderedSection {
+	private renderGoalsSection(tree: PlainTreeNode): RenderedSection {
 		const goals = collectElementsByType(tree, "GOAL", 0, {
 			includeSandbox: this.elementFilter?.includeSandbox,
 		});
@@ -281,7 +278,7 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderStrategiesSection(tree: TreeNode): RenderedSection {
+	private renderStrategiesSection(tree: PlainTreeNode): RenderedSection {
 		const strategies = collectElementsByType(tree, "STRATEGY", 0, {
 			includeSandbox: this.elementFilter?.includeSandbox,
 		});
@@ -301,7 +298,7 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderPropertyClaimsSection(tree: TreeNode): RenderedSection {
+	private renderPropertyClaimsSection(tree: PlainTreeNode): RenderedSection {
 		const claims = collectElementsByType(tree, "PROPERTY_CLAIM", 0, {
 			includeSandbox: this.elementFilter?.includeSandbox,
 		});
@@ -324,7 +321,7 @@ export class FullReportTemplate extends BaseTemplate {
 		};
 	}
 
-	private renderEvidenceSection(tree: TreeNode): RenderedSection {
+	private renderEvidenceSection(tree: PlainTreeNode): RenderedSection {
 		const evidence = collectElementsByType(tree, "EVIDENCE", 0, {
 			includeSandbox: this.elementFilter?.includeSandbox,
 		});
@@ -347,7 +344,7 @@ export class FullReportTemplate extends BaseTemplate {
 	}
 
 	private renderEvidenceItem(
-		node: TreeNode,
+		node: PlainTreeNode,
 		includeUrls: boolean
 	): ContentBlock[] {
 		const blocks: ContentBlock[] = [];
@@ -367,7 +364,7 @@ export class FullReportTemplate extends BaseTemplate {
 		return blocks;
 	}
 
-	private renderCommentsSection(tree: TreeNode): RenderedSection {
+	private renderCommentsSection(tree: PlainTreeNode): RenderedSection {
 		const allComments = collectAllComments(tree, 0, {
 			includeSandbox: this.elementFilter?.includeSandbox,
 		});
@@ -425,7 +422,7 @@ export class FullReportTemplate extends BaseTemplate {
 		return blocks;
 	}
 
-	private renderMetadataSection(caseData: CaseExportNested): RenderedSection {
+	private renderMetadataSection(caseData: PlainCase): RenderedSection {
 		return {
 			type: "metadata",
 			title: this.getSectionTitle("metadata", "Document Information"),
@@ -439,7 +436,7 @@ export class FullReportTemplate extends BaseTemplate {
 	}
 
 	private renderElementWithContext(
-		node: TreeNode,
+		node: PlainTreeNode,
 		depth: number
 	): ContentBlock[] {
 		const blocks: ContentBlock[] = [];

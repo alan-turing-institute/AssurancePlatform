@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { redirect } from "next/navigation";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { validateSession } from "@/lib/auth/validate-session";
 
 /**
@@ -38,6 +38,10 @@ function searchParams(
 const SIGN_IN_HEADING_REGEX = /sign in to your account/i;
 
 describe("SignInPage", () => {
+	beforeEach(() => {
+		vi.mocked(redirect).mockClear();
+	});
+
 	it("renders the sign-in form when there is no session", async () => {
 		vi.mocked(validateSession).mockResolvedValue(null);
 
@@ -83,6 +87,63 @@ describe("SignInPage", () => {
 		await SignInPage({
 			searchParams: searchParams({ redirect: "//evil.example.com" }),
 		});
+
+		expect(redirect).toHaveBeenCalledWith("/dashboard");
+	});
+
+	it("keeps the query of a same-site ?redirect= value", async () => {
+		vi.mocked(validateSession).mockResolvedValue({
+			userId: "1",
+			username: "chris",
+			email: "chris@example.com",
+		});
+
+		await SignInPage({
+			searchParams: searchParams({ redirect: "/discover/some-pattern?use=1" }),
+		});
+
+		expect(redirect).toHaveBeenCalledWith("/discover/some-pattern?use=1");
+	});
+
+	it("returns to the page named by callbackUrl after an OAuth sign-in", async () => {
+		vi.mocked(validateSession).mockResolvedValue({
+			userId: "1",
+			username: "chris",
+			email: "chris@example.com",
+		});
+
+		await SignInPage({
+			searchParams: searchParams({ callbackUrl: "/invites/some-token" }),
+		});
+
+		expect(redirect).toHaveBeenCalledWith("/invites/some-token");
+	});
+
+	it("falls back to /dashboard for an off-site callbackUrl", async () => {
+		vi.mocked(validateSession).mockResolvedValue({
+			userId: "1",
+			username: "chris",
+			email: "chris@example.com",
+		});
+
+		await SignInPage({
+			searchParams: searchParams({ callbackUrl: "https://evil.example/x" }),
+		});
+
+		expect(redirect).toHaveBeenCalledWith("/dashboard");
+	});
+
+	it.each([
+		"/\\evil.example",
+		"https://evil.example",
+	])("falls back to /dashboard for ?redirect=%s", async (value) => {
+		vi.mocked(validateSession).mockResolvedValue({
+			userId: "1",
+			username: "chris",
+			email: "chris@example.com",
+		});
+
+		await SignInPage({ searchParams: searchParams({ redirect: value }) });
 
 		expect(redirect).toHaveBeenCalledWith("/dashboard");
 	});

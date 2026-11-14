@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getManifestEntry } from "@/lib/plugins/manifest";
 import prisma from "@/lib/prisma";
 import {
+	assertModelPluginEnabled,
 	assertPluginEnabledForUser,
 	getUserPluginSettings,
 	isPluginEnabledForUser,
@@ -9,13 +11,16 @@ import {
 } from "@/lib/services/plugin-enablement-service";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
+	createTestIntegrationWithSystemUser,
 	createTestPluginState,
 	createTestUser,
+	enableTestPlugin,
 } from "../utils/prisma-factories";
 
 const KNOWN_PLUGIN_ID = "tea.health";
 const UNKNOWN_PLUGIN_ID = "tea.does-not-exist";
 const NOT_ENABLED_PATTERN = /is not enabled/;
+const NO_MODEL_PLUGIN_PATTERN = /No plugin that uses models is enabled/;
 const UNKNOWN_PLUGIN_PATTERN = /Unknown plugin/;
 
 afterEach(() => {
@@ -41,8 +46,9 @@ describe("resolveEffectivePluginState — unknown plugin id", () => {
 // ============================================
 
 describe("resolveEffectivePluginState — deployment availability", () => {
-	it("is enabled by default with no TEA_PLUGINS_DISABLED configured", async () => {
+	it("is enabled for a person who turned it on, with no TEA_PLUGINS_DISABLED configured", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		const state = expectSuccess(
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
@@ -70,12 +76,27 @@ describe("resolveEffectivePluginState — deployment availability", () => {
 
 	it("ignores an unrelated plugin id in TEA_PLUGINS_DISABLED", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		vi.stubEnv("TEA_PLUGINS_DISABLED", "tea.techniques, tea.gsn-ui");
 
 		const state = expectSuccess(
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
 		expect(state.enabled).toBe(true);
+	});
+
+	it("turns everyone off when withheld via TEA_PLUGINS_DISABLED, an integration's machine account included", async () => {
+		const owner = await createTestUser();
+		const { systemUser } = await createTestIntegrationWithSystemUser(owner.id);
+		vi.stubEnv("TEA_PLUGINS_DISABLED", KNOWN_PLUGIN_ID);
+
+		for (const userId of [owner.id, systemUser.id]) {
+			const state = expectSuccess(
+				await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId })
+			);
+			expect(state.enabled).toBe(false);
+			expect(state.disabledAt).toBe("DEPLOYMENT");
+		}
 	});
 });
 
@@ -84,12 +105,14 @@ describe("resolveEffectivePluginState — deployment availability", () => {
 // ============================================
 
 describe("resolveEffectivePluginState — user tier", () => {
-	it("is ON with no PluginState row at all (available + no rows = enabled)", async () => {
+	it("is OFF for a person with no PluginState row at all (off by default)", async () => {
 		const user = await createTestUser();
 		const state = expectSuccess(
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
-		expect(state.enabled).toBe(true);
+		expect(state.enabled).toBe(false);
+		expect(state.availableAtDeployment).toBe(true);
+		expect(state.disabledAt).toBe("USER");
 	});
 
 	it("is OFF when the user has an explicit disabling row", async () => {
@@ -124,6 +147,7 @@ describe("resolveEffectivePluginState — user tier", () => {
 	it("does not let one user's disabling row affect another user", async () => {
 		const disabledUser = await createTestUser();
 		const otherUser = await createTestUser();
+		await enableTestPlugin(otherUser.id, KNOWN_PLUGIN_ID);
 		await createTestPluginState(disabledUser.id, {
 			pluginId: KNOWN_PLUGIN_ID,
 			scopeType: "USER",
@@ -140,6 +164,7 @@ describe("resolveEffectivePluginState — user tier", () => {
 
 	it("does not let a different plugin's disabling row affect this plugin", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		await createTestPluginState(user.id, {
 			pluginId: "tea.other-namespace",
 			scopeType: "USER",
@@ -150,6 +175,65 @@ describe("resolveEffectivePluginState — user tier", () => {
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
 		expect(state.enabled).toBe(true);
+	});
+});
+
+// ============================================
+// Effective-state matrix — integration machine accounts
+// ============================================
+
+describe("resolveEffectivePluginState — integration machine accounts", () => {
+	it("is ON for an integration's machine account with no PluginState row", async () => {
+		const owner = await createTestUser();
+		const { systemUser } = await createTestIntegrationWithSystemUser(owner.id);
+
+		const state = expectSuccess(
+			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, {
+				userId: systemUser.id,
+			})
+		);
+		expect(state.enabled).toBe(true);
+		expect(state.disabledAt).toBeNull();
+	});
+
+	it("is OFF for the machine account when a row turns the plugin off for it", async () => {
+		const owner = await createTestUser();
+		const { systemUser } = await createTestIntegrationWithSystemUser(owner.id);
+		await createTestPluginState(systemUser.id, {
+			pluginId: KNOWN_PLUGIN_ID,
+			scopeType: "USER",
+			enabled: false,
+		});
+
+		const state = expectSuccess(
+			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, {
+				userId: systemUser.id,
+			})
+		);
+		expect(state.enabled).toBe(false);
+		expect(state.disabledAt).toBe("USER");
+	});
+
+	it("is OFF for the fallback account that inherits a deleted user's cases", async () => {
+		// Same shape as the account `user-management-service` creates: flagged
+		// as a system user, but no integration names it as its machine account.
+		const fallback = await createTestUser({
+			email: "system@tea-platform.internal",
+			username: "system",
+			authProvider: "SYSTEM",
+		});
+		await prisma.user.update({
+			where: { id: fallback.id },
+			data: { isSystemUser: true },
+		});
+
+		const state = expectSuccess(
+			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, {
+				userId: fallback.id,
+			})
+		);
+		expect(state.enabled).toBe(false);
+		expect(state.disabledAt).toBe("USER");
 	});
 });
 
@@ -246,6 +330,7 @@ describe("resolveEffectivePluginState — full ORGANISATION -> TEAM -> USER chai
 
 	it("future-tier rows sit present-but-inactive when a 1.0 caller omits organisationId/teamIds", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		// A row exists at ORGANISATION scope for an id that would, in a
 		// future organisation-aware caller, apply to this user — but no
 		// 1.0 call site can derive an organisationId yet, so a caller that
@@ -266,6 +351,7 @@ describe("resolveEffectivePluginState — full ORGANISATION -> TEAM -> USER chai
 
 	it("a disabling TEAM row for a team outside the caller's teamIds sits present-but-inactive (ORGANISATION twin above)", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		// The caller belongs to `memberTeamId` only — `otherTeamId`'s
 		// disabling row is for a team this caller isn't in, so it must have
 		// no effect on the resolved state (mirrors the ORGANISATION
@@ -297,6 +383,7 @@ describe("resolveEffectivePluginState — full ORGANISATION -> TEAM -> USER chai
 describe("assertPluginEnabledForUser", () => {
 	it("succeeds when the plugin is enabled", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		expectSuccess(await assertPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id));
 	});
 
@@ -323,14 +410,68 @@ describe("assertPluginEnabledForUser", () => {
 	});
 });
 
+describe("assertModelPluginEnabled", () => {
+	it("passes when a plugin that uses models is on for the user", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			scopeType: "USER",
+			enabled: true,
+		});
+
+		expectSuccess(await assertModelPluginEnabled(user.id));
+	});
+
+	it("refuses while every plugin that uses models is off, however many others are on", async () => {
+		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
+		expectSuccess(await assertPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id));
+
+		// The assistant is off until the user turns it on.
+		expectError(
+			await assertModelPluginEnabled(user.id),
+			NO_MODEL_PLUGIN_PATTERN
+		);
+
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			scopeType: "USER",
+			enabled: false,
+		});
+		expectError(
+			await assertModelPluginEnabled(user.id),
+			NO_MODEL_PLUGIN_PATTERN
+		);
+	});
+
+	it("refuses when the deployment withholds the plugin, whatever the user chose", async () => {
+		const user = await createTestUser();
+		await createTestPluginState(user.id, {
+			pluginId: "tea.assistant",
+			scopeType: "USER",
+			enabled: true,
+		});
+		vi.stubEnv("TEA_PLUGINS_DISABLED", "tea.assistant");
+
+		expectError(
+			await assertModelPluginEnabled(user.id),
+			NO_MODEL_PLUGIN_PATTERN
+		);
+	});
+
+	it("leaves tea.health out: it does not use models", () => {
+		expect(getManifestEntry(KNOWN_PLUGIN_ID)?.usesModels).toBeUndefined();
+		expect(getManifestEntry("tea.assistant")?.usesModels).toBe(true);
+	});
+});
+
 describe("isPluginEnabledForUser", () => {
 	it("returns true when enabled, false when disabled — no throw either way", async () => {
 		const user = await createTestUser();
+		await enableTestPlugin(user.id, KNOWN_PLUGIN_ID);
 		expect(await isPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id)).toBe(true);
 
-		await createTestPluginState(user.id, {
-			pluginId: KNOWN_PLUGIN_ID,
-			scopeType: "USER",
+		await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
 			enabled: false,
 		});
 		expect(await isPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id)).toBe(false);
@@ -419,14 +560,23 @@ describe("setPluginEnabledForUser", () => {
 		const user = await createTestUser();
 		expectSuccess(
 			await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
+				enabled: true,
+			})
+		);
+		const on = expectSuccess(
+			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
+		);
+		expect(on.enabled).toBe(true);
+
+		expectSuccess(
+			await setPluginEnabledForUser(KNOWN_PLUGIN_ID, user.id, {
 				enabled: false,
 			})
 		);
-
-		const state = expectSuccess(
+		const off = expectSuccess(
 			await resolveEffectivePluginState(KNOWN_PLUGIN_ID, { userId: user.id })
 		);
-		expect(state.enabled).toBe(false);
+		expect(off.enabled).toBe(false);
 	});
 });
 

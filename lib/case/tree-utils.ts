@@ -12,31 +12,36 @@ import type {
 import type { CaseNode, NestedArrayItem, ReactFlowNode } from "./types";
 
 /**
+ * Keys of a case node that hold the node's own data rather than child nodes.
+ * A context list can hold named-entry records, which must not be walked as if
+ * they were nodes: a visibility flag written onto one would travel back to the
+ * server with the next save.
+ */
+const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["context"]);
+
+/**
+ * The child lists each kind of node is searched through, in search order. A
+ * counter-goal hangs from the node it challenges, so every node that can be
+ * challenged lists `goals`. A type not listed here, including the live case
+ * root ("assurance_case"), has no adjacent nodes.
+ */
+const ADJACENT_KEYS: ReadonlyMap<string, readonly string[]> = new Map([
+	["AssuranceCase", ["goals"]],
+	["goal", ["propertyClaims", "strategies", "goals"]],
+	["strategy", ["propertyClaims", "goals"]],
+	["property_claim", ["strategies", "propertyClaims", "evidence", "goals"]],
+	["evidence", ["goals"]],
+	["away_goal", ["goals"]],
+	["module", ["goals"]],
+]);
+
+/**
  * Gets the adjacent nodes for a given case node based on its type.
  */
-const getAdjacent = (caseNode: CaseNode): CaseNode[] => {
-	if (caseNode.type === "AssuranceCase") {
-		return (caseNode.goals || []) as unknown as CaseNode[];
-	}
-	if (caseNode.type === "goal") {
-		return ((caseNode.context || []) as unknown as CaseNode[]).concat(
-			(caseNode.propertyClaims || []) as unknown as CaseNode[],
-			(caseNode.strategies || []) as unknown as CaseNode[],
-			(caseNode.context || []) as unknown as CaseNode[]
-		);
-	}
-	if (caseNode.type === "strategy") {
-		return (caseNode.propertyClaims || []) as unknown as CaseNode[];
-	}
-	if (caseNode.type === "property_claim") {
-		return ((caseNode.strategies || []) as unknown as CaseNode[]).concat(
-			(caseNode.propertyClaims || []) as unknown as CaseNode[],
-			(caseNode.evidence || []) as unknown as CaseNode[]
-		);
-	}
-
-	return [];
-};
+const getAdjacent = (caseNode: CaseNode): CaseNode[] =>
+	(ADJACENT_KEYS.get(caseNode.type) ?? []).flatMap(
+		(key) => (caseNode[key] ?? []) as CaseNode[]
+	);
 
 /**
  * Searches for a target node within an assurance case using a depth-first search algorithm.
@@ -89,6 +94,9 @@ export const addHiddenProp = (
 		(assuranceCase as unknown as Record<string, unknown>).hidden = false;
 
 		for (const key of Object.keys(assuranceCase)) {
+			if (NON_CHILD_KEYS.has(key)) {
+				continue;
+			}
 			const value = (assuranceCase as unknown as Record<string, unknown>)[key];
 			if (value && (typeof value === "object" || Array.isArray(value))) {
 				addHiddenProp(
@@ -196,6 +204,9 @@ const processObjectProperties = (
 ): void => {
 	const { targetParentId, parentFound, hide, toggleChildren } = options;
 	for (const key of Object.keys(obj)) {
+		if (NON_CHILD_KEYS.has(key)) {
+			continue;
+		}
 		toggleChildren(obj[key], targetParentId, parentFound, hide);
 	}
 };
@@ -278,10 +289,6 @@ const getChildrenByKey = (
 		case "goals":
 			return "goals" in element
 				? (element as AssuranceCaseResponse).goals
-				: undefined;
-		case "context":
-			return "context" in element
-				? (element as GoalResponse).context
 				: undefined;
 		case "propertyClaims":
 			return "propertyClaims" in element
@@ -368,7 +375,6 @@ function findElementById(
 
 		const childrenKeys = [
 			"goals",
-			"context",
 			"propertyClaims",
 			"strategies",
 			"evidence",
@@ -399,7 +405,7 @@ const processChildrenForHiddenStatus = (
 			hiddenStatus.push((child as { hidden: boolean }).hidden);
 		}
 		// Recursively check nested property claims and strategies
-		if (key === "propertyClaims" || key === "strategies") {
+		if (key === "propertyClaims" || key === "strategies" || key === "goals") {
 			const nestedStatus = getChildrenHiddenStatus(
 				child as NestedArrayItem | AssuranceCaseResponse
 			);
@@ -416,7 +422,7 @@ function getChildrenHiddenStatus(
 ): boolean[] {
 	const hiddenStatus: boolean[] = [];
 	const childrenKeys = [
-		"context",
+		"goals",
 		"propertyClaims",
 		"strategies",
 		"evidence",

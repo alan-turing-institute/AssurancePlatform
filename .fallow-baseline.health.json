@@ -1113,6 +1113,11 @@
       "crap_moderate": {
         "count": 1
       }
+    },
+    "components/ai-elements/code-block.tsx": {
+      "crap_high": {
+        "count": 1
+      }
     }
   },
   "identity_finding_counts": {
@@ -2965,6 +2970,11 @@
       "crap_moderate": {
         "count": 1
       }
+    },
+    "components/ai-elements/code-block.tsx\u0000copyToClipboard": {
+      "crap_high": {
+        "count": 1
+      }
     }
   },
   "runtime_coverage_findings": [],
@@ -2983,14 +2993,12 @@
     "lib/export/utils/content-helpers.ts:dead code",
     "components/ui/dropdown-menu.tsx:dead code",
     "components/docs/curriculum/task-registry.ts:dead code",
-    "src/__tests__/utils/mock-data.ts:dead code",
     "components/docs/curriculum/enhanced/nodes/base-node.tsx:dead code",
     "components/ui/navigation-menu.tsx:dead code",
     "app/(authenticated)/dashboard/settings/integrations/_components/integration-card.tsx:complexity",
     "components/docs/curriculum/enhanced/nodes/node-types.tsx:dead code",
     "components/docs/curriculum/stage-definitions.ts:dead code",
     "lib/schemas/version-detection.ts:dead code",
-    "src/__tests__/utils/team-mock-data.ts:dead code",
     "components/modals/_import-modal/use-case-import.ts:dead code",
     "components/docs/curriculum/enhanced/nodes/node-state-manager.tsx:dead code",
     "components/docs/curriculum/enhanced/utils/node-styles.ts:dead code",

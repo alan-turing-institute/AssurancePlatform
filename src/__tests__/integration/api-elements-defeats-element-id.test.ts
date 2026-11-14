@@ -30,6 +30,7 @@ vi.mock("@/lib/services/sse-connection-manager", () => ({
 
 const CROSS_CASE_PATTERN =
 	/defeatsElementId must reference an existing element in this case/;
+const PARENT_REQUIRED_PATTERN = /parentId is required for a goal defeater/;
 
 beforeEach(async () => {
 	await mockNoAuth();
@@ -115,6 +116,48 @@ describe("POST /api/cases/[id]/elements — defeatsElementId", () => {
 			where: { caseId: testCase.id },
 		});
 		expect(elements).toHaveLength(0);
+	});
+});
+
+describe("POST /api/cases/[id]/elements — goal defeaters", () => {
+	it("refuses a goal defeater without a parent, and accepts one that has a parent", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import("@/app/api/cases/[id]/elements/route");
+		const post = (body: Record<string, unknown>) =>
+			POST(
+				new NextRequest(
+					`http://localhost:3000/api/cases/${testCase.id}/elements`,
+					{
+						method: "POST",
+						body: JSON.stringify({ type: "goal", isDefeater: true, ...body }),
+						headers: { "Content-Type": "application/json" },
+					}
+				),
+				{ params: Promise.resolve({ id: testCase.id }) }
+			);
+
+		const refused = await post({ description: "No parent" });
+		expect(refused.status).toBe(400);
+		expect((await refused.json()).error).toMatch(PARENT_REQUIRED_PATTERN);
+
+		const accepted = await post({
+			description: "Challenges the goal",
+			parentId: goal.id,
+			defeatsElementId: goal.id,
+		});
+		expect(accepted.status).toBe(201);
+
+		const roots = await prisma.assuranceElement.findMany({
+			where: { caseId: testCase.id, elementType: "GOAL", parentId: null },
+		});
+		expect(roots.map((root) => root.id)).toEqual([goal.id]);
 	});
 });
 

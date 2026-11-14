@@ -5,39 +5,30 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ReactFlowProvider } from "reactflow";
-import CheckTourClient from "@/components/tour/check-tour-client";
+import { fetchShowUnsupportedMarkers } from "@/actions/unsupported-markers";
+import CheckTour from "@/components/tour/check-tour";
 import { ErrorCard } from "@/components/ui/error-card";
 import type { SSEEvent } from "@/hooks/use-case-events";
-import { useCaseEvents } from "@/hooks/use-case-events";
+import {
+	CASE_RELOAD_EVENT_TYPES,
+	useCaseEvents,
+} from "@/hooks/use-case-events";
 import { addHiddenProp, fetchAndRefreshCase } from "@/lib/case";
+import { plainReferenceText } from "@/lib/case/defined-terms";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { toastError, toastInfo } from "@/lib/toast";
 import useHistoryStore from "@/store/history-store";
 import useStore from "@/store/store";
 import { ErrorBoundary } from "../ui/error-boundary";
+import { CaseAccessRemoved } from "./case-access-removed";
 import CaseDetails from "./case-details";
+import { CaseSignedOut } from "./case-signed-out";
 import Flow from "./flow";
 import Header from "./header";
 
 interface CaseContainerProps {
 	caseId?: string;
 }
-
-/** Event types that trigger a case refetch */
-const REFETCH_EVENTS = [
-	"case:updated",
-	"element:created",
-	"element:updated",
-	"element:deleted",
-	"element:restored",
-	"element:attached",
-	"element:detached",
-	"element:moved",
-	"comment:created",
-	"comment:updated",
-	"comment:deleted",
-	"permission:changed",
-];
 
 /** Event types that also require orphan refetch */
 const ORPHAN_REFETCH_EVENTS = ["element:attached", "element:detached"];
@@ -60,15 +51,39 @@ const EVENT_MESSAGE_TEMPLATES: Record<string, [string, string]> = {
 	],
 };
 
+/** What a `case:updated` event says when it reports a change of kind. */
+const KIND_CHANGE_MESSAGES: Record<string, string> = {
+	PATTERN: "converted this case to a pattern",
+	CASE: "converted this pattern to a case",
+};
+
 /**
- * Extracts element name from SSE event payload.
+ * Extracts element name from SSE event payload. An element with no name is
+ * identified by its description, with references written as `{name}`.
  */
 function getElementName(event: SSEEvent): string | undefined {
+	const element = event.payload?.element as
+		| { name?: string; description?: string }
+		| undefined;
 	return (
 		(event.payload?.elementName as string) ||
-		(event.payload?.element as { name?: string })?.name ||
-		(event.payload?.element as { description?: string })?.description
+		element?.name ||
+		(element?.description ? plainReferenceText(element.description) : undefined)
 	);
+}
+
+/**
+ * An orphaned element with its description in plain form (references written
+ * `{name}`). Orphans are held in plain form, as the ones detached in this
+ * session are, so the attach list shows the text as it is and never reads it
+ * for references a second time.
+ */
+function withPlainDescription<T extends { description?: unknown }>(
+	element: T
+): T {
+	return typeof element.description === "string"
+		? { ...element, description: plainReferenceText(element.description) }
+		: element;
 }
 
 /**
@@ -81,6 +96,17 @@ function buildToastMessage(event: SSEEvent): string | null {
 	}
 
 	const username = (event.payload?.username as string) || "Someone";
+
+	if (
+		event.type === "case:updated" &&
+		event.payload?.action === "kind-changed"
+	) {
+		const kindMessage = KIND_CHANGE_MESSAGES[String(event.payload.kind)];
+		if (kindMessage) {
+			return `${username} ${kindMessage}`;
+		}
+	}
+
 	const elementName = getElementName(event);
 	const [withElement, withoutElement] = templates;
 
@@ -103,12 +129,18 @@ function showEventToast(event: SSEEvent): void {
 
 const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	const [loading, setLoading] = useState(true);
+	// Whether the first load found the case. It is not cleared when the case is
+	// dropped from the store after access is removed, so the live-update stream
+	// opens only for a case this viewer could see, and stays subscribed to say
+	// why it ended.
+	const [caseLoaded, setCaseLoaded] = useState(false);
 	const {
 		assuranceCase,
 		setAssuranceCase,
 		setOrphanedElements,
 		caseDetailsOpen,
 		setCaseDetailsOpen,
+		setShowUnsupportedMarkers,
 	} = useStore();
 	const { setCaseId: setHistoryCaseId } = useHistoryStore();
 
@@ -193,7 +225,11 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 		try {
 			const result = await fetchOrphanedElements(idValue);
-			setOrphanedElements(result || []);
+			setOrphanedElements(
+				Array.isArray(result)
+					? result.map(withPlainDescription)
+					: (result ?? [])
+			);
 		} catch {
 			setOrphanedElements([]);
 		}
@@ -243,9 +279,9 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	);
 
 	// Subscribe to real-time case events via SSE
-	useCaseEvents({
+	const { status: eventsStatus } = useCaseEvents({
 		caseId: effectiveCaseId || "",
-		enabled: Boolean(effectiveCaseId) && !loading,
+		enabled: Boolean(effectiveCaseId) && !loading && caseLoaded,
 		onEvent: (event) => {
 			// Suppress toasts for self-events (acting user)
 			const isSelfEvent = event.userId && event.userId === session?.user?.id;
@@ -254,7 +290,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 			}
 
 			// Refetch case data for element/case events
-			if (REFETCH_EVENTS.includes(event.type)) {
+			if (CASE_RELOAD_EVENT_TYPES.includes(event.type)) {
 				debouncedRefetchCase();
 				if (ORPHAN_REFETCH_EVENTS.includes(event.type)) {
 					debouncedOrphanRefetch();
@@ -272,6 +308,7 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					const idValue = Array.isArray(id) ? (id[0] ?? "") : id;
 					const result = await fetchSingleCase(idValue);
 					setAssuranceCase((result as AssuranceCaseResponse) || null);
+					setCaseLoaded(Boolean(result));
 					setLoading(false);
 				} catch {
 					setLoading(false);
@@ -287,6 +324,27 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		loadOrphanedElementsData();
 	}, [loadOrphanedElementsData]);
 
+	// The viewer's own unsupported-marker setting, loaded once per page. It
+	// starts as "not loaded", which draws no marker, so someone who has
+	// switched the markers off never sees them flash on while the page opens.
+	// If the setting cannot be read it stays "not loaded".
+	useEffect(() => {
+		let current = true;
+		setShowUnsupportedMarkers(null);
+		fetchShowUnsupportedMarkers()
+			.then((show) => {
+				if (current) {
+					setShowUnsupportedMarkers(show);
+				}
+			})
+			.catch(() => {
+				// Left as "not loaded": no marker is drawn.
+			});
+		return () => {
+			current = false;
+		};
+	}, [setShowUnsupportedMarkers]);
+
 	if (loading) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
@@ -298,10 +356,18 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 		);
 	}
 
+	if (eventsStatus === "access-removed") {
+		return <CaseAccessRemoved />;
+	}
+
+	if (eventsStatus === "signed-out") {
+		return <CaseSignedOut />;
+	}
+
 	if (assuranceCase) {
 		return (
 			<ReactFlowProvider>
-				<CheckTourClient
+				<CheckTour
 					enabled={!loading}
 					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
 				/>

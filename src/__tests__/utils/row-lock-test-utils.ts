@@ -23,9 +23,29 @@ export interface HeldRowLock {
 	/**
 	 * Signals the holder to commit, and resolves once it actually has —
 	 * or rejects with the holder transaction's own error, if it failed.
+	 *
+	 * If `mutate` changed the row, every writer queued behind the lock wakes at
+	 * once and re-checks the row against what the holder committed. Those that
+	 * still match then compete for the new version of the row, so which of
+	 * several queued writers goes first is not fixed by the order they queued
+	 * in. A holder that only locks the row keeps the queue order on commit,
+	 * because the first waiter proceeds while it still holds the row lock.
 	 */
 	release: () => Promise<void>;
+	/**
+	 * Signals the holder to roll back instead, so none of its writes land, and
+	 * resolves once it has. The first queued writer takes the row first, and so
+	 * does the second when there are only two, because the row they were waiting
+	 * for is unchanged. Once the first has changed the row, later writers move on
+	 * to its new version and may be served in any order. Use this when the
+	 * holder only needs to hold the lock, and the test depends on which writer
+	 * goes first.
+	 */
+	rollback: () => Promise<void>;
 }
+
+/** Thrown inside the holder's transaction to make it roll back. */
+class HolderRollback extends Error {}
 
 const LOCK_WAIT_POLL_INTERVAL_MS = 10;
 const LOCK_WAIT_TIMEOUT_MS = 5000;
@@ -36,10 +56,13 @@ const LOCK_WAIT_TIMEOUT_MS = 5000;
  * blocked behind `holdRowLock`'s held lock, rather than still running an
  * earlier, non-blocking read. Use this in place of a fixed delay before
  * releasing the lock: a delay only guesses how long the racing call's
- * earlier steps take, and guesses wrong under load.
+ * earlier steps take, and guesses wrong under load. With
+ * `minimumWaiters` above one it waits until that many backends are
+ * blocked, which fixes the order they queue in.
  */
 export async function waitForLockWait(
-	timeoutMs = LOCK_WAIT_TIMEOUT_MS
+	timeoutMs = LOCK_WAIT_TIMEOUT_MS,
+	minimumWaiters = 1
 ): Promise<void> {
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
@@ -50,7 +73,7 @@ export async function waitForLockWait(
 				AND wait_event_type = 'Lock'
 				AND pid <> pg_backend_pid()
 		`;
-		if (Number(rows[0]?.count ?? 0) > 0) {
+		if (Number(rows[0]?.count ?? 0) >= minimumWaiters) {
 			return;
 		}
 		if (Date.now() >= deadline) {
@@ -67,10 +90,11 @@ export async function waitForLockWait(
 /**
  * Opens a transaction, runs `mutate` inside it (typically a write that
  * takes a row lock), then blocks the transaction open — holding that lock —
- * until `release()` is called. Any other transaction that needs the same
- * row for a write (an `updateMany`/`deleteMany` on it) blocks until
- * `release()` lets this one commit, then re-evaluates its own `where`
- * clause against whatever `mutate` just committed.
+ * until `release()` or `rollback()` is called. Any other transaction that
+ * needs the same row for a write (an `updateMany`/`deleteMany` on it) blocks
+ * until `release()` lets this one commit, then re-evaluates its own `where`
+ * clause against whatever `mutate` just committed. With `rollback()` it
+ * proceeds against the row as it was.
  */
 export async function holdRowLock(
 	mutate: (tx: TestTransactionClient) => Promise<void>
@@ -82,41 +106,54 @@ export async function holdRowLock(
 		resolveAcquired = resolve;
 	});
 
-	let resolveReleaseSignal: () => void = () => {
+	let signalFinish: (commit: boolean) => void = () => {
 		/* replaced synchronously below */
 	};
-	const releaseSignal = new Promise<void>((resolve) => {
-		resolveReleaseSignal = resolve;
+	const finishSignal = new Promise<boolean>((resolve) => {
+		signalFinish = resolve;
 	});
 
-	let resolveCommitted: () => void = () => {
+	let resolveFinished: () => void = () => {
 		/* replaced synchronously below */
 	};
-	let rejectCommitted: (error: unknown) => void = () => {
+	let rejectFinished: (error: unknown) => void = () => {
 		/* replaced synchronously below */
 	};
-	const committed = new Promise<void>((resolve, reject) => {
-		resolveCommitted = resolve;
-		rejectCommitted = reject;
+	const finished = new Promise<void>((resolve, reject) => {
+		resolveFinished = resolve;
+		rejectFinished = reject;
 	});
 
 	prisma
 		.$transaction(async (tx) => {
 			await mutate(tx);
 			resolveAcquired();
-			await releaseSignal;
+			if (!(await finishSignal)) {
+				// A query on the transaction first, so one that Prisma already timed
+				// out and rolled back rejects with its own timeout error instead of
+				// being reported as a rollback that worked.
+				await tx.$queryRaw`SELECT 1`;
+				throw new HolderRollback();
+			}
 		})
 		.then(
-			() => resolveCommitted(),
-			(error) => rejectCommitted(error)
+			() => resolveFinished(),
+			(error) =>
+				error instanceof HolderRollback
+					? resolveFinished()
+					: rejectFinished(error)
 		);
 
 	await acquired;
 
 	return {
 		release: async () => {
-			resolveReleaseSignal();
-			await committed;
+			signalFinish(true);
+			await finished;
+		},
+		rollback: async () => {
+			signalFinish(false);
+			await finished;
 		},
 	};
 }

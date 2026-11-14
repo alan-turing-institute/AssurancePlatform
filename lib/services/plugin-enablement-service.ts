@@ -5,6 +5,7 @@ import {
 	listManifestPluginIds,
 } from "@/lib/plugins/manifest";
 import { prisma } from "@/lib/prisma";
+import type { TxClient } from "@/lib/utils/tree-traversal";
 import type {
 	PluginScopeType,
 	PluginState,
@@ -19,6 +20,12 @@ const log = logger.child({ component: "plugin-enablement-service" });
  * for a user iff it is available at the deployment level AND no
  * `PluginState` row with `enabled: false` exists at any scope at-or-above
  * the user in the ORGANISATION -> TEAM -> USER chain ("off wins downward").
+ * A manifest entry with `defaultEnabled: false` additionally needs the
+ * user's own USER-scope row to be on. The exception is an integration's
+ * machine account for a plugin whose manifest lists the `machine-endpoints`
+ * surface: that account counts as opted in (see
+ * `isIntegrationMachineAccount`). For any other plugin it needs its own row
+ * like everyone else.
  *
  * 1.0 activates only the USER tier for writes (`setPluginEnabledForUser`
  * below) — there is no Organisation model yet, and mapping a user to their
@@ -75,9 +82,31 @@ function buildScopeLookups(scopeIds: PluginScopeChain): ScopeLookup[] {
 	return lookups;
 }
 
+/**
+ * True when `userId` is the machine account of an integration. The test is
+ * that an `Integration` row names the account as its `systemUserId`, not the
+ * bare `isSystemUser` flag: the fallback account that inherits a deleted
+ * user's cases carries that flag too and is not an integration's principal.
+ * Only the integration registry creates such a row, in the same transaction
+ * that creates the account, so a person cannot attach one to their own.
+ * The caller asks only for plugins that expose machine endpoints, so the
+ * lookup never runs for the others.
+ */
+async function isIntegrationMachineAccount(
+	userId: string,
+	db: TxClient
+): Promise<boolean> {
+	const integration = await db.integration.findUnique({
+		where: { systemUserId: userId },
+		select: { id: true },
+	});
+	return integration !== null;
+}
+
 export async function resolveEffectivePluginState(
 	pluginId: string,
-	scopeIds: PluginScopeChain
+	scopeIds: PluginScopeChain,
+	db: TxClient = prisma
 ): ServiceResult<EffectivePluginState> {
 	if (!getManifestEntry(pluginId)) {
 		return { error: `Unknown plugin '${pluginId}'` };
@@ -96,7 +125,7 @@ export async function resolveEffectivePluginState(
 	const lookups = buildScopeLookups(scopeIds);
 
 	try {
-		const rows = await prisma.pluginState.findMany({
+		const rows = await db.pluginState.findMany({
 			where: {
 				pluginId,
 				OR: lookups.map(({ scopeType, scopeId }) => ({ scopeType, scopeId })),
@@ -114,6 +143,33 @@ export async function resolveEffectivePluginState(
 						enabled: false,
 						availableAtDeployment: true,
 						disabledAt: scopeType,
+					},
+				};
+			}
+		}
+
+		const entry = getManifestEntry(pluginId);
+		if (entry?.defaultEnabled === false) {
+			const userRow = rows.find(
+				(r) => r.scopeType === "USER" && r.scopeId === scopeIds.userId
+			);
+			// A machine account never chooses plugins; its token's scopes and
+			// case grants already say what it is for. That holds only for a
+			// plugin that machines call, so the surface is checked first and the
+			// lookup runs for no other plugin. The off rows and deployment check
+			// above still win.
+			if (
+				!(
+					userRow?.enabled ||
+					(entry.surfaces.includes("machine-endpoints") &&
+						(await isIntegrationMachineAccount(scopeIds.userId, db)))
+				)
+			) {
+				return {
+					data: {
+						enabled: false,
+						availableAtDeployment: true,
+						disabledAt: "USER",
 					},
 				};
 			}
@@ -137,9 +193,10 @@ export async function resolveEffectivePluginState(
  */
 export async function assertPluginEnabledForUser(
 	pluginId: string,
-	userId: string
+	userId: string,
+	db: TxClient = prisma
 ): ServiceResult<true> {
-	const result = await resolveEffectivePluginState(pluginId, { userId });
+	const result = await resolveEffectivePluginState(pluginId, { userId }, db);
 	if ("error" in result) {
 		return result;
 	}
@@ -149,12 +206,38 @@ export async function assertPluginEnabledForUser(
 	return { data: true };
 }
 
+/**
+ * Passes when at least one plugin that uses models (`usesModels` in the
+ * manifest) is on for `userId`; this is the gate on the model connection
+ * routes. When every such plugin is off, the answer is the refusal below;
+ * when the state of a plugin could not be read and none is on, that failure
+ * is returned instead, so a database fault is not reported as a refusal.
+ */
+export async function assertModelPluginEnabled(
+	userId: string
+): ServiceResult<true> {
+	const states = await Promise.all(
+		listManifestPluginIds()
+			.filter((pluginId) => getManifestEntry(pluginId)?.usesModels)
+			.map((pluginId) => resolveEffectivePluginState(pluginId, { userId }))
+	);
+	if (states.some((state) => "data" in state && state.data.enabled)) {
+		return { data: true };
+	}
+	const unreadable = states.find((state) => "error" in state);
+	if (unreadable && "error" in unreadable) {
+		return unreadable;
+	}
+	return { error: "No plugin that uses models is enabled" };
+}
+
 /** Boolean convenience form of `assertPluginEnabledForUser` for non-`ServiceResult` call sites (e.g. UI slot rendering). */
 export async function isPluginEnabledForUser(
 	pluginId: string,
-	userId: string
+	userId: string,
+	db: TxClient = prisma
 ): Promise<boolean> {
-	const result = await assertPluginEnabledForUser(pluginId, userId);
+	const result = await assertPluginEnabledForUser(pluginId, userId, db);
 	return "data" in result;
 }
 
@@ -168,11 +251,12 @@ export async function isPluginEnabledForUser(
  * the result straight through — it never queries plugin state itself.
  */
 export async function getEnabledPluginIdsForUser(
-	userId: string
+	userId: string,
+	db: TxClient = prisma
 ): Promise<string[]> {
 	const pluginIds = listManifestPluginIds();
 	const enabledFlags = await Promise.all(
-		pluginIds.map((pluginId) => isPluginEnabledForUser(pluginId, userId))
+		pluginIds.map((pluginId) => isPluginEnabledForUser(pluginId, userId, db))
 	);
 	return pluginIds.filter((_, index) => enabledFlags[index]);
 }

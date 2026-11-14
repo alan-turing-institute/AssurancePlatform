@@ -6,7 +6,8 @@
  * content/structure while exporters handle format-specific rendering.
  */
 
-import type { ElementType, TreeNode } from "@/lib/schemas/case-export";
+import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
+import type { ElementType } from "@/lib/schemas/case-export";
 
 /**
  * Supported export formats
@@ -92,11 +93,11 @@ export interface MetadataBlock {
 }
 
 /**
- * Element content block - renders a TreeNode element
+ * Element content block - renders a PlainTreeNode element
  */
 export interface ElementBlock {
 	depth: number;
-	node: TreeNode;
+	node: PlainTreeNode;
 	type: "element";
 }
 
@@ -182,7 +183,7 @@ export type SectionOverrides = Record<string, boolean>;
  */
 export interface TemplateInput {
 	branchDiagrams?: LabelledDiagramImage[];
-	caseData: import("@/lib/schemas/case-export").CaseExportNested;
+	caseData: PlainCase;
 	diagramImage?: DiagramImage;
 	exportedBy?: string;
 	sectionOverrides?: SectionOverrides;

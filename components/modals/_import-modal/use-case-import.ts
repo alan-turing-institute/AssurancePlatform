@@ -93,6 +93,26 @@ export function extractErrorMessage(data: ImportResponse): string {
 	return data.message ?? data.error ?? "Failed to import";
 }
 
+// ─── Connection check ─────────────────────────────────────────────────────────
+
+/**
+ * Asks again whether GitHub is connected and passes the answer to
+ * `setConnected`. Used after a refused GitHub import, because the server may
+ * have removed the stored token while the dialog was open. A failed check
+ * leaves the current state alone.
+ */
+async function refreshGitHubConnection(
+	setConnected: (connected: boolean) => void
+): Promise<void> {
+	try {
+		const { checkGitHubAccess } = await import("@/actions/integrations");
+		const result = await checkGitHubAccess();
+		setConnected(result.connected);
+	} catch {
+		// A failed check says nothing about the token, so keep what we know.
+	}
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 interface DriveFile {
@@ -264,6 +284,12 @@ export function useCaseImport({
 
 				if (!response.ok) {
 					setError(extractErrorMessage(data));
+					// A 403 covers "no usable GitHub token", which includes a token the
+					// server has just discarded. Checking again swaps the URL form for
+					// the connect button when the token is gone.
+					if (response.status === 403) {
+						await refreshGitHubConnection(setGithubConnected);
+					}
 					setLoading(false);
 					return;
 				}

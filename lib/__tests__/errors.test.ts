@@ -52,6 +52,9 @@ describe("AppError", () => {
 		expect(new AppError({ code: "CONFLICT", message: "" }).statusCode).toBe(
 			409
 		);
+		expect(
+			new AppError({ code: "UNPROCESSABLE", message: "" }).statusCode
+		).toBe(422);
 		expect(new AppError({ code: "RATE_LIMITED", message: "" }).statusCode).toBe(
 			429
 		);
@@ -272,6 +275,15 @@ describe("serviceErrorToAppError", () => {
 		const err = serviceErrorToAppError("Case is already in trash");
 		expect(err.code).toBe("CONFLICT");
 		expect(err.message).toBe("Case is already in trash");
+	});
+
+	it("maps a bound-check refusal to UNPROCESSABLE even when the check name contains another pattern", () => {
+		const message =
+			"This claim is bound to check not found already. Evidence from another check needs its own evidence claim in the case.";
+		const err = serviceErrorToAppError(message);
+		expect(err.code).toBe("UNPROCESSABLE");
+		expect(err.statusCode).toBe(422);
+		expect(err.message).toBe(message);
 	});
 
 	it("is case-insensitive", () => {

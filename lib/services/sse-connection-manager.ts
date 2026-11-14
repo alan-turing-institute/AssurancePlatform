@@ -39,8 +39,20 @@ interface SSEConnection {
 	controller: ReadableStreamDefaultController<Uint8Array>;
 	createdAt: Date;
 	id: string;
+	/** Runs once, when the connection is removed by any route to removal. */
+	onRemove?: () => void;
+	/** Checks again whether the connection's user may still view the case. */
+	recheck?: () => void | Promise<void>;
 	userId: string;
 }
+
+/**
+ * Which connections `recheckConnections` acts on. It must name a case, a
+ * user, or both; there is no way to ask for every connection.
+ */
+export type RecheckFilter =
+	| { caseId: string; userId?: string }
+	| { caseId?: string; userId: string };
 
 type CaseConnections = Map<string, SSEConnection>;
 
@@ -53,13 +65,18 @@ class SSEConnectionManager {
 	private readonly encoder = new TextEncoder();
 
 	/**
-	 * Adds a new SSE connection for a case.
+	 * Adds a new SSE connection for a case. `onRemove` runs once when the
+	 * connection leaves the manager, whether the client closed it, the server
+	 * ended it or a write to it failed. `recheck` is what
+	 * `recheckConnections` calls to have the connection's access checked again.
 	 */
 	addConnection(
 		caseId: string,
 		connectionId: string,
 		controller: ReadableStreamDefaultController<Uint8Array>,
-		userId: string
+		userId: string,
+		onRemove?: () => void,
+		recheck?: () => void | Promise<void>
 	): void {
 		if (!this.connections.has(caseId)) {
 			this.connections.set(caseId, new Map());
@@ -72,6 +89,8 @@ class SSEConnectionManager {
 				controller,
 				userId,
 				createdAt: new Date(),
+				onRemove,
+				recheck,
 			});
 		}
 
@@ -83,23 +102,30 @@ class SSEConnectionManager {
 	}
 
 	/**
-	 * Removes an SSE connection.
+	 * Removes an SSE connection and runs its `onRemove` callback. Removing a
+	 * connection that is not registered does nothing, so every path that ends a
+	 * stream can call this without checking whether another already has.
 	 */
 	removeConnection(caseId: string, connectionId: string): void {
 		const caseConnections = this.connections.get(caseId);
-		if (caseConnections) {
-			caseConnections.delete(connectionId);
-			log.info("SSE connection removed", {
-				connectionId,
-				caseId,
-				remainingConnections: caseConnections.size,
-			});
-
-			// Clean up empty case entries
-			if (caseConnections.size === 0) {
-				this.connections.delete(caseId);
-			}
+		const connection = caseConnections?.get(connectionId);
+		if (!(caseConnections && connection)) {
+			return;
 		}
+
+		caseConnections.delete(connectionId);
+		log.info("SSE connection removed", {
+			connectionId,
+			caseId,
+			remainingConnections: caseConnections.size,
+		});
+
+		// Clean up empty case entries
+		if (caseConnections.size === 0) {
+			this.connections.delete(caseId);
+		}
+
+		connection.onRemove?.();
 	}
 
 	/**
@@ -113,10 +139,12 @@ class SSEConnectionManager {
 
 		const eventData = this.formatEvent(event);
 		const deadConnections: string[] = [];
+		let recipients = 0;
 
 		for (const [connectionId, connection] of caseConnections) {
 			try {
 				connection.controller.enqueue(eventData);
+				recipients += 1;
 			} catch {
 				// Connection is dead, mark for removal
 				deadConnections.push(connectionId);
@@ -131,32 +159,82 @@ class SSEConnectionManager {
 		log.info("SSE broadcast event", {
 			eventType: event.type,
 			caseId: event.caseId,
-			recipients: caseConnections.size - deadConnections.length,
+			recipients,
 		});
 	}
 
 	/**
-	 * Sends a heartbeat to all connections for a case.
+	 * Sends a heartbeat to one connection, and removes it if the write fails.
+	 * Each stream runs its own heartbeat timer, so a heartbeat never goes to
+	 * the case's other connections.
 	 */
-	sendHeartbeat(caseId: string): void {
-		const caseConnections = this.connections.get(caseId);
-		if (!caseConnections) {
+	sendHeartbeat(caseId: string, connectionId: string): void {
+		const connection = this.connections.get(caseId)?.get(connectionId);
+		if (!connection) {
 			return;
 		}
 
-		const heartbeat = this.encoder.encode(": heartbeat\n\n");
-		const deadConnections: string[] = [];
+		try {
+			connection.controller.enqueue(this.encoder.encode(": heartbeat\n\n"));
+		} catch {
+			this.removeConnection(caseId, connectionId);
+		}
+	}
 
-		for (const [connectionId, connection] of caseConnections) {
-			try {
-				connection.controller.enqueue(heartbeat);
-			} catch {
-				deadConnections.push(connectionId);
-			}
+	/**
+	 * Has the access of the matching connections checked again now, rather than
+	 * at their next heartbeat. Call it after a change that may have taken away
+	 * someone's access has committed, and wait for it: a stream that has lost
+	 * access is then closed before anything that follows the change, such as an
+	 * event announcing it, is sent. It acts only on the connections held by this
+	 * process, and settles once every check it started has finished. A check
+	 * that fails is logged, never thrown. A filter that names neither a case nor
+	 * a user matches nothing.
+	 */
+	async recheckConnections(filter: RecheckFilter): Promise<void> {
+		const { caseId, userId } = filter;
+		if (!(caseId || userId)) {
+			return;
 		}
 
-		for (const connectionId of deadConnections) {
-			this.removeConnection(caseId, connectionId);
+		const matching = this.connectionsMatching(caseId, userId);
+		if (matching.length === 0) {
+			return;
+		}
+		log.info("SSE access re-check requested", {
+			caseId,
+			userId,
+			connections: matching.length,
+		});
+		await Promise.all(
+			matching.map((connection) => this.runRecheck(connection))
+		);
+	}
+
+	/** The connections on `caseId` (or on every case) that belong to `userId` (or to anyone). */
+	private connectionsMatching(
+		caseId: string | undefined,
+		userId: string | undefined
+	): SSEConnection[] {
+		const cases = caseId
+			? [this.connections.get(caseId)]
+			: [...this.connections.values()];
+		return cases.flatMap((caseConnections) =>
+			[...(caseConnections?.values() ?? [])].filter(
+				(connection) => !userId || connection.userId === userId
+			)
+		);
+	}
+
+	/** Runs one connection's re-check; one that fails is logged and does not reach the caller. */
+	private async runRecheck(connection: SSEConnection): Promise<void> {
+		try {
+			await connection.recheck?.();
+		} catch (error) {
+			log.warn("SSE access re-check failed", {
+				connectionId: connection.id,
+				error,
+			});
 		}
 	}
 
@@ -192,18 +270,19 @@ class SSEConnectionManager {
 	}
 }
 
-// Use globalThis to persist the singleton across module reloads in dev mode
+// Keep the singleton on globalThis. A production build bundles server actions
+// and route handlers separately, so each bundle evaluates this module on its
+// own; without a shared instance, an event emitted from a server action
+// reaches no connection opened by the events route.
 const globalForSSE = globalThis as unknown as {
 	sseConnectionManager: SSEConnectionManager | undefined;
 };
 
-// Export singleton instance (persisted across hot reloads)
+// Export singleton instance (shared across bundles and hot reloads)
 export const sseConnectionManager =
 	globalForSSE.sseConnectionManager ?? new SSEConnectionManager();
 
-if (process.env.NODE_ENV !== "production") {
-	globalForSSE.sseConnectionManager = sseConnectionManager;
-}
+globalForSSE.sseConnectionManager = sseConnectionManager;
 
 /**
  * Helper function to emit an SSE event.

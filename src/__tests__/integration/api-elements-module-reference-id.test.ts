@@ -7,6 +7,10 @@ import {
 	createTestElement,
 	createTestUser,
 } from "../utils/prisma-factories";
+import {
+	createReferencingElement,
+	signInEditor,
+} from "../utils/reference-targets";
 
 /**
  * moduleReferenceId route wiring — "AWAY_GOAL cannot be created via the
@@ -35,7 +39,8 @@ vi.mock("@/lib/services/sse-connection-manager", () => ({
 
 const NOT_APPLICABLE_PATTERN = /only applicable to MODULE and AWAY_GOAL/;
 const REQUIRED_PATTERN = /moduleReferenceId is required/;
-const NOT_FOUND_PATTERN = /must reference an existing case/;
+const NOT_VIEWABLE_MESSAGE =
+	"moduleReferenceId must reference a case you can view";
 
 beforeEach(async () => {
 	await mockNoAuth();
@@ -168,7 +173,7 @@ describe("POST /api/cases/[id]/elements — moduleReferenceId", () => {
 
 		expect(response.status).toBe(400);
 		const body = await response.json();
-		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+		expect(body.error).toBe(NOT_VIEWABLE_MESSAGE);
 
 		const elements = await prisma.assuranceElement.findMany({
 			where: { caseId: homeCase.id, elementType: "AWAY_GOAL" },
@@ -273,7 +278,7 @@ describe("PUT /api/elements/[id] — moduleReferenceId", () => {
 
 		expect(response.status).toBe(400);
 		const body = await response.json();
-		expect(body.error).toMatch(NOT_FOUND_PATTERN);
+		expect(body.error).toBe(NOT_VIEWABLE_MESSAGE);
 
 		// The element's original moduleReferenceId is untouched — the rejected
 		// update didn't partially apply.
@@ -281,5 +286,219 @@ describe("PUT /api/elements/[id] — moduleReferenceId", () => {
 			where: { id: awayGoal.id },
 		});
 		expect(inDb?.moduleReferenceId).toBe(awayCase.id);
+	});
+});
+
+const CITED_NOT_FOUND_MESSAGE =
+	"citedElementId must reference an existing element";
+const MISSING_ELEMENT_ID = "00000000-0000-0000-0000-000000000000";
+
+/** The element types that carry a case reference, as the routes and the database name them. */
+const REFERENCING_TYPES = [
+	{ routeType: "away_goal", elementType: "AWAY_GOAL", extra: {} },
+	{
+		routeType: "module",
+		elementType: "MODULE",
+		extra: { moduleEmbedType: "REFERENCE" },
+	},
+] as const;
+
+/** Creates an element through the POST route as the signed-in user. */
+async function postElement(caseId: string, body: Record<string, unknown>) {
+	const { POST } = await import("@/app/api/cases/[id]/elements/route");
+	const req = new NextRequest(
+		`http://localhost:3000/api/cases/${caseId}/elements`,
+		{
+			method: "POST",
+			body: JSON.stringify(body),
+			headers: { "Content-Type": "application/json" },
+		}
+	);
+	return await POST(req, { params: Promise.resolve({ id: caseId }) });
+}
+
+/** Edits an element through the PUT route as the signed-in user. */
+async function putElement(elementId: string, body: Record<string, unknown>) {
+	const { PUT } = await import("@/app/api/elements/[id]/route");
+	const req = new NextRequest(
+		`http://localhost:3000/api/elements/${elementId}`,
+		{
+			method: "PUT",
+			body: JSON.stringify(body),
+			headers: { "Content-Type": "application/json" },
+		}
+	);
+	return await PUT(req, { params: Promise.resolve({ id: elementId }) });
+}
+
+describe("moduleReferenceId — the editor must be able to view the case it names", () => {
+	it.each(
+		REFERENCING_TYPES
+	)("accepts a new reference to every case the editor can view when creating a $routeType", async ({
+		routeType,
+		extra,
+	}) => {
+		const { homeCase, viewable } = await signInEditor();
+
+		for (const [label, caseId] of Object.entries(viewable)) {
+			const response = await postElement(homeCase.id, {
+				type: routeType,
+				description: `Cites ${label}`,
+				moduleReferenceId: caseId,
+				...extra,
+			});
+			expect(response.status, label).toBe(201);
+			expect((await response.json()).moduleReferenceId, label).toBe(caseId);
+		}
+	});
+
+	it.each(
+		REFERENCING_TYPES
+	)("refuses a new reference to a case it cannot view, one in the bin or a missing one with the same message when creating a $routeType", async ({
+		routeType,
+		extra,
+	}) => {
+		const { homeCase, hidden } = await signInEditor();
+
+		for (const [label, caseId] of Object.entries(hidden)) {
+			const response = await postElement(homeCase.id, {
+				type: routeType,
+				description: `Cites ${label}`,
+				moduleReferenceId: caseId,
+				...extra,
+			});
+			expect(response.status, label).toBe(400);
+			expect((await response.json()).error, label).toBe(NOT_VIEWABLE_MESSAGE);
+		}
+		expect(
+			await prisma.assuranceElement.count({ where: { caseId: homeCase.id } })
+		).toBe(0);
+	});
+
+	it.each(
+		REFERENCING_TYPES
+	)("accepts a changed reference to every case the editor can view when editing a $routeType", async ({
+		elementType,
+	}) => {
+		const { editor, homeCase, other, viewable } = await signInEditor();
+		const hiddenStart = await createTestCase(other.id);
+		const element = await createReferencingElement(
+			homeCase.id,
+			editor.id,
+			elementType,
+			hiddenStart.id
+		);
+
+		for (const [label, caseId] of Object.entries(viewable)) {
+			const response = await putElement(element.id, {
+				moduleReferenceId: caseId,
+			});
+			expect(response.status, label).toBe(200);
+			const stored = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(stored?.moduleReferenceId, label).toBe(caseId);
+		}
+	});
+
+	it.each(
+		REFERENCING_TYPES
+	)("refuses a changed reference to a case it cannot view, one in the bin or a missing one with the same message when editing a $routeType", async ({
+		elementType,
+	}) => {
+		const { editor, homeCase, hidden } = await signInEditor();
+		const start = await createTestCase(editor.id);
+		const element = await createReferencingElement(
+			homeCase.id,
+			editor.id,
+			elementType,
+			start.id
+		);
+
+		for (const [label, caseId] of Object.entries(hidden)) {
+			const response = await putElement(element.id, {
+				moduleReferenceId: caseId,
+			});
+			expect(response.status, label).toBe(400);
+			expect((await response.json()).error, label).toBe(NOT_VIEWABLE_MESSAGE);
+		}
+		const stored = await prisma.assuranceElement.findUnique({
+			where: { id: element.id },
+		});
+		expect(stored?.moduleReferenceId).toBe(start.id);
+	});
+
+	it.each(
+		REFERENCING_TYPES
+	)("saves an edit to a $routeType whose existing reference the editor cannot view, whether or not the request repeats it", async ({
+		elementType,
+	}) => {
+		const { editor, homeCase, other, hidden } = await signInEditor();
+		const unviewable = await createTestCase(other.id);
+
+		for (const caseId of [unviewable.id, hidden["a case in the bin"]]) {
+			const element = await createReferencingElement(
+				homeCase.id,
+				editor.id,
+				elementType,
+				caseId
+			);
+			const reworded = await putElement(element.id, {
+				description: "Reworded",
+			});
+			expect(reworded.status).toBe(200);
+			const repeated = await putElement(element.id, {
+				description: "Reworded again",
+				moduleReferenceId: caseId,
+			});
+			expect(repeated.status).toBe(200);
+			const stored = await prisma.assuranceElement.findUnique({
+				where: { id: element.id },
+			});
+			expect(stored?.moduleReferenceId).toBe(caseId);
+			expect(stored?.description).toBe("Reworded again");
+		}
+	});
+
+	it("refuses a new or changed citation in a case the editor cannot view as it does a missing element, and saves an edit that leaves it alone", async () => {
+		const { homeCase, other } = await signInEditor();
+		const unviewable = await createTestCase(other.id);
+		const [cited, repointed] = await Promise.all(
+			["G1", "G2"].map((name) =>
+				createTestElement(unviewable.id, other.id, { name })
+			)
+		);
+		if (!(cited && repointed)) {
+			throw new Error("missing fixture");
+		}
+		const awayGoal = await createReferencingElement(
+			homeCase.id,
+			other.id,
+			"AWAY_GOAL",
+			unviewable.id
+		);
+		await prisma.assuranceElement.update({
+			where: { id: awayGoal.id },
+			data: { citedElementId: cited.id },
+		});
+
+		for (const citedElementId of [repointed.id, MISSING_ELEMENT_ID]) {
+			const response = await putElement(awayGoal.id, { citedElementId });
+			expect(response.status, citedElementId).toBe(400);
+			expect((await response.json()).error, citedElementId).toBe(
+				CITED_NOT_FOUND_MESSAGE
+			);
+		}
+
+		const repeated = await putElement(awayGoal.id, {
+			description: "Reworded",
+			citedElementId: cited.id,
+		});
+		expect(repeated.status).toBe(200);
+		const stored = await prisma.assuranceElement.findUnique({
+			where: { id: awayGoal.id },
+		});
+		expect(stored?.citedElementId).toBe(cited.id);
+		expect(stored?.description).toBe("Reworded");
 	});
 });

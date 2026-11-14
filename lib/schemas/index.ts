@@ -4,8 +4,10 @@
 export * from "./assurance-case";
 export * from "./auth";
 export * from "./base";
+export * from "./case-from-pattern";
 export * from "./case-image";
 export * from "./case-information";
+export * from "./case-kind";
 export * from "./case-trash";
 export * from "./comment";
 export * from "./element";
@@ -19,6 +21,7 @@ export * from "./status";
 // Domain schemas for API routes
 export * from "./team";
 export * from "./tour";
+export * from "./unsupported-markers";
 export * from "./user";
 
 // Note: batch-update.ts, case-export.ts, connected-accounts.ts, element-validation.ts,

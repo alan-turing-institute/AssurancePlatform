@@ -3,7 +3,12 @@
 import { ExternalLink } from "lucide-react";
 import { memo, useState } from "react";
 import type { NodeProps } from "reactflow";
-import { BaseNode, NodeActionGroup } from "@/components/shared/nodes";
+import {
+	BaseNode,
+	NodeActionGroup,
+	withPlaceholderIndicator,
+} from "@/components/shared/nodes";
+import { useNodeAppearance } from "@/hooks/use-element-appearance";
 import { useElementBadgeSlot } from "@/hooks/use-element-badge-slot";
 import useStore from "@/store/store";
 import NodeEditDialog from "./node-edit-dialog";
@@ -22,6 +27,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 		elementId: String(data.id),
 		elementType: "evidence",
 	});
+	const appearance = useNodeAppearance(String(data.id), "evidence");
 
 	const dataTour =
 		data.isDemo && data.name === "E1" ? "demo-evidence-1" : undefined;
@@ -29,6 +35,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 	return (
 		<>
 			<BaseNode
+				appearance={appearance}
 				bottomLeftActions={
 					<NodeActionGroup
 						commentCount={
@@ -44,10 +51,13 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				dataTour={dataTour}
 				description={data.description}
 				isDefeater={!!data.isDefeater}
+				isPlaceholder={!!data.isPlaceholder}
 				name={data.name}
 				nodeType="evidence"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
-				topRightActions={badgeSlot}
+				terms={data.termsInReach}
+				topRightActions={withPlaceholderIndicator(data, badgeSlot)}
 			>
 				{urls.length > 0 && (
 					<div className="space-y-1">

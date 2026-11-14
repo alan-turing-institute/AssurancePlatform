@@ -85,7 +85,8 @@ export default defineConfig({
 						// pathname is discarded per-worker. Defaults to the dedicated
 						// `postgres-test` container (docker-compose.local.yml, port 5433,
 						// fsync=off) — CI overrides via DATABASE_URL_INTEGRATION_BASE
-						// (build.yaml) to keep using its own single service container.
+						// (the `integration` job in build.yaml) to keep using its own single
+						// service container.
 						DATABASE_URL:
 							process.env.DATABASE_URL_INTEGRATION_BASE ??
 							"postgresql://tea_user:tea_password@localhost:5433/tea_test",
@@ -100,6 +101,11 @@ export default defineConfig({
 						TOKEN_ENCRYPTION_KEY:
 							process.env.TOKEN_ENCRYPTION_KEY ??
 							Buffer.alloc(32, 1).toString("base64"),
+						// Fixed, non-secret signing key: password sign-in counts
+						// attempts under a keyed hash of the name, and refuses to
+						// sign anyone in when no NEXTAUTH_SECRET is configured.
+						NEXTAUTH_SECRET:
+							process.env.NEXTAUTH_SECRET ?? "integration-test-nextauth-secret",
 					},
 				},
 			},

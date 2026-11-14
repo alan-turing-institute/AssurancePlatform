@@ -72,6 +72,8 @@ export default defineConfig({
 				"lib/**",
 				"actions/**",
 				"providers/**",
+				// The request hook lives at the repo root, outside the directories above.
+				"proxy.ts",
 			],
 			all: true,
 			clean: true,
@@ -82,12 +84,16 @@ export default defineConfig({
 			// Measured: statements 18.2%, branches 13.9%, functions 20.79%,
 			// lines 18.27%. Raise these deliberately as coverage improves —
 			// never lower them to make a PR pass.
-			thresholds: {
-				statements: 17,
-				branches: 12,
-				functions: 19,
-				lines: 17,
-			},
+			// CI shard runs set SKIP_COVERAGE_THRESHOLDS; the merge job checks the floors.
+			thresholds:
+				process.env.SKIP_COVERAGE_THRESHOLDS === "true"
+					? undefined
+					: {
+							statements: 17,
+							branches: 12,
+							functions: 19,
+							lines: 17,
+						},
 		},
 		// codemirror-json-schema's ESM build omits file extensions on its
 		// relative imports (e.g. "./features/completion"), which fails

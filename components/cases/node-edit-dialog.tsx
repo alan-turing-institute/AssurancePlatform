@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Lock, Minus, Plus, PlusIcon, Trash2 } from "lucide-react";
+import { Loader2, Lock, Minus, Plus } from "lucide-react";
 import {
 	useCallback,
 	useEffect,
@@ -38,8 +38,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	findDraftContextProblem,
+	useContextNaming,
+} from "@/hooks/use-context-naming";
 import { useElementPanelSlot } from "@/hooks/use-element-panel-slot";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
 import {
@@ -53,18 +58,51 @@ import {
 	updateAssuranceCaseNode,
 } from "@/lib/case";
 import {
+	parseContextEntries,
+	plainReferenceText,
+} from "@/lib/case/defined-terms";
+import { recordedStates } from "@/lib/case/placeholders";
+import type { ElementPanelRegistration } from "@/lib/plugins/slots";
+import {
+	MIN_DESCRIPTION_LENGTH,
 	type NodeEditFormInput,
 	nodeEditFormSchema,
 } from "@/lib/schemas/element";
 import { recordUpdate } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import useStore from "@/store/store";
+import ContextEntriesSection from "./context-entries-section";
+import { finaliseContextEntries } from "./context-entry-form";
+import DescriptionField from "./description-field";
+import TermsInReachList from "./terms-in-reach-list";
 
 type FormValues = NodeEditFormInput;
+
+const DETAILS_TAB = "details";
 
 // Helper to check if element type supports attributes
 const supportsAttributes = (nodeType: DiagramNodeType): boolean =>
 	["goal", "strategy", "property"].includes(nodeType);
+
+// Helper to check if the description is written in the reference editor, where
+// typing `{` offers the terms in reach. Evidence has no context of its own but
+// can refer to the terms of the claim it supports.
+const usesReferenceEditor = (nodeType: DiagramNodeType): boolean =>
+	supportsAttributes(nodeType) || nodeType === "evidence";
+
+/**
+ * Whether the description editor takes the caret when the dialog opens. It
+ * does where the description is the first field, as it was when it was a text
+ * box: with no tab strip above it. The editor loads a moment after the dialog,
+ * so the dialog's own focus step is skipped in that case and the editor
+ * takes focus once it is there.
+ */
+const focusesDescriptionOnOpen = (
+	nodeType: DiagramNodeType,
+	readOnly: boolean,
+	hasTabs: boolean
+): boolean => usesReferenceEditor(nodeType) && !(readOnly || hasTabs);
 
 /**
  * Resolves a node's current `assertionStatus` to one of the five
@@ -97,6 +135,23 @@ function findChallengedElementName(
 }
 
 /**
+ * The placeholder marker and hint a node holds, as the form's fields. The hint
+ * is empty for a node that is not a placeholder, which returns no hint.
+ */
+function getInitialPlaceholder(nodeData: Record<string, unknown>): {
+	isPlaceholder: boolean;
+	placeholderHint: string;
+} {
+	return {
+		isPlaceholder: nodeData?.isPlaceholder === true,
+		placeholderHint:
+			typeof nodeData?.placeholderHint === "string"
+				? nodeData.placeholderHint
+				: "",
+	};
+}
+
+/**
  * Converts node data URLs to field array format.
  */
 function getInitialUrls(
@@ -113,21 +168,37 @@ function getInitialUrls(
 	return [{ value: "" }];
 }
 
-/** Build update payload from form values */
+/**
+ * Build update payload from form values. The description is left out when it
+ * is the text the element already has, so opening and saving an untouched
+ * description changes nothing.
+ */
 function buildUpdatePayload(
 	values: FormValues,
-	nodeType: DiagramNodeType
+	nodeType: DiagramNodeType,
+	storedDescription: string,
+	isPattern: boolean
 ): Record<string, unknown> {
-	const updateItem: Record<string, unknown> = {
-		description: values.description,
-	};
+	const updateItem: Record<string, unknown> = {};
+
+	if (values.description !== storedDescription) {
+		updateItem.description = values.description;
+	}
+
+	// In a pattern the author sets the marker and its hint. In a case the
+	// dialog leaves the marker alone: the server takes it off when a new
+	// description is written.
+	if (isPattern) {
+		updateItem.isPlaceholder = values.isPlaceholder === true;
+		updateItem.placeholderHint = values.isPlaceholder
+			? (values.placeholderHint ?? "").trim()
+			: "";
+	}
 
 	if (supportsAttributes(nodeType)) {
 		updateItem.assumption = values.assumption || "";
 		updateItem.justification = values.justification || "";
-		updateItem.context = (values.context || [])
-			.map((c) => c.trim())
-			.filter((c) => c.length > 0);
+		updateItem.context = finaliseContextEntries(values.context || []);
 		// Per-assertion status (ADR 0004 D3) — always one of the five
 		// author-declarable values; the Select never offers AS_CITED.
 		updateItem.assertionStatus = values.assertionStatus || "ASSERTED";
@@ -149,7 +220,7 @@ function buildUpdatePayload(
 interface TextFieldProps {
 	form: UseFormReturn<FormValues>;
 	label: string;
-	name: "description" | "assumption" | "justification";
+	name: "description" | "assumption" | "justification" | "placeholderHint";
 	placeholder: string;
 	readOnly: boolean;
 }
@@ -247,108 +318,90 @@ function AssertionStatusSection({
 	);
 }
 
-interface ContextSectionProps {
-	contextItems: Array<{ id: string; value: string }>;
+interface PatternPlaceholderFieldsProps {
 	form: UseFormReturn<FormValues>;
-	newContextValue: string;
-	onAddContext: () => void;
-	onNewContextChange: (value: string) => void;
-	onRemoveContext: (idx: number) => void;
+	isPattern: boolean;
 	readOnly: boolean;
 }
 
-// `context` is a `string[]` on the shared zod schema (`nodeEditFormSchema`),
-// and react-hook-form's `useFieldArray` only accepts array fields whose
-// elements are objects (its `FieldArrayPath` type excludes primitive
-// arrays), so each entry is bound individually via `FormField` at the
-// indexed path `context.${idx}` instead — a plain `Path`, which primitive
-// array elements are valid targets for. Add/remove bookkeeping (stable keys
-// via `contextItems`) stays as before; only the read-only `<span>` becomes
-// an editable `Input`.
-function ContextSection({
-	contextItems,
+/**
+ * The pattern author's switch for making the element a placeholder, and the
+ * hint for whoever fills it in. Nothing in a case: there the marker comes off
+ * by itself when the description is written.
+ */
+function PatternPlaceholderFields({
 	form,
+	isPattern,
 	readOnly,
-	newContextValue,
-	onNewContextChange,
-	onAddContext,
-	onRemoveContext,
-}: ContextSectionProps) {
+}: PatternPlaceholderFieldsProps) {
+	const isPlaceholder = form.watch("isPlaceholder");
+	const hasText =
+		form.watch("description").trim().length >= MIN_DESCRIPTION_LENGTH;
+	if (!isPattern) {
+		return null;
+	}
 	return (
 		<div className="space-y-3">
-			<FormLabel className="flex items-center gap-2">
-				Context
-				{readOnly && (
-					<span className="text-muted-foreground" title="Read Only">
-						<Lock className="h-3 w-3" />
-					</span>
+			<FormField
+				control={form.control}
+				name="isPlaceholder"
+				render={({ field }) => (
+					<FormItem className="flex items-center justify-between gap-3 space-y-0">
+						<FormLabel className="font-normal">
+							Placeholder: the person using this pattern writes this
+						</FormLabel>
+						<FormControl>
+							<Switch
+								checked={field.value === true}
+								disabled={readOnly}
+								onBlur={field.onBlur}
+								onCheckedChange={field.onChange}
+								ref={field.ref}
+							/>
+						</FormControl>
+					</FormItem>
 				)}
-			</FormLabel>
-			{contextItems.length > 0 && (
-				<div className="space-y-2">
-					{contextItems.map((item, idx) => (
-						<FormField
-							control={form.control}
-							key={item.id}
-							name={`context.${idx}`}
-							render={({ field }) => (
-								<FormItem>
-									<div className="flex items-start gap-2">
-										<FormControl>
-											<Input
-												aria-label={`Context entry ${idx + 1}`}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") {
-														e.preventDefault();
-													}
-												}}
-												readOnly={readOnly}
-												{...field}
-											/>
-										</FormControl>
-										{!readOnly && (
-											<button
-												className="rounded p-1 text-destructive hover:bg-destructive/10"
-												onClick={() => onRemoveContext(idx)}
-												title="Remove context"
-												type="button"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
-										)}
-									</div>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					))}
-				</div>
+			/>
+			{!(isPlaceholder || hasText || readOnly) && (
+				<p className="text-muted-foreground text-sm">
+					This element has no text yet. Write its description above before
+					switching the placeholder off.
+				</p>
 			)}
-			{!readOnly && (
-				<div className="flex gap-2">
-					<Input
-						onChange={(e) => onNewContextChange(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") {
-								e.preventDefault();
-								onAddContext();
-							}
-						}}
-						placeholder="Add new context..."
-						value={newContextValue}
-					/>
-					<Button
-						disabled={!newContextValue.trim()}
-						onClick={onAddContext}
-						size="sm"
-						type="button"
-						variant="outline"
-					>
-						<PlusIcon className="size-4" />
-						Add
-					</Button>
-				</div>
+			{isPlaceholder && (
+				<TextFieldSection
+					form={form}
+					label="Hint for the person filling this in"
+					name="placeholderHint"
+					placeholder="Say what to write here (optional)."
+					readOnly={readOnly}
+				/>
 			)}
+		</div>
+	);
+}
+
+/**
+ * In a case, the hint of a placeholder that is still to be written, shown
+ * above the description. Nothing for an element that is not a placeholder or
+ * has no hint.
+ */
+function PlaceholderHintNotice({
+	hint,
+	isPattern,
+	isPlaceholder,
+}: {
+	hint: string;
+	isPattern: boolean;
+	isPlaceholder: boolean;
+}) {
+	if (isPattern || !isPlaceholder || hint === "") {
+		return null;
+	}
+	return (
+		<div className="rounded-md border border-warning/60 border-dashed bg-warning/10 px-3 py-2 text-sm">
+			<span className="font-medium text-muted-foreground">To fill in: </span>
+			<span>{hint}</span>
 		</div>
 	);
 }
@@ -426,6 +479,38 @@ function UrlsSection({
 	);
 }
 
+/**
+ * The tab showing in the dialog, so the dialog can be wider while a tab that
+ * asks for it is showing. It goes back to Details each time the dialog closes.
+ * It also remembers which tabs have been shown, so a tab keeps its state when
+ * the person moves to another one; the memory is cleared with the dialog.
+ */
+function useActiveTab(
+	open: boolean,
+	registrations: readonly ElementPanelRegistration[]
+) {
+	const [activeTab, setActiveTabState] = useState(DETAILS_TAB);
+	const [shownTabs, setShownTabs] = useState<ReadonlySet<string>>(new Set());
+	const [wasOpen, setWasOpen] = useState(open);
+	if (open !== wasOpen) {
+		setWasOpen(open);
+		if (!open) {
+			setActiveTabState(DETAILS_TAB);
+			setShownTabs(new Set());
+		}
+	}
+	const setActiveTab = (tab: string) => {
+		setActiveTabState(tab);
+		setShownTabs((current) =>
+			current.has(tab) ? current : new Set(current).add(tab)
+		);
+	};
+	const wideTab = registrations.some(
+		(registration) => registration.tabId === activeTab && registration.wide
+	);
+	return { activeTab, setActiveTab, shownTabs, wideTab };
+}
+
 // --- Main component ---
 
 interface NodeEditDialogProps {
@@ -447,6 +532,10 @@ export default function NodeEditDialog({
 	const [idCounter, setIdCounter] = useState(0);
 	const { assuranceCase, nodes: allNodes } = useStore();
 	const panelSlot = useElementPanelSlot();
+	const { activeTab, setActiveTab, shownTabs, wideTab } = useActiveTab(
+		open,
+		panelSlot.registrations
+	);
 	// Dialogical reasoning (defeaters, ADR 0005 D2): a read-only "Challenges"
 	// line naming the target — changing the target is out of scope for 1.0.
 	const isDefeater = !!node.data?.isDefeater;
@@ -461,6 +550,16 @@ export default function NodeEditDialog({
 		assuranceCase?.permissions === "edit" ||
 		assuranceCase?.permissions === "manage"
 	);
+	const focusDescriptionOnOpen = focusesDescriptionOnOpen(
+		nodeType,
+		readOnly,
+		panelSlot.registrations.length > 0
+	);
+
+	const isPattern = assuranceCase?.kind === "PATTERN";
+	const initialPlaceholder = getInitialPlaceholder(
+		node.data as Record<string, unknown>
+	);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(nodeEditFormSchema),
@@ -468,11 +567,12 @@ export default function NodeEditDialog({
 			description: (node.data?.description as string) ?? "",
 			assumption: (node.data?.assumption as string) ?? "",
 			justification: (node.data?.justification as string) ?? "",
-			context: (node.data?.context as string[]) ?? [],
+			context: parseContextEntries(node.data?.context),
 			urls: getInitialUrls(node.data as Record<string, unknown>),
 			assertionStatus: getInitialAssertionStatus(
 				node.data as Record<string, unknown>
 			),
+			...getInitialPlaceholder(node.data as Record<string, unknown>),
 		},
 	});
 
@@ -509,7 +609,9 @@ export default function NodeEditDialog({
 			const newId = `${componentId}-${idCounter}`;
 			setIdCounter((c) => c + 1);
 			setItemIds([...itemIds, newId]);
-			form.setValue("context", [...currentContext, newContextValue.trim()]);
+			form.setValue("context", [...currentContext, newContextValue.trim()], {
+				shouldDirty: true,
+			});
 			setNewContextValue("");
 		}
 	};
@@ -519,9 +621,15 @@ export default function NodeEditDialog({
 		setItemIds(itemIds.filter((_, i) => i !== indexToRemove));
 		form.setValue(
 			"context",
-			currentContext.filter((_, i) => i !== indexToRemove)
+			currentContext.filter((_, i) => i !== indexToRemove),
+			{ shouldDirty: true }
 		);
 	};
+
+	// Naming entries, and the terms the description can refer to: the entries
+	// as they stand in the form, then those on the elements above.
+	const { contextProblem, nameContext, terms, unnameContext } =
+		useContextNaming(form, node.data, contextValues);
 
 	// The id of the node whose data is currently loaded into the form. Used
 	// (not `node` object identity — host node components rebuild that object
@@ -531,7 +639,7 @@ export default function NodeEditDialog({
 
 	const resetFormToNode = useCallback(
 		(n: Node) => {
-			const contextData = (n.data?.context as string[]) ?? [];
+			const contextData = parseContextEntries(n.data?.context);
 			form.reset({
 				description: (n.data?.description as string) ?? "",
 				assumption: (n.data?.assumption as string) ?? "",
@@ -541,6 +649,7 @@ export default function NodeEditDialog({
 				assertionStatus: getInitialAssertionStatus(
 					n.data as Record<string, unknown>
 				),
+				...getInitialPlaceholder(n.data as Record<string, unknown>),
 			});
 			setItemIds(contextData.map((_, i) => `${componentId}-reset-${i}`));
 			setNewContextValue("");
@@ -616,9 +725,25 @@ export default function NodeEditDialog({
 			values.context = [...(values.context || []), newContextValue.trim()];
 			setNewContextValue("");
 		}
+		const listProblem = supportsAttributes(nodeType)
+			? findDraftContextProblem(values.context || [])
+			: undefined;
+		if (listProblem) {
+			toast({
+				variant: "destructive",
+				title: "Check the context entries",
+				description: listProblem,
+			});
+			return;
+		}
 		setLoading(true);
 		const beforeData = { ...node.data } as Record<string, unknown>;
-		const updateItem = buildUpdatePayload(values, nodeType);
+		const updateItem = buildUpdatePayload(
+			values,
+			nodeType,
+			(node.data?.description as string | undefined) ?? "",
+			isPattern
+		);
 
 		const updated = await updateAssuranceCaseNode(
 			node.type || "unknown",
@@ -628,10 +753,17 @@ export default function NodeEditDialog({
 		);
 
 		if (updated === true) {
-			recordUpdate(node.data.id as number, node.type || "unknown", beforeData, {
-				...beforeData,
-				...updateItem,
-			});
+			const recorded = recordedStates(
+				assuranceCase?.kind,
+				beforeData,
+				updateItem
+			);
+			recordUpdate(
+				node.data.id as number,
+				node.type || "unknown",
+				recorded.before,
+				recorded.after
+			);
 			setLoading(false);
 			handleClose();
 			return;
@@ -666,13 +798,31 @@ export default function NodeEditDialog({
 						<span>{challengedName ?? "an element outside this case"}</span>
 					</div>
 				)}
-				<TextFieldSection
-					form={form}
-					label="Description"
-					name="description"
-					placeholder="Type your description here."
-					readOnly={readOnly}
+				<PlaceholderHintNotice
+					hint={initialPlaceholder.placeholderHint}
+					isPattern={isPattern}
+					isPlaceholder={initialPlaceholder.isPlaceholder}
 				/>
+				{usesReferenceEditor(nodeType) ? (
+					<>
+						<DescriptionField
+							autoFocus={focusDescriptionOnOpen}
+							form={form}
+							placeholder="Type your description here."
+							readOnly={readOnly}
+							terms={terms}
+						/>
+						<TermsInReachList terms={terms} />
+					</>
+				) : (
+					<TextFieldSection
+						form={form}
+						label="Description"
+						name="description"
+						placeholder="Type your description here."
+						readOnly={readOnly}
+					/>
+				)}
 
 				{supportsAttributes(nodeType) && (
 					<>
@@ -695,13 +845,16 @@ export default function NodeEditDialog({
 							onSelectOpenChange={onSelectOpenChange}
 							readOnly={readOnly}
 						/>
-						<ContextSection
+						<ContextEntriesSection
 							contextItems={contextItems}
 							form={form}
 							newContextValue={newContextValue}
 							onAddContext={addContext}
+							onNameContext={nameContext}
 							onNewContextChange={setNewContextValue}
 							onRemoveContext={removeContext}
+							onUnnameContext={unnameContext}
+							problem={contextProblem}
 							readOnly={readOnly}
 						/>
 					</>
@@ -716,6 +869,12 @@ export default function NodeEditDialog({
 						readOnly={readOnly}
 					/>
 				)}
+
+				<PatternPlaceholderFields
+					form={form}
+					isPattern={isPattern}
+					readOnly={readOnly}
+				/>
 
 				<DialogFooter className="pt-4">
 					<Button onClick={handleClose} type="button" variant="outline">
@@ -743,15 +902,20 @@ export default function NodeEditDialog({
 	);
 
 	const panelContext = {
+		canEdit: !readOnly,
 		caseId: assuranceCase?.id?.toString() ?? "",
 		elementId: String(node.data?.id ?? ""),
+		elementText: plainReferenceText(form.watch("description"), terms),
 		elementType: nodeType,
 	};
 
 	return (
 		<Dialog onOpenChange={handleOpenChange} open={open}>
 			<DialogContent
-				className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+				className={cn(
+					"max-h-9/10 overflow-y-auto",
+					wideTab ? "sm:max-w-2xl" : "sm:max-w-lg"
+				)}
 				// `onPointerDownOutside` is the path this fix targets: it's
 				// the click-through case where a click inside the dialog
 				// falls through to the Dialog's own overlay while the
@@ -763,6 +927,11 @@ export default function NodeEditDialog({
 				// against a live dismissal — it's defensive only.
 				onInteractOutside={(event) => {
 					if (shouldGuardFocusDismiss()) {
+						event.preventDefault();
+					}
+				}}
+				onOpenAutoFocus={(event) => {
+					if (focusDescriptionOnOpen) {
 						event.preventDefault();
 					}
 				}}
@@ -786,9 +955,14 @@ export default function NodeEditDialog({
 				{panelSlot.registrations.length === 0 ? (
 					detailsForm
 				) : (
-					<Tabs defaultValue="details">
+					<Tabs
+						// A grid item of the dialog: without `min-w-0`, a tab's unbreakable content sets the dialog's width.
+						className="min-w-0"
+						onValueChange={setActiveTab}
+						value={activeTab}
+					>
 						<TabsList>
-							<TabsTrigger value="details">Details</TabsTrigger>
+							<TabsTrigger value={DETAILS_TAB}>Details</TabsTrigger>
 							{panelSlot.registrations.map(
 								({ pluginId, tabId, label, icon: Icon }) => (
 									<TabsTrigger key={pluginId} value={tabId}>
@@ -798,10 +972,15 @@ export default function NodeEditDialog({
 								)
 							)}
 						</TabsList>
-						<TabsContent value="details">{detailsForm}</TabsContent>
+						<TabsContent value={DETAILS_TAB}>{detailsForm}</TabsContent>
 						{panelSlot.registrations.map(({ pluginId, tabId, Component }) => (
-							<TabsContent key={pluginId} value={tabId}>
-								<Component {...panelContext} />
+							<TabsContent
+								className="data-[state=inactive]:hidden"
+								forceMount
+								key={pluginId}
+								value={tabId}
+							>
+								{shownTabs.has(tabId) && <Component {...panelContext} />}
 							</TabsContent>
 						))}
 					</Tabs>

@@ -16,15 +16,51 @@ The repository's `prepare` script points Git at `.githooks/`. Its pre-push hook 
 
 `.github/workflows/build.yaml` runs on pull requests, matching pushes to `main` or `staging`, and manual dispatch. The `validate` job runs Ultracite and TypeScript. It runs `pnpm docs:generate` and fails if `public/openapi.json` changes. It also runs `pnpm audit --audit-level=high`, currently with `continue-on-error`, so an audit finding does not by itself fail that job.
 
-The test job runs unit tests with coverage, integration tests against PostgreSQL, and Playwright end-to-end tests. For pull requests, a changed-path check can skip the expensive test job when no code-relevant path changed. The `Structural Quality (blocking)` job uses fallow on pull requests and consumes merged unit and integration coverage. `.github/workflows/fallow.yml` is a retired manual-only placeholder; the active gate is in `build.yaml`.
+The tests run as parallel jobs, each on its own runner.
+The unit tests are split into three shards, named `Unit tests (shard 1/3)` to `Unit tests (shard 3/3)`.
+Each shard runs a third of the unit suite and uploads a Vitest blob report.
+The `Integration tests` job runs the integration project against its own PostgreSQL service and uploads its coverage.
+The `E2E and page check` job migrates and seeds a fresh database, checks that the migrations match the Prisma schema, builds the standalone app, runs the Playwright journeys and then checks that every page loads.
 
-After validation and tests succeed, push and manual-dispatch runs build and push a Docker image to GHCR. Pull requests do not build an image. For `main` and `staging`, its deployment job calls the corresponding Azure webhook and then checks `/api/health`. The workflow's image name is `alan-turing-institute/assuranceplatform/tea-app`. Check the [Docker deployment guide](/docs/technical-guide/deployment/docker-production) for the separate compose-file image setting.
+The `Merge coverage` job waits for the unit shards and the integration job.
+It fails unless all three blob reports arrived, merges them, and applies the coverage thresholds in `vitest.config.ts` to the merged unit coverage.
+It then combines the unit and integration coverage into the `merged-coverage` artifact.
+
+`Run Tests` is the required check for the test jobs, and it succeeds only when each of them succeeded.
+For pull requests, a changed-path check skips every test job, and so `Run Tests`, when no code-relevant path changed.
+The `Structural Quality (blocking)` job uses fallow on pull requests and consumes the `merged-coverage` artifact.
+`.github/workflows/fallow.yml` is a retired manual-only placeholder; the active gate is in `build.yaml`.
+
+After validation and tests succeed, push and manual-dispatch runs build and push a Docker image to GHCR.
+Pull requests do not build an image.
+A `staging` build pushes the image under `staging-<short SHA>` and a dated tag, and never moves the `staging` tag itself.
+For `main`, the deployment job calls the production Azure webhook and then checks `/api/health`.
+For `staging`, the deployment job first reads the commit recorded on the image that the `staging` tag points at, and asks GitHub how this run's commit compares with it.
+Staging deployments queue in the order they arrive, which is not always commit order, so this check stops an older commit from replacing a newer one.
+If this commit is ahead of the current one, or the same, the job points the `staging` tag at the image this run built and reads the tag back to confirm it carries this commit.
+It then calls the Azure webhook and checks `/api/health`.
+If this commit is behind the current one, the job skips the deployment and leaves staging as it is.
+If the current commit cannot be read, or the two commits have diverged, the job deploys and logs a warning.
+The workflow's image name is `alan-turing-institute/assuranceplatform/tea-app`.
+Check the [Docker deployment guide](/docs/technical-guide/deployment/docker-production) for the separate compose-file image setting.
 
 ## Release and staging data
 
 The `Release` workflow runs when a successful `Build` workflow completes on `main`. It runs semantic-release, which uses conventional commit history for versioning and release notes, then merges the release commit back into `staging`. It is not triggered by a manually created version tag. The [versioning guide](/docs/technical-guide/ci-cd-pipeline/versioning-strategy) explains the release rules.
 
-`Seed staging database` runs after a successful staging `Build` or on manual dispatch. It checks out `staging`, resets and migrates the staging database, grants the application database user access and runs the seed script. This is a staging reset, so do not treat it as a general production migration procedure.
+`Seed staging database` runs after a successful staging `Build` run whose staging deployment ran, or on manual dispatch.
+A `Build` run that skipped its deployment because staging already runs a newer commit does not reseed staging, and neither does the `Build` run of a pull request from `staging` to `main`.
+The workflow checks out `staging`, resets and migrates the staging database, grants the application database user access and runs the seed script.
+This is a staging reset, so do not treat it as a general production migration procedure.
+
+After the seed script, a second script recreates a shared `demo` account.
+The account has the Case Assistant and Claim/Evidence Health plugins on, the Bluebird demo case and the showcase cases beside it, an OpenRouter model connection and a machine integration for an evidence pipeline.
+Each case is imported from a file in `prisma/seed/fixtures/` under a fixed case id, and `prisma/seed/demo-account-seed.ts` lists the files.
+The integration can edit the Bluebird case only.
+The account holds no health checks and no recorded evidence results.
+Its password, model key and pipeline token come from repository secrets, and its model key is encrypted with the staging app's own `TOKEN_ENCRYPTION_KEY`.
+Every reseed rebuilds the account from scratch, so changes made to it do not survive a reseed.
+The pipeline publishes its list of checks when it starts, so restart it after a reseed.
 
 ## Scheduled workflows
 

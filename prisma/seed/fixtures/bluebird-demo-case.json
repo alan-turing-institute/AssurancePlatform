@@ -1,0 +1,143 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-10-15T09:50:31.507Z",
+  "case": {
+    "name": "Bluebird Demo Assurance Case",
+    "description": "Assurance case for demonstration to Fundamental Research and Turing Showcase"
+  },
+  "tree": {
+    "id": "8b3c19a9-6d58-46a3-a5c8-2b5432ec2455",
+    "type": "GOAL",
+    "name": "G1",
+    "description": "BluebirdATC at version 0.3 is a sufficiently valid representation of air traffic for its intended use",
+    "inSandbox": false,
+    "assertionStatus": "ASSERTED",
+    "role": "TOP_LEVEL",
+    "context": [
+      "Intended use: inform AI agents on their decision-making"
+    ],
+    "children": [
+      {
+        "id": "93725744-3bb2-4e1d-92f3-a4567db8fd0b",
+        "type": "STRATEGY",
+        "name": "S1",
+        "description": "Argument over data quality",
+        "inSandbox": false,
+        "assertionStatus": "ASSERTED",
+        "children": [
+          {
+            "id": "e81fc73c-63eb-484a-bb39-c09fe3d1feb2",
+            "type": "PROPERTY_CLAIM",
+            "name": "P1",
+            "description": "In each <window>, BluebirdATC's ingested state carries a complete flight record for at least <q1>% of its aircraft",
+            "inSandbox": false,
+            "assertionStatus": "ASSERTED",
+            "level": 1,
+            "children": []
+          },
+          {
+            "id": "9fe07397-f3ed-4fc0-8310-58f11180b150",
+            "type": "PROPERTY_CLAIM",
+            "name": "P2",
+            "description": "In each <window>, BluebirdATC's ingested aircraft states are internally consistent for at least <q2>% of its aircraft",
+            "inSandbox": false,
+            "assertionStatus": "ASSERTED",
+            "level": 1,
+            "children": [
+              {
+                "id": "960b41d9-15dd-45fe-9870-6a9162b5a457",
+                "type": "STRATEGY",
+                "name": "S3",
+                "description": "Argument over internal consistency across three dimensions",
+                "inSandbox": false,
+                "assertionStatus": "ASSERTED",
+                "children": [
+                  {
+                    "id": "b3122d8f-df17-4996-ab9c-14cc38c92bc4",
+                    "type": "PROPERTY_CLAIM",
+                    "name": "P2.2",
+                    "description": "Vertical speed reported by aircraft and vertical speed inferred by its change in flight level are consistent to within <q> ft/min",
+                    "inSandbox": false,
+                    "assertionStatus": "ASSERTED",
+                    "level": 2,
+                    "children": []
+                  },
+                  {
+                    "id": "2485496b-95cd-4366-a3de-f6fe8612fd2f",
+                    "type": "PROPERTY_CLAIM",
+                    "name": "P2.1",
+                    "description": "Ground speed reported by aircraft and ground speed inferred by its change in (latitude, longitude) are consistent to within <q> knots",
+                    "inSandbox": false,
+                    "assertionStatus": "ASSERTED",
+                    "level": 2,
+                    "children": []
+                  },
+                  {
+                    "id": "09cb6b06-b091-4b64-b452-f6306f5d014c",
+                    "type": "PROPERTY_CLAIM",
+                    "name": "P2.3",
+                    "description": "Rate of turn reported by aircraft and rate of turn inferred from its change in heading are consistent to within <q> deg/min",
+                    "inSandbox": false,
+                    "assertionStatus": "NEEDS_SUPPORT",
+                    "level": 2,
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "1e6a5864-9e5b-4172-bb27-9823fceb54c2",
+        "type": "STRATEGY",
+        "name": "S2",
+        "description": "Argument over operating domain",
+        "inSandbox": false,
+        "assertionStatus": "ASSERTED",
+        "children": [
+          {
+            "id": "4c894a75-5498-4206-a7a2-1e05f038f9ee",
+            "type": "PROPERTY_CLAIM",
+            "name": "P3",
+            "description": "In each <window>, BluebirdATC's ingested state contains no aircraft squawking an emergency code",
+            "inSandbox": false,
+            "assertionStatus": "ASSERTED",
+            "level": 1,
+            "children": []
+          },
+          {
+            "id": "73a5f36a-2594-495f-a1ca-c9327b63c7b0",
+            "type": "PROPERTY_CLAIM",
+            "name": "P4",
+            "description": "In each <window>, BluebirdATC's modelled sector holds at most <n> aircraft",
+            "inSandbox": false,
+            "assertionStatus": "ASSERTED",
+            "level": 1,
+            "children": []
+          },
+          {
+            "id": "083b6c8d-72a2-4451-a4e3-31d3301cc668",
+            "type": "PROPERTY_CLAIM",
+            "name": "P6",
+            "description": "In each <window>, BluebirdATC's simulated pilot responses to clearances fall within <0-6>s, the range the agents are trained on",
+            "inSandbox": false,
+            "assertionStatus": "NEEDS_SUPPORT",
+            "level": 1,
+            "children": []
+          },
+          {
+            "id": "b1def19b-5554-4aed-9505-5c2feab9b068",
+            "type": "PROPERTY_CLAIM",
+            "name": "P5",
+            "description": "In each <window>, BluebirdATC's ingested state gives at least <q4>% of its climbing or descending aircraft speed and flight-level combinations achievable for their aircraft type",
+            "inSandbox": false,
+            "assertionStatus": "ASSERTED",
+            "level": 1,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

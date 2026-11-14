@@ -1,0 +1,78 @@
+name: Thin health evidence log
+
+on:
+  schedule:
+    # Daily at 3:47 AM UTC (off-minute from the other cron jobs). Always a
+    # real run — dry_run only applies to a manual workflow_dispatch.
+    - cron: "47 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Count what would be removed — remove and write nothing"
+        type: boolean
+        default: true
+
+# One run at a time; a run that is still going is never cancelled by the next.
+concurrency:
+  group: health-evidence-thinning
+  cancel-in-progress: false
+
+# The job calls the app with curl and the cron secret; it needs no token permissions.
+permissions: {}
+
+jobs:
+  thin:
+    runs-on: ubuntu-latest
+    # 30 calls of up to 225 seconds each is 112.5 minutes at the worst.
+    timeout-minutes: 120
+    steps:
+      - name: Call health-evidence-thinning endpoint until nothing is left
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+        run: |
+          # The one-day cut-off is measured from this hour on every call, so a
+          # run that crosses an hour boundary does not move it part-way.
+          now=$(date -u +%Y-%m-%dT%H:00:00Z)
+          query="now=${now}"
+          max_calls=30
+          if [ "$DRY_RUN" = "true" ]; then
+            # A dry run reports what one real call would do, so it is one call.
+            query="dryRun=1&${query}"
+            max_calls=1
+          fi
+          url="${APP_URL}/api/cron/health-evidence-thinning?${query}"
+
+          # Each call works for about a minute and says whether more is left.
+          # --max-time sits under the 230 second limit Azure puts on a request.
+          for call in $(seq 1 "$max_calls"); do
+            if ! response=$(curl -s --max-time 225 -w "\n%{http_code}" -X POST "$url" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Content-Type: application/json"); then
+              echo "::error::Health evidence thinning call $call did not complete"
+              exit 1
+            fi
+
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+
+            echo "Call $call response: $body"
+            echo "HTTP Status: $http_code"
+
+            if [ "$http_code" -ne 200 ]; then
+              echo "::error::Health evidence thinning failed with status $http_code"
+              exit 1
+            fi
+
+            if [ "$(echo "$body" | jq -r '.busy // false')" = "true" ]; then
+              echo "::warning::Another thinning call holds the lock, so this run did nothing"
+              exit 0
+            fi
+
+            if [ "$(echo "$body" | jq -r '.more // false')" != "true" ]; then
+              exit 0
+            fi
+          done
+
+          echo "::warning::Stopped after $max_calls calls with records still to examine; the next run carries on"

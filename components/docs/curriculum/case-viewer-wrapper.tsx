@@ -1,6 +1,7 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import type { SelectedElementSummary } from "@/lib/docs/selected-element";
 import { logger } from "@/lib/logger";
 import type { CaseExportNested } from "@/types/curriculum";
 
@@ -12,14 +13,14 @@ const log = logger.child({ component: "case-viewer-wrapper" });
 const ReadOnlyCaseCanvas = lazy(() => import("./read-only-case-canvas"));
 
 /**
- * Type guard to check if data is the CaseExportNested format (v1.0)
+ * Type guard to check if data is the CaseExportNested format (v1.0 or v1.1)
  */
 function isCaseExportNested(data: unknown): data is CaseExportNested {
 	return (
 		typeof data === "object" &&
 		data !== null &&
 		"version" in data &&
-		data.version === "1.0" &&
+		(data.version === "1.0" || data.version === "1.1") &&
 		"tree" in data
 	);
 }
@@ -33,7 +34,7 @@ function parseCaseData(data: unknown): CaseExportNested {
 		return data;
 	}
 	throw new Error(
-		"Invalid case data format. Expected v1.0 schema with 'version' and 'tree' properties."
+		"Invalid case data format. Expected v1.0 or v1.1 schema with 'version' and 'tree' properties."
 	);
 }
 
@@ -44,7 +45,8 @@ interface ViewerState {
 }
 
 interface CaseViewerWrapperProps {
-	caseFile?: string;
+	caseFile: string;
+	onSelectedElementChange?: (element: SelectedElementSummary | null) => void;
 }
 
 /**
@@ -53,7 +55,8 @@ interface CaseViewerWrapperProps {
  * Loads JSON data from /public/data/ folder.
  */
 const CaseViewerWrapper = ({
-	caseFile = "demo-case.json",
+	caseFile,
+	onSelectedElementChange,
 }: CaseViewerWrapperProps) => {
 	const [state, setState] = useState<ViewerState>({
 		data: null,
@@ -148,7 +151,10 @@ const CaseViewerWrapper = ({
 					</div>
 				}
 			>
-				<ReadOnlyCaseCanvas caseData={state.data} />
+				<ReadOnlyCaseCanvas
+					caseData={state.data}
+					onSelectedElementChange={onSelectedElementChange}
+				/>
 			</ErrorBoundary>
 		</Suspense>
 	);

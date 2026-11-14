@@ -2,11 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
-import { createAssuranceCase } from "@/actions/assurance-cases";
 import {
 	Form,
 	FormControl,
@@ -24,15 +20,34 @@ import {
 	createAssuranceCaseSchema,
 } from "@/lib/schemas/assurance-case";
 import { Button } from "../ui/button";
+import { LeftOutNotice } from "./_case-create-modal/left-out-notice";
+import { StartFromSection } from "./_case-create-modal/start-from-section";
+import { useCaseCreate } from "./_case-create-modal/use-case-create";
+
+const PLACEHOLDERS = {
+	case: { name: "Case name", description: "Your case description" },
+	pattern: { name: "Pattern name", description: "Your pattern description" },
+};
 
 export const CaseCreateModal = () => {
 	const createCaseModal = useCreateCaseModal();
-	const router = useRouter();
-	const { data: session } = useSession();
-
-	const [loading, setLoading] = useState(false);
-	const [_stage, _setStage] = useState(0);
-	const [errors, setErrors] = useState<string[]>([]);
+	const {
+		changeStart,
+		choices,
+		close,
+		create,
+		errors,
+		loading,
+		openCase,
+		patternError,
+		patternKey,
+		pending,
+		selectPattern,
+		start,
+	} = useCaseCreate({
+		onClose: createCaseModal.onClose,
+		preset: createCaseModal.preset,
+	});
 
 	const form = useForm<CreateAssuranceCaseInput>({
 		resolver: zodResolver(createAssuranceCaseSchema),
@@ -42,62 +57,42 @@ export const CaseCreateModal = () => {
 		},
 	});
 
-	const CreateCase = useCallback(
-		async (name: string, description: string) => {
-			// Check user.id for JWT-only mode compatibility (key may not exist in JWT-only mode)
-			if (!session?.user?.id) {
-				setErrors(["You must be logged in to create a case"]);
-				return;
-			}
-
-			setLoading(true);
-
-			try {
-				const result = await createAssuranceCase({
-					name,
-					description,
-				});
-
-				if (result.success) {
-					setLoading(false);
-					createCaseModal.onClose();
-					router.push(`/case/${result.data.id}`);
-				} else {
-					setLoading(false);
-					setErrors([
-						result.error ?? "An error occurred, please try again later",
-					]);
-				}
-			} catch (_ex) {
-				setLoading(false);
-				setErrors(["An error occurred, please try again later"]);
-			}
-		},
-		[session, createCaseModal, router]
-	);
-
 	const handleCancel = (e: React.MouseEvent<HTMLButtonElement>) => {
 		e.preventDefault();
 		form.clearErrors();
-		createCaseModal.onClose();
+		close();
 	};
 
 	const onSubmit = (values: CreateAssuranceCaseInput) => {
-		CreateCase(values.name, values.description);
+		create(values.name, values.description);
 	};
+
+	const placeholders =
+		PLACEHOLDERS[start === "blank-pattern" ? "pattern" : "case"];
 
 	return (
 		<Modal
-			description="Please enter a name and description for your new assurance case."
+			description={
+				pending
+					? "Your case has been created from the pattern."
+					: "Choose how to start, then enter a name and description."
+			}
 			isOpen={createCaseModal.isOpen}
-			onClose={createCaseModal.onClose}
+			onClose={close}
 			title="Create New Assurance Case"
 		>
-			{loading ? (
+			{loading && (
 				<div className="flex items-center justify-center p-16">
 					<Loader className="h-10 w-10 animate-spin" />
 				</div>
-			) : (
+			)}
+			{!loading && pending && (
+				<LeftOutNotice
+					onContinue={() => openCase(pending.id)}
+					warnings={pending.warnings}
+				/>
+			)}
+			{!(loading || pending) && (
 				<div className="space-y-4 py-2 pb-4">
 					<div className="space-y-2">
 						<Form {...form}>
@@ -105,6 +100,15 @@ export const CaseCreateModal = () => {
 								className="space-y-6"
 								onSubmit={form.handleSubmit(onSubmit)}
 							>
+								<StartFromSection
+									choices={choices}
+									disabled={loading}
+									onPatternChange={selectPattern}
+									onStartChange={changeStart}
+									patternError={patternError}
+									patternKey={patternKey}
+									start={start}
+								/>
 								<FormField
 									control={form.control}
 									name="name"
@@ -114,7 +118,7 @@ export const CaseCreateModal = () => {
 											<FormControl>
 												<Input
 													disabled={loading}
-													placeholder="Case name"
+													placeholder={placeholders.name}
 													{...field}
 												/>
 											</FormControl>
@@ -131,8 +135,8 @@ export const CaseCreateModal = () => {
 											<FormControl>
 												<Textarea
 													disabled={loading}
-													placeholder="Your case description"
-													rows={6}
+													placeholder={placeholders.description}
+													rows={4}
 													{...field}
 												/>
 											</FormControl>
@@ -151,6 +155,7 @@ export const CaseCreateModal = () => {
 									<Button
 										disabled={loading}
 										onClick={(e) => handleCancel(e)}
+										type="button"
 										variant="outline"
 									>
 										Cancel

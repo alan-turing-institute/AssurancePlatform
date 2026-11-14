@@ -12,15 +12,17 @@ import { revokeIntegration } from "@/lib/services/integration-registry-service";
 /**
  * POST /api/integrations/[id]/revoke
  *
- * Revokes an integration permanently (→ REVOKED) and, in the same
- * transaction, revokes every one of its currently-unrevoked tokens.
- * Terminal — there is no un-revoke (`reactivate` refuses a REVOKED
- * integration). Owner-only, audited.
+ * Revokes an integration permanently and revokes every token it still has, in
+ * one step.
+ * Revocation is final: a revoked integration cannot be reactivated.
+ * Only the owner can revoke an integration.
  *
+ * @description Revokes an integration permanently, together with all of its tokens that are still valid; a revoked integration cannot be reactivated.
  * @pathParam id - Integration ID (UUID)
  * @response 200 - The revoked integration
  * @response 401 - Unauthorised
- * @response 404 - Integration not found (covers non-existent and not-owned — same message)
+ * @response 404 - Integration not found (covers non-existent and not-owned, with the same message)
+ * @add 404
  * @auth SessionAuth
  * @tag Integrations
  */

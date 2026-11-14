@@ -47,7 +47,7 @@ export const ELEMENT_GUIDE: HelpGuideEntry[] = [
 			"State plainly what should be true of the system. Keep it broad enough to frame the whole case, and leave how you will show it to the strategies and claims underneath.",
 		naming:
 			"G1. Most cases have a single goal. A second only appears when the case embeds another case as a module.",
-		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#goal-claims`,
+		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#goal`,
 	},
 	{
 		id: "PROPERTY_CLAIM",
@@ -58,7 +58,7 @@ export const ELEMENT_GUIDE: HelpGuideEntry[] = [
 			"A claim is a proposition that can be true or false. Keep each one narrow enough to check against evidence, and split anything that reads like several claims joined together.",
 		naming:
 			"P1 for a top-level claim. A sub-claim takes its parent's number with a dot added, for example P1.1, P1.2.",
-		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#property-claims`,
+		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#property-claim`,
 	},
 	{
 		id: "STRATEGY",
@@ -68,7 +68,7 @@ export const ELEMENT_GUIDE: HelpGuideEntry[] = [
 		guidance:
 			"A strategy groups the claims that together support its parent, and explains why they belong together. It makes no claim of its own, so use it to make the decomposition visible rather than to assert something new.",
 		naming: "S1",
-		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#strategies`,
+		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#strategy`,
 	},
 	{
 		id: "EVIDENCE",
@@ -97,7 +97,7 @@ export const ELEMENT_GUIDE: HelpGuideEntry[] = [
 		guidance:
 			"Use a justification to say why an element is relevant or was chosen, not to restate what it already says. It attaches to the element it explains and cannot have children of its own.",
 		naming: "J1",
-		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#justifications`,
+		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#justification`,
 	},
 	{
 		id: "ASSUMPTION",
@@ -107,7 +107,7 @@ export const ELEMENT_GUIDE: HelpGuideEntry[] = [
 		guidance:
 			"Record an assumption whenever a claim, goal, or strategy depends on a condition you are taking on trust, so a reviewer can see, and challenge, what the case is resting on. Like a justification, it attaches to the element it qualifies and cannot have children of its own.",
 		naming: "A1",
-		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#assumptions`,
+		docsHref: `${ELEMENT_TYPES_DOCS_PAGE}#assumption`,
 	},
 	{
 		id: "MODULE",

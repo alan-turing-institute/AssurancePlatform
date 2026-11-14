@@ -51,6 +51,33 @@ export const optionalString = (maxLength = 2000) =>
 		.describe("Optional string field");
 
 /**
+ * Optional trimmed string where an exact empty string is a value, not "leave
+ * as it is" (null, and text of only spaces, still become undefined). For text
+ * that may be emptied on purpose, such as a placeholder's description.
+ */
+export const optionalStringAllowingEmpty = (maxLength = 2000) =>
+	z
+		.string()
+		.max(maxLength, `Must be less than ${maxLength} characters`)
+		.nullable()
+		.transform((v) => (v === "" ? v : v?.trim() || undefined))
+		.optional()
+		.describe("Optional string field");
+
+/**
+ * The guidance shown to whoever fills in a placeholder element, on a request
+ * that writes it. Trimmed; an empty string or null clears the hint, which is
+ * why this is not `optionalString` (where empty means "leave as it is").
+ */
+export const placeholderHintInputSchema = z
+	.string()
+	.max(500, "A hint must be 500 characters or fewer")
+	.nullable()
+	.transform((v) => v?.trim() || null)
+	.optional()
+	.describe("Guidance for whoever fills in a placeholder element");
+
+/**
  * Valid username — letters, numbers, underscores, and hyphens only.
  */
 export const usernameSchema = z

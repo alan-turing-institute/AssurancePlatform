@@ -66,7 +66,7 @@ ENV DATABASE_URL=${DATABASE_URL}
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 # Increase Node.js memory limit for the Next.js production build (the docs
 # compile is a large share of it, regardless of which docs framework sits on top)
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=6144"
 RUN --mount=type=cache,target=/app/.next/cache \
     npx prisma generate && corepack enable pnpm && pnpm build
 

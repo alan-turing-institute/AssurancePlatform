@@ -10,6 +10,7 @@ import {
 	extractPublishedImageKey,
 	removePublishedCopies,
 } from "@/lib/services/publish-service";
+import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "case-trash-service" });
@@ -202,6 +203,10 @@ export async function softDeleteCase(
 						: await removePublishedCopies(tx, [caseId]);
 			}
 		});
+
+		// A case in the bin is hidden from everyone, so every open stream on it
+		// ends; this does not wait for the stored copies to be deleted
+		await sseConnectionManager.recheckConnections({ caseId });
 		await deleteMediaKeys(removedKeys);
 
 		return { data: true };
@@ -372,6 +377,9 @@ export async function listArchivedCopies(
 	}
 }
 
+/** Thrown inside `removeArchivedCopy`'s transaction when the copy is not there to remove, so that anything the transaction wrote is rolled back. */
+class ArchivedCopyNotFoundError extends Error {}
+
 /**
  * Removes one of the caller's own archived Discover copies — the author
  * can take an archived copy down at any time, including after the case
@@ -382,15 +390,18 @@ export async function listArchivedCopies(
  * exists (still in Trash), its publish fields are reset to draft, matching
  * what removing the copy at trash time would have done — so restoring it
  * afterwards gives a draft.
+ *
+ * The case row is written before the copy is deleted, as in every other
+ * transaction that writes both, so a restore or a permanent delete of the
+ * case can never wait on this transaction's lock on the copy while this one
+ * waits on theirs for the case. A removal that finds the copy gone by then (a
+ * restore un-archived it first) rolls back, leaving the case as it was.
  */
 export async function removeArchivedCopy(
 	userId: string,
 	publishedId: string
 ): ServiceResult {
 	try {
-		// `undefined` (never found / lost the race) is distinct from `null`
-		// (found and removed, but held no image) — only the latter still needs
-		// `deleteMediaKeys` called on it.
 		const removedKey = await prisma.$transaction(async (tx) => {
 			const row = await tx.publishedAssuranceCase.findFirst({
 				where: {
@@ -401,22 +412,7 @@ export async function removeArchivedCopy(
 				select: { assuranceCaseId: true, content: true },
 			});
 			if (!row) {
-				return;
-			}
-
-			// Re-checks the same guard at delete time, closing the race against a
-			// concurrent restore: if the copy was un-archived between the read
-			// above and this delete, `count` comes back 0 and the (now live)
-			// copy is left untouched.
-			const deleted = await tx.publishedAssuranceCase.deleteMany({
-				where: {
-					id: publishedId,
-					archivedOwnerId: userId,
-					archivedAt: { not: null },
-				},
-			});
-			if (deleted.count === 0) {
-				return;
+				throw new ArchivedCopyNotFoundError();
 			}
 
 			if (row.assuranceCaseId) {
@@ -425,18 +421,33 @@ export async function removeArchivedCopy(
 					data: DRAFT_PUBLISH_FIELDS,
 				});
 			}
+
+			// Re-checks the same guard at delete time, closing the race against a
+			// concurrent restore: if the copy was un-archived between the read
+			// above and this delete, `count` comes back 0, the case-row update
+			// above is rolled back, and the (now live) copy is left untouched.
+			const deleted = await tx.publishedAssuranceCase.deleteMany({
+				where: {
+					id: publishedId,
+					archivedOwnerId: userId,
+					archivedAt: { not: null },
+				},
+			});
+			if (deleted.count === 0) {
+				throw new ArchivedCopyNotFoundError();
+			}
 			return extractPublishedImageKey(row.content);
 		});
 
-		if (removedKey === undefined) {
-			return { error: "Archived copy not found" };
-		}
 		if (removedKey) {
 			await deleteMediaKeys([removedKey]);
 		}
 
 		return { data: true };
 	} catch (error) {
+		if (error instanceof ArchivedCopyNotFoundError) {
+			return { error: "Archived copy not found" };
+		}
 		log.error("Failed to remove archived copy", { error });
 		return { error: "Failed to remove archived copy" };
 	}

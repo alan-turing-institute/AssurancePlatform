@@ -11,6 +11,7 @@
  */
 
 import { z } from "zod";
+import { type ContextEntry, ContextEntrySchema } from "./context-entry";
 
 // ============================================
 // ENUMS (matching Prisma schema)
@@ -63,8 +64,18 @@ export const AssertionStatusSchema = z
 		"Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
 	);
 
+/**
+ * What an exported case is. A file without `kind` is an ordinary case.
+ */
+export const CaseKindSchema = z
+	.enum(["CASE", "PATTERN"])
+	.describe(
+		"What the case is - CASE for an ordinary case, PATTERN for a reusable pattern that cases are started from. Omitted means CASE"
+	);
+
 export type ElementType = z.infer<typeof ElementTypeSchema>;
 export type ElementRole = z.infer<typeof ElementRoleSchema>;
+export type CaseKind = z.infer<typeof CaseKindSchema>;
 export type ModuleEmbedType = z.infer<typeof ModuleEmbedTypeSchema>;
 export type AssertionStatus = z.infer<typeof AssertionStatusSchema>;
 
@@ -99,9 +110,9 @@ export const ElementV2Schema = z
 			.optional()
 			.describe("Justification text for applicable element types"),
 		context: z
-			.array(z.string())
+			.array(ContextEntrySchema)
 			.optional()
-			.describe("Context tags associated with the element"),
+			.describe("Context entries associated with the element"),
 		url: z.string().nullable().optional().describe("URL for evidence elements"),
 		level: z
 			.number()
@@ -163,6 +174,17 @@ export const ElementV2Schema = z
 			.default(false)
 			.optional()
 			.describe("Whether the element has been modified from its pattern"),
+		isPlaceholder: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe("Whether the person using the case or pattern writes this"),
+		placeholderHint: z
+			.string()
+			.max(500)
+			.nullable()
+			.optional()
+			.describe("Guidance for whoever fills in a placeholder element"),
 		comments: z
 			.array(
 				// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
@@ -213,6 +235,7 @@ export const CaseExportV2Schema = z
 					.min(1, "Case name is required")
 					.describe("Name of the assurance case"),
 				description: z.string().describe("Description of the assurance case"),
+				kind: CaseKindSchema.optional(),
 			})
 			.describe("Case metadata"),
 		elements: z.array(ElementV2Schema).describe("All elements in the case"),
@@ -246,7 +269,7 @@ export interface ExportComment {
  * - role: GOAL only
  * - assumption: GOAL, STRATEGY, PROPERTY_CLAIM, ASSUMPTION, AWAY_GOAL
  * - justification: GOAL, STRATEGY, PROPERTY_CLAIM, JUSTIFICATION
- * - context: GOAL, STRATEGY, PROPERTY_CLAIM (array of strings)
+ * - context: GOAL, STRATEGY, PROPERTY_CLAIM (array of strings or named entries)
  * - url: EVIDENCE only
  * - level: PROPERTY_CLAIM only
  * - moduleReferenceId: MODULE (required), AWAY_GOAL (required)
@@ -254,6 +277,7 @@ export interface ExportComment {
  * - modulePublicSummary: MODULE only
  * - citedElementId: AWAY_GOAL only (ADR 0004 D5)
  * - isDefeater, defeatsElementId: any type (dialogical reasoning)
+ * - isPlaceholder, placeholderHint: any type; written only for a placeholder
  * - comments: optional, included when includeComments export option is true
  * - assertionStatus: any type (ADR 0004 D3). Typed optional here (so
  *   existing TreeNode-typed fixtures/consumers elsewhere in the codebase
@@ -263,14 +287,14 @@ export interface ExportComment {
  *   the field, unlike the type-specific fields above.
  */
 export interface TreeNode {
-	assertionStatus?: AssertionStatus;
+	assertionStatus?: AssertionStatus | null;
 	assumption?: string | null;
 	children: TreeNode[];
 	// Element-level citation (ADR 0004 D5) — AWAY_GOAL only
 	citedElementId?: string | null;
 	// Comments (optional - included when export option enabled)
 	comments?: ExportComment[];
-	context?: string[];
+	context?: ContextEntry[];
 	defeatsElementId?: string;
 	description: string;
 	// Pattern metadata (only included when true)
@@ -279,6 +303,8 @@ export interface TreeNode {
 	inSandbox: boolean;
 	// Dialogical reasoning
 	isDefeater?: boolean;
+	// Placeholder metadata (only included when true)
+	isPlaceholder?: boolean;
 	justification?: string | null;
 	level?: number | null;
 	modifiedFromPattern?: boolean;
@@ -287,6 +313,7 @@ export interface TreeNode {
 	// Module fields
 	moduleReferenceId?: string;
 	name: string | null;
+	placeholderHint?: string | null;
 	// Type-specific fields (only included when applicable)
 	role?: ElementRole | null;
 	type: ElementType;
@@ -303,8 +330,7 @@ export const ExportCommentSchema = z
 	})
 	.describe("A comment attached to an element");
 
-// biome-ignore lint/suspicious/noExplicitAny: Required for Zod recursive schema typing
-export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
+export const TreeNodeSchema: z.ZodType<TreeNode> = z.lazy(() =>
 	// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 	z.object({
 		id: z.string().uuid().describe("Unique identifier for the element"),
@@ -320,7 +346,7 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 		role: ElementRoleSchema.nullable().optional(),
 		assumption: z.string().nullable().optional(),
 		justification: z.string().nullable().optional(),
-		context: z.array(z.string()).optional(),
+		context: z.array(ContextEntrySchema).optional(),
 		url: z.string().nullable().optional(),
 		level: z.number().int().nullable().optional(),
 		// Module fields
@@ -343,6 +369,20 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 			.describe(
 				"Whether this element has been modified since being created from a pattern"
 			),
+		// Placeholder metadata (optional - only included when true)
+		isPlaceholder: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe(
+				"Whether the person using the case or pattern writes this element's text"
+			),
+		placeholderHint: z
+			.string()
+			.max(500)
+			.nullable()
+			.optional()
+			.describe("Guidance for whoever fills in a placeholder element"),
 		// Dialogical reasoning
 		isDefeater: z
 			.boolean()
@@ -367,22 +407,84 @@ export const TreeNodeSchema: z.ZodType<any> = z.lazy(() =>
 	})
 );
 
+type TreePath = (string | number)[];
+
+/**
+ * Walks a parsed tree and returns the path of the first node that `findIn`
+ * reports on: `findIn` gives the path inside that node, or null for none.
+ */
+function findPathInTree(
+	node: unknown,
+	path: TreePath,
+	findIn: (node: Record<string, unknown>) => TreePath | null
+): TreePath | null {
+	if (typeof node !== "object" || node === null) {
+		return null;
+	}
+	const inside = findIn(node as Record<string, unknown>);
+	if (inside) {
+		return [...path, ...inside];
+	}
+	const { children } = node as { children?: unknown };
+	if (Array.isArray(children)) {
+		for (const [index, child] of children.entries()) {
+			const found = findPathInTree(child, [...path, "children", index], findIn);
+			if (found) {
+				return found;
+			}
+		}
+	}
+	return null;
+}
+
+/** The path inside a node to its first named context entry, or null when every entry is plain text. */
+function namedContextEntryIn(node: Record<string, unknown>): TreePath | null {
+	const index = Array.isArray(node.context)
+		? node.context.findIndex((entry) => typeof entry !== "string")
+		: -1;
+	return index === -1 ? null : ["context", index];
+}
+
+/** The path inside a node to its placeholder marker or hint, or null when it has neither. */
+function placeholderIn(node: Record<string, unknown>): TreePath | null {
+	if (node.isPlaceholder === true) {
+		return ["isPlaceholder"];
+	}
+	return node.placeholderHint ? ["placeholderHint"] : null;
+}
+
 /**
  * Nested Export format - tree structure for human readability.
  * Evidence appears inline under claims, may be duplicated if multi-linked.
- * Uses version "1.0" as this is the first officially versioned export format
- * (the legacy Django format had no version field).
+ *
+ * Version "1.0" is the first officially versioned export format (the legacy
+ * Django format had no version field); every context entry in it is plain
+ * text. Version "1.1" lets a context entry also be a named entry (which can
+ * be marked as a variable, so that text which mentions it shows its value), lets
+ * element text hold references to named entries, lets the case say it is a
+ * pattern (`case.kind`), and lets an element be a placeholder
+ * (`isPlaceholder`, `placeholderHint`). A 1.0 file is already valid 1.1, so
+ * nothing converts on import; a file that says "1.0" but holds a named entry,
+ * a placeholder or marks the case as a pattern is rejected, because the shape
+ * behind a version string never changes silently. A "1.0" file with
+ * `kind: "CASE"` is accepted: an older reader drops the key and reads the same
+ * ordinary case. Those rules are
+ * checks in this schema only: they have no JSON Schema equivalent, and the
+ * generated file describes the 1.1 shape.
  *
  * ADR 0004 D1: `version` is the format-migration key for the whole case
  * export contract, not just a label. A change to the model this schema
- * describes bumps the literal (e.g. "1.0" -> "2.0", mirrored in
- * CaseExportV2Schema above) and ships an explicit migration; the shape
- * behind a given version string never changes silently underneath it.
+ * describes bumps the version (mirrored in CaseExportV2Schema above) and
+ * ships an explicit migration.
  */
 // biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 export const CaseExportNestedSchema = z
 	.object({
-		version: z.literal("1.0").describe("Schema version identifier"),
+		version: z
+			.enum(["1.0", "1.1"])
+			.describe(
+				'Schema version identifier. "1.1" adds named context entries (which can be variables), references in element text, case.kind and placeholders'
+			),
 		exportedAt: z.string().datetime().describe("ISO 8601 timestamp of export"),
 		// biome-ignore lint/plugin: case-export.ts parses the export/import document shape (and the JSON editor's saved document) — older exports and hand-edited documents carry keys this repo no longer models; they must be dropped silently, not rejected.
 		case: z
@@ -392,11 +494,43 @@ export const CaseExportNestedSchema = z
 					.min(1, "Case name is required")
 					.describe("Name of the assurance case"),
 				description: z.string().describe("Description of the assurance case"),
+				kind: CaseKindSchema.optional(),
 			})
 			.describe("Case metadata"),
 		tree: TreeNodeSchema.describe("Root element of the case tree"),
 	})
-	.describe("Assurance case export in nested tree format (v1.0)");
+	.superRefine((data, ctx) => {
+		if (data.version !== "1.0") {
+			return;
+		}
+		const path = findPathInTree(data.tree, ["tree"], namedContextEntryIn);
+		if (path) {
+			ctx.addIssue({
+				code: "custom",
+				path,
+				message:
+					'A version "1.0" file cannot hold named context entries; set the version to "1.1"',
+			});
+		}
+		const placeholderPath = findPathInTree(data.tree, ["tree"], placeholderIn);
+		if (placeholderPath) {
+			ctx.addIssue({
+				code: "custom",
+				path: placeholderPath,
+				message:
+					'A version "1.0" file cannot hold placeholders; set the version to "1.1"',
+			});
+		}
+		if (data.case.kind === "PATTERN") {
+			ctx.addIssue({
+				code: "custom",
+				path: ["case", "kind"],
+				message:
+					'A version "1.0" file cannot mark the case as a pattern; set the version to "1.1"',
+			});
+		}
+	})
+	.describe("Assurance case export in nested tree format (v1.0 and v1.1)");
 
 export type CaseExportNested = z.infer<typeof CaseExportNestedSchema>;
 

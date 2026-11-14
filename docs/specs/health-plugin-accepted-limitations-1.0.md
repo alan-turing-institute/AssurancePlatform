@@ -2,9 +2,9 @@
 
 - **Status:** Accepted for the 1.0 release
 - **Date:** 2026-07-13
-- **Related:** ADR 0002 (plugin architecture), evidence format v0.1 (`docs/specs/evidence-format-v0.1.md`)
+- **Related:** ADR 0002 (plugin architecture), the technical guide's health plugin page (evidence format 1.1)
 
-The claim/evidence health plugin ships in 1.0 with four known limitations,
+The claim/evidence health plugin ships in 1.0 with fourteen known limitations,
 each accepted deliberately rather than silently carried forward. Each entry
 below states the limitation and the concrete trigger that would make it
 worth revisiting — none of them are blockers for the 1.0 release.
@@ -62,16 +62,127 @@ underlying connection rather than each opening its own. This softens the
 concern considerably — the trigger above still applies for very large
 canvases, but it is no longer a near-term one.
 
-## 4. No settings-management path for automated integrations
+## 4. The evidence log thins only repeated passes
 
-The scoring thresholds and validity window used to compute a claim's health
-score are read per human user (each user can have their own settings), but
-there's no equivalent settings entry point for an automated system acting on
-its own account — such an integration always gets the platform defaults,
-with no way to configure them for itself.
+A nightly job removes passing results that repeat their neighbours exactly
+once they are more than a day old, keeping the first and last of each run,
+one for each hour and both sides of any pause, and leaves a note of each
+removed stretch (the technical guide's health plugin page gives the rule).
+Everything else is kept for as long as its case exists: every fail,
+marginal and could-not-judge result, every result that differed from the
+accepted settings, every result stored while the claim had no accepted
+settings (comparison `undeclared`), every withdrawn result, every change of
+value, and everything from the last day. A check that reports once a
+minute adds about 1,440 records to its claim each day, and a record can
+carry several kilobytes (its member list, provenance and payload), so a
+claim whose pipeline reports a value that changes with every result, or
+that fails for long periods, keeps all of those records and its log keeps
+growing. Removed records are not archived anywhere. Reads are paged, so a
+long log does not slow the evidence tab.
 
-This is a non-issue while only one external pipeline (DARTER) is producing
-evidence, since its evaluating account can simply use the defaults.
+A deployment that must keep every record does not schedule the job; nothing
+else removes records except the case purge described in limitation 1.
 
-**Revisit trigger:** a second automated integration begins sharing a case's
-evidence and needs its own distinct scoring configuration.
+**Revisit trigger:** a deployment where removed results must remain
+available (which would need an archive of them), or claims whose results
+change with every report and whose logs grow large enough to become a
+storage or backup concern.
+
+## 5. The echo shows a pipeline that is behind, not one that misreports
+
+A result carries a copy of the settings' version labels, and TEA compares
+that copy with the accepted settings when the result arrives. The comparison
+catches a pipeline that has not yet picked up an edit. It cannot catch a
+pipeline that copies the declared labels while judging by other rules, because
+the labels are the pipeline's own statement about what it did. Likewise, a
+pipeline can keep the "read at" time of settings fresh by fetching them
+without using them, so the read time is never described as use.
+
+**Revisit trigger:** a requirement that the judging itself, not the pipeline's
+account of it, is verified, for example by re-deriving a verdict from the
+reported value.
+
+## 6. The echo columns are outside the hash chain
+
+The comparison stored with a result (`echo_state`, `echo_differences` and
+`criteria_revision`) is set by the server and is not part of what a record's
+hash covers, like its expiry time. A change to those columns is not detected
+by the chain. They describe how the record compared with the settings of the
+moment, not the evidence itself, so the chain protects the record and who
+stored it, and nothing else.
+
+**Revisit trigger:** any use of the comparison as evidence in its own right,
+rather than as a signal that a pipeline is behind.
+
+## 7. Deleting a claim removes its settings history with it
+
+A claim's settings and their history are removed when the claim is deleted
+for good, as its evidence is, by the same cascade. Within a living claim the
+history is append-only and settings are never deleted, only made inactive.
+After a claim, or a case, is purged, nothing remains to show what settings
+were declared for it.
+
+**Revisit trigger:** the same trigger as limitation 1: a deployment where the
+record of what was declared must outlive the case.
+
+## 8. A status shows the settings declared for a claim to every pipeline that can view the case
+
+A claim's status belongs to the claim, not to a pipeline.
+A pipeline that can view a case can therefore read, through the status routes, the version labels and check settings declared for a claim whose settings were set up for another pipeline on the same case.
+The criteria routes return only the settings whose check came from the calling pipeline's own list.
+The status routes are not filtered in that way.
+The same token can already read the claim's evidence records, which carry the same labels and check settings.
+
+**Revisit trigger:** a case where two pipelines run for different parties and the settings declared for one must not be visible to the other.
+
+## 9. A collapsed claim expands again when the case reloads
+
+Any change to an element makes every open canvas load the case again.
+Loading the case expands claims that were collapsed.
+Adding or rewriting a claim's evidence node is an element change, so it does this too.
+The same happens for every other element change.
+The evidence node does not make it more frequent than ordinary editing.
+
+**Revisit trigger:** the canvas keeping collapse state across a reload.
+
+## 10. Evidence linked to two claims is drawn twice with one id
+
+Evidence can support more than one claim, but only the JSON editor and import can make the second link.
+The canvas then draws two nodes that share one id.
+The evidence node is one such element when it is linked to a second claim that way.
+Only the claim it reports on counts it as live.
+
+**Revisit trigger:** a way to link evidence to a second claim from the canvas, or any report of the duplicate id causing a fault.
+
+## 11. Deleting a claim leaves its evidence in the case
+
+Evidence linked to a claim is not moved to the trash with the claim.
+A claim's evidence node is left as ordinary evidence and is not live while the claim is in the trash.
+Restoring the claim makes it live again.
+
+**Revisit trigger:** a decision about what should happen to evidence when the last claim it supports is deleted.
+
+## 12. Evidence identifiers can repeat
+
+An evidence element's identifier is the number of undeleted evidence elements in the case, plus one, when it is written.
+Deleting evidence and then adding more can give a new element the identifier of an older one.
+A claim's evidence node takes its identifier the same way.
+Elements are referred to by id internally, so nothing is mis-linked, but two elements can read the same.
+
+**Revisit trigger:** a requirement that identifiers are never reused, or an export format that treats them as keys.
+
+## 13. An open JSON editor refuses a save after any change to the case
+
+The JSON editor records the case's last-changed time when it opens and refuses to save once the case has changed, whoever changed it.
+Adding an evidence node changes the case, as does every other element write.
+An editor that was open when an author accepted a check's settings must be reloaded before it can save.
+
+**Revisit trigger:** a merge of the editor's changes with the case, in place of the refusal.
+
+## 14. A result with no expiry keeps its look
+
+A result whose time limit is `indefinite` never goes out of date by the clock.
+If the pipeline stops sending, the claim keeps showing the status of its last result, wherever the status is drawn, until a person revokes that result.
+The evidence node, whose look follows the claim's status, does the same.
+
+**Revisit trigger:** a requirement that a claim must show silence from its pipeline even when its last result never expires.

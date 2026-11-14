@@ -71,3 +71,46 @@ describe("nested-to-flat: nodeToElement carries dialogical reasoning fields", ()
 		expect(rootElement?.defeatsElementId).toBeUndefined();
 	});
 });
+
+describe("nested-to-flat: context entries", () => {
+	it("keeps plain text and named entries in order, and adds legacy context children after them", () => {
+		const named = {
+			id: "k3f9x2m7qa",
+			name: "window",
+			text: "the interval",
+			value: "5 minutes",
+		};
+		const tree = {
+			id: "10000000-0000-4000-8000-000000000004",
+			type: "GOAL",
+			name: "Root Goal",
+			description: "Top-level goal",
+			inSandbox: false,
+			role: "TOP_LEVEL",
+			context: ["plain", named],
+			children: [
+				{
+					id: "10000000-0000-4000-8000-000000000005",
+					type: "CONTEXT",
+					name: "C1",
+					description: "A legacy context element",
+					inSandbox: false,
+					children: [],
+				},
+			],
+		} as TreeNode;
+
+		const flat = flattenNestedToFlat({
+			version: "1.1",
+			exportedAt: new Date().toISOString(),
+			case: { name: "Case", description: "" },
+			tree,
+		});
+
+		expect(flat.elements[0]?.context).toEqual([
+			"plain",
+			named,
+			"A legacy context element",
+		]);
+	});
+});

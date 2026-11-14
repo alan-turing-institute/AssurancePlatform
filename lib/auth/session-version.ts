@@ -19,8 +19,9 @@ export class SessionRevokedError extends Error {
  * Reads `userId`'s current session version — a primary-key lookup of one
  * integer column. Returns `null` if the user no longer exists.
  *
- * Dynamic import, not a top-level one: `lib/auth/config.ts` (this module's
- * only caller) deliberately keeps Prisma out of its module-level imports —
+ * Dynamic import, not a top-level one: `lib/auth/config.ts` (which calls
+ * this on every session read, as does the live-update events route)
+ * deliberately keeps Prisma out of its module-level imports —
  * see its own dynamic imports in `authenticateWithPrisma` and friends — so
  * that importing `authOptions` doesn't drag in a database connection for
  * code paths that never authenticate. A static `import { prisma } from

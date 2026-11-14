@@ -9,6 +9,19 @@ const devAllowedOrigins = process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	output: process.env.NODE_ENV === "development" ? undefined : "standalone",
+	// undici is loaded at run time from node_modules instead of being bundled,
+	// so the address-checking connection in lib/models/guarded-fetch.ts uses the
+	// installed package and the standalone output traces it into its own
+	// node_modules.
+	serverExternalPackages: ["undici"],
+	// Stops `next dev` writing an agent-rules block into AGENTS.md when an AI
+	// agent runs it.
+	agentRules: false,
+	experimental: {
+		// Advisories reach the team through the dependency audit and Dependabot,
+		// so a build run by an AI agent does not exit non-zero on one.
+		agentUpgrade: false,
+	},
 	// Next 16 blocks cross-origin dev requests (HMR, /_next/static chunks) by
 	// default. Set NEXT_DEV_ALLOWED_ORIGINS (comma-separated hosts, no
 	// protocol) when running `next dev` for LAN review; leave it unset for a
@@ -22,12 +35,6 @@ const nextConfig = {
 		remotePatterns: [
 			{
 				protocol: "https",
-				hostname: "stagingteastorageaccount.blob.core.windows.net",
-				port: "",
-				pathname: "**/*",
-			},
-			{
-				protocol: "https",
 				hostname: "teastorageaccount.blob.core.windows.net",
 				port: "",
 				pathname: "**/*",
@@ -38,25 +45,27 @@ const nextConfig = {
 				port: "",
 				pathname: "**/*",
 			},
-			{
-				protocol: "https",
-				hostname: "res.cloudinary.com",
-				port: "",
-				pathname: "**/*",
-			},
-			{
-				protocol: "http",
-				hostname: "tea-backend",
-				port: "8000",
-				pathname: "**/*",
-			},
-			{
-				protocol: "http",
-				hostname: "localhost",
-				port: "8000",
-				pathname: "**/*",
-			},
 		],
+	},
+	// Rules that need nothing from the page's own scripts, sent on every
+	// response: no plug-in content, no base-address changes, forms post only to
+	// this site, and no other site may frame the app. Linking an account in
+	// Settings posts a form to this site that answers with a redirect to the
+	// provider, and browsers check that redirect against form-action, so the
+	// two sign-in providers are listed beside 'self'.
+	async headers() {
+		return [
+			{
+				source: "/:path*",
+				headers: [
+					{
+						key: "Content-Security-Policy",
+						value:
+							"object-src 'none'; base-uri 'self'; form-action 'self' https://github.com https://accounts.google.com; frame-ancestors 'none'",
+					},
+				],
+			},
+		];
 	},
 	// Redirect old /documentation URLs to new /docs URLs
 	async redirects() {

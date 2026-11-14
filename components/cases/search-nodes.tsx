@@ -4,6 +4,10 @@ import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Node } from "reactflow";
 import {
+	plainDescription,
+	searchableDescription,
+} from "@/components/shared/nodes/reference-text-utils";
+import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -29,7 +33,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 			return nodes;
 		}
 		return nodes.filter((node) =>
-			String(node.data.description ?? "")
+			searchableDescription(node.data)
 				.toLowerCase()
 				.includes(value.toLowerCase())
 		);
@@ -83,7 +87,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 							/>
 						</div>
 					</div>
-					<div className="max-h-[320px] overflow-y-auto">
+					<div className="max-h-80 overflow-y-auto">
 						{filteredNodes.map((node) => (
 							<div key={node.id}>
 								<button
@@ -102,7 +106,7 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 											Identifier: {node.data.name}
 										</span>
 										<span className="line-clamp-2 w-full text-sm">
-											{node.data.description as string}
+											{plainDescription(node.data)}
 										</span>
 									</div>
 								</button>

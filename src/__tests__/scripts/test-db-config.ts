@@ -20,8 +20,9 @@ export const INTEGRATION_TEST_WORKER_COUNT = 4;
  * container in docker-compose.local.yml (port 5433, fsync=off — see that
  * file's comment for why the integration suite gets its own Postgres rather
  * than sharing the crash-safe dev one on 5432). CI overrides this via the
- * `INTEGRATION_TEST_ADMIN_DATABASE_URL` env var (build.yaml) to keep
- * pointing at its single, already test-only service container instead.
+ * `INTEGRATION_TEST_ADMIN_DATABASE_URL` env var (the `integration` job in
+ * build.yaml) to keep pointing at its single, already test-only service
+ * container instead.
  */
 export const INTEGRATION_TEST_ADMIN_DATABASE_URL =
 	process.env.INTEGRATION_TEST_ADMIN_DATABASE_URL ??

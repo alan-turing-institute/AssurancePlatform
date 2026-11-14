@@ -70,9 +70,47 @@ describe("sanitize-html", () => {
 
 		it("should handle br tags with attributes", () => {
 			const input = '<p><br class="clear"></p><p>Content</p>';
-			// sanitize-html uses XHTML-style self-closing tags
-			const expected = '<p><br class="clear" /></p><p>Content</p>';
+			// With the class removed the paragraph is a bare empty one, which is dropped
+			const expected = "<p>Content</p>";
 			expect(sanitizeDescription(input)).toBe(expected);
+		});
+
+		it.each([
+			"p",
+			"strong",
+			"em",
+			"u",
+			"s",
+			"ul",
+			"ol",
+			"li",
+			"blockquote",
+			"code",
+			"pre",
+			"h1",
+			"h2",
+			"h3",
+			"h4",
+			"h5",
+			"h6",
+			"div",
+			"span",
+		])("should remove a class from <%s> and keep its text", (tag) => {
+			const input = `<${tag} class="x y">Text</${tag}>`;
+			expect(sanitizeDescription(input)).toBe(`<${tag}>Text</${tag}>`);
+		});
+
+		it("should remove a class from a link and keep its address", () => {
+			const input = '<a class="x" href="https://example.com">Link</a>';
+			expect(sanitizeDescription(input)).toBe(
+				'<a href="https://example.com">Link</a>'
+			);
+		});
+
+		it("should remove a class from a line break", () => {
+			expect(sanitizeDescription('<p>One<br class="x">Two</p>')).toBe(
+				"<p>One<br />Two</p>"
+			);
 		});
 
 		it("should only remove exact match pattern", () => {

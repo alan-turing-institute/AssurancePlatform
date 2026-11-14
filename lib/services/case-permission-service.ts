@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { createCaseInvite } from "@/lib/services/case-invite-service";
+import { sseConnectionManager } from "@/lib/services/sse-connection-manager";
 import type { PermissionLevel } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
@@ -592,6 +593,13 @@ export async function revokeUserPermission(
 			where: { id: permissionId },
 		});
 
+		// Close the user's open streams on the case now if this was their last
+		// route to it, before the caller announces the change to the others
+		await sseConnectionManager.recheckConnections({
+			caseId,
+			userId: existingPermission.userId,
+		});
+
 		return { data: true };
 	} catch (error) {
 		log.error("Failed to revoke permission", { error });
@@ -623,10 +631,25 @@ export async function revokeTeamPermission(
 			return { error: "Permission not found" };
 		}
 
+		// The members who lose a route to the case are read before the delete, so
+		// a failed read cannot report a committed unshare as a failure
+		const members = await prisma.teamMember.findMany({
+			where: { teamId: existingPermission.teamId },
+			select: { userId: true },
+		});
+
 		// Delete permission
 		await prisma.caseTeamPermission.delete({
 			where: { id: permissionId },
 		});
+
+		// Close the open streams on the case of any team member who has no other
+		// route to it, before the caller announces the change to the others
+		await Promise.all(
+			members.map(({ userId: memberId }) =>
+				sseConnectionManager.recheckConnections({ caseId, userId: memberId })
+			)
+		);
 
 		return { data: true };
 	} catch (error) {

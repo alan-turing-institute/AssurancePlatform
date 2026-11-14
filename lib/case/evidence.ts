@@ -6,94 +6,29 @@
 import type {
 	EvidenceResponse,
 	PropertyClaimResponse,
-	StrategyResponse,
 } from "@/lib/services/case-response-types";
+import { type CaseTreeNode, findCaseNode } from "./case-walk";
 
-// Helper function to add evidence to a specific claim
-const addEvidenceToSpecificClaim = (
-	propertyClaim: PropertyClaimResponse,
+/**
+ * Adds evidence to a specified property claim by ID. The claim is looked for
+ * in the given nodes and everywhere beneath them: nested claims, strategies,
+ * and the counter-goals hanging from any of them.
+ */
+export const addEvidenceToClaim = (
+	nodes: readonly CaseTreeNode[],
+	parentId: string,
 	newEvidence: EvidenceResponse
-): void => {
+): boolean => {
+	const propertyClaim = findCaseNode(
+		nodes,
+		parentId
+	) as PropertyClaimResponse | null;
+	if (!propertyClaim) {
+		return false; // Indicates the parent property claim was not found
+	}
 	if (!propertyClaim.evidence) {
 		propertyClaim.evidence = [];
 	}
 	propertyClaim.evidence.push(newEvidence);
-};
-
-// Helper function to search in nested property claims for evidence
-const searchInNestedClaimsForEvidence = (
-	propertyClaims: PropertyClaimResponse[],
-	parentId: string,
-	newEvidence: EvidenceResponse
-): boolean => {
-	const found = addEvidenceToClaim(propertyClaims, parentId, newEvidence);
-	return found;
-};
-
-// Helper function to search in strategies for evidence
-const searchInStrategiesForEvidence = (
-	strategies: StrategyResponse[],
-	parentId: string,
-	newEvidence: EvidenceResponse
-): boolean => {
-	for (const strategy of strategies) {
-		if (strategy.propertyClaims && strategy.propertyClaims.length > 0) {
-			const found = addEvidenceToClaim(
-				strategy.propertyClaims,
-				parentId,
-				newEvidence
-			);
-			if (found) {
-				return true;
-			}
-		}
-	}
-	return false;
-};
-
-/**
- * Adds evidence to a specified property claim by ID.
- */
-export const addEvidenceToClaim = (
-	array: PropertyClaimResponse[],
-	parentId: string,
-	newEvidence: EvidenceResponse
-): boolean => {
-	// Iterate through the property claims array
-	for (const propertyClaim of array) {
-		// Check if this property claim matches the parent ID
-		if (propertyClaim.id === parentId) {
-			addEvidenceToSpecificClaim(propertyClaim, newEvidence);
-			return true; // Indicates the property claim was found and updated
-		}
-
-		// If this property claim has nested property claims, recursively search within them
-		if (
-			propertyClaim.propertyClaims &&
-			propertyClaim.propertyClaims.length > 0
-		) {
-			const found = searchInNestedClaimsForEvidence(
-				propertyClaim.propertyClaims,
-				parentId,
-				newEvidence
-			);
-			if (found) {
-				return true; // Indicates the property claim was found and updated within nested property claims
-			}
-		}
-
-		// If this property claim has strategies, recursively search within them
-		if (propertyClaim.strategies && propertyClaim.strategies.length > 0) {
-			const found = searchInStrategiesForEvidence(
-				propertyClaim.strategies,
-				parentId,
-				newEvidence
-			);
-			if (found) {
-				return true; // Indicates the property claim was found and updated within nested property claims of strategy
-			}
-		}
-	}
-
-	return false; // Indicates the parent property claim was not found
+	return true; // Indicates the property claim was found and updated
 };

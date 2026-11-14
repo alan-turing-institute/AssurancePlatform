@@ -12,27 +12,24 @@ import { rotateToken } from "@/lib/services/integration-registry-service";
 /**
  * POST /api/integrations/[id]/tokens/[tokenId]/rotate
  *
- * Issues a replacement token and brings the old token's expiry forward to
- * a short overlap window (both authenticate during it — see
- * `TOKEN_ROTATION_OVERLAP_MS` in `integration-registry-service.ts`). The
- * new plaintext secret is returned EXACTLY ONCE, here. Owner-only —
- * ownership rides the token's OWN integration, not the path `[id]`. The
- * path `[id]` IS still checked, though, for a different reason: a `tokenId`
- * that exists and is owned by the caller but actually belongs to a
- * DIFFERENT integration the caller also owns is rejected with the exact
- * same generic 404 as a nonexistent `tokenId` (deviation-5 fix, work item
- * 2 — no enumeration oracle, and no cross-integration token operations via
- * a mismatched path).
+ * Issues a replacement token and moves the old token's expiry to 24 hours from
+ * now, or leaves it where it is if it already expires sooner.
+ * Both tokens work during that overlap, so the client can switch without a
+ * break.
+ * The new secret is returned once, in this response.
+ * The integration in the path must be the one the token belongs to; otherwise
+ * the answer is the same 404 as for a token that does not exist.
+ * Only the owner can rotate a token.
  *
- * @description Refuses a token that is already revoked, or whose
- * integration isn't ACTIVE.
- * @pathParam id - Integration ID (UUID) — checked against the token's OWN integration; a mismatch is a 404 identical to a nonexistent tokenId
+ * @description Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked token, or a token of an integration that is not active, is refused with 409.
+ * @pathParam id - Integration ID (UUID), which must be the integration the token belongs to
  * @pathParam tokenId - Token ID (UUID)
  * @response 200 - `{ secret, token: { id, tokenPrefix, createdAt, expiresAt }, oldTokenId, overlapUntil }`
  * @response 400 - Validation error
  * @response 401 - Unauthorised
- * @response 404 - Token not found (covers non-existent, not-owned, and belonging to a different integration than the path — same message)
- * @response 409 - The token is already revoked, or its integration isn't ACTIVE
+ * @response 404 - Token not found (covers non-existent, not-owned, and belonging to a different integration than the path, with the same message)
+ * @response 409 - The token is already revoked, or its integration is not active
+ * @add 404,409
  * @auth SessionAuth
  * @tag Integrations
  */

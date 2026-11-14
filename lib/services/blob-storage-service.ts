@@ -2,7 +2,8 @@
  * Azure Blob Storage service for handling file uploads.
  *
  * Provides secure upload functionality using environment-configured credentials.
- * Falls back to local file storage in development when Azure is not configured.
+ * Falls back to local file storage in development or with USE_LOCAL_STORAGE=true
+ * when Azure is not configured.
  *
  * Environment variables required for production:
  * - AZURE_STORAGE_ACCOUNT_NAME: The storage account name (e.g., 'teastorageaccount')
@@ -58,6 +59,14 @@ export function isAzureStorageConfigured(): boolean {
 	return !!(
 		process.env.AZURE_STORAGE_ACCOUNT_NAME &&
 		process.env.AZURE_STORAGE_ACCOUNT_KEY
+	);
+}
+
+/** Whether local uploads are enabled when Azure is not configured. */
+export function isLocalStorageEnabled(): boolean {
+	return (
+		process.env.NODE_ENV === "development" ||
+		process.env.USE_LOCAL_STORAGE === "true"
 	);
 }
 
@@ -118,7 +127,8 @@ export function uploadToLocalStorage(
 
 /**
  * Uploads a buffer to Azure Blob Storage.
- * Falls back to local storage in development when Azure is not configured.
+ * Falls back to local storage in development or with USE_LOCAL_STORAGE=true
+ * when Azure is not configured.
  *
  * @param buffer - The file data as a Buffer
  * @param blobPath - The path within the container (e.g., 'images/screenshot.png') — also the storage key returned on success
@@ -139,8 +149,8 @@ export async function uploadToBlob(
 	}
 
 	// Fall back to local storage when Azure isn't configured
-	if (process.env.NODE_ENV === "development") {
-		log.info("Dev Azure Blob Storage not configured, using local file storage");
+	if (isLocalStorageEnabled()) {
+		log.info("Azure Blob Storage not configured, using local file storage");
 		const localResult = uploadToLocalStorage(buffer, blobPath);
 		if (!localResult.success) {
 			return { error: localResult.error };

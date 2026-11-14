@@ -11,6 +11,8 @@ describe("scopes", () => {
 	it("locks the exact v1 scope vocabulary", () => {
 		expect(SCOPES).toEqual([
 			"case:read",
+			"health:checks:write",
+			"health:criteria:read",
 			"health:evidence:read",
 			"health:evidence:write",
 		]);

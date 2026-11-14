@@ -10,6 +10,7 @@ import {
 	createNestedCaseWithChainJSON,
 	createTestCase,
 	createTestElement,
+	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
 
@@ -278,6 +279,61 @@ describe("importCase", () => {
 		});
 		expect(links).toHaveLength(0);
 	});
+
+	describe("element and case ids", () => {
+		const fileElementIds = [
+			"10000000-0000-4000-8000-000000000001",
+			"10000000-0000-4000-8000-000000000002",
+			"10000000-0000-4000-8000-000000000003",
+			"10000000-0000-4000-8000-000000000004",
+		];
+
+		it("gives the case and every element new ids by default", async () => {
+			const user = await createTestUser();
+			const { importCase } = await import("@/lib/services/case-import-service");
+
+			const data = expectSuccess(
+				await importCase(user.id, createNestedCaseWithChainJSON())
+			);
+
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId: data.caseId },
+			});
+			expect(elements).toHaveLength(fileElementIds.length);
+			for (const element of elements) {
+				expect(fileElementIds).not.toContain(element.id);
+			}
+		});
+
+		it("keeps the file's element ids and uses the given case id when fixedIds is set", async () => {
+			const user = await createTestUser();
+			const { importCase } = await import("@/lib/services/case-import-service");
+			const caseId = crypto.randomUUID();
+
+			const data = expectSuccess(
+				await importCase(user.id, createNestedCaseWithChainJSON(), {
+					fixedIds: { caseId },
+				})
+			);
+
+			expect(data.caseId).toBe(caseId);
+			const elements = await prisma.assuranceElement.findMany({
+				where: { caseId },
+			});
+			expect(elements.map((element) => element.id).sort()).toEqual(
+				fileElementIds
+			);
+			const strategy = elements.find((e) => e.elementType === "STRATEGY");
+			const claim = elements.find((e) => e.elementType === "PROPERTY_CLAIM");
+			expect(claim?.parentId).toBe(strategy?.id);
+			const links = await prisma.evidenceLink.findMany({
+				where: { claimId: claim?.id },
+			});
+			expect(links.map((link) => link.evidenceId)).toEqual([
+				"10000000-0000-4000-8000-000000000004",
+			]);
+		});
+	});
 });
 
 // ============================================
@@ -425,6 +481,7 @@ describe("validateImportData", () => {
 		expect(exportedAwayGoal?.citedElementId).toBe(citedGoal.id);
 
 		const importer = await createTestUser();
+		await createTestPermission(awayCase.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, firstExport));
 
 		// Direct DB check — proves the createMany write itself carries the
@@ -602,6 +659,7 @@ describe("validateImportData", () => {
 
 		try {
 			const importer = await createTestUser();
+			await createTestPermission(awayCase.id, importer.id, owner.id);
 			const imported = expectSuccess(await importCase(importer.id, json));
 
 			// The import SUCCEEDED — not rolled back by the raced FK violation —
@@ -882,6 +940,8 @@ describe("validateImportData", () => {
 
 		const { importCase } = await import("@/lib/services/case-import-service");
 		const importer = await createTestUser();
+		await createTestPermission(caseA.id, importer.id, owner.id);
+		await createTestPermission(caseB.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, json));
 
 		expect(imported.elementCount).toBe(2);
@@ -962,6 +1022,7 @@ describe("validateImportData", () => {
 
 		const { importCase } = await import("@/lib/services/case-import-service");
 		const importer = await createTestUser();
+		await createTestPermission(awayCase.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, json));
 
 		expect(imported.elementCount).toBe(2);
@@ -1070,6 +1131,7 @@ describe("validateImportData", () => {
 		expect(exportedAwayGoal?.moduleReferenceId).toBe(awayCase.id);
 
 		const importer = await createTestUser();
+		await createTestPermission(awayCase.id, importer.id, owner.id);
 		const imported = expectSuccess(await importCase(importer.id, firstExport));
 
 		// Direct DB check — proves the createMany write itself carries the

@@ -40,6 +40,7 @@ export type ThemeVariable =
 	| "--sidebar-border"
 	| "--sidebar-ring"
 	| "--sidebar-muted"
+	| "--node-drawn-foreground"
 	| "--radius"
 	| "--font-sans"
 	| "--font-serif"

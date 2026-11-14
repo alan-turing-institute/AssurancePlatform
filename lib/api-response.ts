@@ -11,6 +11,7 @@ import {
 	notFound,
 	payloadTooLarge,
 	unauthorised,
+	unprocessable,
 	validationError,
 } from "./errors";
 
@@ -46,6 +47,22 @@ export function apiErrorFromUnknown(
 /** Create a JSON success response. */
 export function apiSuccess<T>(data: T, status = 200): NextResponse<T> {
 	return NextResponse.json(data, { status });
+}
+
+/**
+ * The 400 answer for an import file that failed validation. The "path:
+ * message" strings reach the client as their own top-level array, because the
+ * import dialog reads `validationErrors` specifically; the shared envelope
+ * carries only `fieldErrors`, a record of strings, which cannot hold a list.
+ */
+export function apiImportValidationError(
+	error: string,
+	validationErrors: string[]
+): NextResponse {
+	return NextResponse.json(
+		{ error, code: "VALIDATION", validationErrors },
+		{ status: 400 }
+	);
 }
 
 /**
@@ -112,10 +129,71 @@ const ERROR_MAPPINGS: Array<{
 	pattern: ErrorPattern;
 	factory: () => AppError;
 }> = [
+	// `health-evidence-service.ts`'s bound-check refusal: the request is
+	// well-formed but names a check other than the one the claim is bound to
+	// (422). Anchored and listed first because the message embeds a
+	// producer-supplied check name, which must not be able to trigger any of
+	// the substring patterns below.
+	{
+		pattern: /^This claim is bound to check /,
+		factory: () => unprocessable(""),
+	},
+	// `context-entry-rules.ts` and `lib/schemas/context-entry.ts`: a named
+	// context entry that breaks a rule (a repeated name or id) is a validation
+	// failure (400). Anchored and listed before the substring patterns below
+	// because the message embeds an author-chosen name.
+	{ pattern: /^Context entry /, factory: () => validationError("") },
 	{ pattern: "Permission denied", factory: () => forbidden() },
 	{ pattern: "unauthorised", factory: () => unauthorised() },
 	{ pattern: "not found", factory: () => notFound() },
 	{ pattern: "already", factory: conflict },
+	// `health-evidence-service.ts`'s `reinstateHealthEvidence`: reinstating a
+	// record that has no open revocation is a state conflict, like revoking
+	// one twice ("already revoked" above).
+	{ pattern: /^This record is not revoked$/, factory: conflict },
+	// `health-evidence-service.ts`'s `changeBoundCheck`: while a claim has
+	// accepted evidence settings, its check is set there, so changing the
+	// binding by hand is a state conflict (409).
+	{
+		pattern: /^This claim's check is set in its evidence settings$/,
+		factory: conflict,
+	},
+	// `health-criteria-service.ts`: saving accepted settings as a suggestion,
+	// and stopping the use of settings that are already inactive, are state
+	// conflicts (409).
+	{
+		pattern: /^Accepted settings cannot be saved as a suggestion$/,
+		factory: conflict,
+	},
+	{ pattern: /^These settings are already inactive$/, factory: conflict },
+	// `health-criteria-service.ts`'s `saveCriteria`: a save made from settings
+	// that were replaced since the form read them is a state conflict (409).
+	{
+		pattern: /^These settings were changed by someone else$/,
+		factory: conflict,
+	},
+	// `health-criteria-service.ts`: adding an evidence node to settings that are
+	// not accepted, or to a claim that already has a live node, is a state
+	// conflict (409). So is any failure that means another change to the case
+	// got in first (a deadlock or write conflict, or a record that went missing
+	// before it could be locked): the person is told to try again.
+	{ pattern: /^These settings are not accepted$/, factory: conflict },
+	{
+		pattern: /^This claim already has a live evidence node$/,
+		factory: conflict,
+	},
+	{
+		pattern: /^The case changed while you were saving\. Try again\.$/,
+		factory: conflict,
+	},
+	// `publish-service.ts`'s `publishAssuranceCase` and `updatePublishedCase`:
+	// a conversion between a case and a pattern committed while a publish or
+	// republish was being written, or (for a republish) the case was
+	// unpublished in that window, so nothing was written (409).
+	{
+		pattern: /^The case changed while it was being published\. Try again\.$/,
+		factory: conflict,
+	},
 	// `file-storage-service.ts`'s `validateFile` — a declared MIME type
 	// outside the allowed set, or one whose content signature doesn't match
 	// what was declared (AP-QA-007), is a validation failure (400), not the
@@ -139,6 +217,12 @@ const ERROR_MAPPINGS: Array<{
 	// error that happens to contain that phrase for a different reason isn't
 	// misclassified as a plugin-disabled 403.
 	{ pattern: /^Plugin '.+' is not enabled$/, factory: () => forbidden() },
+	// `assertModelPluginEnabled` (`plugin-enablement-service.ts`): none of the
+	// plugins that use models is on for the user — the same refusal (403).
+	{
+		pattern: /^No plugin that uses models is enabled$/,
+		factory: () => forbidden(),
+	},
 	// `integration-registry-service.ts` / `lib/schemas/integration.ts`
 	// (integration management API, work item 7): an unknown scope is a
 	// validation failure (400), not an unmapped 500.
@@ -165,13 +249,31 @@ const ERROR_MAPPINGS: Array<{
 	// `element-service.ts`'s `rejectModuleReferenceIdIfNotApplicable` /
 	// `rejectMissingModuleReferenceId` / `validateModuleReferenceId`: a bad
 	// `moduleReferenceId` (wrong element type, missing on a required type,
-	// nonexistent target case) is a validation failure (400), not a 500.
+	// target case that is missing, in the bin or not viewable by the editor)
+	// is a validation failure (400), not a 500.
 	{ pattern: /^moduleReferenceId /, factory: () => validationError("") },
 	// `element-service.ts`'s `validateDefeatsElementId`: a bad
 	// `defeatsElementId` (cross-case, nonexistent, soft-deleted, or
 	// self-reference target) is a validation failure (400), not a 500 —
 	// same shape as citedElementId/moduleReferenceId above.
 	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
+	// `element-service.ts`'s goal rules, on create, update and the batch editor:
+	// a goal defeater without a `parentId` would be a second root goal — a
+	// validation failure (400), not a 500.
+	{ pattern: /^parentId /, factory: () => validationError("") },
+	// A second ordinary goal in a case is a rule refusal (422), not a 500. It is
+	// not a 409: that code on the batch endpoint means another person changed
+	// the case, and the JSON editor reads it that way.
+	{
+		pattern: /^A case can only have one goal claim$/,
+		factory: () => unprocessable(""),
+	},
+	// `case-batch-update-service.ts`: a batch that updates an element twice, or
+	// updates and deletes it, is a validation failure (400), not a 500.
+	{
+		pattern: /^A batch can change an element only once/,
+		factory: () => validationError(""),
+	},
 	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
 	// element-name prefix validation): a name that doesn't match its type's
 	// registered prefix format is a validation failure (400), not a 500.
@@ -230,6 +332,24 @@ const ERROR_MAPPINGS: Array<{
 	// `/uploads/...`/blob address, or an `http://` address) is a validation
 	// failure (400), not a 500.
 	{ pattern: /^featureImageUrl must be/, factory: () => validationError("") },
+	// `publish-service.ts`'s `publishAssuranceCase` and `updatePublishedCase`:
+	// a case with placeholders left in its argument, or variables with no
+	// value mentioned in it, is refused with the numbers still to fill in — a
+	// validation failure (400), as for incomplete case information, not a 500.
+	// The message is either count or both, "2 elements still to fill in; 1
+	// variable with no value".
+	{
+		pattern:
+			/^\d+ elements? still to fill in(; \d+ variables? with no value)?$|^\d+ variables? with no value$/,
+		factory: () => validationError(""),
+	},
+	// `password-reset-service.ts`'s `resetPassword` and `validateResetToken`: a
+	// reset link that is used, expired or unknown gets this one message, so
+	// nobody can tell which links exist — a validation failure (400), not a 500.
+	{
+		pattern: /^Invalid or expired reset token$/,
+		factory: () => validationError(""),
+	},
 ];
 
 /**
@@ -249,4 +369,19 @@ export function serviceErrorToAppError(error: string): AppError {
 	}
 
 	return new AppError({ code: "INTERNAL", message: error });
+}
+
+/**
+ * The answer for a case import that failed. A file that failed validation gets
+ * the list of validation messages (`apiImportValidationError`); any other
+ * failure is mapped from its service error message.
+ */
+export function apiImportFailure(failure: {
+	error: string;
+	validationErrors?: string[];
+}): NextResponse {
+	if (failure.validationErrors?.length) {
+		return apiImportValidationError(failure.error, failure.validationErrors);
+	}
+	return apiError(serviceErrorToAppError(failure.error));
 }

@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
 import { JSON_BODY_LIMITS, readJsonBody } from "@/lib/api-request";
 import {
 	apiError,
 	apiErrorFromUnknown,
+	apiImportValidationError,
 	apiSuccess,
 	requireAuth,
 } from "@/lib/api-response";
@@ -13,12 +13,15 @@ import { importCase } from "@/lib/services/case-import-service";
  * Import an assurance case from JSON
  *
  * @description Imports a case from JSON data. Accepts v1 (legacy Django),
- * v2 (flat format), and nested (v1.0) formats. Creates a new case with
+ * v2 (flat format), and nested (v1.0 and v1.1) formats. Creates a new case with
  * all elements and evidence links.
+ * A goal defeater (counter-goal) needs a parent in the file and a case has one
+ * ordinary goal; a file that breaks either is refused. Anything but a goal
+ * defeater found beneath evidence is left out and named in `warnings`.
  *
  * @body JSON case data in any supported format
  * @response 200 - { id, name, elementCount, evidenceLinkCount, warnings }
- * @response 400 - Validation errors
+ * @response 400 - Validation errors (including a goal defeater without a parent and a second ordinary goal)
  * @response 401 - Unauthorised
  * @response 413 - Payload too large
  * @auth bearer
@@ -30,7 +33,7 @@ export async function POST(request: Request) {
 
 		// The body is a whole case document whose format is detected by the
 		// import service itself (`importCase` -> `validateImportData`), not
-		// by a zod schema here — the accepted shapes (v1, v2, nested v1.0)
+		// by a zod schema here — the accepted shapes (v1, v2, nested v1.0 and v1.1)
 		// vary too much for one schema to usefully bound, so this is the one
 		// sanctioned schema-less body read (Design §4). Still size-capped,
 		// at the larger `caseImport` limit rather than the 1 MiB default.
@@ -41,27 +44,8 @@ export async function POST(request: Request) {
 		const result = await importCase(userId, jsonData);
 
 		if ("error" in result) {
-			// `validationErrors` (already formatted "path: message" strings —
-			// see `case-import-service.ts`'s `processImportData`) needs to
-			// reach the client as its own top-level array: the shared
-			// `apiError`/`AppError` envelope only carries `fieldErrors`, a
-			// `Record<string, string>`, and the import dialog's own error
-			// parsing (`extractErrorMessage`, `use-case-import.ts`) reads
-			// `data.validationErrors` specifically. Stuffing the array into
-			// `fieldErrors` as a JSON string left it invisible to the dialog,
-			// which fell back to the generic "Invalid import data" message
-			// instead of naming the offending field (walkthrough finding 16).
-			// A bespoke envelope for this one error shape only — the error
-			// envelope, not the documented API contract.
 			if (result.validationErrors && result.validationErrors.length > 0) {
-				return NextResponse.json(
-					{
-						error: result.error,
-						code: "VALIDATION",
-						validationErrors: result.validationErrors,
-					},
-					{ status: 400 }
-				);
+				return apiImportValidationError(result.error, result.validationErrors);
 			}
 			return apiError(validationError(result.error));
 		}

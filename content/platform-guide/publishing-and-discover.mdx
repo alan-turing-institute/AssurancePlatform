@@ -1,23 +1,41 @@
 ---
 title: "Publishing and Discover"
-description: "Publish a frozen assurance case snapshot, update it and remove its public listing."
+description: "Publish a frozen snapshot of an assurance case or a pattern, update it and remove its public listing."
 ---
 
-Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public Discover page at `/discover` lists published cases. A visitor can open a case's public page by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
+Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public [Discover page](/discover) lists published cases and published patterns. A visitor can open a published case or pattern by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
 
 The same frozen snapshot is also available without sign-in as JSON at `/api/public/discover/<slug>`. Review all case and plugin data included in the export before publishing.
 
 ## Prepare the case
 
-Open the case at `/case/<caseId>` and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
+Open the case and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
 
-When the information is complete, choose **Publish**. The platform exports the case tree and freezes it in a `PublishedAssuranceCase` record. That record includes the case's argument and evidence links, plus Case Information and any plugin data present on the case. The public page presents the snapshot's title, descriptive information and a download of its full JSON content. Internal collaboration comments are excluded from the public snapshot. Review the case content and its attached data before publishing, since a public visitor can download the snapshot.
+A case with elements still to fill in cannot be published either.
+An element marked **To fill in** on the diagram is a placeholder that nobody has written yet, for example one that came from a [pattern](/docs/platform-guide/templates).
+The status dialog says how many there are ("3 elements still to fill in") and offers no Publish button until you have written them.
+Only the argument that would be published is counted: an element detached into the sandbox is left out, and a piece of evidence shown under several claims counts once.
+The platform refuses the request with the same message if it arrives another way.
+A pattern is not held back by its own placeholders.
+
+A case also cannot be published while the text of its argument mentions a [variable](/docs/platform-guide/building-a-case) that has no value.
+On the diagram such a mention shows the variable's name in square brackets, such as `[system]`.
+The status dialog says how many variables there are ("1 variable with no value"), beside the count of elements still to fill in when there are both, and the platform refuses the request with the same message if it arrives another way.
+A variable counts once however often it is mentioned.
+A variable that nothing mentions, or that is out of reach of the text that mentions it, is not counted.
+A pattern can be published with variables that have no value.
+
+When the information is complete and nothing is left to fill in, choose **Publish**. The platform exports the case tree and freezes it in a `PublishedAssuranceCase` record. That record includes the case's argument and evidence links, plus Case Information and any plugin data present on the case. The public page presents the snapshot's title, descriptive information and a download of its full JSON content. Internal collaboration comments are excluded from the public snapshot. Review the case content and its attached data before publishing, since a public visitor can download the snapshot.
+
+An evidence node that the health plugin added under a claim is published as ordinary evidence.
+Its text names the check and the pipeline that runs it, and the snapshot carries no results and no health data.
+Accepting a check's settings with a node changes the argument, so the case then shows as changed since publication.
 
 ## Public links and later changes
 
 The first publication makes a slug from the case name: lower case letters and digits, with other characters collapsed to hyphens. If another current public case uses that slug, the platform appends a number. The public page is at `/discover/<slug>`. Republishing a case while it remains published keeps the same slug, even if you rename the working case.
 
-Editing the working case does not silently replace the public record. The status control indicates when the working case has changed since publication. Open it and choose **Update published version** to make a new frozen snapshot. That action runs the same Case Information completeness check as the first publication. The previous snapshot is retired from the current Discover listing; the new one becomes the current public version at the same slug.
+Editing the working case does not silently replace the public record. The status control indicates when the working case has changed since publication. Open it and choose **Update published version** to make a new frozen snapshot. That action runs the same Case Information completeness check as the first publication, and the same checks for elements still to fill in and variables with no value. The previous snapshot is retired from the current Discover listing; the new one becomes the current public version at the same slug.
 
 ## Unpublish
 
@@ -32,7 +50,45 @@ An archived copy survives the case being permanently deleted from Trash; its own
 A case in Trash cannot be published or republished.
 Deleting an account archives the Discover copies of the deleted person's cases that move to Trash in the same way; a case kept under another Admin stays published as before.
 
-Publishing does not grant visitors edit rights, copy private comments into the snapshot or create a live mirror of future changes. Sharing the working case with a colleague is a separate permission action. Discover currently lists assurance cases; it does not list argument patterns as a separate public resource.
+Publishing does not grant visitors edit rights, copy private comments into the snapshot or create a live mirror of future changes. Sharing the working case with a colleague is a separate permission action.
+
+## Cases and patterns on Discover
+
+A pattern is published in the same way as a case.
+Open it in the editor, select its status control and choose **Publish**.
+The same checks apply, including the description, authors and sector in Case Information.
+A pattern may still hold elements to fill in and variables with no value, which a case may not.
+The slug, **Update published version**, **Unpublish**, Trash and archived copies work as they do for a case.
+The platform records that the public copy was published from a pattern, and keeps that through every update.
+
+Discover lists published cases and published patterns together.
+Each card and each page carries a badge: **Worked example** for a case and **Reusable template** for a pattern.
+The **Filter by type** list, beside the sector filter, shows **All types**, **Cases** only or **Patterns** only.
+The page of a published pattern can be used to start a new case, as described in [Use a published pattern](#use-a-published-pattern).
+
+The public API names the type.
+In the JSON at `/api/public/discover/<slug>`, `type` is `ARGUMENT_PATTERN` for a published pattern and `ASSURANCE_CASE` for a published case.
+The `content` of a pattern's snapshot records `"kind": "PATTERN"` on its `case` object, as an export of a pattern does.
+
+## Use a published pattern
+
+The page of a published pattern shows **Use this pattern** beside **Download JSON**.
+The page of a published case shows only the download.
+An archived pattern, marked "Archived" on its page, can be used in the same way.
+
+If the pattern has variables, its page lists them under **Variables**, each with what it means and, where the pattern gives one, its default value.
+The list comes from the published snapshot, so visitors who are not signed in see it too.
+The dialog does not ask for values; the new case takes the pattern's own, and you change one afterwards on the element that defines it; see [Values in a case started from a pattern](/docs/platform-guide/templates#values-in-a-case-started-from-a-pattern).
+
+When you are signed in, **Use this pattern** opens **Create New Assurance Case** with **A pattern** chosen under **Start from** and this pattern selected.
+Enter a **Name** and **Description**, then choose **Submit**.
+The platform makes a new case that belongs to you and opens it in the editor.
+The case is a copy of the pattern's published snapshot, without its comments.
+If you can also view the pattern itself, for example because you own it or it is shared with you, the copy is of the pattern as it is now, which can differ from the published snapshot.
+You can pick a different pattern, or a different start, in the dialog before you submit.
+
+When you are not signed in, **Use this pattern** takes you to the sign-in page and brings you back to the same page afterwards, with the dialog open.
+Returning opens the dialog only; no case is created until you submit it.
 
 ## Where this lives in the code
 

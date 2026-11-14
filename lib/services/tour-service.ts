@@ -6,20 +6,17 @@
  */
 
 import { logger } from "@/lib/logger";
+import { TOUR_IDS, type TourId } from "@/lib/tours";
 
 const log = logger.child({ component: "tour-service" });
-
-const KNOWN_TOUR_IDS = ["dashboard", "case-canvas", "demo-case"] as const;
-
-type KnownTourId = (typeof KNOWN_TOUR_IDS)[number];
 
 export type TourServiceResult = { data: string[] } | { error: string };
 
 /**
  * Validates that a tour ID is one of the known tour identifiers.
  */
-export function isKnownTourId(tourId: string): tourId is KnownTourId {
-	return KNOWN_TOUR_IDS.includes(tourId as KnownTourId);
+export function isKnownTourId(tourId: string): tourId is TourId {
+	return TOUR_IDS.includes(tourId as TourId);
 }
 
 /**

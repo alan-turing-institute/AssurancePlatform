@@ -6,9 +6,11 @@ import { UPLOADS_DIR } from "@/lib/services/blob-storage-service";
 import { readMedia } from "@/lib/services/file-storage-service";
 import { setPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
 import {
+	archivePublishedCopies,
 	getFullPublishStatus,
 	getPublishStatus,
 	publishAssuranceCase,
+	removePublishedCopies,
 	transitionStatus,
 	unpublishAssuranceCase,
 	updatePublishedCase,
@@ -400,7 +402,13 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		await createTestPluginData(testCase.id, {
 			pluginId: "tea.health",
 			elementId: claim.id,
-			data: { score: 1, lastEvaluatedAt: null, validityWindowSeconds: 86_400 },
+			data: {
+				verdict: "pass",
+				record_id: "record-1",
+				timestamp: null,
+				expires_at: null,
+				bound_check: "Check A",
+			},
 		});
 
 		const data = expectSuccess(
@@ -418,9 +426,11 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 				{
 					elementId: claim.id,
 					data: {
-						score: 1,
-						lastEvaluatedAt: null,
-						validityWindowSeconds: 86_400,
+						verdict: "pass",
+						record_id: "record-1",
+						timestamp: null,
+						expires_at: null,
+						bound_check: "Check A",
 					},
 				},
 			],
@@ -453,7 +463,13 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 		await createTestPluginData(testCase.id, {
 			pluginId: "tea.health",
 			elementId: claim.id,
-			data: { score: 0.5, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+			data: {
+				verdict: "marginal",
+				record_id: "record-1",
+				timestamp: null,
+				expires_at: null,
+				bound_check: "Check A",
+			},
 		});
 		expectSuccess(
 			await setPluginEnabledForUser("tea.health", owner.id, { enabled: false })
@@ -474,9 +490,11 @@ describe("publishAssuranceCase — snapshot pluginData capture", () => {
 				{
 					elementId: claim.id,
 					data: {
-						score: 0.5,
-						lastEvaluatedAt: null,
-						validityWindowSeconds: 60,
+						verdict: "marginal",
+						record_id: "record-1",
+						timestamp: null,
+						expires_at: null,
+						bound_check: "Check A",
 					},
 				},
 			],
@@ -521,7 +539,13 @@ describe("updatePublishedCase — snapshot pluginData capture", () => {
 		const dataRow = await createTestPluginData(testCase.id, {
 			pluginId: "tea.health",
 			elementId: claim.id,
-			data: { score: 0, lastEvaluatedAt: null, validityWindowSeconds: 60 },
+			data: {
+				verdict: "fail",
+				record_id: "record-1",
+				timestamp: null,
+				expires_at: null,
+				bound_check: "Check A",
+			},
 		});
 
 		const updated = expectSuccess(
@@ -1132,5 +1156,203 @@ describe("unpublishAssuranceCase — feature-image copy clean-up", () => {
 		expect(await readMedia(copiedKey)).toBeNull();
 		// The live key is a different concern — untouched by unpublishing.
 		expect(await readMedia(liveKey)).not.toBeNull();
+	});
+});
+
+// ============================================
+// The published type follows the case's kind
+// ============================================
+
+const KIND_AND_TYPE = [
+	["CASE", "ASSURANCE_CASE"],
+	["PATTERN", "ARGUMENT_PATTERN"],
+] as const;
+
+const CASE_CHANGED_MESSAGE =
+	"The case changed while it was being published. Try again.";
+
+describe.each(
+	KIND_AND_TYPE
+)("publishing a case of kind %s", (kind, expectedType) => {
+	it(`creates a row of type ${expectedType}`, async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id, { kind });
+		await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Top-level goal",
+			role: "TOP_LEVEL",
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: data.publishedId },
+		});
+		expect(row.type).toBe(expectedType);
+		expect(row.isCurrent).toBe(true);
+	});
+
+	it(`keeps the type ${expectedType} on every republish`, async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id, { kind });
+		await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Top-level goal",
+			role: "TOP_LEVEL",
+		});
+		expectSuccess(await publishAssuranceCase(owner.id, testCase.id));
+
+		expectSuccess(await updatePublishedCase(owner.id, testCase.id));
+		expectSuccess(await updatePublishedCase(owner.id, testCase.id));
+
+		const rows = await prisma.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(rows).toHaveLength(3);
+		expect(rows.map((row) => row.type)).toEqual([
+			expectedType,
+			expectedType,
+			expectedType,
+		]);
+		expect(rows.filter((row) => row.isCurrent)).toHaveLength(1);
+	});
+
+	it(`keeps the type ${expectedType} on the copy kept when the case is archived`, async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id, { kind });
+		await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "Top-level goal",
+			role: "TOP_LEVEL",
+		});
+		expectSuccess(await publishAssuranceCase(owner.id, testCase.id));
+		expectSuccess(await updatePublishedCase(owner.id, testCase.id));
+
+		await prisma.$transaction((tx) =>
+			archivePublishedCopies(tx, [testCase.id], owner.id)
+		);
+
+		const rows = await prisma.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.type).toBe(expectedType);
+		expect(rows[0]?.archivedAt).not.toBeNull();
+	});
+});
+
+describe("publishing a pattern — the snapshot", () => {
+	it("carries the case kind, so the public copy is known to be a pattern", async () => {
+		const owner = await createTestUser();
+		const pattern = await createTestCase(owner.id, { kind: "PATTERN" });
+		await createTestElement(pattern.id, owner.id, {
+			elementType: "GOAL",
+			name: "Top-level goal",
+			role: "TOP_LEVEL",
+		});
+
+		const data = expectSuccess(
+			await publishAssuranceCase(owner.id, pattern.id)
+		);
+
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: data.publishedId },
+		});
+		const content = row.content as { case?: { kind?: string } };
+		expect(content.case?.kind).toBe("PATTERN");
+	});
+});
+
+describe("updatePublishedCase — refused when the case changed while it was being published", () => {
+	it("writes nothing when the case was converted to the other kind after the snapshot was composed", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Converted Mid");
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, testCase.id)
+		);
+
+		const holder = await holdRowLock(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: testCase.id },
+				data: { kind: "PATTERN" },
+			});
+		});
+
+		const republishPromise = updatePublishedCase(owner.id, testCase.id);
+		await waitForLockWait();
+		await holder.release();
+		const result = await republishPromise;
+
+		expectError(result, CASE_CHANGED_MESSAGE);
+
+		const rows = await prisma.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: testCase.id },
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.id).toBe(published.publishedId);
+		expect(rows[0]?.isCurrent).toBe(true);
+		expect(rows[0]?.type).toBe("ASSURANCE_CASE");
+	});
+
+	it("writes nothing when the case was unpublished after the snapshot was composed", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Unpublished Mid");
+		expectSuccess(await publishAssuranceCase(owner.id, testCase.id));
+
+		const holder = await holdRowLock(async (tx) => {
+			await removePublishedCopies(tx, [testCase.id]);
+		});
+
+		const republishPromise = updatePublishedCase(owner.id, testCase.id);
+		await waitForLockWait();
+		await holder.release();
+		const result = await republishPromise;
+
+		expectError(result, CASE_CHANGED_MESSAGE);
+
+		expect(
+			await prisma.publishedAssuranceCase.count({
+				where: { assuranceCaseId: testCase.id },
+			})
+		).toBe(0);
+		const after = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+			select: { published: true, publishStatus: true },
+		});
+		expect(after).toEqual({ published: false, publishStatus: "DRAFT" });
+	});
+});
+
+describe("publishAssuranceCase — refused when the case was converted while it was being published", () => {
+	it("writes nothing and leaves the case a draft", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCaseWithGoal(owner.id, "Converted First");
+
+		const holder = await holdRowLock(async (tx) => {
+			await tx.assuranceCase.update({
+				where: { id: testCase.id },
+				data: { kind: "PATTERN" },
+			});
+		});
+
+		const publishPromise = publishAssuranceCase(owner.id, testCase.id);
+		await waitForLockWait();
+		await holder.release();
+		const result = await publishPromise;
+
+		expectError(result, CASE_CHANGED_MESSAGE);
+
+		expect(
+			await prisma.publishedAssuranceCase.count({
+				where: { assuranceCaseId: testCase.id },
+			})
+		).toBe(0);
+		const after = await prisma.assuranceCase.findUniqueOrThrow({
+			where: { id: testCase.id },
+			select: { published: true, publishStatus: true },
+		});
+		expect(after).toEqual({ published: false, publishStatus: "DRAFT" });
 	});
 });

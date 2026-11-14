@@ -36,6 +36,43 @@
       "GitHubImportSchema": {
         "type": "string",
         "description": "GitHub import request parameters"
+      },
+      "updateConnectionSchema": {
+        "type": "string"
+      },
+      "createConnectionSchema": {
+        "type": "string"
+      },
+      "quickSetupSchema": {
+        "type": "string"
+      },
+      "setRolesSchema": {
+        "type": "string"
+      },
+      "labelSchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "baseUrlSchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "apiKeySchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "modelSchema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "connectionIdSchema": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "jobSchema": {
+        "type": "string",
+        "nullable": true
       }
     },
     "responses": {
@@ -103,6 +140,54 @@
           }
         }
       },
+      "409": {
+        "description": "Conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "The request conflicts with the current state"
+                }
+              }
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Unprocessable Entity",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "The request could not be processed"
+                }
+              }
+            }
+          }
+        }
+      },
+      "429": {
+        "description": "Too Many Requests",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "Too many requests"
+                }
+              }
+            }
+          }
+        }
+      },
       "500": {
         "description": "Internal Server Error",
         "content": {
@@ -113,6 +198,22 @@
                 "error": {
                   "type": "string",
                   "example": "An unexpected error occurred"
+                }
+              }
+            }
+          }
+        }
+      },
+      "503": {
+        "description": "Service Unavailable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "example": "The service is temporarily unavailable"
                 }
               }
             }
@@ -333,7 +434,7 @@
       "get": {
         "operationId": "get-cases-export",
         "summary": "Export an assurance case as JSON",
-        "description": "Exports the specified case in nested JSON format (v1.0).",
+        "description": "Exports the specified case in nested JSON format (v1.1 when the case uses named context entries or is a pattern, v1.0 otherwise).",
         "tags": [
           "Cases"
         ],
@@ -505,6 +606,31 @@
         }
       }
     },
+    "/cases/{id}/assistant": {
+      "post": {
+        "operationId": "post-cases-{id}-assistant",
+        "summary": "POST /api/cases/[id]/assistant",
+        "description": "",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/changes": {
       "get": {
         "operationId": "get-cases-{id}-changes",
@@ -581,21 +707,23 @@
     "/cases/{id}/events": {
       "get": {
         "operationId": "get-cases-{id}-events",
-        "summary": "GET /api/cases/[id]/events",
-        "description": "",
+        "summary": "Stream live updates for a case",
+        "description": "Server-sent events for real-time case updates. Requires a session and VIEW access to the case; a missing case, a case in Trash and a case the caller cannot view all answer 404. The stream sends a heartbeat comment every 25 to 30 seconds and checks the caller's VIEW access and session again each time, and the server also checks straight after a change that may have removed that access. When access is lost, or the case is moved to Trash or deleted, the server sends a `stream:closed` event with data `{\"reason\":\"access-removed\"}` and then ends the stream. When the caller's session has ended because their password was changed or reset, it does the same with the reason `signed-out`.",
         "tags": [
           "Cases"
         ],
         "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "responses": {
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
           "401": {
             "$ref": "#/components/responses/401"
           },
-          "403": {
-            "$ref": "#/components/responses/403"
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -1305,6 +1433,126 @@
         }
       }
     },
+    "/cases/{id}/health/checks": {
+      "get": {
+        "operationId": "get-cases-{id}-health-checks",
+        "summary": "GET /api/cases/[id]/health/checks",
+        "description": "Human session only; the session user needs VIEW on the case.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `[{ integration, pipeline, published_at, checks }]`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/health/evidence-nodes": {
+      "get": {
+        "operationId": "get-cases-{id}-health-evidence-nodes",
+        "summary": "GET /api/cases/[id]/health/evidence-nodes",
+        "description": "Human session only; the session user needs VIEW on the case.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `[{ id, name, claim_id, claim_name, status }]`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/cases/{id}/health/hygiene": {
+      "get": {
+        "operationId": "get-cases-{id}-health-hygiene",
+        "summary": "GET /api/cases/[id]/health/hygiene",
+        "description": "Human session only; the session user needs VIEW on the case.",
+        "tags": [
+          "Cases"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ claims_without_time_limit, checks_without_time_limit, settings_as_recommended }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cases/{id}/information/image": {
       "post": {
         "operationId": "post-cases-{id}-information-image",
@@ -1623,11 +1871,46 @@
         }
       }
     },
+    "/cron/health-evidence-thinning": {
+      "post": {
+        "operationId": "post-cron-health-evidence-thinning",
+        "summary": "Thin the health plugin's evidence log (cron job)",
+        "description": "Removes repeated passing results older than a day from the evidence log.",
+        "tags": [
+          "Cron"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - { success: true, dryRun: boolean, busy: boolean, claimsProcessed: number, recordsRemoved: number, runsRecorded: number, more: boolean }"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/cron/health-staleness-sweep": {
       "post": {
         "operationId": "post-cron-health-staleness-sweep",
         "summary": "Sweep tea.health claims for newly-stale state (cron job)",
-        "description": "Scans every claim carrying `tea.health` PluginData and emits",
+        "description": "Computes the status of every claim that has accepted",
         "tags": [
           "Cron"
         ],
@@ -1728,6 +2011,31 @@
         }
       }
     },
+    "/public/discover/{slug}": {
+      "get": {
+        "operationId": "get-public-discover-{slug}",
+        "summary": "GET /api/public/discover/[slug]",
+        "description": "Returns the current published version of a Discover item by slug; no sign-in needed. Text fields, including description and every description inside content, are returned exactly as the publisher stored them, without cleaning, and may contain HTML markup: escape or sanitise them before showing them as HTML.",
+        "tags": [
+          "Discover"
+        ],
+        "parameters": [],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/public/discover/{slug}/image/{versionId}": {
       "get": {
         "operationId": "get-public-discover-{slug}-image-{versionId}",
@@ -1789,7 +2097,7 @@
       },
       "put": {
         "operationId": "put-elements-{id}",
-        "summary": "PUT /api/elements/[id]",
+        "summary": "PUT /api/elements/[id] (400 without a parent, 422 for a second goal)",
         "description": "",
         "tags": [
           "Elements"
@@ -1804,6 +2112,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -1871,6 +2182,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -1910,6 +2227,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -2035,7 +2355,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ health: { score, lastEvaluatedAt, validityWindowSeconds } | null }`"
+                  "$ref": "#/components/schemas/200 - `{ status: { verdict, stale, stale_reason, stale_since, expires_at, record_id, timestamp, bound_check, rejected_since_last_accept, mismatch } | null }`"
                 }
               }
             }
@@ -2105,6 +2425,284 @@
         }
       }
     },
+    "/elements/{id}/health/bound-check": {
+      "put": {
+        "operationId": "put-elements-{id}-health-bound-check",
+        "summary": "PUT /api/elements/[id]/health/bound-check",
+        "description": "Human session only — a machine token cannot change the",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ status }` (null when the claim has no accepted record yet)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/criteria": {
+      "get": {
+        "operationId": "get-elements-{id}-health-criteria",
+        "summary": "GET /api/elements/[id]/health/criteria",
+        "description": "Human session only; the session user needs VIEW on the",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ criteria, check_description, evidence_node, evidence_node_text, integration, accepted_by, last_change, pipeline_read, check_offer, offered_version, latest_result }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "put": {
+        "operationId": "put-elements-{id}-health-criteria",
+        "summary": "PUT /api/elements/[id]/health/criteria",
+        "description": "Human session only — a machine token cannot change settings.",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The same body as the GET, after the save"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/evidence-node": {
+      "post": {
+        "operationId": "post-elements-{id}-health-evidence-node",
+        "summary": "POST /api/elements/[id]/health/evidence-node",
+        "description": "Human session only. The session user needs EDIT on the claim's",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The same body as `GET /api/elements/[id]/health/criteria`, after the change"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/criteria/retirement": {
+      "post": {
+        "operationId": "post-elements-{id}-health-criteria-retirement",
+        "summary": "POST /api/elements/[id]/health/criteria/retirement",
+        "description": "Human session only. The session user needs EDIT on the claim's",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - The same body as `GET /api/elements/[id]/health/criteria`, after the change"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/records/{recordId}/reinstatement": {
+      "post": {
+        "operationId": "post-elements-{id}-health-records-{recordId}-reinstatement",
+        "summary": "POST /api/elements/[id]/health/records/[recordId]/reinstatement",
+        "description": "Human session only — a machine token cannot reinstate. The",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ status }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/elements/{id}/health/records/{recordId}/revocation": {
+      "post": {
+        "operationId": "post-elements-{id}-health-records-{recordId}-revocation",
+        "summary": "POST /api/elements/[id]/health/records/[recordId]/revocation",
+        "description": "Human session only — a machine token cannot revoke. The",
+        "tags": [
+          "Elements"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - `{ revocation: { cause, reason, revoked_at, revoked_by_name }, status }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "get-health",
@@ -2134,7 +2732,7 @@
       "get": {
         "operationId": "get-integrations",
         "summary": "GET /api/integrations",
-        "description": "Owner-only listing — the caller's own integrations only.",
+        "description": "Lists the integrations the signed-in user owns, each with a summary of its tokens and never a secret.",
         "tags": [
           "Integrations"
         ],
@@ -2172,7 +2770,7 @@
       "post": {
         "operationId": "post-integrations",
         "summary": "POST /api/integrations",
-        "description": "Any authenticated user may register an integration; the",
+        "description": "Registers an integration owned by the signed-in user and returns it without a token; any signed-in user may register one, and an unknown scope is a 400.",
         "tags": [
           "Integrations"
         ],
@@ -2202,6 +2800,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2212,7 +2813,7 @@
       "patch": {
         "operationId": "patch-integrations-{id}",
         "summary": "PATCH /api/integrations/[id]",
-        "description": "At least one of `description`/`scopes` must be present.",
+        "description": "Updates an integration's description and/or scopes (at least one is required); the scopes sent replace the existing list, and an unknown scope is a 400.",
         "tags": [
           "Integrations"
         ],
@@ -2242,6 +2843,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2250,7 +2854,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}",
         "summary": "DELETE /api/integrations/[id]",
-        "description": "Prefer `POST .../revoke` when the integration's own",
+        "description": "Deletes an integration with its account and tokens; revoke it instead when the record of who sent its evidence must stay resolvable.",
         "tags": [
           "Integrations"
         ],
@@ -2273,6 +2877,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2283,7 +2890,7 @@
       "get": {
         "operationId": "get-integrations-{id}-case-grants",
         "summary": "GET /api/integrations/[id]/case-grants",
-        "description": "",
+        "description": "Lists the cases the integration can reach and the permission level on each, limited to cases the signed-in user can view; it works for a suspended or revoked integration.",
         "tags": [
           "Integrations"
         ],
@@ -2313,6 +2920,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2321,7 +2931,7 @@
       "post": {
         "operationId": "post-integrations-{id}-case-grants",
         "summary": "POST /api/integrations/[id]/case-grants",
-        "description": "Never errors on a repeat call for a case the system user",
+        "description": "Grants the integration's account View, Comment or Edit access to a case (Admin is refused); the integration must be active, and the signed-in user must own it and hold Admin on the case.",
         "tags": [
           "Integrations"
         ],
@@ -2337,7 +2947,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` — new grant, or an existing grant's permission level changed"
+                  "$ref": "#/components/schemas/201 - `{ grant: { caseId, caseName, permission, grantedAt, alreadyGranted: false } }` for a new grant, or an existing grant whose permission level changed"
                 }
               }
             }
@@ -2351,6 +2961,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2361,7 +2977,7 @@
       "post": {
         "operationId": "post-integrations-{id}-reactivate",
         "summary": "POST /api/integrations/[id]/reactivate",
-        "description": "REVOKED stays terminal — reactivating a revoked integration",
+        "description": "Reactivates a suspended integration; a revoked integration cannot be reactivated, and reactivating one that is already active is a 409.",
         "tags": [
           "Integrations"
         ],
@@ -2391,6 +3007,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2401,7 +3023,7 @@
       "post": {
         "operationId": "post-integrations-{id}-revoke",
         "summary": "POST /api/integrations/[id]/revoke",
-        "description": "",
+        "description": "Revokes an integration permanently, together with all of its tokens that are still valid; a revoked integration cannot be reactivated.",
         "tags": [
           "Integrations"
         ],
@@ -2431,6 +3053,9 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2441,7 +3066,7 @@
       "post": {
         "operationId": "post-integrations-{id}-suspend",
         "summary": "POST /api/integrations/[id]/suspend",
-        "description": "A REVOKED integration cannot be suspended (REVOKED is",
+        "description": "Suspends an active integration so that none of its tokens authenticate until it is reactivated; a revoked integration cannot be suspended (409).",
         "tags": [
           "Integrations"
         ],
@@ -2471,6 +3096,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2481,7 +3112,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens",
         "summary": "POST /api/integrations/[id]/tokens",
-        "description": "`expiresAt` is optional — omitted means the token never",
+        "description": "Issues a bearer token for an active integration and returns its secret once; the token does not expire unless `expiresAt` is given.",
         "tags": [
           "Integrations"
         ],
@@ -2511,6 +3142,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2521,7 +3158,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}-case-grants-{caseId}",
         "summary": "DELETE /api/integrations/[id]/case-grants/[caseId]",
-        "description": "",
+        "description": "Removes the integration's access to a case; removing a grant that does not exist succeeds, and it works for a suspended or revoked integration.",
         "tags": [
           "Integrations"
         ],
@@ -2543,6 +3180,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -2554,7 +3194,7 @@
       "delete": {
         "operationId": "delete-integrations-{id}-tokens-{tokenId}",
         "summary": "DELETE /api/integrations/[id]/tokens/[tokenId]",
-        "description": "",
+        "description": "Revokes a single token immediately; revoking a token that is already revoked is a 409.",
         "tags": [
           "Integrations"
         ],
@@ -2577,6 +3217,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }
@@ -2587,7 +3233,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens-{tokenId}-rotate",
         "summary": "POST /api/integrations/[id]/tokens/[tokenId]/rotate",
-        "description": "Refuses a token that is already revoked, or whose",
+        "description": "Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked token, or a token of an integration that is not active, is refused with 409.",
         "tags": [
           "Integrations"
         ],
@@ -2616,6 +3262,12 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -2652,7 +3304,7 @@
       "get": {
         "operationId": "get-machine-whoami",
         "summary": "Diagnostic identity check for a machine integration.",
-        "description": "Returns the identity of the integration whose bearer token",
+        "description": "Returns the name, current scopes and token prefix of the integration whose bearer token authenticated the request; any valid token for an active integration works, whatever its scopes, so it is the quickest way to check that a token and the connection to TEA are working.",
         "tags": [
           "Machine"
         ],
@@ -2688,11 +3340,11 @@
         }
       }
     },
-    "/machine/health/elements/{id}/evidence": {
-      "get": {
-        "operationId": "get-machine-health-elements-{id}-evidence",
-        "summary": "GET /api/machine/health/elements/[id]/evidence",
-        "description": "Auth is EITHER a bearer token scoped `health:evidence:read`",
+    "/machine/health/checks": {
+      "put": {
+        "operationId": "put-machine-health-checks",
+        "summary": "PUT /api/machine/health/checks",
+        "description": "Publishes the list of checks a pipeline can run, replacing the integration's previous list, and returns how many checks it holds with a warning for each recommendation that would not pass as evidence settings. Needs a bearer token with the `health:checks:write` scope and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin; it addresses no case, so the integration needs no case grant. The body is `{ pipeline, checks }` with at most 200 checks, one per check name, in at most 256 KB, and unknown keys are refused. A check's `params` may be a plain object of setting name to default value, and a recommended `aggregation` may carry a `rule` that judges the combined result.",
         "tags": [
           "Machine"
         ],
@@ -2700,9 +3352,6 @@
         "security": [
           {
             "BearerAuth": []
-          },
-          {
-            "SessionAuth": []
           }
         ],
         "responses": {
@@ -2711,45 +3360,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/200 - `{ evidence: PluginHealthEvidence[] }`"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/400"
-          },
-          "401": {
-            "$ref": "#/components/responses/401"
-          },
-          "403": {
-            "$ref": "#/components/responses/403"
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      },
-      "post": {
-        "operationId": "post-machine-health-elements-{id}-evidence",
-        "summary": "POST /api/machine/health/elements/[id]/evidence",
-        "description": "Machine-only (`requireApiToken(\"health:evidence:write\")`).",
-        "tags": [
-          "Machine"
-        ],
-        "parameters": [],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/201 - `{ evidence: PluginHealthEvidence, health: { score, lastEvaluatedAt, validityWindowSeconds } }`"
+                  "$ref": "#/components/schemas/200 - `{ checks: number, warnings: [{ check, problem }] }`"
                 }
               }
             }
@@ -2769,16 +3380,31 @@
         }
       }
     },
-    "/public/discover/{slug}": {
+    "/machine/health/cases/{id}/criteria": {
       "get": {
-        "operationId": "get-public-discover-{slug}",
-        "summary": "GET /api/public/discover/[slug]",
-        "description": "",
+        "operationId": "get-machine-health-cases-{id}-criteria",
+        "summary": "GET /api/machine/health/cases/[id]/criteria",
+        "description": "Returns the evidence settings accepted for the claims of a case whose checks came from the calling integration's own check list, which are the settings its pipeline should judge results against; settings that are only suggested or are inactive are never returned, and reading records which revision was read. Each aggregation carries its own `rule` with the pass mark in `rule.params.pass_values`, and a percentile reduction's percentile is `reduction.params.percentile`. Needs a bearer token with the `health:criteria:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
         "tags": [
-          "Public"
+          "Machine"
         ],
         "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ case_id, criteria: Item[] }`"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -2787,6 +3413,231 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/cases/{id}/status": {
+      "get": {
+        "operationId": "get-machine-health-cases-{id}-status",
+        "summary": "GET /api/machine/health/cases/[id]/status",
+        "description": "Returns the health status of every property claim in a case that has a bound check or at least one record, as `{ claim_ref, status }` entries; claims with neither are left out. Needs a bearer token with the `health:evidence:read` scope, View access to the case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ case_id, statuses: [{ claim_ref, status }] }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/elements/{id}/criteria": {
+      "get": {
+        "operationId": "get-machine-health-elements-{id}-criteria",
+        "summary": "GET /api/machine/health/elements/[id]/criteria",
+        "description": "Returns the evidence settings accepted for one property claim when their check came from the calling integration's own check list, in the item shape of the case route, where each aggregation carries its own `rule` and a percentile reduction names its percentile `params.percentile`; suggested settings, inactive settings and another pipeline's settings give the same 404 as no settings at all, and reading records which revision was read. Needs a bearer token with the `health:criteria:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - One item, as in `GET /api/machine/health/cases/[id]/criteria`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/elements/{id}/evidence": {
+      "get": {
+        "operationId": "get-machine-health-elements-{id}-evidence",
+        "summary": "GET /api/machine/health/elements/[id]/evidence",
+        "description": "Returns a page of a claim's evidence log, newest first, for a bearer token with the `health:evidence:read` scope or a signed-in person with view access to the case; the caller also needs the Claim/Evidence Health plugin on, which an integration's account counts as unless the deployment withholds the plugin. `limit` (default 50, at most 200) sets the page size and `before` (a `chain_sequence`) returns only older records; `next_before` in the response is the value to pass as `before` for the next page, or null on the last page. With `live=true`, only records that are not revoked and not expired are returned.",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ evidence: Item[], next_before: number | null }`"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      },
+      "post": {
+        "operationId": "post-machine-health-elements-{id}-evidence",
+        "summary": "POST /api/machine/health/elements/[id]/evidence",
+        "description": "Appends one evidence format 1.1 record to a property claim's log and returns 201 with `{ record, status }`. Needs a bearer token with the `health:evidence:write` scope and Edit access to the claim's case, and the Claim/Evidence Health plugin on for the integration's account, which counts as opted in unless the deployment withholds the plugin. The body is the record, `claim_ref` must equal the path id, and unknown top-level fields are refused. An `aggregation` in the record may carry a `rule` that judges the combined result, and a reduction names its percentile `params.percentile`, or `p`. The first record accepted binds the claim to its check; a record naming another check is refused with 422, and a repeated `record_id` with 409.",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/201 - `{ record, status }`: the stored record and the claim's status (`verdict`, `stale`, `stale_reason`, `stale_since`, `expires_at`, `record_id`, `timestamp`, `bound_check`, `rejected_since_last_accept`, `mismatch`)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/machine/health/elements/{id}/status": {
+      "get": {
+        "operationId": "get-machine-health-elements-{id}-status",
+        "summary": "GET /api/machine/health/elements/[id]/status",
+        "description": "Returns one property claim's health status, which is null when the claim has no bound check and no record; its `mismatch` field is null when the current result was judged with the accepted settings, `{ state: \"undeclared\" }` when the claim has no accepted settings, and `{ state: \"mismatch\", differences }` when the current result used other settings than those accepted now. Needs a bearer token with the `health:evidence:read` scope, View access to the claim's case for the integration's account, and the Claim/Evidence Health plugin on for that account, which counts as opted in unless the deployment withholds the plugin.",
+        "tags": [
+          "Machine"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ status }` (null when the claim has no bound check and no record)"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -3065,6 +3916,36 @@
         }
       }
     },
+    "/user/models": {
+      "get": {
+        "operationId": "get-user-models",
+        "summary": "GET /api/user/models — the session user's connections, jobs, recommended models and connection types.",
+        "description": "Connections (never with their keys), the three jobs, the recommended model per connection type and job, and the connection types on offer.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/user/plugins": {
       "get": {
         "operationId": "get-user-plugins",
@@ -3161,6 +4042,226 @@
         }
       }
     },
+    "/user/models/connections": {
+      "post": {
+        "operationId": "post-user-models-connections",
+        "summary": "POST /api/user/models/connections — adds a model connection for the session user (up to 10 each).",
+        "description": "Adds a connection and returns it without its key; a refused value is a 400, the limit of 10 a 409.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/createConnectionSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/user/models/quick-setup": {
+      "post": {
+        "operationId": "post-user-models-quick-setup",
+        "summary": "POST /api/user/models/quick-setup — one OpenRouter key adds a connection and fills all three jobs with the recommended models.",
+        "description": "Tests an OpenRouter key, then adds the connection and its recommended jobs; a refused key writes nothing.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/quickSetupSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/user/models/roles": {
+      "put": {
+        "operationId": "put-user-models-roles",
+        "summary": "PUT /api/user/models/roles — saves the session user's chat, ranking and search jobs, and checks a search job that is new or that the caller asks to have checked again.",
+        "description": "Saves the three jobs and returns them with the outcome of the search check, if one ran.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/setRolesSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/user/models/connections/{id}": {
+      "patch": {
+        "operationId": "patch-user-models-connections-{id}",
+        "summary": "PATCH /api/user/models/connections/[id] — changes the label, address or key of one of the session user's connections.",
+        "description": "Changes a connection and returns it without its key; another user's connection is a 404.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/updateConnectionSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete-user-models-connections-{id}",
+        "summary": "DELETE /api/user/models/connections/[id] — removes one of the session user's connections and empties every job that used it.",
+        "description": "Removes a connection, its stored key and its jobs; works while the plugins are off.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
     "/user/plugins/{pluginId}/consequences": {
       "get": {
         "operationId": "get-user-plugins-{pluginId}-consequences",
@@ -3182,6 +4283,45 @@
           },
           "500": {
             "$ref": "#/components/responses/500"
+          }
+        }
+      }
+    },
+    "/user/models/connections/{id}/test": {
+      "post": {
+        "operationId": "post-user-models-connections-{id}-test",
+        "summary": "POST /api/user/models/connections/[id]/test — checks that one of the session user's connections answers and accepts its key, and lists its models.",
+        "description": "Calls the connection with its stored key and returns whether it works and the models it offers for each job.",
+        "tags": [
+          "User"
+        ],
+        "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "403": {
+            "$ref": "#/components/responses/403"
+          },
+          "404": {
+            "$ref": "#/components/responses/404"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
           }
         }
       }

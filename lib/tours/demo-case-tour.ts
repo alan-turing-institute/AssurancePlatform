@@ -1,127 +1,65 @@
 import type { Tour } from "nextstepjs";
+import { tourStep } from "./step";
 
 export const demoCaseTour: Tour = {
 	tour: "demo-case",
 	steps: [
-		{
-			icon: "👋",
-			title: "Welcome to Your Tutorial Case",
+		tourStep({
+			title: "A worked example",
 			content:
-				"This is a pre-built assurance case that demonstrates how Trustworthy and Ethical Assurance (TEA) works. We'll walk through each element type so you understand the methodology.",
-			selector: "[data-tour='case-header']",
+				"This tutorial case argues that a customer support chatbot is safe to deploy. It is yours to explore and edit. This tour walks through the four kinds of element it uses, from the top of the tree to the bottom.",
+			target: "case-header",
 			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🎯",
-			title: "The Goal",
+		}),
+		tourStep({
+			title: "The goal",
 			content:
-				"Every assurance case starts with a top-level Goal — the overall claim you want to demonstrate. This one argues that a chatbot is safe and trustworthy for deployment.",
-			selector: "[data-tour='demo-goal']",
-			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🔍",
-			title: "Node Details",
+				"Every case starts with a goal: the overall claim the case sets out to demonstrate. State it plainly, and leave how you will show it to the elements beneath.",
+			target: "demo-goal",
+			side: "right",
+		}),
+		tourStep({
+			title: "Context and details",
 			content:
-				"Click the chevron on any node to reveal more details. Goals have context statements that scope the claim. Strategies have justifications that explain the reasoning behind a decomposition.",
-			selector: "[data-tour='demo-expand']",
+				"This goal is shown expanded, so you can read its context: the operating conditions the claim assumes, such as who uses the system and where. The chevron collapses or expands any element.",
+			target: "demo-expand",
+			side: "right",
+		}),
+		tourStep({
+			title: "The strategy",
+			content:
+				"A strategy explains how the goal is broken down. This one argues about the quality of the chatbot's responses, splitting content safety from factual accuracy so each can be evidenced on its own. A strategy makes no claim of its own; its justification says why the split is reasonable.",
+			target: "demo-strategy-1",
+			side: "right",
+		}),
+		tourStep({
+			title: "The property claim",
+			content:
+				"A property claim is a specific statement that can be true or false. This one says responses contain no harmful or misleading content. Keep each claim narrow enough to check against evidence.",
+			target: "demo-claim-1",
+			side: "right",
+		}),
+		tourStep({
+			title: "The evidence",
+			content:
+				"Evidence is an artefact someone can inspect, such as a test report or an assessment, linked to the claim it supports. Here a red-teaming report supports the claim above it. Read from the bottom up and you have the whole argument: evidence supports claims, claims follow a strategy, and the strategy supports the goal.",
+			target: "demo-evidence-1",
+			side: "right",
+		}),
+		tourStep({
+			title: "Editing the case",
+			content:
+				"Use the controls at the foot of an element to add a child element, edit its text, show or hide its children, or add a comment. Each new element gets a short label, such as S1 or P1, automatically.",
+			target: "demo-goal",
+			side: "right",
+		}),
+		tourStep({
+			title: "Where to go next",
+			content:
+				"When you are ready, return to the dashboard and choose Create new case. A short tour of the editing tools runs the first time you open a case of your own. The Help button here lists every element type and toolbar option, and can restart this tour.",
+			target: "toolbar-help",
 			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🔀",
-			title: "Strategies",
-			content:
-				"A Strategy explains how you break a goal into smaller, arguable parts. This strategy decomposes the goal by considering response quality attributes separately.",
-			selector: "[data-tour='demo-strategy-1']",
-			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "📌",
-			title: "Property Claims",
-			content:
-				"Claims are specific, testable assertions that support a strategy. Each claim should be precise enough to verify with evidence.",
-			selector: "[data-tour='demo-claim-1']",
-			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "📄",
-			title: "Evidence",
-			content:
-				"Evidence is the proof that backs up a claim — test reports, assessments, audits, or policy documents. Each piece of evidence links to one or more claims.",
-			selector: "[data-tour='demo-evidence-1']",
-			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🌳",
-			title: "The Tree Structure",
-			content:
-				"Together, these elements form a tree: Goals at the top decompose through Strategies into Claims, which are supported by Evidence at the leaves. This is the core of TEA.",
-			selector: "[data-tour='demo-goal']",
-			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "➕",
-			title: "Adding New Elements",
-			content:
-				"Click the + button on any node to add child elements. Goals can have Strategies, Strategies can have Property Claims, and Property Claims can have Evidence.",
-			selector: "[data-tour='demo-goal']",
-			side: "bottom",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🛠️",
-			title: "Editing & Tools",
-			content:
-				"Click on the pencil icon to edit a node's content. Use the toolbar for undo/redo, auto-layout, sharing, and exporting your case.",
-			selector: "[data-tour='toolbar']",
-			side: "top",
-			showControls: true,
-			showSkip: true,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
-		{
-			icon: "🚀",
-			title: "Start Building!",
-			content:
-				"You've learned the fundamentals of TEA. Go back to the dashboard to create your own assurance case, or continue exploring this tutorial case.",
-			selector: "[data-tour='case-header']",
-			side: "bottom",
-			showControls: true,
-			showSkip: false,
-			pointerPadding: 10,
-			pointerRadius: 8,
-		},
+			final: true,
+		}),
 	],
 };

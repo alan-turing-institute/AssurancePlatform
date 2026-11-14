@@ -12,10 +12,12 @@ export type ErrorCode =
 	| "NOT_FOUND"
 	| "VALIDATION"
 	| "CONFLICT"
+	| "UNPROCESSABLE"
 	| "RATE_LIMITED"
 	| "PAYLOAD_TOO_LARGE"
 	| "GATEWAY_TIMEOUT"
 	| "DB_UNAVAILABLE"
+	| "SERVICE_UNAVAILABLE"
 	| "INTERNAL";
 
 /**
@@ -32,10 +34,12 @@ const STATUS_MAP: Record<ErrorCode, number> = {
 	NOT_FOUND: 404,
 	VALIDATION: 400,
 	CONFLICT: 409,
+	UNPROCESSABLE: 422,
 	RATE_LIMITED: 429,
 	PAYLOAD_TOO_LARGE: 413,
 	GATEWAY_TIMEOUT: 504,
 	DB_UNAVAILABLE: 503,
+	SERVICE_UNAVAILABLE: 503,
 	INTERNAL: 500,
 };
 
@@ -88,6 +92,10 @@ export function validationError(
 	fieldErrors?: Record<string, string>
 ): AppError {
 	return new AppError({ code: "VALIDATION", message, fieldErrors });
+}
+
+export function unprocessable(message: string): AppError {
+	return new AppError({ code: "UNPROCESSABLE", message });
 }
 
 export function gatewayTimeout(message = "Request timed out"): AppError {

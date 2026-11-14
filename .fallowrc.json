@@ -11,8 +11,7 @@
     "coverage-merge-input/**"
   ],
   "entry": [
-    "components/docs/curriculum/index.ts",
-    "components/docs/curriculum/concept-carousel.tsx",
+    "components/docs/curriculum/concept-cards.tsx",
     "components/docs/curriculum/learning-objectives.tsx",
     "components/docs/curriculum/module-card.tsx",
     "components/docs/curriculum/module-header.tsx",
@@ -48,7 +47,8 @@
     "axe-core",
     "conventional-changelog-conventionalcommits",
     "@radix-ui/react-menu",
-    "fumadocs-mdx"
+    "fumadocs-mdx",
+    "yaml"
   ],
   "ignoreExports": [
     { "file": "actions/connected-accounts.ts", "exports": ["unlinkProvider"] },
@@ -63,11 +63,6 @@
     {
       "file": "src/__tests__/utils/prisma-factories.ts",
       "exports": ["addTeamMember"]
-    },
-    { "file": "src/__tests__/utils/mock-data.ts", "exports": ["mockTeam"] },
-    {
-      "file": "src/__tests__/utils/team-mock-data.ts",
-      "exports": ["mockTeam"]
     },
     { "file": "hooks/use-json-validation.ts", "exports": ["ValidationError"] },
     { "file": "lib/schemas/case-export.ts", "exports": ["ValidationError"] }

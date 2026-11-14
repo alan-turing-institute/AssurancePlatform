@@ -8,6 +8,7 @@ Rate limits slow repeated attempts against selected account and machine-authenti
 ## Apply the configured limits
 
 `lib/services/rate-limit-service.ts` declares named configurations. Registration allows five attempts per IP and three per email in one hour. Invitation acceptance allows 20 per IP and 10 per user ID in one hour. Password reset allows three per email and ten per IP in one hour. Failed machine bearer authentication allows 20 attempts per IP in 15 minutes. Valid machine polling does not spend the failed-auth budget. The service counts stored `RateLimitAttempt` rows inside the rolling window, returns an allowed flag and retry delay, and records attempts. A blocked request also generates a security event.
+Behind Cloudflare with `CLOUDFLARE_ORIGIN_SECRET` set, an IPv6 visitor is counted, and logged, by their /64 network, because one IPv6 connection holds a whole /64.
 
 Call the shared limit check from a route with the relevant IP, email or user ID. The helper skips an identifier that is absent; it does not invent an identity. Keep authentication and authorisation guards in place after a request passes the limit. A limit is scoped to its configured endpoint and identifier type, not a global cap on every action by one person.
 

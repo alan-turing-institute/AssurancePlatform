@@ -2,6 +2,7 @@ import {
 	DocumentDuplicateIcon,
 	FolderIcon,
 	GlobeAltIcon,
+	Squares2X2Icon,
 	TrashIcon,
 	UserGroupIcon,
 	UsersIcon,
@@ -16,6 +17,14 @@ export const navigation = [
 		current: false,
 		externalLink: false,
 		tourId: "sidebar-my-cases",
+	},
+	{
+		name: "My Patterns",
+		href: "/dashboard/patterns",
+		icon: Squares2X2Icon,
+		current: false,
+		externalLink: false,
+		tourId: "sidebar-patterns",
 	},
 	{
 		name: "Shared With Me",
@@ -42,7 +51,7 @@ export const navigation = [
 		tourId: "sidebar-trash",
 	},
 	{
-		name: "Discover Public Projects",
+		name: "Discover Cases & Patterns",
 		href: "/discover",
 		icon: GlobeAltIcon,
 		current: false,

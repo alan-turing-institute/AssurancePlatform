@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { nullableUrlSchema } from "./base";
+import { nullableUrlSchema, placeholderHintInputSchema } from "./base";
 import { AssertionStatusSchema } from "./case-export";
+import { ContextEntrySchema } from "./context-entry";
 
 /**
  * Per-assertion status on a batch create/update payload (ADR 0004 D3).
@@ -10,6 +11,23 @@ import { AssertionStatusSchema } from "./case-export";
  * here — mirrors lib/schemas/element.ts's assertionStatusInputSchema.
  */
 const assertionStatusInputSchema = AssertionStatusSchema.nullable().optional();
+
+/**
+ * `fromPattern` and `modifiedFromPattern` on a change. Only the server sets
+ * them (when a case is started from a pattern and when text is edited), but a
+ * document saved from an earlier export still carries them, so a change that
+ * has them is accepted and they are dropped.
+ */
+const ignoredPatternMarkers = {
+	fromPattern: z
+		.boolean()
+		.optional()
+		.transform(() => undefined),
+	modifiedFromPattern: z
+		.boolean()
+		.optional()
+		.transform(() => undefined),
+};
 
 /**
  * Schema for batch update request body.
@@ -33,16 +51,17 @@ export const batchUpdateRequestSchema = z.strictObject({
 						assertionStatus: assertionStatusInputSchema,
 						assumption: z.string().nullable().optional(),
 						justification: z.string().nullable().optional(),
-						context: z.array(z.string()).optional(),
+						context: z.array(ContextEntrySchema).optional(),
 						url: nullableUrlSchema,
 						level: z.number().nullable().optional(),
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
 						modulePublicSummary: z.string().nullable().optional(),
-						fromPattern: z.boolean().optional(),
-						modifiedFromPattern: z.boolean().optional(),
 						isDefeater: z.boolean().optional(),
 						defeatsElementId: z.string().optional(),
+						isPlaceholder: z.boolean().optional(),
+						placeholderHint: placeholderHintInputSchema,
+						...ignoredPatternMarkers,
 					}),
 				}),
 				z.strictObject({
@@ -57,16 +76,17 @@ export const batchUpdateRequestSchema = z.strictObject({
 						assertionStatus: assertionStatusInputSchema,
 						assumption: z.string().nullable().optional(),
 						justification: z.string().nullable().optional(),
-						context: z.array(z.string()).optional(),
+						context: z.array(ContextEntrySchema).optional(),
 						url: nullableUrlSchema,
 						level: z.number().nullable().optional(),
 						moduleReferenceId: z.string().optional(),
 						moduleEmbedType: z.string().optional(),
 						modulePublicSummary: z.string().nullable().optional(),
-						fromPattern: z.boolean().optional(),
-						modifiedFromPattern: z.boolean().optional(),
 						isDefeater: z.boolean().optional(),
 						defeatsElementId: z.string().optional(),
+						isPlaceholder: z.boolean().optional(),
+						placeholderHint: placeholderHintInputSchema,
+						...ignoredPatternMarkers,
 					}),
 				}),
 				z.strictObject({

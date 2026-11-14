@@ -13,7 +13,7 @@ function StrategyNode({ data, ...props }: NodeProps) {
 
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
-	const topRightActions = useNodeTopRightActions(data, "strategy");
+	const topRightActions = useNodeTopRightActions(data, "strategy", props.id);
 
 	const dataTour =
 		data.isDemo && data.name === "S1" ? "demo-strategy-1" : undefined;
@@ -38,10 +38,13 @@ function StrategyNode({ data, ...props }: NodeProps) {
 				dataTour={dataTour}
 				description={data.description}
 				isDefeater={!!data.isDefeater}
+				isPlaceholder={!!data.isPlaceholder}
 				justification={data.justification}
 				name={data.name}
 				nodeType="strategy"
+				placeholderHint={data.placeholderHint}
 				selected={props.selected}
+				terms={data.termsInReach}
 				topRightActions={topRightActions}
 			/>
 

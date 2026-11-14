@@ -116,6 +116,7 @@ type CaseOverrides = Partial<{
 	name: string;
 	description: string;
 	mode: "STANDARD" | "ADVANCED";
+	kind: "CASE" | "PATTERN";
 	publishStatus: "DRAFT" | "PUBLISHED";
 	published: boolean;
 	isDemo: boolean;
@@ -132,6 +133,7 @@ export function createTestCase(
 			description: overrides.description ?? `Description for test case ${n}`,
 			createdById,
 			mode: overrides.mode ?? "STANDARD",
+			kind: overrides.kind ?? "CASE",
 			publishStatus: overrides.publishStatus ?? "DRAFT",
 			published: overrides.published ?? false,
 			isDemo: overrides.isDemo ?? false,
@@ -181,6 +183,10 @@ type ElementOverrides = Partial<{
 	isDefeater: boolean;
 	defeatsElementId: string | null;
 	defeatsDangling: boolean;
+	// Placeholders and pattern markers
+	isPlaceholder: boolean;
+	placeholderHint: string | null;
+	fromPattern: boolean;
 }>;
 
 export function createTestElement(
@@ -208,6 +214,9 @@ export function createTestElement(
 			isDefeater: overrides.isDefeater ?? false,
 			defeatsElementId: overrides.defeatsElementId,
 			defeatsDangling: overrides.defeatsDangling ?? false,
+			isPlaceholder: overrides.isPlaceholder ?? false,
+			placeholderHint: overrides.placeholderHint,
+			fromPattern: overrides.fromPattern ?? false,
 		},
 	});
 }
@@ -331,6 +340,29 @@ export function createTestPluginState(
 			enabled: overrides.enabled ?? true,
 			settings: overrides.settings,
 		},
+	});
+}
+
+/**
+ * Switches a plugin on for one person with a USER-scope row, as the Plugins
+ * page does. Plugins that are off by default (`tea.health`, `tea.assistant`)
+ * stay off for a fresh person until this runs. Replaces any row the person
+ * already has for that plugin.
+ */
+export function enableTestPlugin(
+	userId: string,
+	pluginId: string
+): Promise<PluginState> {
+	return prisma.pluginState.upsert({
+		where: {
+			pluginId_scopeType_scopeId: {
+				pluginId,
+				scopeType: "USER",
+				scopeId: userId,
+			},
+		},
+		create: { pluginId, scopeType: "USER", scopeId: userId, enabled: true },
+		update: { enabled: true },
 	});
 }
 

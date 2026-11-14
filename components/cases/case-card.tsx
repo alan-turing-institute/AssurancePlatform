@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
+import { Badge } from "@/components/ui/badge";
 import {
 	Card,
 	CardDescription,
@@ -19,7 +20,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { caseItemName } from "@/lib/case-item-name";
 import { formatShortDate } from "@/lib/date";
+import type { CaseKind } from "@/lib/schemas/case-export";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
@@ -31,6 +34,8 @@ export interface CaseCardData {
 	description?: string;
 	id: number | string;
 	isDemo?: boolean;
+	/** CASE for an ordinary case, PATTERN for a pattern: a pattern is badged wherever it is listed. */
+	kind?: CaseKind;
 	name: string;
 	permissions?: string | string[];
 	/** Whether the case has a current published copy on Discover — decides which delete dialog the card shows. */
@@ -118,13 +123,14 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 	}, [fetchScreenshot]);
 
 	return (
-		<div className="group relative min-h-[420px]">
+		<div className="group relative min-h-105">
 			<Link href={`/case/${assuranceCase.id}`}>
 				<Card
 					className={cn(
 						"flex h-full flex-col items-start justify-start transition-all group-hover:bg-primary/5",
 						isDemo && "ring-2 ring-primary/20"
 					)}
+					data-tour={isDemo ? "tutorial-case" : undefined}
 				>
 					<CardHeader className="w-full flex-1">
 						{imageLoading ? (
@@ -148,7 +154,14 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 								)}
 							</div>
 						)}
-						<CardTitle>{name}</CardTitle>
+						<div className="flex items-start justify-between gap-2">
+							<CardTitle>{name}</CardTitle>
+							{assuranceCase.kind === "PATTERN" && (
+								<Badge className="shrink-0" variant="secondary">
+									Pattern
+								</Badge>
+							)}
+						</div>
 						<CardDescription className="text-foreground">
 							{description}
 						</CardDescription>
@@ -185,6 +198,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 				<DeleteCaseDialog
 					isOpen={open}
 					isOwner={permissions.includes("owner")}
+					itemName={caseItemName(assuranceCase.kind)}
 					loading={loading}
 					onCancel={() => setOpen(false)}
 					onConfirm={onDelete}

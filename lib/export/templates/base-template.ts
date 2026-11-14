@@ -5,7 +5,7 @@
  * Subclasses implement the abstract renderSections() method to define their structure.
  */
 
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
 import type { BrandingConfig } from "../schemas/branding-config";
 import { DEFAULT_BRANDING, resolveBranding } from "../schemas/branding-config";
 import type { SectionsConfig } from "../schemas/section-config";
@@ -110,7 +110,7 @@ export abstract class BaseTemplate {
 	 * Build document metadata from case data
 	 */
 	protected buildMetadata(
-		caseData: CaseExportNested,
+		caseData: PlainCase,
 		exportedBy?: string
 	): DocumentMetadata {
 		return {
@@ -150,7 +150,7 @@ export abstract class BaseTemplate {
 	 * @returns Array of rendered sections (sync or async)
 	 */
 	protected abstract renderSections(
-		caseData: CaseExportNested,
+		caseData: PlainCase,
 		diagramImage?: DiagramImage,
 		branchDiagrams?: LabelledDiagramImage[]
 	): RenderedSection[] | Promise<RenderedSection[]>;
@@ -205,7 +205,7 @@ export abstract class BaseTemplate {
 	/**
 	 * Count total elements in tree
 	 */
-	protected countElements(node: TreeNode): number {
+	protected countElements(node: PlainTreeNode): number {
 		let count = 1;
 		for (const child of node.children ?? []) {
 			count += this.countElements(child);
@@ -216,7 +216,7 @@ export abstract class BaseTemplate {
 	/**
 	 * Count elements of a specific type in tree
 	 */
-	protected countElementsByType(node: TreeNode, type: string): number {
+	protected countElementsByType(node: PlainTreeNode, type: string): number {
 		let count = node.type === type ? 1 : 0;
 		for (const child of node.children ?? []) {
 			count += this.countElementsByType(child, type);
@@ -227,7 +227,7 @@ export abstract class BaseTemplate {
 	/**
 	 * Check if an element should be included based on filter settings
 	 */
-	protected shouldIncludeElement(node: TreeNode, depth: number): boolean {
+	protected shouldIncludeElement(node: PlainTreeNode, depth: number): boolean {
 		const filter = this.elementFilter;
 		if (!filter) {
 			return true;
@@ -259,11 +259,11 @@ export abstract class BaseTemplate {
 	 * Collect all elements of a specific type from tree
 	 */
 	protected collectElementsByType(
-		node: TreeNode,
+		node: PlainTreeNode,
 		type: string,
 		depth = 0
-	): Array<{ node: TreeNode; depth: number }> {
-		const results: Array<{ node: TreeNode; depth: number }> = [];
+	): Array<{ node: PlainTreeNode; depth: number }> {
+		const results: Array<{ node: PlainTreeNode; depth: number }> = [];
 
 		if (node.type === type && this.shouldIncludeElement(node, depth)) {
 			results.push({ node, depth });
@@ -280,18 +280,18 @@ export abstract class BaseTemplate {
 	 * Collect all comments from tree
 	 */
 	protected collectAllComments(
-		node: TreeNode,
+		node: PlainTreeNode,
 		depth = 0
 	): Array<{
 		elementName: string | null;
 		elementType: string;
-		comments: NonNullable<TreeNode["comments"]>;
+		comments: NonNullable<PlainTreeNode["comments"]>;
 		depth: number;
 	}> {
 		const results: Array<{
 			elementName: string | null;
 			elementType: string;
-			comments: NonNullable<TreeNode["comments"]>;
+			comments: NonNullable<PlainTreeNode["comments"]>;
 			depth: number;
 		}> = [];
 
@@ -367,7 +367,7 @@ export abstract class BaseTemplate {
 	/**
 	 * Create an element block
 	 */
-	protected element(node: TreeNode, depth: number): ContentBlock {
+	protected element(node: PlainTreeNode, depth: number): ContentBlock {
 		return { type: "element", node, depth };
 	}
 }

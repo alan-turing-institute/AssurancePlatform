@@ -182,4 +182,29 @@ describe("SlotRegistry", () => {
 		expect(badgeRegistry.list()).toEqual([{ pluginId: "tea.fake" }]);
 		expect(panelRegistry.list()).toEqual([{ pluginId: "tea.fake" }]);
 	});
+
+	it("has a case-panel slot that admits only plugins declaring that surface", async () => {
+		const { casePanelSlot } = await import("../registry");
+		casePanelSlot.resetForTests();
+		const registration = {
+			pluginId: "tea.fake",
+			panelId: "fake",
+			label: "Fake panel",
+			Component: () => null,
+		};
+
+		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
+		expect(() => casePanelSlot.register(registration)).toThrow(
+			UNDECLARED_SURFACE_MESSAGE
+		);
+
+		mockGetManifestEntry.mockReturnValue({
+			...FAKE_PLUGIN,
+			surfaces: ["case-panel"],
+		});
+		casePanelSlot.register(registration);
+		expect(casePanelSlot.list()).toEqual([registration]);
+
+		casePanelSlot.resetForTests();
+	});
 });

@@ -2,9 +2,53 @@
 
 import { X } from "lucide-react";
 import type { CardComponentProps } from "nextstepjs";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+/** Gap kept between the card and every edge of the window, in pixels. */
+const VIEWPORT_MARGIN = 16;
+
+/**
+ * Keeps the card inside the window. The tour library places a card beside its
+ * target and does not clamp it, so near an edge the card can run off screen.
+ * While mounted this shifts the card back by the amount it overhangs, using
+ * the CSS `translate` property so the library's own positioning is left
+ * alone. The card is measured on every frame because the library animates it
+ * into place. The arrow may end up away from the card as a result.
+ */
+function useKeepInViewport(ref: React.RefObject<HTMLElement | null>) {
+	useEffect(() => {
+		let frame = 0;
+		let shiftX = 0;
+		let shiftY = 0;
+		const clamp = () => {
+			const element = ref.current;
+			if (element) {
+				const rect = element.getBoundingClientRect();
+				// Position the card would have with no shift applied.
+				const left = rect.left - shiftX;
+				const top = rect.top - shiftY;
+				const width = rect.width;
+				const height = rect.height;
+				const maxX = window.innerWidth - VIEWPORT_MARGIN - width;
+				const maxY = window.innerHeight - VIEWPORT_MARGIN - height;
+				// The top and left edges win when the card is larger than the window.
+				const nextX = Math.max(VIEWPORT_MARGIN, Math.min(left, maxX)) - left;
+				const nextY = Math.max(VIEWPORT_MARGIN, Math.min(top, maxY)) - top;
+				if (Math.abs(nextX - shiftX) > 0.5 || Math.abs(nextY - shiftY) > 0.5) {
+					shiftX = nextX;
+					shiftY = nextY;
+					element.style.translate =
+						shiftX === 0 && shiftY === 0 ? "" : `${shiftX}px ${shiftY}px`;
+				}
+			}
+			frame = requestAnimationFrame(clamp);
+		};
+		frame = requestAnimationFrame(clamp);
+		return () => cancelAnimationFrame(frame);
+	}, [ref]);
+}
 
 const TourCard = ({
 	step,
@@ -15,6 +59,8 @@ const TourCard = ({
 	skipTour,
 	arrow,
 }: CardComponentProps) => {
+	const cardRef = useRef<HTMLDivElement>(null);
+	useKeepInViewport(cardRef);
 	const isFirstStep = currentStep === 0;
 	const isLastStep = currentStep === totalSteps - 1;
 
@@ -42,7 +88,8 @@ const TourCard = ({
 		<div
 			aria-labelledby="tour-step-title"
 			aria-modal="true"
-			className="w-[320px] rounded-lg border border-border bg-card p-4 shadow-lg sm:w-[380px]"
+			className="w-80 rounded-lg border border-border bg-card p-4 shadow-lg sm:w-95"
+			ref={cardRef}
 			role="dialog"
 		>
 			{arrow}

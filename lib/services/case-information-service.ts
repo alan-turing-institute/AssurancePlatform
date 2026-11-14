@@ -234,12 +234,18 @@ export async function checkCaseInformationCompleteness(
 }
 
 /**
- * The publish-readiness gate itself (ADR 0003 §4), shared by every route
- * that can move a case to PUBLISHED — first publish
+ * The case-information half of the publish-readiness gate, shared by every
+ * route that can move a case to PUBLISHED — first publish
  * (`POST /api/cases/[id]/publish`) and republish
  * (`PATCH /api/cases/[id]/status`, `targetStatus: "PUBLISHED"` against an
  * already-published case). Wraps `checkCaseInformationCompleteness` and adds
  * the field-error formatting each of those routes used to duplicate inline.
+ *
+ * It does not look at the argument. A case with placeholders left in it, or
+ * with a variable that has no value mentioned in it, is refused by the publish
+ * itself (`publishSnapshot` in `publish-service.ts`), which counts them on the
+ * snapshot it is about to write, so the rule cannot disagree with what is
+ * published.
  *
  * Callers should treat `{ data: true }` as "proceed" and, on failure, prefer
  * `fieldErrors` (via `validationError`) when present — its absence means the

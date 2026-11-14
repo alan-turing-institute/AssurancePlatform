@@ -8,6 +8,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
 import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
 import { Button } from "../ui/button";
 import {
@@ -19,6 +21,27 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
+
+const RATE_LIMITED_PREFIX = `${SIGN_IN_RATE_LIMITED}:`;
+
+/**
+ * The sentence shown for the error next-auth reports when a sign-in fails.
+ * A paused sign-in arrives as `SignInRateLimited:<minutes>`. Any other error
+ * the form does not know is not shown as it came.
+ */
+function signInFailureMessage(error: string | null | undefined): string {
+	if (error === "CredentialsSignin") {
+		return "Invalid credentials. Please check your email/username and password.";
+	}
+	if (error?.startsWith(RATE_LIMITED_PREFIX)) {
+		const minutes = Math.max(
+			1,
+			Number.parseInt(error.slice(RATE_LIMITED_PREFIX.length), 10) || 1
+		);
+		return `Too many sign-in attempts. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}, or reset your password.`;
+	}
+	return "Unable to log in. Please try again.";
+}
 
 const SignInForm = () => {
 	const [errors, setErrors] = useState<string[]>([]);
@@ -54,20 +77,21 @@ const SignInForm = () => {
 			});
 
 			if (result?.ok) {
-				// Redirect to original page or dashboard on successful sign-in
-				const redirectTo = searchParams.get("redirect") || "/dashboard";
+				// Return to the page that asked for sign-in. `redirect` is set by
+				// our own links and pages; `callbackUrl` is set by the auth proxy
+				// when it sends a signed-out visitor here (for example from an
+				// invitation link). Only a same-site path is followed.
+				const redirectTo = safeRedirectPath(
+					searchParams.get("redirect") || searchParams.get("callbackUrl")
+				);
 				// Use router.refresh() to update server state, then redirect
-				// This ensures the session is properly recognised before navigation
+				// This ensures the session is properly recognised before navigation.
+				// replace() keeps the sign-in page out of the browser history.
 				router.refresh();
-				router.push(redirectTo);
+				router.replace(redirectTo);
 			} else {
 				setLoading(false);
-				// Provide user-friendly error messages
-				const errorMessage =
-					result?.error === "CredentialsSignin"
-						? "Invalid credentials. Please check your email/username and password."
-						: result?.error || "Unable to log in. Please try again.";
-				setErrors([errorMessage]);
+				setErrors([signInFailureMessage(result?.error)]);
 			}
 		} catch (_error) {
 			setLoading(false);
@@ -145,7 +169,11 @@ const SignInForm = () => {
 									<FormLabel>Email or Username</FormLabel>
 									<FormControl>
 										<Input
+											autoCapitalize="none"
+											autoComplete="username"
+											autoCorrect="off"
 											placeholder="alan.turing@example.com or aturing"
+											spellCheck={false}
 											type="text"
 											{...field}
 										/>
@@ -163,6 +191,7 @@ const SignInForm = () => {
 									<FormControl>
 										<div className="relative">
 											<Input
+												autoComplete="current-password"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>

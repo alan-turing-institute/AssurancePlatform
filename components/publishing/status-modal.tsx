@@ -16,25 +16,42 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCaseInformation } from "@/hooks/use-case-information";
 import {
+	placeholderCountMessage,
+	unsetVariableCountMessage,
+} from "@/lib/case/placeholders";
+import type { CaseItemName } from "@/lib/case-item-name";
+import {
 	CASE_INFORMATION_FIELD_LABELS,
 	getMissingCaseInformationFields,
 	type RequiredCaseInformationField,
 } from "@/lib/schemas/case-information";
 import type { PublishStatusType } from "@/lib/services/case-response-types";
 
+/** The dialog title's word for what is being published. */
+const ITEM_TITLES: Record<CaseItemName, string> = {
+	case: "Case",
+	pattern: "Pattern",
+};
+
 interface StatusModalProps {
 	caseId?: string | null;
 	hasChanges?: boolean;
+	/** What the dialog calls the thing being published: "case" (the default) or "pattern". */
+	itemName?: CaseItemName;
 	onOpenChange: (open: boolean) => void;
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	onUnpublish?: () => Promise<void>;
 	onUpdatePublished?: () => Promise<void>;
 	open: boolean;
+	/** How many elements of the case's argument are still to fill in; they hold the case back from publishing. */
+	placeholderCount?: number;
 	publishedAt?: Date | string | null;
 	publishLoading?: boolean;
 	status: PublishStatusType;
 	unpublishLoading?: boolean;
+	/** How many variables the case's text mentions that have no value; they hold the case back from publishing too. */
+	unsetVariableCount?: number;
 }
 
 /**
@@ -54,13 +71,16 @@ export function StatusModal({
 	caseId,
 	status,
 	hasChanges = false,
+	itemName = "case",
 	publishedAt,
 	onUpdatePublished,
 	onPublish,
 	onUnpublish,
 	onRequestCaseInformation,
+	placeholderCount = 0,
 	publishLoading = false,
 	unpublishLoading = false,
+	unsetVariableCount = 0,
 }: StatusModalProps) {
 	const [loading, setLoading] = useState(false);
 
@@ -91,26 +111,23 @@ export function StatusModal({
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
 			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>
-						Case Status: {getStatusLabel(status)}
-						{hasChanges && status === "PUBLISHED" && (
-							<span className="ml-2 font-normal text-sm text-warning">
-								(Changes pending)
-							</span>
-						)}
-					</DialogTitle>
-					<DialogDescription>{getStatusDescription(status)}</DialogDescription>
-				</DialogHeader>
+				<StatusModalHeader
+					hasChanges={hasChanges}
+					itemName={itemName}
+					status={status}
+				/>
 
 				<Separator />
 
 				{status === "DRAFT" && caseId && (
 					<PublishContent
 						caseId={caseId}
+						itemName={itemName}
 						loading={publishLoading}
 						onPublish={onPublish}
 						onRequestCaseInformation={onRequestCaseInformation}
+						placeholderCount={placeholderCount}
+						unsetVariableCount={unsetVariableCount}
 					/>
 				)}
 
@@ -120,11 +137,14 @@ export function StatusModal({
 						formattedDate={formattedDate}
 						handleAction={handleAction}
 						hasChanges={hasChanges}
+						itemName={itemName}
 						loading={loading}
 						onRequestCaseInformation={onRequestCaseInformation}
 						onUnpublish={onUnpublish}
 						onUpdatePublished={onUpdatePublished}
+						placeholderCount={placeholderCount}
 						unpublishLoading={unpublishLoading}
+						unsetVariableCount={unsetVariableCount}
 					/>
 				)}
 
@@ -142,6 +162,35 @@ export function StatusModal({
 	);
 }
 
+interface StatusModalHeaderProps {
+	hasChanges: boolean;
+	itemName: CaseItemName;
+	status: PublishStatusType;
+}
+
+/** The dialog's title, with a pending-changes note on a published item, and its one-line description. */
+function StatusModalHeader({
+	hasChanges,
+	itemName,
+	status,
+}: StatusModalHeaderProps) {
+	return (
+		<DialogHeader>
+			<DialogTitle>
+				{ITEM_TITLES[itemName]} Status: {getStatusLabel(status)}
+				{hasChanges && status === "PUBLISHED" && (
+					<span className="ml-2 font-normal text-sm text-warning">
+						(Changes pending)
+					</span>
+				)}
+			</DialogTitle>
+			<DialogDescription>
+				{getStatusDescription(status, itemName)}
+			</DialogDescription>
+		</DialogHeader>
+	);
+}
+
 function getStatusLabel(status: PublishStatusType): string {
 	switch (status) {
 		case "DRAFT":
@@ -153,12 +202,15 @@ function getStatusLabel(status: PublishStatusType): string {
 	}
 }
 
-function getStatusDescription(status: PublishStatusType): string {
+function getStatusDescription(
+	status: PublishStatusType,
+	itemName: CaseItemName
+): string {
 	switch (status) {
 		case "DRAFT":
-			return "This case is private. Publish it to make it available on Discover.";
+			return `This ${itemName} is private. Publish it to make it available on Discover.`;
 		case "PUBLISHED":
-			return "This case is published and visible on Discover.";
+			return `This ${itemName} is published and visible on Discover.`;
 		default:
 			return status satisfies never;
 	}
@@ -215,14 +267,65 @@ function MissingFieldsGate({
 }
 
 // ============================================
+// Shared — placeholders and variables still to fill in
+// ============================================
+
+interface PlaceholdersGateProps {
+	count: number;
+	testId: string;
+	trailingCopy: string;
+	variableCount: number;
+}
+
+/**
+ * "N elements still to fill in" and "N variables with no value" — shown in
+ * place of the Publish action (Draft) or the Update Published action
+ * (Published) while a case has placeholders left in its argument or mentions a
+ * variable that has no value. A line appears for each that is left. The same
+ * counts the server refuses with.
+ */
+function PlaceholdersGate({
+	count,
+	testId,
+	trailingCopy,
+	variableCount,
+}: PlaceholdersGateProps) {
+	return (
+		<div data-testid={testId}>
+			<Alert>
+				<Info className="h-4 w-4" />
+				<AlertDescription className="space-y-1">
+					{count > 0 && (
+						<p>
+							{placeholderCountMessage(count)}. Write each element marked{" "}
+							<strong>To fill in</strong> on the diagram {trailingCopy}
+						</p>
+					)}
+					{variableCount > 0 && (
+						<p>
+							{unsetVariableCountMessage(variableCount)}. Give a value to each
+							variable that shows its name in square brackets on the diagram{" "}
+							{trailingCopy}
+						</p>
+					)}
+				</AlertDescription>
+			</Alert>
+		</div>
+	);
+}
+
+// ============================================
 // Draft — the Publish flow (ADR 0003 §2)
 // ============================================
 
 interface PublishContentProps {
 	caseId: string;
+	itemName: CaseItemName;
 	loading: boolean;
 	onPublish?: () => Promise<void>;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
+	placeholderCount: number;
+	unsetVariableCount: number;
 }
 
 /**
@@ -233,9 +336,12 @@ interface PublishContentProps {
  */
 function PublishContent({
 	caseId,
+	itemName,
 	loading,
 	onPublish,
 	onRequestCaseInformation,
+	placeholderCount,
+	unsetVariableCount,
 }: PublishContentProps) {
 	const { information, loading: infoLoading } = useCaseInformation(caseId);
 
@@ -251,14 +357,30 @@ function PublishContent({
 
 	const missingFields = getMissingCaseInformationFields(information);
 
-	if (missingFields.length > 0) {
+	if (
+		missingFields.length > 0 ||
+		placeholderCount > 0 ||
+		unsetVariableCount > 0
+	) {
 		return (
-			<MissingFieldsGate
-				missingFields={missingFields}
-				onRequestCaseInformation={onRequestCaseInformation}
-				testId="publish-content-incomplete"
-				trailingCopy="before publishing."
-			/>
+			<div className="space-y-4">
+				{missingFields.length > 0 && (
+					<MissingFieldsGate
+						missingFields={missingFields}
+						onRequestCaseInformation={onRequestCaseInformation}
+						testId="publish-content-incomplete"
+						trailingCopy="before publishing."
+					/>
+				)}
+				{(placeholderCount > 0 || unsetVariableCount > 0) && (
+					<PlaceholdersGate
+						count={placeholderCount}
+						testId="publish-content-placeholders"
+						trailingCopy="before publishing."
+						variableCount={unsetVariableCount}
+					/>
+				)}
+			</div>
 		);
 	}
 
@@ -267,8 +389,7 @@ function PublishContent({
 			<Alert>
 				<Globe className="h-4 w-4" />
 				<AlertDescription>
-					Case information is complete. Publishing creates a snapshot of this
-					case and makes it visible on the Discover page.
+					{`Case information is complete. Publishing creates a snapshot of this ${itemName} and makes it visible on the Discover page.`}
 				</AlertDescription>
 			</Alert>
 			<Button disabled={loading} onClick={onPublish}>
@@ -288,11 +409,14 @@ interface PublishedContentProps {
 	formattedDate: string | null;
 	handleAction: (action: (() => Promise<void>) | undefined) => void;
 	hasChanges: boolean;
+	itemName: CaseItemName;
 	loading: boolean;
 	onRequestCaseInformation?: (field: RequiredCaseInformationField) => void;
 	onUnpublish?: () => Promise<void>;
 	onUpdatePublished?: () => Promise<void>;
+	placeholderCount: number;
 	unpublishLoading: boolean;
+	unsetVariableCount: number;
 }
 
 /**
@@ -308,17 +432,22 @@ function PublishedContent({
 	caseId,
 	hasChanges,
 	formattedDate,
+	itemName,
 	loading,
 	onUpdatePublished,
 	onUnpublish,
 	onRequestCaseInformation,
+	placeholderCount,
 	unpublishLoading,
+	unsetVariableCount,
 	handleAction,
 }: PublishedContentProps) {
 	const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
 	const { information } = useCaseInformation(caseId ?? undefined);
 	const missingFields = getMissingCaseInformationFields(information);
-	const republishBlocked = hasChanges && missingFields.length > 0;
+	const fillInLeft = placeholderCount > 0 || unsetVariableCount > 0;
+	const republishBlocked =
+		hasChanges && (missingFields.length > 0 || fillInLeft);
 
 	return (
 		<div className="space-y-4">
@@ -331,18 +460,26 @@ function PublishedContent({
 			{hasChanges && !republishBlocked && (
 				<Alert>
 					<AlertDescription>
-						Changes have been made since this case was last published. Update
-						the published version to reflect the latest changes.
+						{`Changes have been made since this ${itemName} was last published. Update the published version to reflect the latest changes.`}
 					</AlertDescription>
 				</Alert>
 			)}
 
-			{republishBlocked && (
+			{republishBlocked && missingFields.length > 0 && (
 				<MissingFieldsGate
 					missingFields={missingFields}
 					onRequestCaseInformation={onRequestCaseInformation}
 					testId="republish-content-incomplete"
 					trailingCopy="before updating the published version."
+				/>
+			)}
+
+			{republishBlocked && fillInLeft && (
+				<PlaceholdersGate
+					count={placeholderCount}
+					testId="republish-content-placeholders"
+					trailingCopy="before updating the published version."
+					variableCount={unsetVariableCount}
 				/>
 			)}
 
@@ -365,9 +502,7 @@ function PublishedContent({
 							<Alert variant="destructive">
 								<AlertTriangle className="h-4 w-4" />
 								<AlertDescription>
-									Unpublishing removes the public record. Anyone with the
-									Discover link will no longer be able to view it. This case
-									stays intact as a private draft.
+									{`Unpublishing removes the public record. Anyone with the Discover link will no longer be able to view it. This ${itemName} stays intact as a private draft.`}
 								</AlertDescription>
 							</Alert>
 							<div className="flex justify-end gap-2">

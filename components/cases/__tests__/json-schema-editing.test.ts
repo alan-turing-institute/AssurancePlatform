@@ -1,7 +1,7 @@
 /**
  * Exercises the schema-aware editing path itself — the same
  * codemirror-json-schema functions and the same schema file
- * (lib/schemas/json-schema-v1.0.json, imported by path) wired in
+ * (lib/schemas/json-schema-v1.1.json, imported by path) wired in
  * json-view-panel.tsx — against a real CodeMirror EditorState/EditorView.
  * No mocking of codemirror-json-schema: linter, completion and hover are
  * the library's actual implementations.
@@ -17,7 +17,7 @@ import {
 	stateExtensions,
 } from "codemirror-json-schema";
 import { describe, expect, it } from "vitest";
-import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.0.json";
+import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.1.json";
 
 type CaseExportJsonSchema = NonNullable<Parameters<typeof stateExtensions>[0]>;
 const caseExportJsonSchema =

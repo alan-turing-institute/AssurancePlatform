@@ -8,9 +8,39 @@ If you want to build something step by step first, see [Module 2 of the TEA Trai
 
 ## Create a case
 
-From the dashboard, choose **New Case** (or the **Create new case** card if you already have cases) and fill in **Name** and **Description** in the **Create New Assurance Case** dialog, then choose **Submit**.
-This creates a blank working case with a single top-level goal, named `G1` and holding a placeholder description for you to replace.
-There is no starter-template choice in this dialog; a separate **Import File** option on the dashboard creates a case from an existing JSON export instead.
+From the dashboard, choose **New Case** (or the **Create new case** card if you already have cases) to open the **Create New Assurance Case** dialog.
+Under **Start from**, choose one of three starting points:
+
+- **A blank case** creates a working case with a single top-level goal, named `G1`.
+  The goal has no text yet: it is marked **To fill in**, and shows the hint "Describe your top-level assurance goal" where its text will go.
+  Writing the goal takes the marker off.
+  This is the default.
+- **A blank pattern** creates the same single-goal starting point, but as a pattern: a reusable argument that cases can be started from.
+  A pattern does not appear in your list of cases.
+- **A pattern** creates a case from a pattern you can view, as described below.
+
+Fill in **Name** and **Description**, then choose **Submit**.
+A separate **Import File** option on the dashboard creates a case from an existing JSON export instead.
+
+### Starting a case from a pattern
+
+Choose **A pattern** under **Start from** to open a picker of the patterns you can view.
+It lists the patterns you own, then patterns shared with you directly or through a team, then any patterns published on Discover.
+Choosing one shows its description below the picker.
+Enter a name and description for the new case as usual; they are yours, not the pattern's.
+If the pattern has variables, the new case takes the pattern's own values, and you change one afterwards on the element that defines it; see [Values in a case started from a pattern](/docs/platform-guide/templates#values-in-a-case-started-from-a-pattern).
+What a pattern is, and how to make one, is covered on the [Patterns](/docs/platform-guide/templates) page.
+A pattern published on Discover can also be started from its own page, with **Use this pattern**; see [Use a published pattern](/docs/platform-guide/publishing-and-discover#use-a-published-pattern).
+
+The new case is an ordinary case that belongs to you.
+It holds a copy of the pattern's elements, and each copied element is marked as coming from the pattern.
+Comments on the pattern are not copied.
+The case also records which pattern it was started from, unless that pattern no longer exists.
+Changing the pattern afterwards does not change cases already started from it.
+
+A pattern can hold an away goal or a module that cites another case.
+A reference to a case you cannot view is not kept in the new case: the reference is cleared and the element is flagged as having lost its citation.
+The dialog lists what was left out before you continue to the new case.
 
 ## Element types
 
@@ -42,9 +72,102 @@ The pencil icon on a node, labelled **Edit element** (or **View details** if you
 The dialog's fields depend on the element type — a description for every type, plus **Context** entries and an **Assertion status** selector on goals and property claims, and an optional assumption or justification field where relevant.
 Saving calls the dialog's submit button, labelled **Update** followed by the element type — **Update Goal**, **Update Strategy**, **Update Property**, **Update Evidence** and so on.
 
+## Defined terms
+
+A context entry can be given a name, so that the description of the element it sits on, and of every element below it, can refer to it.
+This lets you define a word once, for example `window` as "the moving 5-minute interval over which separation is measured", and use it in the claims beneath.
+
+### Name a context entry
+
+In the edit dialog of a goal, strategy or property claim, each context entry has a tag button, labelled **Name context entry 1**, **Name context entry 2** and so on.
+Choose it, then type the name.
+The entry's own text becomes the name's meaning.
+You can also give the entry a value, such as `5 minutes`, in the box beneath its text.
+The value is optional.
+
+A name is 1 to 40 characters.
+It starts with a letter and uses letters, digits, spaces, hyphens and underscores.
+A value is at most 500 characters.
+One element cannot have two names that differ only in capital letters, such as `Window` and `window`.
+
+**Remove name** turns the entry back into ordinary text.
+If the entry has a value, the dialog warns that the value goes with the name, and asks you to confirm.
+Text that referred to the name then shows it as not found.
+
+### Use a name in a description
+
+In the description of a goal, strategy, property claim or piece of evidence, type `{`.
+Evidence has no context entries of its own, so the list holds the names in reach of the claim it sits under.
+A list opens beside the cursor with the names the element can use.
+Each name is labelled with the element it is defined on, and the nearest definition comes first.
+Keep typing to narrow the list.
+Press the arrow keys and **Enter**, or click a name, to insert it as a highlighted word.
+Press **Escape** to close the list; the `{` stays in the text, and the dialog and anything you have typed stay as they are.
+Typing `}` closes the list too, so braces you mean as plain text are left alone.
+
+The description box takes paragraphs and references.
+It has no other formatting.
+Pressing **Enter** starts a new paragraph.
+
+A name reaches the element that defines it and every element below it on the same branch.
+It does not reach an element on another branch.
+If two names in reach are the same, the list shows both, with the nearer one first.
+
+Under the description, **Terms you can use here** lists every name in reach with its meaning, its value and the element it is defined on.
+Use it to read a meaning without a mouse.
+
+### See a name on the diagram
+
+On a card, a reference appears as a highlighted word that shows the entry's current name.
+Rename the entry and every reference follows.
+Hover over the word on an expanded card to see its meaning, its value and the element that defines it.
+On a collapsed card the word is highlighted without its own tooltip, and hovering a description that is cut short shows its full text, with each reference written `{name}`.
+An expanded card's **Context** section lists each named entry as the name, its meaning and its value in brackets.
+
+If the definition is no longer in reach, the word stays but is underlined with a dashed line, and its tooltip says that no definition was found above the element.
+This happens when the entry is deleted or has its name removed, or when the element moves to another branch.
+Screen readers announce the word followed by "(definition not found)".
+
+Evidence cards resolve references with the names in reach of the claim they are drawn under, and evidence is written in the same description box as a goal, strategy or claim.
+Away goal and module cards do not resolve references, and any reference in their text shows as `{name}` without a highlight.
+
+### Make a name a variable
+
+Under a named entry, switch on **Variable: show its value wherever it is mentioned**.
+The name is then a variable: wherever it is mentioned, the card shows the entry's value in place of the name, and changing the value once updates every mention, evidence included.
+A pattern uses variables for details that the person using it sets once, such as the name of the system.
+
+A variable with no value shows its name in square brackets, such as `[system]`, in a dashed outline like a placeholder.
+Its tooltip says the variable is not set yet, and screen readers announce "(variable not set)".
+A value made only of spaces counts as no value.
+The value is shown as plain text on the card and is not read for references, so a value that looks like a reference stays as typed.
+A long value is cut like ordinary text when a collapsed card is cut short.
+A document export writes the value as it writes any other description.
+
+The description box in the edit dialog still shows the name, as a highlighted word, and saves the name, never the value.
+**Terms you can use here** shows each variable's current value beside its name, or "variable, not set".
+An expanded card's **Context** section reads a variable as `system — the system under test (variable: AcmeBot)`, or `(variable, not set)`.
+
+The switch only changes how the entry is shown.
+Ordinary named entries behave exactly as before, and **Remove name** turns a variable back into ordinary text.
+Changing a variable's value is an ordinary edit of the element that defines it: it can be undone, and it counts as a change for **Update published version**.
+Marking an entry as a variable survives saving, export and import.
+
+A case cannot be published while a variable it mentions has no value; see [Publishing and Discover](/docs/platform-guide/publishing-and-discover).
+A pattern can be published with its variables empty.
+
+### Where else you see a reference
+
+Search, the move list, document exports and the rules check show an ordinary reference as `{name}` and a variable as its value, or `[name]` while it has none.
+Search finds a variable by its name as well as by its value.
+The [Case Assistant](/docs/platform-guide/case-assistant) reads a variable as `{name = "value"}`, or `{name = (not set)}`, so that it can tell a variable from fixed wording.
+The attach dialog's list of detached elements writes each reference as `{name}`, a variable's too, because the list is made without the terms in reach.
+For a moment after you detach an element, the list can still hold the words its card showed, with a variable as its value, until the list is loaded again.
+Raw JSON exports keep the stored form, `{name#id}`, where the id is what ties the reference to its entry, and a variable's entry carries `"variable": true`.
+
 ## Assertion status
 
-Goals and property claims carry an assertion status, set from the edit dialog.
+Goals, strategies and property claims carry an assertion status, set from the edit dialog.
 There are five values an author can choose from:
 
 - **Asserted** — the author's stated position. This is the default.
@@ -54,10 +177,47 @@ There are five values an author can choose from:
 - **Defeated** — marked by the author as refuted or withdrawn.
 
 <Callout type="info">
-A sixth status, **As cited**, can appear on an element, but you cannot set it directly. It is computed automatically when an element cites another claim, from that claim's own status.
+A sixth status, **As cited**, can appear on an element, but you cannot set it directly. It is not computed automatically in this build; it arrives only when a case is imported with that status.
 </Callout>
 
 Assertion status records the author's own position; it is not an automated verdict on whether the evidence is actually sufficient.
+
+### The Unsupported marker
+
+A goal, strategy or property claim with nothing beneath it carries a small badge reading **Unsupported**, drawn with a dashed outline.
+The marker shows where an argument stops.
+Hover over it for a reminder of how to clear it.
+
+An element counts as supported when at least one of these sits directly beneath it:
+
+- a strategy or a property claim;
+- a piece of evidence;
+- an away goal or a module, even when its link to the other case or module is broken.
+
+A defeater does not count, because it challenges the element it is attached to rather than supporting it.
+A claim whose only child is a defeater is still marked.
+Collapsing a branch hides its children without removing them, so a collapsed element is never marked for that reason.
+
+The marker sits on the element with nothing beneath it, not on the elements above it.
+Add a strategy under an unsupported goal and the marker moves to the strategy.
+Add a claim under that strategy and it moves to the claim.
+Add evidence under the claim and it clears.
+
+The marker does not appear on evidence, away goals, modules or defeaters, which end a branch by design.
+It also does not appear once you have set a status that explains why nothing is beneath the element.
+**Needs support** shows its own badge instead, and **Assumed**, **Axiomatic**, **Defeated** and **As cited** show no marker.
+An element with the default **Asserted** status can carry the marker.
+
+The marker is different from the **Needs support** status.
+**Needs support** is your own declaration that an element still needs work, and it is saved with the case.
+The marker is worked out from the diagram each time it is drawn.
+It is never saved, so it does not appear in a JSON export or on import, and it never changes a status you have set.
+It is also left out of exported images and the dashboard thumbnail, and out of the example diagrams in the documentation.
+
+Each person chooses whether to see the marker.
+Use **Show unsupported markers** in the **Settings** menu on the case toolbar, or in the **Case diagram** section of the account **Settings** page.
+The choice is saved to your account, so it applies in every browser you sign in from, and it starts on.
+Other people viewing the same case see the marker by their own setting.
 
 ## Element names and the prefix rule
 
@@ -71,6 +231,8 @@ If names in your working case get out of order — after a lot of adding, deleti
 
 The toolbar's history controls are **Undo** (`Cmd+Z`) and **Redo** (`Cmd+Shift+Z`); both operate on your recent add, edit and delete actions within the current session.
 
+The **More actions** control (the three dots) holds **Convert to pattern**, or **Convert to case** on a pattern, for the case owner and anyone with Admin access; see [Patterns](/docs/platform-guide/templates).
+
 The **Export** control opens the **Export Case** dialog, which offers four independent ways to take a copy of your case:
 
 - **Export Raw JSON** — the case data itself, suitable for import elsewhere.
@@ -80,6 +242,16 @@ The **Export** control opens the **Export Case** dialog, which offers four indep
 
 None of these dialogs has a separate whole-case "Save" button.
 Every add and edit dialog persists its own change the moment you submit it; export and backup are separate actions for taking a copy, not for saving your work.
+
+### Report presets
+
+The case share and export dialog offers document export presets.
+The presets include a full report, summary and evidence list.
+They control which sections and rendering layout appear in an exported document; they do not add claims or evidence to a working case.
+Choose the preset that suits the intended reader, then review the resulting file.
+A Markdown report escapes the characters that would start HTML, a link or a character reference, so text that looks like a tag or a link shows as typed.
+A Markdown report that includes the diagram downloads as a .zip file containing the Markdown file and the diagram images; leave the Diagram section out to download the Markdown file on its own.
+An evidence list is a way to present what the case already contains, not a judgement about evidence quality.
 
 ## Learn by doing
 

@@ -1,4 +1,5 @@
 import type { ValidatedSession } from "@/lib/auth/validate-session";
+import { noticeElementName } from "@/lib/case/defined-terms";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
@@ -155,8 +156,10 @@ async function getCommentWithPermission(
 		return { error: "Permission denied" };
 	}
 
-	const elementName = comment.element?.name || comment.element?.description;
-	return { data: { comment, caseId, elementName: elementName ?? null } };
+	const elementName = comment.element
+		? noticeElementName(comment.element)
+		: null;
+	return { data: { comment, caseId, elementName } };
 }
 
 // ---------------------------------------------------------------------------
@@ -333,7 +336,7 @@ export async function createElementComment(
 	emitSSEEvent("comment:created", element.caseId, {
 		comment: response,
 		elementId,
-		elementName: element.name || element.description,
+		elementName: noticeElementName(element),
 		username,
 		userId: session.userId,
 	});

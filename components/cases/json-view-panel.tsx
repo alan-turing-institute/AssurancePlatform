@@ -25,17 +25,22 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJsonValidation } from "@/hooks/use-json-validation";
 import { fetchAndRefreshCase } from "@/lib/case";
+import { writingClearsPlaceholder } from "@/lib/case/placeholders";
 import {
 	computeTreeDiff,
 	type ElementChange,
 	type TreeDiffResult,
 } from "@/lib/case/tree-diff";
-import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
+import type {
+	CaseExportNested,
+	CaseKind,
+	TreeNode,
+} from "@/lib/schemas/case-export";
 // The generated build artefact (ADR 0004 D1) — imported by path, not content:
 // a parallel change regenerates this file from CaseExportNestedSchema via
 // zod's z.toJSONSchema(). codemirror-json-schema drives inline hints only;
 // Apply always re-validates with the Zod schema above, unchanged.
-import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.0.json";
+import rawCaseExportJsonSchema from "@/lib/schemas/json-schema-v1.1.json";
 import { createSnapshot } from "@/lib/services/history-service";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -159,9 +164,14 @@ function flattenTree(node: TreeNode, map: Map<string, TreeNode>): void {
 }
 
 /**
- * Creates a snapshot from a TreeNode for history recording
+ * Creates a snapshot from a TreeNode for history recording. The marker is
+ * always written out (an export leaves it out of an element that is not a
+ * placeholder), so undoing an edit switches it back off as well as on.
  */
-function snapshotFromNode(node: TreeNode): ReturnType<typeof createSnapshot> {
+function snapshotFromNode(
+	node: TreeNode,
+	isPlaceholder = node.isPlaceholder === true
+): ReturnType<typeof createSnapshot> {
 	return createSnapshot({
 		id: node.id,
 		type: node.type,
@@ -172,7 +182,34 @@ function snapshotFromNode(node: TreeNode): ReturnType<typeof createSnapshot> {
 		context: node.context,
 		URL: node.url,
 		inSandbox: node.inSandbox,
+		isPlaceholder,
+		placeholderHint: node.placeholderHint,
 	});
+}
+
+/**
+ * The marker an update leaves on an element, as the server will. A marker the
+ * edit changes itself is kept as the document has it. Otherwise writing the
+ * description takes it off in a case, and a pattern keeps whatever the
+ * document says.
+ */
+function markerAfterUpdate(
+	kind: CaseKind,
+	change: Extract<ElementChange, { type: "update" }>,
+	beforeNode: TreeNode,
+	afterNode: TreeNode
+): boolean {
+	if (
+		change.data.isPlaceholder === undefined &&
+		writingClearsPlaceholder(
+			kind,
+			beforeNode.description,
+			afterNode.description.trim()
+		)
+	) {
+		return false;
+	}
+	return afterNode.isPlaceholder === true;
 }
 
 /**
@@ -180,6 +217,7 @@ function snapshotFromNode(node: TreeNode): ReturnType<typeof createSnapshot> {
  */
 function processChangeToCommand(
 	change: ElementChange,
+	kind: CaseKind,
 	beforeMap: Map<string, TreeNode>,
 	afterMap: Map<string, TreeNode>
 ): HistoryCommand | null {
@@ -213,7 +251,10 @@ function processChangeToCommand(
 			elementId: change.elementId,
 			elementType: beforeNode.type,
 			before: snapshotFromNode(beforeNode),
-			after: snapshotFromNode(afterNode),
+			after: snapshotFromNode(
+				afterNode,
+				markerAfterUpdate(kind, change, beforeNode, afterNode)
+			),
 		};
 	}
 
@@ -248,8 +289,11 @@ function convertChangesToHistoryCommands(
 	flattenTree(serverData.tree, beforeMap);
 	flattenTree(editedData.tree, afterMap);
 
+	// The export leaves the kind out for an ordinary case.
+	const kind = serverData.case.kind ?? "CASE";
+
 	return changes
-		.map((change) => processChangeToCommand(change, beforeMap, afterMap))
+		.map((change) => processChangeToCommand(change, kind, beforeMap, afterMap))
 		.filter((cmd): cmd is HistoryCommand => cmd !== null);
 }
 

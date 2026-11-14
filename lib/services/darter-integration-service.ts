@@ -25,6 +25,9 @@ import type { ServiceResult } from "@/types/service";
 export const DARTER_INTEGRATION_NAME = "darter-pipeline";
 export const DARTER_EXPECTED_SCOPES = [
 	"case:read",
+	"health:checks:write",
+	"health:criteria:read",
+	"health:evidence:read",
 	"health:evidence:write",
 ] as const;
 const DARTER_DESCRIPTION =

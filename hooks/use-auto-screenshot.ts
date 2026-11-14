@@ -1,5 +1,9 @@
 import { toPng } from "html-to-image";
 import { useCallback, useEffect, useRef } from "react";
+import {
+	isAuthoredContent,
+	stripPluginAppearance,
+} from "@/lib/case/plugin-display-capture";
 import { logger } from "@/lib/logger";
 
 const log = logger.child({ component: "use-auto-screenshot" });
@@ -15,6 +19,41 @@ function isUsableDataUrl(dataUrl: string): boolean {
 		dataUrl.startsWith("data:image/") &&
 		dataUrl.length > "data:image/png;base64,".length
 	);
+}
+
+/**
+ * The attribute on a card's line that names a cited case. People other than
+ * the editor see the dashboard thumbnail, and not all of them can view the
+ * cited case, so the thumbnail leaves the line out. An editor's own image
+ * exports keep it: they show only what that editor can already see.
+ */
+const LEFT_OUT_OF_SHARED_THUMBNAIL_ATTRIBUTE =
+	"data-left-out-of-shared-thumbnail";
+
+/** The thumbnail's capture filter: the authored case, without what is left out of the shared thumbnail. */
+function isSharedThumbnailContent(domNode: HTMLElement): boolean {
+	return (
+		isAuthoredContent(domNode) &&
+		!(
+			domNode instanceof Element &&
+			domNode.hasAttribute(LEFT_OUT_OF_SHARED_THUMBNAIL_ATTRIBUTE)
+		)
+	);
+}
+
+/**
+ * Takes the picture of the canvas as the authored case: without the tints,
+ * edge colours, badges and dots that plugins draw on it, and without the names
+ * of cited cases. The picture becomes the case's thumbnail, which people who
+ * have the plugin off, and people who cannot view a cited case, also see.
+ */
+function captureAuthoredCase(target: HTMLElement): Promise<string> {
+	const restoreAppearance = stripPluginAppearance(target);
+	return toPng(target, {
+		backgroundColor: "#ffffff",
+		filter: isSharedThumbnailContent,
+		pixelRatio: 1,
+	}).finally(restoreAppearance);
 }
 
 interface UseAutoScreenshotOptions {
@@ -61,10 +100,7 @@ export function useAutoScreenshot({
 		isCapturingRef.current = true;
 
 		try {
-			const base64Image = await toPng(target as HTMLElement, {
-				backgroundColor: "#ffffff",
-				pixelRatio: 1,
-			});
+			const base64Image = await captureAuthoredCase(target as HTMLElement);
 
 			if (!isUsableDataUrl(base64Image)) {
 				log.warn("Skipped upload of a degenerate screenshot capture", {
@@ -127,10 +163,7 @@ export function useAutoScreenshot({
 				// Use sendBeacon for reliable delivery during page unload
 				const target = document.querySelector(selector);
 				if (target) {
-					toPng(target as HTMLElement, {
-						backgroundColor: "#ffffff",
-						pixelRatio: 1,
-					})
+					captureAuthoredCase(target as HTMLElement)
 						.then((base64Image) => {
 							if (!isUsableDataUrl(base64Image)) {
 								log.warn(
