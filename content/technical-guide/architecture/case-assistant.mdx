@@ -394,7 +394,7 @@ The system prompt explains the markers and tells the model not to write them, a 
 `suggest_edit` takes an element and the complete new text of any of the description, assumption, justification and context fields.
 It refuses, with a reason in plain words, when:
 
-- the element is an away goal or a module, which point at other cases;
+- the element is an away goal or a module, which point at other cases, or is of any type other than a goal, strategy, property claim, evidence, assumption or justification;
 - the element type has no such field (`fieldAppliesTo`);
 - a value is empty after trimming, or the context list is empty, because a suggestion cannot empty a field;
 - a value is over 5,000 characters, which is the server's limit for one field;
@@ -468,7 +468,7 @@ The model is sent that call together with an error result that says it did not f
 Without that result the model would take the question that began the reply as still waiting for an answer, and would call the tool again.
 A call that was cut off while its arguments were still arriving cannot be sent as a call, so it is left out.
 An assistant message that this leaves holding only thinking is left out too, because some providers refuse an empty assistant message.
-Calls that finished earlier in the same reply stay in what the model is sent as they were, and the next question is answered normally.
+Calls that finished earlier in the same reply stay in what the model is sent, and the next question is answered normally; earlier case reads and claim health reads are replaced by a notice, as described under Suggested changes and Claim health.
 Only what is sent to the model changes.
 The chat and its stored messages keep the call as it was.
 
@@ -569,14 +569,14 @@ Whenever `lint_case` is registered, it offers "Check this case against the rules
 An element is named by its label, for example P1, or as "the selected element" when it has none.
 The technique prompt needs a selected element because only then does the server send the claim's exact text.
 The introduction mentions technique suggestions only when `suggest_techniques` is registered.
-It says that the assistant never changes the case itself and that the user decides whether to apply a suggestion when either suggestion tool is registered, and that it never changes the case otherwise.
+Once the tool list has loaded, it says that the assistant never changes the case itself and that the user decides whether to apply a suggestion when either suggestion tool is registered, and that it never changes the case otherwise. While the list is loading, it says nothing about changes.
 
 The panel learns which tools are registered from `GET /api/cases/{id}/assistant`, which returns `{ "tools": ["read_case", ...] }`.
 The names come from the same call that builds the tools for a chat request, so there is no second list to keep up to date.
 The endpoint makes the same checks as the chat route, in the same order.
 It answers 401 without a session, and 404 when the plugin is off, the id is not a UUID, or the user cannot view the case.
 It is not part of the published API description, because it exists for the panel and is not an integration point.
-If the request fails, the introduction appears without prompts.
+If the request fails, the introduction appears without prompts and says nothing about changes.
 
 ## Linting a case
 
