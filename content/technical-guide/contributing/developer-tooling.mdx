@@ -19,7 +19,7 @@ The generator configuration is in `next.openapi.json`. Generated output includes
 
 `.commitlintrc.json` describes a convention; no hook or CI step enforces it. It allows types such as `feat`, `fix`, `docs`, `test`, `ci` and `chore`, with a defined scope list and lower-case short subjects. The repository's release configuration analyses these types for semantic versioning. Releases run on `main` through `.github/workflows/release.yaml`; `feat` proposes minor, while `fix`, `perf`, `docs`, `style`, `refactor`, `test`, `build` and `revert` propose patch; a breaking change proposes major. `ci` and `chore` do not cut a release. A commit on staging is not itself a published release.
 
-The `prepare` script sets Git's hooks path to `.githooks`. The local pre-push hook runs lint and typecheck for pushes to `staging` or `main`. You can run the same checks while editing:
+The `prepare` script sets Git's hooks path to `.githooks`. The local pre-push hook runs on a push to any branch (a push that only deletes branches is let through). It regenerates the Prisma client, blocks the push if that changes a tracked file you had not already modified, and then runs lint and typecheck. You can run lint and typecheck while editing:
 
 ```sh
 pnpm lint
@@ -30,14 +30,14 @@ The hook is an early check; CI remains the shared gate. Local setup uses Node 20
 
 ## Integration database
 
-Integration tests use the `postgres-test` service in `docker-compose.local.yml`, separate from the development database. `scripts/run-integration-tests.sh` checks for that container. Start it before the package test script:
+Integration tests use the `postgres-test` service in `docker-compose.local.yml`, separate from the development database. Start the container before the package test script. The pre-commit hook `scripts/run-integration-tests.sh` runs the integration tests only when a PostgreSQL server answers on the test database's host and port (`localhost:5433` unless `INTEGRATION_TEST_ADMIN_DATABASE_URL` overrides it), and otherwise skips with a message:
 
 ```sh
 docker compose -f docker-compose.local.yml up -d postgres-test
 pnpm test:integration
 ```
 
-This setup reduces the risk of test data reaching a developer's working database. The script still expects the documented local database configuration. The tooling does not replace a code review or a migration review.
+This setup reduces the risk of test data reaching a developer's working database. The test container publishes port 5433 and keeps its data in memory, so nothing persists between runs. The tooling does not replace a code review or a migration review.
 
 ## Limits and code location
 
