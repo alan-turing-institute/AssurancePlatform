@@ -29,6 +29,7 @@ const TRUTHY = new Set(["1", "true"]);
 const DISPOSABLE_SUFFIXES = ["_test", "_e2e"];
 const DEFAULT_POSTGRES_PORT = "5432";
 const DATABASE_NAME = /^[A-Za-z0-9_$-]+$/;
+const AUTHORITY_END = /[/?#]/;
 
 const isSwitchOn = (value: string | undefined) =>
 	TRUTHY.has((value ?? "").trim().toLowerCase());
@@ -60,11 +61,14 @@ function parseDatabaseUrl(
 		return null;
 	}
 	// An unencoded "/", "?" or "#" in the credentials ends the host part early,
-	// so the real separating "@" lands in the query or fragment (or the path,
-	// refused above) and the parsed host and database come from the password.
-	// Nothing the parser reports can then be echoed. An "@" in a query value
-	// must be written "%40".
-	if (parsed.search.includes("@") || parsed.hash.includes("@")) {
+	// so the real separating "@" lands after the authority and the parsed host
+	// and database come from the password. The parser can also drop that part
+	// (for example a "/../" or "/%2e%2e/" segment), so the raw text is checked:
+	// any literal "@" after the authority is refused, and nothing the parser
+	// reports is echoed. An "@" after the authority must be written "%40".
+	const afterScheme = raw.slice(raw.indexOf("//") + 2);
+	const authorityEnd = afterScheme.search(AUTHORITY_END);
+	if (authorityEnd !== -1 && afterScheme.slice(authorityEnd).includes("@")) {
 		return null;
 	}
 	// The drivers let these query parameters override the host part.

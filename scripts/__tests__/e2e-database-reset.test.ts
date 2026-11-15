@@ -142,6 +142,10 @@ describe("decideE2eDatabaseReset", () => {
 			"postgresql://tea_owner:Pa@s3cret/word_e2e?1@localhost:5433/tea_dev",
 			"postgresql://tea_owner:Pa@s3cret/word_e2e#1@localhost:5433/tea_dev",
 			"postgresql://tea_owner:/x_e2e?s3cret@localhost:5433/tea_dev",
+			"postgresql://tea_owner:12/s3cret@localhost:5433/../tea_e2e",
+			"postgresql://tea_owner:12/s3cret@localhost:5433/%2e%2e/tea_e2e",
+			"postgresql://tea_owner:12/s3cret@localhost:5433/../tea_dev",
+			"postgresql://tea_owner:x@s3cret/a@localhost:5433/../tea_e2e",
 		]) {
 			const decision = decideE2eDatabaseReset({ DATABASE_URL: value });
 			expect(decision.action).toBe("refuse");
