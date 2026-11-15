@@ -16,6 +16,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import {
 	OPERATIONS,
 	QUERY_PARAMETERS,
@@ -220,10 +221,13 @@ function checkTableHasNoStrays(paths: Json): void {
 			present.add(operationKey(method, routePath));
 		}
 	}
-	const stray = Object.keys(OPERATIONS).filter((key) => !present.has(key));
+	const stray = [
+		...Object.keys(OPERATIONS),
+		...Object.keys(QUERY_PARAMETERS),
+	].filter((key) => !present.has(key));
 	if (stray.length > 0) {
 		throw new Error(
-			`Entries in scripts/openapi/operations.ts with no operation: ${stray.join(", ")}`
+			`Entries in scripts/openapi/operations.ts with no operation: ${[...new Set(stray)].join(", ")}`
 		);
 	}
 }
@@ -253,7 +257,20 @@ function schemaName(refValue: string): string | null {
 		: null;
 }
 
-/** Replaces a reference to a schema that does not exist with an open object. */
+/**
+ * The references the generator writes to schemas it never defines (the import
+ * routes name their request bodies by a sentence). Only these are replaced;
+ * a reference to any other missing schema stops the run.
+ */
+const KNOWN_DANGLING = new Set([
+	"JSON case data in any supported format",
+	"JSON case data to validate",
+]);
+
+/**
+ * Replaces a reference to one of the known missing schemas with an open
+ * object. Any other reference to a schema that does not exist throws.
+ */
 function closeDanglingRefs(node: unknown, schemas: Json): unknown {
 	if (Array.isArray(node)) {
 		return node.map((child) => closeDanglingRefs(child, schemas));
@@ -264,7 +281,10 @@ function closeDanglingRefs(node: unknown, schemas: Json): unknown {
 	const record = node as Json;
 	const name = typeof record.$ref === "string" ? schemaName(record.$ref) : null;
 	if (name !== null && !(name in schemas)) {
-		return { ...OPEN_OBJECT };
+		if (KNOWN_DANGLING.has(name)) {
+			return { ...OPEN_OBJECT };
+		}
+		throw new Error(`Reference to a schema that does not exist: ${name}`);
 	}
 	return Object.fromEntries(
 		Object.entries(record).map(([key, value]) => [
@@ -272,6 +292,24 @@ function closeDanglingRefs(node: unknown, schemas: Json): unknown {
 			closeDanglingRefs(value, schemas),
 		])
 	);
+}
+
+/** Throws when a table entry refers to a schema that is neither in SCHEMAS nor generated. */
+function checkTableReferences(generated: Json): void {
+	const used = new Set<string>();
+	collectRefs(OPERATIONS, used);
+	collectRefs(QUERY_PARAMETERS, used);
+	const unknownNames = [...used]
+		.map(schemaName)
+		.filter(
+			(name): name is string =>
+				name !== null && !(name in SCHEMAS || name in generated)
+		);
+	if (unknownNames.length > 0) {
+		throw new Error(
+			`Entries in scripts/openapi/operations.ts refer to unknown schemas: ${unknownNames.join(", ")}`
+		);
+	}
 }
 
 /** The schemas reachable from the paths and from the other components. */
@@ -317,6 +355,7 @@ export function correctOpenApi(input: OpenApiDocument): OpenApiDocument {
 	const paths = correctPaths(asRecord(document.paths));
 	checkTableHasNoStrays(paths);
 	const components = asRecord(document.components);
+	checkTableReferences(asRecord(components.schemas));
 	const known = { ...asRecord(components.schemas), ...SCHEMAS };
 	const closedPaths = closeDanglingRefs(paths, known) as Json;
 	const withPaths = { ...document, paths: closedPaths };
@@ -338,6 +377,9 @@ function main(): void {
 }
 
 // Runs main() when invoked directly (tsx/pnpm) but not when imported by a test.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (
+	process.argv[1] !== undefined &&
+	import.meta.url === pathToFileURL(process.argv[1]).href
+) {
 	main();
 }

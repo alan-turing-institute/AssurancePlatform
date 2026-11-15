@@ -57,7 +57,7 @@
         "type": "string",
         "description": "GitHub import request parameters"
       },
-      "ImportOutcome": {
+      "ImportResult": {
         "type": "object",
         "properties": {
           "id": {
@@ -300,6 +300,11 @@
         "description": "",
         "tags": [
           "Auth"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -678,7 +683,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOutcome"
+                  "$ref": "#/components/schemas/ImportResult"
                 }
               }
             }
@@ -767,7 +772,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOutcome"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ImportResult"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -854,7 +871,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportOutcome"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ImportResult"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -2026,6 +2055,9 @@
               }
             }
           },
+          "304": {
+            "description": "The image has not changed since the caller's cached copy"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -2075,6 +2107,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "The image has not changed since the caller's cached copy"
           },
           "400": {
             "$ref": "#/components/responses/400"
@@ -2163,7 +2198,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The user already has access, or the team was added",
+            "description": "The user already has access",
             "content": {
               "application/json": {
                 "schema": {
@@ -2173,7 +2208,7 @@
             }
           },
           "201": {
-            "description": "The permission, or an invite link when the user has no account",
+            "description": "The user's or team's permission, or an invite link when the user has no account",
             "content": {
               "application/json": {
                 "schema": {
@@ -2719,6 +2754,9 @@
                       "type": "string"
                     },
                     "publishedId": {
+                      "type": "string"
+                    },
+                    "publishedAt": {
                       "type": "string"
                     }
                   }
@@ -5441,6 +5479,9 @@
               }
             }
           },
+          "304": {
+            "description": "The image has not changed since the caller's cached copy"
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },
@@ -6031,6 +6072,15 @@
                     },
                     "roles": {
                       "type": "object"
+                    },
+                    "recommended": {
+                      "type": "object"
+                    },
+                    "connectionTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
                     }
                   }
                 }
@@ -6315,6 +6365,15 @@
                     },
                     "roles": {
                       "type": "object"
+                    },
+                    "searchCheck": {
+                      "type": "object"
+                    },
+                    "unsetJobs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   }
                 }

@@ -81,6 +81,10 @@ function stream(description: string): SuccessAnswer[] {
 function image(description: string): SuccessAnswer[] {
 	return [
 		{ status: 200, description, contentType: IMAGE_TYPE, schema: BINARY },
+		{
+			status: 304,
+			description: "The image has not changed since the caller's cached copy",
+		},
 	];
 }
 
@@ -88,7 +92,7 @@ function image(description: string): SuccessAnswer[] {
 export const SCHEMAS: Record<string, Schema> = {
 	SuccessFlag: obj({ success: BOOLEAN }),
 	ConnectedFlag: obj({ connected: BOOLEAN }),
-	ImportOutcome: obj({
+	ImportResult: obj({
 		id: STRING,
 		name: STRING,
 		elementCount: NUMBER,
@@ -189,6 +193,9 @@ export const QUERY_PARAMETERS: Record<string, QueryParameter[]> = {
 const CLAIM_STATUS = ref("ClaimHealthStatus");
 
 const INTEGRATION = fields("The integration", { integration: OBJECT });
+const IMPORT_WITH_SOURCE: Schema = {
+	allOf: [ref("ImportResult"), obj({ source: OBJECT })],
+};
 const CRITERIA = object("The claim's evidence settings");
 
 export const OPERATIONS: Record<string, SuccessAnswer[]> = {
@@ -218,7 +225,7 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 	"GET /cases/export": [
 		json(200, "The case in the export format, sent as a file download"),
 	],
-	"POST /cases/import": [json(200, "The imported case", ref("ImportOutcome"))],
+	"POST /cases/import": [json(200, "The imported case", ref("ImportResult"))],
 	"PUT /cases/import": fields("The preview of an import", {
 		isValid: BOOLEAN,
 		version: STRING,
@@ -242,14 +249,14 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		json(200, "Whether Google Drive is connected", ref("ConnectedFlag")),
 	],
 	"POST /cases/import/gdrive": [
-		json(200, "The imported case", ref("ImportOutcome")),
+		json(200, "The imported case", IMPORT_WITH_SOURCE),
 	],
 	"GET /cases/import/gdrive": fields(
 		"Whether Google Drive is connected, and the files that can be imported",
 		{ connected: BOOLEAN, files: ARRAY }
 	),
 	"POST /cases/import/github": [
-		json(200, "The imported case", ref("ImportOutcome")),
+		json(200, "The imported case", IMPORT_WITH_SOURCE),
 	],
 	"GET /cases/import/github": [
 		json(200, "Whether GitHub is connected", ref("ConnectedFlag")),
@@ -302,8 +309,11 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		"Who has access to the case, directly and through teams"
 	),
 	"POST /cases/{id}/permissions": [
-		json(200, "The user already has access, or the team was added"),
-		json(201, "The permission, or an invite link when the user has no account"),
+		json(200, "The user already has access"),
+		json(
+			201,
+			"The user's or team's permission, or an invite link when the user has no account"
+		),
 	],
 	"GET /cases/{id}/publish": fields("The case's publication state", {
 		is_published: BOOLEAN,
@@ -323,6 +333,7 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		success: BOOLEAN,
 		newStatus: STRING,
 		publishedId: STRING,
+		publishedAt: STRING,
 	}),
 	"POST /cases/{id}/update-ids": fields("The identifiers were reset", {
 		message: STRING,
@@ -487,6 +498,8 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 	"GET /user/models": fields("The caller's model connections and jobs", {
 		connections: ARRAY,
 		roles: OBJECT,
+		recommended: OBJECT,
+		connectionTypes: ARRAY,
 	}),
 	"POST /user/models/connections": object("The new connection", 201),
 	"PATCH /user/models/connections/{id}": object("The updated connection"),
@@ -494,7 +507,12 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 	"POST /user/models/connections/{id}/test": object("The result of the test"),
 	"POST /user/models/quick-setup": fields(
 		"The new connection and the jobs it was assigned to",
-		{ connection: OBJECT, roles: OBJECT },
+		{
+			connection: OBJECT,
+			roles: OBJECT,
+			searchCheck: OBJECT,
+			unsetJobs: { type: "array", items: STRING },
+		},
 		201
 	),
 	"PUT /user/models/roles": fields("The saved jobs", {

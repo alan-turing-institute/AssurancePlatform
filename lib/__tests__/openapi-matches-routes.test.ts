@@ -33,13 +33,14 @@ const TOP_LEVEL_START =
 	/\n(?=(?:\/\*\*|export |async function |function |const |let |interface |type |class ))/;
 
 /** Success codes of handlers that answer through a helper the parser cannot see into. */
-const HELPER_CODES: Record<string, number> = {
-	"mediaResponse(": 200,
-	"createUIMessageStreamResponse(": 200,
-	"answerCriteriaRead(": 200,
-	"answerCriteriaChange(": 200,
-	"NextResponse.redirect(": 307,
+const HELPER_CODES: Record<string, number[]> = {
+	"mediaResponse(": [200, 304],
+	"createUIMessageStreamResponse(": [200],
+	"answerCriteriaRead(": [200],
+	"answerCriteriaChange(": [200],
 };
+
+const REDIRECT_DEFAULT = 307;
 
 interface Handler {
 	/** "METHOD /path", as the description writes it. */
@@ -65,11 +66,17 @@ function routePath(file: string): string {
 }
 
 const LOCAL_FUNCTION = /^(?:async )?function (\w+)|^const (\w+) = /;
+const EXPORT_PREFIX = /^export /;
 
-function localFunctions(blocks: string[]): Map<string, string> {
+function localFunctions(
+	blocks: string[],
+	includeExported = false
+): Map<string, string> {
 	const local = new Map<string, string>();
 	for (const block of blocks) {
-		const match = LOCAL_FUNCTION.exec(block);
+		const match = LOCAL_FUNCTION.exec(
+			includeExported ? block.replace(EXPORT_PREFIX, "") : block
+		);
 		const name = match?.[1] ?? match?.[2];
 		if (name) {
 			local.set(name, block);
@@ -93,7 +100,11 @@ function reachableText(start: string, local: Map<string, string>): string {
 }
 
 function handlersIn(file: string): Handler[] {
-	const blocks = readFileSync(file, "utf8").split(TOP_LEVEL_START);
+	return handlersInSource(readFileSync(file, "utf8"), routePath(file));
+}
+
+function handlersInSource(source: string, route: string): Handler[] {
+	const blocks = source.split(TOP_LEVEL_START);
 	const local = localFunctions(blocks);
 	const found: Handler[] = [];
 	blocks.forEach((block, i) => {
@@ -102,7 +113,7 @@ function handlersIn(file: string): Handler[] {
 		const ignored = before.startsWith("/**") && before.includes("@ignore");
 		if (method && !ignored) {
 			found.push({
-				id: `${method} ${routePath(file)}`,
+				id: `${method} ${route}`,
 				text: block,
 				reach: reachableText(block, local),
 			});
@@ -197,7 +208,13 @@ function directResponseCodes(text: string): number[] {
 function helperCodes(text: string): number[] {
 	return Object.entries(HELPER_CODES)
 		.filter(([name]) => text.includes(name))
-		.map(([, code]) => code);
+		.flatMap(([, codes]) => codes);
+}
+
+function redirectCodes(text: string): number[] {
+	return calls(text, "NextResponse.redirect(").flatMap((args) =>
+		args.length > 1 ? successNumbers(args[1] ?? "") : [REDIRECT_DEFAULT]
+	);
 }
 
 function handlerSuccessCodes(handler: Handler): number[] {
@@ -205,6 +222,7 @@ function handlerSuccessCodes(handler: Handler): number[] {
 		...apiSuccessCodes(handler.text),
 		...directResponseCodes(handler.text),
 		...helperCodes(handler.text),
+		...redirectCodes(handler.text),
 	];
 	return [...new Set(codes)].sort((a, b) => a - b);
 }
@@ -261,6 +279,8 @@ function resolves(ref: string): boolean {
 	return true;
 }
 
+/** Any use of `searchParams` other than building a URL with `.set(`. */
+const READS_QUERY = /searchParams(?!\.set\()/;
 const QUERY_GET = /searchParams\.get\("([^"]+)"\)/g;
 
 /** Query parameters read through a schema rather than by name. */
@@ -283,6 +303,16 @@ function queryNamesRead(handler: Handler): string[] {
 	return [...new Set([...named, ...fromSchemas])].sort();
 }
 
+/** Handlers that touch the query string but yielded no parameter names. */
+function unreadQueryStrings(handlers: Handler[]): string[] {
+	return handlers
+		.filter(
+			(handler) =>
+				READS_QUERY.test(handler.reach) && queryNamesRead(handler).length === 0
+		)
+		.map((handler) => handler.id);
+}
+
 function documentedQueryNames(operation: Json): string[] {
 	return ((operation.parameters ?? []) as Json[])
 		.filter((parameter) => parameter.in === "query")
@@ -290,10 +320,29 @@ function documentedQueryNames(operation: Json): string[] {
 		.sort();
 }
 
+const SERVICES_DIR = path.join(ROOT, "lib/services");
+
 /**
- * What each call in a handler's reach asks of the caller. The scheduled-job
- * routes pass the token to a service, so they are recognised by their folder.
+ * The service functions that check the scheduled-job secret themselves, found
+ * by reading which functions in lib/services reach `requireCronSecret(`.
  */
+function cronGuardedServiceCalls(): string[] {
+	return walk(SERVICES_DIR)
+		.filter((file) => file.endsWith(".ts"))
+		.flatMap((file) => {
+			const local = localFunctions(
+				readFileSync(file, "utf8").split(TOP_LEVEL_START),
+				true
+			);
+			return [...local.entries()]
+				.filter(([, body]) =>
+					reachableText(body, local).includes("requireCronSecret(")
+				)
+				.map(([name]) => `${name}(`);
+		});
+}
+
+/** What each call in a handler's reach asks of the caller. */
 const SCHEME_MARKERS: [string, string][] = [
 	["requireApiToken(", "BearerAuth"],
 	["requireAuth(", "SessionAuth"],
@@ -301,16 +350,31 @@ const SCHEME_MARKERS: [string, string][] = [
 	["authoriseModelRoute(", "SessionAuth"],
 	["requireClaimRequest(", "SessionAuth"],
 	["handleHealthRecordAction(", "SessionAuth"],
+	["validateSession(", "SessionAuth"],
+	["getServerSession(", "SessionAuth"],
 	["requireCronSecret(", "CronSecret"],
+	...cronGuardedServiceCalls().map((marker): [string, string] => [
+		marker,
+		"CronSecret",
+	]),
 ];
+
+/** A call that looks like a sign-in check. */
+const SIGN_IN_CALL =
+	/\b(?:validate|get|require|check|authori[sz]e)\w*(?:Session|Auth)\w*\(/g;
+
+/** Sign-in-looking calls in a handler's reach that no marker recognises. */
+function unrecognisedSignIns(handler: Handler): string[] {
+	const known = new Set(SCHEME_MARKERS.map(([marker]) => marker));
+	return [...new Set(handler.reach.match(SIGN_IN_CALL) ?? [])].filter(
+		(call) => !known.has(call)
+	);
+}
 
 function requiredSchemes(handler: Handler): string[] {
 	const schemes = SCHEME_MARKERS.filter(([marker]) =>
 		handler.reach.includes(marker)
 	).map(([, scheme]) => scheme);
-	if (handler.id.split(" ")[1]?.startsWith("/cron/")) {
-		schemes.push("CronSecret");
-	}
 	return [...new Set(schemes)].sort();
 }
 
@@ -382,6 +446,58 @@ describe("the published API description matches the routes", () => {
 					`${id}: documented [${documented}] / reads [${read}]`
 			);
 		expect(wrong, `${wrong.length} operations differ`).toEqual([]);
+	});
+
+	it("(e2) no handler reads the query string without a recognised name", () => {
+		expect(unreadQueryStrings(allHandlers())).toEqual([]);
+	});
+
+	it("(e3) the checks notice a query string read by a name they cannot see", () => {
+		const [handler] = handlersInSource(
+			'export async function GET(request: Request) {\n\tconst key = "a";\n\treturn apiSuccess(new URL(request.url).searchParams.get(key));\n}\n',
+			"/x"
+		);
+		expect(unreadQueryStrings(handler ? [handler] : [])).toEqual(["GET /x"]);
+	});
+
+	it("(g2) every scheduled-job handler is detected as checking the secret", () => {
+		const unguarded = allHandlers()
+			.filter((handler) => handler.id.split(" ")[1]?.startsWith("/cron/"))
+			.filter((handler) => !requiredSchemes(handler).includes("CronSecret"))
+			.map((handler) => handler.id);
+		expect(unguarded).toEqual([]);
+	});
+
+	it("(g3) a scheduled-job handler with no secret check is not detected as guarded", () => {
+		const [handler] = handlersInSource(
+			"export async function POST(request: Request) {\n\treturn apiSuccess({ success: true });\n}\n",
+			"/cron/new-job"
+		);
+		expect(handler ? requiredSchemes(handler) : ["missing"]).toEqual([]);
+	});
+
+	it("(g4) the secret check is found through the service functions that make it", () => {
+		expect(cronGuardedServiceCalls()).toEqual(
+			expect.arrayContaining(["purgeExpiredCases(", "sweepHealthStaleness("])
+		);
+	});
+
+	it("(g5) no handler signs in through a call the markers do not recognise", () => {
+		const unknown = allHandlers()
+			.filter(
+				(handler) =>
+					requiredSchemes(handler).length === 0 &&
+					unrecognisedSignIns(handler).length > 0
+			)
+			.map((handler) => `${handler.id}: ${unrecognisedSignIns(handler)}`);
+		expect(unknown).toEqual([]);
+		const [handler] = handlersInSource(
+			"export async function GET() {\n\tawait checkUserSession();\n\treturn apiSuccess({});\n}\n",
+			"/x"
+		);
+		expect(handler ? unrecognisedSignIns(handler) : []).toEqual([
+			"checkUserSession(",
+		]);
 	});
 
 	it("(g) sign-in schemes equal those the handler requires", () => {

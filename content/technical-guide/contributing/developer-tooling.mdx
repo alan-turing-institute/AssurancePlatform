@@ -15,6 +15,7 @@ pnpm docs:generate
 
 The generator configuration is in `next.openapi.json`. The package script runs the generator and then `scripts/openapi/correct-openapi.ts`, which corrects what the generator cannot express: success codes and answer shapes, and path parameters.
 A new or changed route needs an entry in `scripts/openapi/operations.ts` giving each success answer (status, content type and schema), including non-JSON answers and routes with two success codes.
+A route that reads query parameters also needs an entry in `QUERY_PARAMETERS` in the same file, because the generator does not read them from the tag form the routes use.
 Where the generator reads a comment tag correctly, such as `@auth` or the summary line, fix the route comment instead.
 Generated output includes `public/openapi.json`.
 Never edit that file by hand. Commit the regenerated file with route changes: CI runs `pnpm docs:generate` and fails when `public/openapi.json` has drifted. Keep route comments and validation schemas aligned with behaviour so the reference remains useful to browser and machine clients. Generating a specification does not test that a route works; run the relevant tests as well.
