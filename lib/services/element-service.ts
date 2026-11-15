@@ -93,10 +93,11 @@ export interface ElementResponse {
 	comments?: unknown[];
 	context?: ContextEntry[];
 	createdDate: string;
-	// Dangling-defeat indicator: true when defeatsElementId was blanked
-	// because the imported target wasn't part of the same import (see
-	// resolveImportedDefeatsElementId, case-import-service.ts). Omitted (not
-	// false) when there is nothing to flag — mirrors citationDangling above.
+	// Dangling-defeat indicator: true when defeatsElementId was blanked because
+	// the target is gone: not part of the same import (see
+	// resolveImportedDefeatsElementId, case-import-service.ts), or deleted or
+	// detached later (see nullifyDanglingDefeats). Omitted (not false) when
+	// there is nothing to flag — mirrors citationDangling above.
 	defeatsDangling?: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	defeatsElementId?: string | null;
@@ -1659,7 +1660,7 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.defeatsElementId !== undefined) {
 		updateData.defeatsElementId = input.defeatsElementId;
 		// The author explicitly set (or cleared) the defeat target — whatever
-		// dangling flag was left over from a previous import no longer
+		// dangling flag was left over from an import, a deletion or a detach no longer
 		// describes the current state, declared or not (mirrors
 		// citationDangling's reset above).
 		updateData.defeatsDangling = false;
