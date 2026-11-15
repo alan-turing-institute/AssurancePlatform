@@ -34,6 +34,8 @@ import {
 
 const BASELINE_FILENAME_RE = /\.a11y-baseline\.json$/;
 const NEW_A11Y_RULE_RE = /new accessibility rule/;
+const SCAN_DID_NOT_RUN_RE = /accessibility scan did not run: .*scan broke/;
+const REFUSING_RE = /refusing to write the baseline.*\/x/;
 const NAVIGATION_FAILED_RE = /navigation failed: boom/;
 
 // ============================================
@@ -999,6 +1001,16 @@ describe("checkPage", () => {
 		expect(result.axe.violations).toEqual({ "button-name": 2 });
 	});
 
+	it("fails a page whose accessibility scan did not run", async () => {
+		const context = makeFakeContext();
+		(window as unknown as { axe: unknown }).axe = {
+			run: () => Promise.reject(new Error("scan broke")),
+		};
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.pass).toBe(false);
+		expect(result.failReasons[0]).toMatch(SCAN_DID_NOT_RUN_RE);
+	});
+
 	it("with --only status,errors,placeholders, a new a11y violation is measured but does not fail the page", async () => {
 		const context = makeFakeContext({
 			axeViolations: [{ id: "button-name", impact: "critical", nodes: [1] }],
@@ -1099,6 +1111,26 @@ describe("reportResults", () => {
 		});
 	});
 
+	it("exits non-zero and writes no baseline when a scan did not run", () => {
+		const outPath = path.join(dir, "baseline.json");
+		reportResults(
+			[
+				fakeResult({
+					axe: {
+						byImpact: { error: 1 },
+						topRules: ["boom"],
+						violations: {},
+						nodeCounts: {},
+					},
+				}),
+			],
+			[],
+			baseArgs({ writeBaseline: true, baselinePath: outPath })
+		);
+		expect(fs.existsSync(outPath)).toBe(false);
+		expect(process.exitCode).toBe(1);
+	});
+
 	it("writes the JSON results file when --json is set", () => {
 		const outPath = path.join(dir, "out.json");
 		reportResults([fakeResult()], [], baseArgs({ jsonOut: outPath }));
@@ -1141,6 +1173,16 @@ describe("mergeBaseline", () => {
 		});
 	});
 
+	it("refuses to merge a result whose accessibility scan did not run", () => {
+		const failed = {
+			path: "/x",
+			routeTemplate: "/x",
+			cls: 0,
+			axe: { byImpact: { error: 1 }, topRules: ["boom"], violations: {} },
+		};
+		expect(() => mergeBaseline({}, [failed])).toThrow(REFUSING_RE);
+	});
+
 	it("writes a page to its own entry when its exact path already has one", () => {
 		const existing: Baseline = {
 			"/docs": { violations: { label: 1 }, cls: 0 },
@@ -1164,6 +1206,21 @@ describe("mergeBaseline", () => {
 // ============================================
 
 describe("writeBaselineFile", () => {
+	it("writes nothing when a result's accessibility scan did not run", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "write-baseline-test-"));
+		const outPath = path.join(dir, "baseline.json");
+		const failed = {
+			path: "/x",
+			routeTemplate: "/x",
+			cls: 0,
+			axe: { byImpact: { error: 1 }, topRules: ["boom"], violations: {} },
+		} as unknown as PageResult;
+		expect(() => writeBaselineFile(outPath, [failed])).toThrow(REFUSING_RE);
+		const exists = fs.existsSync(outPath);
+		fs.rmSync(dir, { recursive: true, force: true });
+		expect(exists).toBe(false);
+	});
+
 	it("keeps entries already in the file for pages not checked", () => {
 		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "write-baseline-test-"));
 		const outPath = path.join(dir, "baseline.json");

@@ -567,6 +567,14 @@ export function roundCls(cls: number): number {
 	return Math.round(cls * 1e4) / 1e4;
 }
 
+/** Why the accessibility scan did not run on a page, or null when it did. */
+export function axeFailureOf(axe: {
+	byImpact: Record<string, number>;
+	topRules: string[];
+}): string | null {
+	return axe.byImpact.error ? (axe.topRules[0] ?? "unknown error") : null;
+}
+
 /** The path without its query string. */
 function pathnameOf(routePath: string): string {
 	return routePath.split("?")[0] ?? routePath;
@@ -584,10 +592,25 @@ export function mergeBaseline(
 	existing: Baseline,
 	results: Array<
 		Pick<PageResult, "cls" | "path" | "routeTemplate"> & {
-			axe: { violations: Record<string, number> };
+			axe: {
+				byImpact?: Record<string, number>;
+				topRules?: string[];
+				violations: Record<string, number>;
+			};
 		}
 	>
 ): Baseline {
+	const failed = results.filter((r) =>
+		axeFailureOf({
+			byImpact: r.axe.byImpact ?? {},
+			topRules: r.axe.topRules ?? [],
+		})
+	);
+	if (failed.length > 0) {
+		throw new Error(
+			`refusing to write the baseline: the accessibility scan did not run on ${failed.map((r) => r.path).join(", ")}`
+		);
+	}
 	const merged: Baseline = { ...existing };
 	const replaced = new Set<string>();
 	for (const r of results) {
@@ -932,6 +955,7 @@ interface FailReasonEntry {
 
 /** One row per possible failure reason; buildFailReasons below just filters and formats. */
 function listFailReasonEntries(input: {
+	axeFailure?: string | null;
 	cls: number;
 	delta: BaselineDelta;
 	pageErrorCount: number;
@@ -963,6 +987,11 @@ function listFailReasonEntries(input: {
 		},
 		{
 			category: "a11y",
+			condition: Boolean(input.axeFailure),
+			message: () => `accessibility scan did not run: ${input.axeFailure}`,
+		},
+		{
+			category: "a11y",
 			condition: input.delta.newRules.length > 0,
 			message: () =>
 				`new accessibility rule(s): ${input.delta.newRules.join(", ")}`,
@@ -991,6 +1020,7 @@ function listFailReasonEntries(input: {
  * just not counted towards `pass`.
  */
 export function buildFailReasons(input: {
+	axeFailure?: string | null;
 	cls: number;
 	delta: BaselineDelta;
 	only?: Set<CheckCategory>;
@@ -1072,6 +1102,7 @@ export async function checkPage(
 		clsBudget
 	);
 	const failReasons = buildFailReasons({
+		axeFailure: axeFailureOf(axe),
 		status,
 		pageErrorCount: pageErrors.length,
 		redirectFailReason,
@@ -1117,7 +1148,12 @@ function checkThrewResult(
 		pageErrors: [],
 		consoleErrors: [],
 		cls: 0,
-		axe: { byImpact: {}, topRules: [], violations: {}, nodeCounts: {} },
+		axe: {
+			byImpact: { error: 1 },
+			topRules: ["check threw before the accessibility scan"],
+			violations: {},
+			nodeCounts: {},
+		},
 		placeholderHits: [],
 		pass: false,
 		failReasons: [
@@ -1229,8 +1265,14 @@ export function reportResults(
 		);
 	}
 
+	let writeFailed = false;
 	if (args.writeBaseline) {
-		writeBaselineFile(args.baselinePath ?? DEFAULT_BASELINE_PATH, results);
+		try {
+			writeBaselineFile(args.baselinePath ?? DEFAULT_BASELINE_PATH, results);
+		} catch (err) {
+			console.error(err instanceof Error ? err.message : String(err));
+			writeFailed = true;
+		}
 	}
 
 	if (args.jsonOut) {
@@ -1251,7 +1293,7 @@ export function reportResults(
 		);
 	}
 
-	process.exitCode = failCount > 0 ? 1 : 0;
+	process.exitCode = failCount > 0 || writeFailed ? 1 : 0;
 }
 
 async function main() {
