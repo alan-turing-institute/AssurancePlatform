@@ -15,7 +15,8 @@
  *   --base-url <url>        required
  *   --all                   check every page route under app/ (page.tsx,
  *                           excluding API routes), filling dynamic segments
- *                           from the database DATABASE_URL points at
+ *                           from the database DATABASE_URL points at; any
+ *                           explicit paths are checked as well
  *   --storage-state <file>  reuse an existing signed-in session instead of
  *                           logging in as the seed user
  *   --only <list>           comma-separated subset of status,errors,
@@ -33,10 +34,15 @@
  *                           any layout shift over --cls-budget fails
  *   --write-baseline        after the run, (re)write the baseline file (the
  *                           one named by --baseline, or the default path)
- *                           from this run's results
+ *                           from this run's results; entries for routes not
+ *                           checked in this run are kept
+ *
+ * Counts are kinds of failing element, not elements (see violationKind), so
+ * repeated content does not raise them. The sign-in pages (SIGNED_OUT_ROUTES)
+ * are checked in a context with no session.
  *
  * A page fails an accessibility check only on a *new* problem: a rule whose
- * serious+critical node count exceeds the baseline's count for that route,
+ * serious+critical kind count exceeds the baseline's count for that route,
  * or a rule the baseline does not mention at all. A route absent from the
  * baseline is treated as having zero known violations. Layout shift fails
  * only past max(--cls-budget, baseline cls + 0.02). With --no-baseline (or
@@ -222,6 +228,8 @@ const CATCHALL_RE = /^\[\.\.\.(.+)\]$/;
 const DYNAMIC_SEGMENT_RE = /^\[(.+)\]$/;
 
 interface RouteTemplate {
+	/** true when the route ends in an optional catch-all, so it also serves every path beneath `template` */
+	optionalCatchAll?: true;
 	/** dynamic segment names appearing in `template`, in order */
 	params: string[];
 	/** e.g. "/discover/{slug}" */
@@ -232,6 +240,7 @@ export function toRouteTemplate(filePath: string): RouteTemplate {
 	const rel = path.relative(APP_DIR, path.dirname(filePath)).split(path.sep);
 	const params: string[] = [];
 	const outSegments: string[] = [];
+	let hasOptionalCatchAll = false;
 	for (const seg of rel) {
 		if (seg === ".") {
 			continue;
@@ -241,7 +250,8 @@ export function toRouteTemplate(filePath: string): RouteTemplate {
 		}
 		const optionalCatchAll = seg.match(OPTIONAL_CATCHALL_RE);
 		if (optionalCatchAll) {
-			continue; // resolves to the parent path with no extra segment
+			hasOptionalCatchAll = true; // resolves to the parent path with no extra segment
+			continue;
 		}
 		const catchAll = seg.match(CATCHALL_RE);
 		if (catchAll?.[1]) {
@@ -257,7 +267,10 @@ export function toRouteTemplate(filePath: string): RouteTemplate {
 		}
 		outSegments.push(seg);
 	}
-	return { template: `/${outSegments.join("/")}`, params };
+	const template = `/${outSegments.join("/")}`;
+	return hasOptionalCatchAll
+		? { template, params, optionalCatchAll: true }
+		: { template, params };
 }
 
 const REGEX_ESCAPE_RE = /[.*+?^${}()|[\]\\]/g;
@@ -279,13 +292,16 @@ export function buildRouteRegex(template: string): RegExp {
  * Finds which known route template a filled path belongs to, so an
  * explicitly-listed path (not just --all) can be looked up in the
  * baseline. Static templates are tried before dynamic ones, so
- * "/discover/new" prefers a literal "/discover/new" page over a sibling
- * "/discover/{slug}". Falls back to the bare pathname (its own "template")
- * when nothing matches, which the baseline then treats as unbaselined.
+ * "/discover/{slug}". Optional catch-all templates (`catchAllTemplates`) are
+ * tried last and match their own path and anything beneath it, so every docs
+ * page shares the "/docs" entry. Falls back to the bare pathname (its own
+ * "template") when nothing matches, which the baseline then treats as
+ * unbaselined.
  */
 export function matchRouteTemplate(
 	routePath: string,
-	templates: string[]
+	templates: string[],
+	catchAllTemplates: string[] = []
 ): string {
 	const pathname = routePath.split("?")[0] ?? routePath;
 	const ordered = [...templates].sort(
@@ -296,13 +312,25 @@ export function matchRouteTemplate(
 			return template;
 		}
 	}
+	for (const template of catchAllTemplates) {
+		if (
+			template !== "/" &&
+			(pathname === template || pathname.startsWith(`${template}/`))
+		) {
+			return template;
+		}
+	}
 	return pathname;
 }
 
-function getKnownRouteTemplates(): string[] {
-	return findPageFiles(APP_DIR)
+function getKnownRoutes(): { catchAll: string[]; templates: string[] } {
+	const routes = findPageFiles(APP_DIR)
 		.filter((f) => !f.split(path.sep).includes("api"))
-		.map((f) => toRouteTemplate(f).template);
+		.map((f) => toRouteTemplate(f));
+	return {
+		templates: routes.map((r) => r.template),
+		catchAll: routes.filter((r) => r.optionalCatchAll).map((r) => r.template),
+	};
 }
 
 interface ParamResolution {
@@ -326,7 +354,8 @@ export async function resolveParam(
 				`SELECT ac.id FROM assurance_cases ac
 				 JOIN users u ON u.id = ac.created_by_id
 				 WHERE u.username = 'chris' AND ac.deleted_at IS NULL
-				 ORDER BY ac.created_at ASC LIMIT 1`
+				 ORDER BY (SELECT COUNT(*) FROM assurance_elements ae WHERE ae.case_id = ac.id) DESC,
+				   ac.created_at ASC LIMIT 1`
 			);
 			return r.rows[0]
 				? { value: r.rows[0].id }
@@ -335,7 +364,8 @@ export async function resolveParam(
 		case "slug": {
 			const r = await client.query(
 				`SELECT slug FROM published_assurance_cases
-				 WHERE is_current = true ORDER BY created_at DESC LIMIT 1`
+				 WHERE is_current = true AND archived_at IS NULL
+				 ORDER BY created_at DESC LIMIT 1`
 			);
 			return r.rows[0]
 				? { value: r.rows[0].slug }
@@ -537,15 +567,44 @@ export function roundCls(cls: number): number {
 	return Math.round(cls * 1e4) / 1e4;
 }
 
-function writeBaselineFile(outPath: string, results: PageResult[]): void {
-	const baseline: Baseline = {};
+/**
+ * Folds a run's results into an existing baseline. Only the route templates
+ * checked in the run are replaced; every other entry is kept as it was. When
+ * several checked paths share one template, each rule keeps its highest count
+ * and the entry keeps the highest layout shift.
+ */
+export function mergeBaseline(
+	existing: Baseline,
+	results: Array<
+		Pick<PageResult, "cls" | "routeTemplate"> & {
+			axe: { violations: Record<string, number> };
+		}
+	>
+): Baseline {
+	const merged: Baseline = { ...existing };
+	const replaced = new Set<string>();
 	for (const r of results) {
-		baseline[r.routeTemplate] = {
-			violations: r.axe.violations,
-			cls: roundCls(r.cls),
-		};
+		const entry: BaselineEntry = replaced.has(r.routeTemplate)
+			? (merged[r.routeTemplate] as BaselineEntry)
+			: { violations: {}, cls: 0 };
+		replaced.add(r.routeTemplate);
+		for (const [rule, count] of Object.entries(r.axe.violations)) {
+			entry.violations[rule] = Math.max(entry.violations[rule] ?? 0, count);
+		}
+		entry.cls = Math.max(entry.cls, roundCls(r.cls));
+		merged[r.routeTemplate] = entry;
 	}
-	fs.writeFileSync(outPath, serialiseBaseline(baseline));
+	return merged;
+}
+
+function writeBaselineFile(outPath: string, results: PageResult[]): void {
+	const existing: Baseline = fs.existsSync(outPath)
+		? (JSON.parse(fs.readFileSync(outPath, "utf8")) as Baseline)
+		: {};
+	fs.writeFileSync(
+		outPath,
+		serialiseBaseline(mergeBaseline(existing, results))
+	);
 }
 
 // ============================================
@@ -554,12 +613,26 @@ function writeBaselineFile(outPath: string, results: PageResult[]): void {
 
 const LOGIN_PATH_RE = /^\/login(?:\/|$)/;
 
+/** Sign-in pages that send a signed-in visitor away, so they are checked in a context with no session. */
+export const SIGNED_OUT_ROUTES = [
+	"/login",
+	"/register",
+	"/forgot-password",
+	"/reset-password",
+	"/auth-error",
+];
+
+export function isSignedOutRoute(routePath: string): boolean {
+	const pathname = routePath.split("?")[0] ?? routePath;
+	return SIGNED_OUT_ROUTES.includes(pathname);
+}
+
 export interface RedirectInfo {
 	failReason: string | null;
 	redirectedTo: string | null;
 }
 
-/** Every check here assumes an authenticated session, so landing on the sign-in page is always a failure — whether that came from a real session dying or (as in a deliberate test) a signed-out storage state. */
+/** Pages checked signed in fail when they end on the sign-in page, whether a real session died or (as in a deliberate test) a signed-out storage state was used. A requested sign-in page that stays where it was asked for is not a redirect. */
 export function describeRedirect(
 	requestedPath: string,
 	finalUrl: string | null
@@ -578,9 +651,10 @@ export function describeRedirect(
 	}
 	const requestedPathname = requestedPath.split("?")[0] ?? requestedPath;
 	const redirectedTo = finalPathname !== requestedPathname ? finalPath : null;
-	const failReason = LOGIN_PATH_RE.test(finalPathname)
-		? "redirected to sign-in"
-		: null;
+	const failReason =
+		LOGIN_PATH_RE.test(finalPathname) && finalPathname !== requestedPathname
+			? "redirected to sign-in"
+			: null;
 	return { redirectedTo, failReason };
 }
 
@@ -610,17 +684,73 @@ function injectClsObserver() {
 
 interface AxeSummary {
 	byImpact: Record<string, number>;
+	/** serious+critical failing-element count per rule id, for reporting only; the baseline does not use it */
+	nodeCounts: Record<string, number>;
 	topRules: string[];
 	/** serious+critical node count per rule id — what the baseline compares against */
 	violations: Record<string, number>;
+}
+
+interface AxeNode {
+	/** the per-check results; colour contrast keeps its colours in their `data` */
+	any?: Array<{ data?: unknown }>;
+	/** outer HTML of the failing element, as axe reports it */
+	html?: string;
 }
 
 interface AxeRunResults {
 	violations: Array<{
 		id: string;
 		impact?: string;
-		nodes: unknown[];
+		nodes: AxeNode[];
 	}>;
+}
+
+const OPENING_TAG_RE = /^<\s*([a-zA-Z][\w-]*)([^>]*)>?/;
+const ROLE_ATTR_RE = /\brole\s*=\s*"([^"]*)"/;
+const CLASS_ATTR_RE = /\bclass\s*=\s*"([^"]*)"/;
+const WHITESPACE_RE = /\s+/;
+
+function contrastKind(node: AxeNode): string {
+	for (const check of node.any ?? []) {
+		const data = check.data as
+			| {
+					bgColor?: unknown;
+					expectedContrastRatio?: unknown;
+					fgColor?: unknown;
+			  }
+			| undefined;
+		if (data && typeof data === "object" && "fgColor" in data) {
+			const large = String(data.expectedContrastRatio) === "3:1";
+			return `fg=${String(data.fgColor)} bg=${String(data.bgColor)} large=${large}`;
+		}
+	}
+	return "contrast-unknown";
+}
+
+/**
+ * Names the kind of element a violation is on, so repeated elements of one
+ * kind count once. Colour contrast is keyed by its foreground colour,
+ * background colour and large-text flag; every other rule by the tag, role
+ * and sorted class list in the element's opening tag.
+ */
+export function violationKind(ruleId: string, node: AxeNode): string {
+	if (ruleId === "color-contrast") {
+		return contrastKind(node);
+	}
+	const html = typeof node?.html === "string" ? node.html : "";
+	const match = html.match(OPENING_TAG_RE);
+	if (!match) {
+		return "unknown";
+	}
+	const attributes = match[2] ?? "";
+	const role = attributes.match(ROLE_ATTR_RE)?.[1] ?? "";
+	const classes = (attributes.match(CLASS_ATTR_RE)?.[1] ?? "")
+		.split(WHITESPACE_RE)
+		.filter(Boolean)
+		.sort()
+		.join(" ");
+	return `${(match[1] ?? "").toLowerCase()}|${role}|${classes}`;
 }
 
 /** Pure tally half of the axe check: turns raw violations into the summary the baseline compares against. */
@@ -629,7 +759,8 @@ export function summariseAxeViolations(
 ): AxeSummary {
 	const byImpact: Record<string, number> = {};
 	const ruleCounts = new Map<string, number>();
-	const seriousOrCritical: Record<string, number> = {};
+	const kindsByRule = new Map<string, Set<string>>();
+	const nodeCounts: Record<string, number> = {};
 	for (const violation of violations) {
 		const impact = violation.impact ?? "unknown";
 		byImpact[impact] = (byImpact[impact] ?? 0) + 1;
@@ -638,15 +769,24 @@ export function summariseAxeViolations(
 			(ruleCounts.get(violation.id) ?? 0) + violation.nodes.length
 		);
 		if (impact === "serious" || impact === "critical") {
-			seriousOrCritical[violation.id] =
-				(seriousOrCritical[violation.id] ?? 0) + violation.nodes.length;
+			nodeCounts[violation.id] =
+				(nodeCounts[violation.id] ?? 0) + violation.nodes.length;
+			const kinds = kindsByRule.get(violation.id) ?? new Set<string>();
+			for (const node of violation.nodes) {
+				kinds.add(violationKind(violation.id, node));
+			}
+			kindsByRule.set(violation.id, kinds);
 		}
+	}
+	const seriousOrCritical: Record<string, number> = {};
+	for (const [id, kinds] of kindsByRule) {
+		seriousOrCritical[id] = kinds.size;
 	}
 	const topRules = [...ruleCounts.entries()]
 		.sort((a, b) => b[1] - a[1])
 		.slice(0, 5)
 		.map(([id]) => id);
-	return { byImpact, topRules, violations: seriousOrCritical };
+	return { byImpact, topRules, violations: seriousOrCritical, nodeCounts };
 }
 
 async function runAxe(page: Page): Promise<AxeSummary> {
@@ -665,6 +805,7 @@ async function runAxe(page: Page): Promise<AxeSummary> {
 				`axe-injection-failed: ${err instanceof Error ? err.message : String(err)}`,
 			],
 			violations: {},
+			nodeCounts: {},
 		};
 	}
 }
@@ -938,7 +1079,7 @@ function checkThrewResult(
 		pageErrors: [],
 		consoleErrors: [],
 		cls: 0,
-		axe: { byImpact: {}, topRules: [], violations: {} },
+		axe: { byImpact: {}, topRules: [], violations: {}, nodeCounts: {} },
 		placeholderHits: [],
 		pass: false,
 		failReasons: [
@@ -1000,17 +1141,25 @@ async function ensureSignedIn(
 
 /** Runs every page's check, isolating one page's exception as that page's failure. */
 async function runChecks(
-	context: BrowserContext,
+	contexts: { signedIn: BrowserContext; signedOut: BrowserContext },
 	toCheck: string[],
 	clsBudget: number,
 	baseline: Baseline,
 	only?: Set<CheckCategory>
 ): Promise<PageResult[]> {
-	await context.addInitScript(injectClsObserver);
-	const knownTemplates = getKnownRouteTemplates();
+	await contexts.signedIn.addInitScript(injectClsObserver);
+	await contexts.signedOut.addInitScript(injectClsObserver);
+	const known = getKnownRoutes();
 	const results: PageResult[] = [];
 	for (const routePath of toCheck) {
-		const routeTemplate = matchRouteTemplate(routePath, knownTemplates);
+		const routeTemplate = matchRouteTemplate(
+			routePath,
+			known.templates,
+			known.catchAll
+		);
+		const context = isSignedOutRoute(routePath)
+			? contexts.signedOut
+			: contexts.signedIn;
 		let result: PageResult;
 		try {
 			result = await checkPage(
@@ -1074,7 +1223,7 @@ async function main() {
 	const skipped: SkippedRoute[] = [];
 	if (args.all) {
 		const discovered = await discoverAllPaths();
-		toCheck = discovered.toCheck;
+		toCheck = [...new Set([...discovered.toCheck, ...args.paths])];
 		skipped.push(...discovered.skipped);
 	} else {
 		toCheck = args.paths;
@@ -1101,8 +1250,9 @@ async function main() {
 			return;
 		}
 
+		const signedOut = await browser.newContext({ baseURL: args.baseUrl });
 		results = await runChecks(
-			context,
+			{ signedIn: context, signedOut },
 			toCheck,
 			args.clsBudget,
 			baseline,

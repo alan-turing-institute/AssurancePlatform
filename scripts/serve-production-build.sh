@@ -141,6 +141,10 @@ echo "== 5/6 seed"
 DATABASE_URL="$db_url" SEED_USER_PASSWORD="$seed_password" \
 	pnpm --dir "$REPO_ROOT" exec tsx prisma/seed/dev-seed.ts >"$seed_log" 2>&1 \
 	|| { tail -20 "$seed_log" >&2; exit 1; }
+# one trashed case with an archived Discover copy, so the page checker measures those pages populated
+DATABASE_URL="$db_url" \
+	pnpm --dir "$REPO_ROOT" exec tsx prisma/seed/page-check-state.ts >>"$seed_log" 2>&1 \
+	|| { tail -20 "$seed_log" >&2; exit 1; }
 
 echo "== 6/6 start standalone server on :$port"
 # USE_LOCAL_STORAGE: a production build has no Azure Blob settings here, so without it every upload
