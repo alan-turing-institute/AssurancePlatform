@@ -1770,7 +1770,7 @@ async function validateParentChange(
  * The refusal for any `parentId` on a piece of evidence through the general
  * edit. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a 400.
  */
-export const PARENT_CLEAR_ERROR =
+const PARENT_CLEAR_ERROR =
 	"parentId cannot be cleared on the general edit; use the detach route";
 export const EVIDENCE_PARENT_CHANGE_ERROR =
 	"parentId cannot be set on evidence; use move or detach";
@@ -1958,9 +1958,9 @@ async function enforceTypeRulesOnUpdate(
 	);
 }
 
-export const IN_SANDBOX_SET_ERROR =
+const IN_SANDBOX_SET_ERROR =
 	"inSandbox cannot be set on the general edit; use the detach route";
-export const IN_SANDBOX_CLEAR_ERROR =
+const IN_SANDBOX_CLEAR_ERROR =
 	"inSandbox cannot be cleared on the general edit; use the attach route";
 
 /**
