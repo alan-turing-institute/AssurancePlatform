@@ -325,7 +325,7 @@
       "get": {
         "operationId": "get-cases-{id}",
         "summary": "Get an assurance case by ID",
-        "description": "Retrieves the full case structure including goals, strategies,",
+        "description": "Retrieves the full case structure including goals, strategies, property claims, evidence and comments. Each element carries commentCount, the number of comments and replies on it. Requires VIEW permission.",
         "tags": [
           "Cases"
         ],

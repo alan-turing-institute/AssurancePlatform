@@ -16,8 +16,7 @@ import {
 /**
  * Get an assurance case by ID
  *
- * @description Retrieves the full case structure including goals, strategies,
- * property claims, evidence, and comments. Requires VIEW permission.
+ * @description Retrieves the full case structure including goals, strategies, property claims, evidence and comments. Each element carries commentCount, the number of comments and replies on it. Requires VIEW permission.
  *
  * @pathParam id - Case ID (UUID)
  * @response 200 - Full case data with nested elements
