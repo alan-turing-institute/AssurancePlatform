@@ -1,7 +1,9 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { generateInviteToken } from "@/lib/services/case-invite-service";
 
+vi.mock("@/lib/prisma", () => ({ prisma: {}, default: {} }));
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/auth/config", () => ({ authOptions: {} }));
 vi.mock("next/navigation", () => ({
@@ -20,6 +22,7 @@ const TOKEN =
 describe("AcceptInvitePage", () => {
 	beforeEach(() => {
 		vi.mocked(redirect).mockClear();
+		vi.mocked(notFound).mockClear();
 	});
 
 	it("sends a signed-out visitor to sign in and back to the invitation", async () => {
@@ -39,5 +42,18 @@ describe("AcceptInvitePage", () => {
 		await AcceptInvitePage({ params: Promise.resolve({ token: TOKEN }) });
 
 		expect(redirect).not.toHaveBeenCalled();
+	});
+
+	it("opens a token made by the invitation generator", async () => {
+		vi.mocked(getServerSession).mockResolvedValue({
+			user: { id: "1" },
+			expires: "2099-01-01T00:00:00.000Z",
+		});
+
+		await AcceptInvitePage({
+			params: Promise.resolve({ token: generateInviteToken() }),
+		});
+
+		expect(notFound).not.toHaveBeenCalled();
 	});
 });
