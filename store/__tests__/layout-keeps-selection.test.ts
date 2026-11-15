@@ -64,6 +64,28 @@ describe("layout writes keep the live selection", () => {
 		});
 	});
 
+	describe("layoutNodes edges", () => {
+		it("hands the layout and the store edges without the display highlight", async () => {
+			const highlighted: Edge = {
+				id: "e1",
+				source: "a",
+				target: "b",
+				className: "case-edge--highlighted",
+				data: { highlighted: true },
+			};
+			layoutMock.mockImplementationOnce(
+				(layoutNodes: Node[], layoutEdges: Edge[]) =>
+					Promise.resolve({ nodes: layoutNodes, edges: layoutEdges })
+			);
+			await useStore
+				.getState()
+				.layoutNodes([node("a"), node("b")], [highlighted]);
+			const stored = useStore.getState().edges[0];
+			expect(stored?.className).toBeUndefined();
+			expect(stored?.data?.highlighted).toBeUndefined();
+		});
+	});
+
 	describe("triggerLayout", () => {
 		it("keeps a node selected after the layout finishes", async () => {
 			useStore.setState({ nodes: [node("a"), node("b")] });

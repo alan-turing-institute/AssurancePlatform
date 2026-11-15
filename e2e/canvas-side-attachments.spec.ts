@@ -398,6 +398,13 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		await expect(evidenceCard).toBeVisible();
 		await expect(page.locator(SUPPORT_EDGE_PATH_SELECTOR)).toHaveCount(2);
 
+		// Clicking inside a card (the add-child menu) selects it, and the
+		// selection now survives the redraws that follow an edit; clear it by
+		// clicking empty canvas so the baseline starts with nothing selected.
+		await page
+			.locator(".react-flow__pane")
+			.click({ position: { x: 20, y: 200 } });
+
 		// Baseline: nothing highlighted before any node is selected.
 		await expect(
 			page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`)

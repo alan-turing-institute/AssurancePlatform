@@ -12,6 +12,7 @@ import {
 	type OnNodesChange,
 } from "reactflow";
 import { create } from "zustand";
+import { clearEdgeHighlight } from "@/lib/case/edge-highlight";
 import { keepLiveSelection } from "@/lib/case/keep-live-selection";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { logger } from "@/lib/logger";
@@ -199,9 +200,12 @@ const useStore = create<Store>((set, get) => ({
 		// this catch is a second line of defence so a regression there can't
 		// leave the canvas stuck with whatever was on screen mid-conversion.
 		const direction = get().layoutDirection;
+		// Callers may pass edges read back from React Flow, which carry the
+		// display-only selection highlight; the store keeps plain edges.
+		const plainEdges = clearEdgeHighlight(edges);
 		try {
 			const { nodes: layoutedNodes, edges: layoutedEdges } =
-				await getLayoutedElements(nodes, edges, { direction });
+				await getLayoutedElements(nodes, plainEdges, { direction });
 			set((state) => ({
 				nodes: keepLiveSelection(layoutedNodes, state.nodes),
 				edges: layoutedEdges,
@@ -212,7 +216,7 @@ const useStore = create<Store>((set, get) => ({
 			});
 			set((state) => ({
 				nodes: keepLiveSelection(nodes, state.nodes),
-				edges,
+				edges: plainEdges,
 			}));
 		}
 	},
