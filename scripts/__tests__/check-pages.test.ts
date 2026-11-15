@@ -274,7 +274,7 @@ const NO_SEED_LOOKUP_RE = /no seed lookup defined/;
 const CASE_ORDERED_BY_ELEMENTS_RE =
 	/ORDER BY\s*\(SELECT COUNT\(\*\) FROM assurance_elements[^)]*\)\s*DESC/;
 const ARCHIVED_EXCLUDED_RE = /archived_at IS NULL/;
-const NOT_DELETED_RE = /deleted_at IS NULL/;
+const NOT_DELETED_RE = /ae\.deleted_at IS NULL/;
 
 function fakeClient(rows: Record<string, unknown>[]): Client {
 	return { query: async () => ({ rows }) } as unknown as Client;
@@ -1242,6 +1242,18 @@ describe("mergeBaseline", () => {
 			expect(() =>
 				mergeBaseline({}, [
 					{ ...loaded, status: 200, finalUrl: "http://localhost:3000/login" },
+				])
+			).toThrow(NOT_LOADED_RE);
+		});
+
+		it("on a redirect to another page", () => {
+			expect(() =>
+				mergeBaseline({}, [
+					{
+						...loaded,
+						status: 200,
+						finalUrl: "http://localhost:3000/dashboard",
+					},
 				])
 			).toThrow(NOT_LOADED_RE);
 		});

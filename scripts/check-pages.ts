@@ -577,7 +577,7 @@ export function axeFailureOf(axe: {
 
 /**
  * Why a page did not load properly (no response, an error status, page
- * errors, or a redirect to sign-in), or null when it did. Fields a caller
+ * errors, or a redirect to any other page), or null when it did. Fields a caller
  * leaves out are not checked.
  */
 function loadFailureOf(
@@ -591,7 +591,14 @@ function loadFailureOf(
 	if (r.pageErrors && r.pageErrors.length > 0) {
 		return `${r.pageErrors.length} page error(s)`;
 	}
-	return describeRedirect(r.path, r.finalUrl ?? null).failReason;
+	const { redirectedTo, failReason } = describeRedirect(
+		r.path,
+		r.finalUrl ?? null
+	);
+	if (failReason) {
+		return failReason;
+	}
+	return redirectedTo ? `redirected to ${redirectedTo}` : null;
 }
 
 /** The path without its query string. */
@@ -600,9 +607,10 @@ function pathnameOf(routePath: string): string {
 }
 
 /**
- * Refuses (throws) when any result's accessibility scan did not run or its
- * page did not load properly. Folds a run's results into an existing baseline. Only the entries for the
- * pages checked in the run are replaced; every other entry is kept as it was.
+ * Folds a run's results into an existing baseline. Refuses (throws) when any
+ * result's accessibility scan did not run or its page did not load properly.
+ * Only the entries for the pages checked in the run are replaced; every other
+ * entry is kept as it was.
  * A page whose exact path already has an entry in the baseline writes to that
  * entry; every other page writes to its route template's entry. When several
  * checked paths share one entry, each rule keeps its highest count and the
@@ -758,7 +766,7 @@ interface AxeNode {
 	any?: Array<{ data?: unknown }>;
 	/** outer HTML of the failing element, as axe reports it */
 	html?: string;
-	/** selector path to the element; more than one entry means it sits in an iframe or shadow root */
+	/** selector path to the element; an element in an iframe has more than one entry, and one in a shadow root has an entry that is itself an array */
 	target?: unknown[];
 }
 
