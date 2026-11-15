@@ -665,6 +665,9 @@ describe("goal writes that meet another write to the same case", () => {
 		const response = await putting;
 
 		expect(response.status).toBe(422);
+		expect((await response.json()).error).toBe(
+			"A case can only have one goal claim"
+		);
 		const stored = await prisma.assuranceElement.findUniqueOrThrow({
 			where: { id: first.id },
 		});

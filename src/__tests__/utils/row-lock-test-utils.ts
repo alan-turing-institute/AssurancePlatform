@@ -97,9 +97,19 @@ export async function elementRowIsFree(elementId: string): Promise<boolean> {
 			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${elementId} FOR UPDATE NOWAIT`;
 		});
 		return true;
-	} catch {
-		return false;
+	} catch (error) {
+		if (isLockNotAvailable(error)) {
+			return false;
+		}
+		throw error;
 	}
+}
+
+/** Whether a failed query reports Postgres SQLSTATE 55P03 (lock not available). */
+function isLockNotAvailable(error: unknown): boolean {
+	const meta = (error as { meta?: { code?: unknown } } | null)?.meta;
+	const message = error instanceof Error ? error.message : "";
+	return meta?.code === "55P03" || message.includes("55P03");
 }
 
 /**

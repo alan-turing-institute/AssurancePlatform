@@ -40,7 +40,7 @@ export async function GET(
 
 /**
  * PUT /api/elements/[id] (400 without a parent, 422 for a second goal)
- * @description Updates an existing element. A `parentId` on evidence, including `null`, answers 400: evidence is moved with the move route and detached with the detach route. Moving an element beneath evidence also answers 400, because only counter-goals hang from evidence. Turning a counter-goal beneath evidence into an ordinary goal answers 400 with the top-goal message, since an ordinary goal takes no parent. The top goal never takes a parent, so a `parentId` on it answers 400. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. An empty assumption or justification (an empty string, spaces or null) clears the stored text; leaving the field out keeps it.
+ * @description Updates an existing element. A `parentId` on evidence, including `null`, answers 400: evidence is moved with the move route and detached with the detach route. Moving an element beneath evidence also answers 400, because only counter-goals hang from evidence. Turning a counter-goal into an ordinary goal answers 422 ("A case can only have one goal claim") when the case already has an ordinary goal, otherwise 400 with "parentId cannot be set on the top goal; only a counter-goal has a parent". The top goal never takes a parent, so a `parentId` on it answers 400. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. An empty assumption or justification (an empty string, spaces or null) clears the stored text; leaving the field out keeps it.
  * @add 422
  */
 export async function PUT(

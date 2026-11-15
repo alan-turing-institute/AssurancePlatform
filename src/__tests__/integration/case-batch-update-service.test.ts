@@ -3562,6 +3562,54 @@ describe("applyBatchUpdate", () => {
 					});
 					expect(updated?.name).toBe("P1");
 				});
+
+				it("a flip does not reuse the name of a defeater created earlier in the same batch", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "P1",
+						isDefeater: false,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const createdId = crypto.randomUUID();
+					const changes: ElementChange[] = [
+						{
+							type: "create",
+							elementId: createdId,
+							parentId: null,
+							data: {
+								id: createdId,
+								type: "PROPERTY_CLAIM",
+								name: "CP1",
+								description: "A defeater created in the same batch",
+								inSandbox: false,
+								isDefeater: true,
+							},
+						},
+						{
+							type: "update",
+							elementId: claim.id,
+							data: { isDefeater: true },
+						},
+					];
+
+					expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+					const created = await prisma.assuranceElement.findUniqueOrThrow({
+						where: { id: createdId },
+					});
+					const flipped = await prisma.assuranceElement.findUniqueOrThrow({
+						where: { id: claim.id },
+					});
+					expect(created.name).toBe("CP1");
+					expect(flipped.name).not.toBe("CP1");
+					expect(flipped.name).toBeTruthy();
+				});
 			});
 		});
 	});
