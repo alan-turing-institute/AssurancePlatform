@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { wroteComment } from "@/lib/case/comment-authorship";
 import { formatShortDate } from "@/lib/date";
 import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
@@ -43,24 +44,6 @@ interface CommentItemProps {
 	onResolve: (id: string, resolved: boolean) => Promise<void>;
 	replyingTo: string | null;
 	setReplyingTo: (id: string | null) => void;
-}
-
-/**
- * Whether the signed-in person wrote the comment. User ids decide when both
- * sides have one; otherwise the names are compared, because an edited comment
- * comes back without an author id until the next refresh. A Google or GitHub
- * sign-in carries the provider's display name rather than the stored username,
- * so the name alone never matches their own comments.
- */
-function wroteComment(
-	comment: CommentResponse,
-	currentUserId: string | undefined,
-	currentUsername: string | null | undefined
-): boolean {
-	if (currentUserId && comment.authorId) {
-		return comment.authorId === currentUserId;
-	}
-	return currentUsername === comment.author;
 }
 
 /**
