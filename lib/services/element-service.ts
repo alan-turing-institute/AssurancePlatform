@@ -1610,6 +1610,13 @@ async function validateParentChange(
 }
 
 /**
+ * The refusal for any `parentId` on a piece of evidence through the general
+ * edit. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a 400.
+ */
+export const EVIDENCE_PARENT_CHANGE_ERROR =
+	"parentId cannot be set on evidence; use move or detach";
+
+/**
  * Validates and applies a parentId change to `updateData` IN PLACE, for
  * `updateElement`'s move-operation branch: existence/soft-delete/same-case
  * checks, then the circular-reference guard, then (for a property claim)
@@ -1625,6 +1632,9 @@ async function applyParentChangeForUpdate(
 	updateData: Record<string, unknown>
 ): Promise<{ error: string } | undefined> {
 	if (newParentId === null) {
+		if (existing.elementType === "EVIDENCE") {
+			return { error: EVIDENCE_PARENT_CHANGE_ERROR };
+		}
 		// Detaching — allowed unconditionally.
 		updateData.parentId = null;
 		return;
@@ -1641,6 +1651,11 @@ async function applyParentChangeForUpdate(
 		newParent.caseId !== existing.caseId
 	) {
 		return { error: "Element not found" };
+	}
+
+	// Evidence hangs from claims through links, never through parentId.
+	if (existing.elementType === "EVIDENCE") {
+		return { error: EVIDENCE_PARENT_CHANGE_ERROR };
 	}
 
 	const validationError = await validateParentChange(elementId, newParentId);

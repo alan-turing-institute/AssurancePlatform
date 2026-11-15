@@ -40,7 +40,9 @@ export async function GET(
 
 /**
  * PUT /api/elements/[id] (400 without a parent, 422 for a second goal)
- * Updates an existing element
+ * Updates an existing element. A `parentId` on evidence, including `null`,
+ * answers 400: evidence is moved with the move route and detached with the
+ * detach route.
  * @add 422
  */
 export async function PUT(

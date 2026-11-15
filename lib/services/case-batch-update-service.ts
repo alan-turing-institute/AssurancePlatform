@@ -27,6 +27,7 @@ import { validateElementName } from "@/lib/schemas/element-validation";
 import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
+	EVIDENCE_PARENT_CHANGE_ERROR,
 	enforceAssertionStatusRules,
 	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
@@ -802,6 +803,20 @@ async function validateCreateParents(
 async function validateUpdateParents(
 	updates: UpdateChange[]
 ): Promise<string | null> {
+	const withParent = updates.filter((c) => c.data.parentId !== undefined);
+	if (withParent.length > 0) {
+		const evidence = await prisma.assuranceElement.findFirst({
+			where: {
+				id: { in: withParent.map((c) => c.elementId) },
+				elementType: "EVIDENCE",
+			},
+			select: { id: true },
+		});
+		if (evidence) {
+			return `${EVIDENCE_PARENT_CHANGE_ERROR} (element ${evidence.id})`;
+		}
+	}
+
 	const relevant = updates.filter(
 		(c) => c.data.parentId !== undefined && c.data.parentId !== null
 	);
