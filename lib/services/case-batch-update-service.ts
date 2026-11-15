@@ -1440,7 +1440,7 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
  * write loop below applies each onto that update's `updateData.name`.
  *
  * Names are counted through the batch's transaction, so the creates the
- * batch has already made are seen (and names given earlier in the loop below),
+ * batch has already made are seen (and names given earlier in this function's own loop),
  * and the case lock the batch holds keeps other writers from adding names
  * meanwhile.
  */

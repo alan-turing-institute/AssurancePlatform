@@ -3607,8 +3607,7 @@ describe("applyBatchUpdate", () => {
 						where: { id: claim.id },
 					});
 					expect(created.name).toBe("CP1");
-					expect(flipped.name).not.toBe("CP1");
-					expect(flipped.name).toBeTruthy();
+					expect(flipped.name).toBe("CP2");
 				});
 			});
 		});

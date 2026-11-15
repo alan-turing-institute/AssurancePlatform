@@ -108,7 +108,8 @@ export async function elementRowIsFree(elementId: string): Promise<boolean> {
 /** Whether a failed query reports Postgres SQLSTATE 55P03 (lock not available). */
 function isLockNotAvailable(error: unknown): boolean {
 	// The text form carries the message; the JSON form carries the error's own
-	// enumerable fields, including `code` and `meta.code`.
+	// enumerable fields, including the database code at
+	// `meta.driverAdapterError.cause.originalCode`.
 	return `${String(error)} ${JSON.stringify(error)}`.includes("55P03");
 }
 

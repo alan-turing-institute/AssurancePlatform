@@ -141,7 +141,7 @@ describe("POST /api/elements/[id]/attach", () => {
 		["CONTEXT", "MODULE"],
 		["JUSTIFICATION", "AWAY_GOAL"],
 		["ASSUMPTION", "MODULE"],
-	] as const)("refuses to attach a %s element beneath an %s", async (elementType, parentType) => {
+	] as const)("refuses to attach a %s element beneath a parent of type %s", async (elementType, parentType) => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);
 		const referenced = await createTestCase(owner.id);
