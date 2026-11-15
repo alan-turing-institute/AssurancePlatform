@@ -404,7 +404,7 @@ describe("element-service", () => {
 		});
 
 		describe("parent change", () => {
-			it("detaches the element when parentId is set to null", async () => {
+			it("refuses a null parentId on a strategy and keeps its parent", async () => {
 				const user = await createTestUser();
 				const testCase = await createTestCase(user.id);
 				const goal = expectSuccess(
@@ -421,14 +421,15 @@ describe("element-service", () => {
 					})
 				);
 
-				expectSuccess(
-					await updateElement(user.id, strategy.id, { parentId: null })
+				expectError(
+					await updateElement(user.id, strategy.id, { parentId: null }),
+					"parentId cannot be cleared on the general edit; use the detach route"
 				);
 
 				const inDb = await prisma.assuranceElement.findUnique({
 					where: { id: strategy.id },
 				});
-				expect(inDb?.parentId).toBeNull();
+				expect(inDb?.parentId).toBe(goal.id);
 			});
 
 			it("returns 'Element not found' when the new parent doesn't exist or is in a different case, leaving the parent unchanged", async () => {

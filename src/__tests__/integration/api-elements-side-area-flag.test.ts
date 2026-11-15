@@ -329,3 +329,39 @@ describe("POST /api/cases/[id]/batch — inSandbox", () => {
 		});
 	});
 });
+
+describe("a null parentId on anything but a goal", () => {
+	it("is refused by the general edit, which keeps the parent", async () => {
+		const { owner, goal, strategy } = await build();
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await putElement(strategy.id, { parentId: null });
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"parentId cannot be cleared on the general edit; use the detach route"
+		);
+		expect((await stored(strategy.id))?.parentId).toBe(goal.id);
+	});
+
+	it("is refused by the batch, which keeps the parent", async () => {
+		const { owner, testCase, goal, strategy } = await build();
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{
+					type: "update",
+					elementId: strategy.id,
+					data: { parentId: null },
+				},
+			],
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			`parentId cannot be cleared in a batch; use the detach route (element ${strategy.id})`
+		);
+		expect((await stored(strategy.id))?.parentId).toBe(goal.id);
+	});
+});

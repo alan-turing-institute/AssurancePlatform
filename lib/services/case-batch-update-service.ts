@@ -1098,6 +1098,20 @@ async function validateUpdateParents(
 		}
 	}
 
+	const cleared = updates.filter((c) => c.data.parentId === null);
+	if (cleared.length > 0) {
+		const nonGoal = await prisma.assuranceElement.findFirst({
+			where: {
+				id: { in: cleared.map((c) => c.elementId) },
+				elementType: { not: "GOAL" },
+			},
+			select: { id: true },
+		});
+		if (nonGoal) {
+			return `parentId cannot be cleared in a batch; use the detach route (element ${nonGoal.id})`;
+		}
+	}
+
 	const relevant = updates.filter(
 		(c) => c.data.parentId !== undefined && c.data.parentId !== null
 	);

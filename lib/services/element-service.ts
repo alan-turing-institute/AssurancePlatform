@@ -1770,6 +1770,8 @@ async function validateParentChange(
  * The refusal for any `parentId` on a piece of evidence through the general
  * edit. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a 400.
  */
+export const PARENT_CLEAR_ERROR =
+	"parentId cannot be cleared on the general edit; use the detach route";
 export const EVIDENCE_PARENT_CHANGE_ERROR =
 	"parentId cannot be set on evidence; use move or detach";
 
@@ -1792,7 +1794,11 @@ async function applyParentChangeForUpdate(
 		if (existing.elementType === "EVIDENCE") {
 			return { error: EVIDENCE_PARENT_CHANGE_ERROR };
 		}
-		// Detaching — allowed unconditionally.
+		// Only a goal can have no parent; anything else leaves the tree through
+		// the detach route, which applies the detach rules.
+		if (existing.elementType !== "GOAL") {
+			return { error: PARENT_CLEAR_ERROR };
+		}
 		updateData.parentId = null;
 		return;
 	}
