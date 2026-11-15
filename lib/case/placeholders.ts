@@ -165,6 +165,9 @@ export function writingClearsPlaceholder(
  * redoing the edit then sends the marker off, not the one it started with.
  * An edit that sets the marker itself (in a pattern) records the state before
  * with the marker spelled out, so undoing it can switch the marker back off.
+ * An edit that writes a status records the state before with the status
+ * spelled out too: an element that never had one carries none, and a request
+ * with no status leaves the new one in place, so undoing records it as `null`.
  */
 export function recordedStates(
 	kind: CaseKind | undefined,
@@ -179,12 +182,16 @@ export function recordedStates(
 	) {
 		after.isPlaceholder = false;
 	}
+	const statusSpelledOut =
+		fields.assertionStatus === undefined
+			? before
+			: { ...before, assertionStatus: before.assertionStatus ?? null };
 	if (fields.isPlaceholder === undefined) {
-		return { before, after };
+		return { before: statusSpelledOut, after };
 	}
 	return {
 		before: {
-			...before,
+			...statusSpelledOut,
 			isPlaceholder: before.isPlaceholder === true,
 			placeholderHint: before.placeholderHint ?? null,
 		},
