@@ -243,7 +243,6 @@ function Flow({ liveUpdatesNotice }: FlowProps) {
 					<CommentsSheet />
 					<div className="pointer-events-none absolute top-16 left-0 w-full">
 						<PatternBanner />
-						{liveUpdatesNotice}
 						{orphanedElements &&
 							orphanedElements.length > 0 &&
 							showOrphanMessage && (
@@ -265,6 +264,7 @@ function Flow({ liveUpdatesNotice }: FlowProps) {
 									</div>
 								</div>
 							)}
+						{liveUpdatesNotice}
 					</div>
 				</div>
 			)}
