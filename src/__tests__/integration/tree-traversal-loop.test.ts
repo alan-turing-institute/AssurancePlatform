@@ -134,7 +134,7 @@ describe("walks down the element tree on a stored parent loop", () => {
 	);
 
 	it(
-		"detaching an element in the loop finishes",
+		"detach on a looped element still answers 200",
 		async () => {
 			const { owner, a } = await buildLoop();
 			await mockAuth(owner.id, owner.username, owner.email);

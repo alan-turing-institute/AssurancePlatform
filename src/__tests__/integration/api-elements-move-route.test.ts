@@ -97,6 +97,23 @@ describe("POST /api/elements/[id]/move", () => {
 		expect(await parentOf(claim.id)).toBe(goal.id);
 	});
 
+	it("answers 400 for a strategy moved beneath itself and keeps the parent", async () => {
+		const { owner, testCase, goal } = await build();
+		const strategy = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postMove(strategy.id, { parentId: strategy.id });
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"Cannot set element as its own parent"
+		);
+		expect(await parentOf(strategy.id)).toBe(goal.id);
+	});
+
 	it("moves an element under a sibling", async () => {
 		const { owner, claim, other } = await build();
 		await mockAuth(owner.id, owner.username, owner.email);

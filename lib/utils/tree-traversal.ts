@@ -103,8 +103,8 @@ export async function getDescendantIdsForRoots(
 		frontierOwners = nextFrontierOwners;
 	}
 
-	for (const rootId of loopRoots) {
-		log.warn(LOOP_WARNING, { rootId });
+	if (loopRoots.size > 0) {
+		log.warn(LOOP_WARNING, { rootIds: [...loopRoots] });
 	}
 	return result;
 }

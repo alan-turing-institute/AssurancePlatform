@@ -1770,10 +1770,12 @@ async function validateParentChange(
  * The refusal for any `parentId` on a piece of evidence through the general
  * edit. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a 400.
  */
-const PARENT_CLEAR_ERROR =
-	"parentId cannot be cleared on the general edit; use the detach route";
 export const EVIDENCE_PARENT_CHANGE_ERROR =
 	"parentId cannot be set on evidence; use move or detach";
+
+/** The refusal for clearing a `parentId` through the general edit. */
+const PARENT_CLEAR_ERROR =
+	"parentId cannot be cleared on the general edit; use the detach route";
 
 /**
  * Validates and applies a parentId change to `updateData` IN PLACE, for
@@ -2791,6 +2793,12 @@ export async function moveElement(
 			return { error: "Element not found" };
 		}
 
+		// Validate the move does not create a circular reference
+		const circularError = await validateParentChange(elementId, newParentId);
+		if (circularError) {
+			return { error: circularError };
+		}
+
 		// Check type compatibility
 		const { canBeChildOf } = await import("@/lib/element-compatibility");
 		const elementTypeLower = element.elementType.toLowerCase();
@@ -2800,12 +2808,6 @@ export async function moveElement(
 			return {
 				error: `${element.elementType.toLowerCase()} cannot be a child of ${newParent.elementType.toLowerCase()}`,
 			};
-		}
-
-		// Validate the move does not create a circular reference
-		const circularError = await validateParentChange(elementId, newParentId);
-		if (circularError) {
-			return { error: circularError };
 		}
 
 		// Perform the move atomically

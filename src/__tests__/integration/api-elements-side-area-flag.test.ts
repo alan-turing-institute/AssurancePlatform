@@ -108,6 +108,7 @@ describe("PUT /api/elements/[id] — inSandbox", () => {
 		const response = await putElement(goal.id, { inSandbox: true });
 
 		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(SET_MESSAGE);
 		expect((await stored(goal.id))?.inSandbox).toBe(false);
 	});
 
@@ -127,6 +128,7 @@ describe("PUT /api/elements/[id] — inSandbox", () => {
 		const response = await putElement(counterGoal.id, { inSandbox: true });
 
 		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(SET_MESSAGE);
 		expect(await stored(counterGoal.id)).toMatchObject({
 			inSandbox: false,
 			parentId: claim.id,
@@ -150,6 +152,7 @@ describe("PUT /api/elements/[id] — inSandbox", () => {
 		const response = await putElement(evidence.id, { inSandbox: true });
 
 		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(SET_MESSAGE);
 		expect((await stored(evidence.id))?.inSandbox).toBe(false);
 		expect(
 			await prisma.evidenceLink.count({ where: { evidenceId: evidence.id } })
@@ -277,6 +280,9 @@ describe("POST /api/cases/[id]/batch — inSandbox", () => {
 		});
 
 		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			`inSandbox cannot be changed in a batch; use the detach or attach route (element ${strategy.id})`
+		);
 		expect((await stored(strategy.id))?.inSandbox).toBe(true);
 	});
 
@@ -303,6 +309,9 @@ describe("POST /api/cases/[id]/batch — inSandbox", () => {
 		});
 
 		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			`inSandbox cannot be changed in a batch; use the detach or attach route (element ${newId})`
+		);
 		expect(
 			await prisma.assuranceElement.findUnique({ where: { id: newId } })
 		).toBeNull();
