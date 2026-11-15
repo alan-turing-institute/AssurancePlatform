@@ -1,7 +1,11 @@
 import { calculateDaysRemaining, TRASH_RETENTION_DAYS } from "@/lib/constants";
 import { logger } from "@/lib/logger";
+import { toMediaKey } from "@/lib/media-key";
 import { prisma } from "@/lib/prisma";
 import type { DeleteCaseOptionsInput } from "@/lib/schemas/case-trash";
+import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
+import { deleteCaseScreenshotKey } from "@/lib/services/case-image-service";
+import { deleteCaseFeatureImageKey } from "@/lib/services/case-information-service";
 import { requireCronSecret } from "@/lib/services/cron-auth";
 import {
 	archivePublishedCopies,
@@ -80,6 +84,87 @@ async function validateCaseOwner(
 	}
 
 	return { valid: true, deletedAt: existingCase.deletedAt };
+}
+
+interface CaseImageKeys {
+	feature: string | null;
+	/** Media keys that a surviving published snapshot of the case still names. */
+	keep: Set<string>;
+	screenshot: string | null;
+}
+
+/**
+ * Reads, for each case, the stored screenshot and feature-image values plus
+ * the feature-image keys that surviving published snapshots still name. Must
+ * run before the case rows are deleted, because the image rows cascade.
+ */
+async function readCaseImageKeys(
+	db: Pick<typeof prisma, "assuranceCase" | "publishedAssuranceCase">,
+	caseIds: string[]
+): Promise<Map<string, CaseImageKeys>> {
+	const result = new Map<string, CaseImageKeys>();
+	if (caseIds.length === 0) {
+		return result;
+	}
+	const [cases, snapshots] = await Promise.all([
+		db.assuranceCase.findMany({
+			where: { id: { in: caseIds } },
+			select: {
+				id: true,
+				caseImage: { select: { imageUrl: true } },
+				caseInformation: { select: { featureImageUrl: true } },
+			},
+		}),
+		db.publishedAssuranceCase.findMany({
+			where: { assuranceCaseId: { in: caseIds } },
+			select: { assuranceCaseId: true, content: true },
+		}),
+	]);
+	for (const row of cases) {
+		result.set(row.id, {
+			screenshot: row.caseImage?.imageUrl ?? null,
+			feature: row.caseInformation?.featureImageUrl ?? null,
+			keep: new Set(),
+		});
+	}
+	for (const snapshot of snapshots) {
+		const parsed = publishedSnapshotMetaSchema.safeParse(snapshot.content);
+		const url = parsed.success
+			? parsed.data.caseInformation?.featureImageUrl
+			: null;
+		if (url && snapshot.assuranceCaseId) {
+			result.get(snapshot.assuranceCaseId)?.keep.add(toMediaKey(url));
+		}
+	}
+	return result;
+}
+
+/**
+ * Deletes a purged case's screenshot and feature-image files, best effort:
+ * the rows are already gone, so a failed delete is logged and the purge
+ * still succeeds. A key an archived snapshot still names is left in place.
+ */
+async function deleteCaseImageFiles(
+	caseId: string,
+	keys: CaseImageKeys
+): Promise<void> {
+	const candidates = [
+		{ stored: keys.screenshot, remove: deleteCaseScreenshotKey },
+		{ stored: keys.feature, remove: deleteCaseFeatureImageKey },
+	];
+	for (const { stored, remove } of candidates) {
+		if (!stored || keys.keep.has(toMediaKey(stored))) {
+			continue;
+		}
+		try {
+			await remove(caseId, stored);
+		} catch (error) {
+			log.warn("Failed to delete a purged case's image file", {
+				caseId,
+				error,
+			});
+		}
+	}
 }
 
 // ============================================
@@ -282,9 +367,19 @@ export async function purgeCase(userId: string, caseId: string): ServiceResult {
 	}
 
 	try {
-		await prisma.assuranceCase.delete({
-			where: { id: caseId },
+		// The image rows cascade with the case, so their keys are read in the
+		// same transaction that deletes it.
+		const keys = await prisma.$transaction(async (tx) => {
+			const found = await readCaseImageKeys(tx, [caseId]);
+			await tx.assuranceCase.delete({
+				where: { id: caseId },
+			});
+			return found.get(caseId);
 		});
+
+		if (keys) {
+			await deleteCaseImageFiles(caseId, keys);
+		}
 
 		return { data: true };
 	} catch (error) {
@@ -309,20 +404,38 @@ export async function purgeExpiredCases(
 		const cutoffDate = new Date();
 		cutoffDate.setDate(cutoffDate.getDate() - TRASH_RETENTION_DAYS);
 
-		const result = await prisma.assuranceCase.deleteMany({
-			where: {
-				deletedAt: {
-					not: null,
-					lt: cutoffDate,
-				},
-			},
+		const expired = await prisma.assuranceCase.findMany({
+			where: { deletedAt: { not: null, lt: cutoffDate } },
+			select: { id: true },
 		});
+		const keysByCase = await readCaseImageKeys(
+			prisma,
+			expired.map((c) => c.id)
+		);
 
-		log.info("Purged expired cases from trash", { count: result.count });
+		// One case at a time, re-checking the Trash condition in the delete
+		// itself: a case restored since the read matches nothing, so it keeps
+		// both its row and its files.
+		let purgedCount = 0;
+		for (const { id } of expired) {
+			const result = await prisma.assuranceCase.deleteMany({
+				where: { id, deletedAt: { not: null, lt: cutoffDate } },
+			});
+			if (result.count !== 1) {
+				continue;
+			}
+			purgedCount += 1;
+			const keys = keysByCase.get(id);
+			if (keys) {
+				await deleteCaseImageFiles(id, keys);
+			}
+		}
+
+		log.info("Purged expired cases from trash", { count: purgedCount });
 
 		return {
 			data: {
-				purgedCount: result.count,
+				purgedCount,
 				cutoffDate: cutoffDate.toISOString(),
 			},
 		};
