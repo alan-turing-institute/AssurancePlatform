@@ -86,7 +86,8 @@ export async function PUT(
 
 /**
  * DELETE /api/elements/[id]
- * Deletes an element
+ * Deletes an element. A challenge elsewhere in the case that named it is left
+ * unlinked and marked `defeatsDangling`.
  */
 export async function DELETE(
 	_request: Request,

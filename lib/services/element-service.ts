@@ -2052,6 +2052,33 @@ async function nullifyDanglingCitations(
 }
 
 /**
+ * When an element leaves the argument tree (deleted or detached together with
+ * its descendants), a challenge elsewhere in the case that still names it is
+ * left unlinked and flagged `defeatsDangling`, the same way citations are. A
+ * challenge inside the removed set is left alone: it normally hangs from the
+ * element it challenges and goes and comes back with it. `repointedIds` names
+ * challenges the same write gives a new target, which are left alone too.
+ */
+export async function nullifyDanglingDefeats(
+	tx: TxClient,
+	caseId: string,
+	removedIds: string[],
+	repointedIds: string[] = []
+): Promise<void> {
+	if (removedIds.length === 0) {
+		return;
+	}
+	await tx.assuranceElement.updateMany({
+		where: {
+			caseId,
+			defeatsElementId: { in: removedIds },
+			id: { notIn: [...removedIds, ...repointedIds] },
+		},
+		data: { defeatsElementId: null, defeatsDangling: true },
+	});
+}
+
+/**
  * Removes the evidence link between `evidenceId` and `claimId` inside the
  * caller's transaction and bumps the case's `updatedAt`. The evidence element
  * itself is untouched.
@@ -2094,6 +2121,7 @@ export async function deleteElementWithin(
 	// `caseId` — every deleted id (the element and its
 	// descendants) may be cited from anywhere.
 	await nullifyDanglingCitations(tx, allIds);
+	await nullifyDanglingDefeats(tx, caseId, allIds);
 	await touchCase(tx, caseId);
 }
 
@@ -2188,6 +2216,10 @@ export async function detachElement(
 			}
 			const descendantIds = await getDescendantIds(elementId, tx);
 			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
+			await nullifyDanglingDefeats(tx, existing.caseId, [
+				elementId,
+				...descendantIds,
+			]);
 			await touchCase(tx, existing.caseId);
 		});
 

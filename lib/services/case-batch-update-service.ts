@@ -31,6 +31,7 @@ import {
 	enforceAssertionStatusRules,
 	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
+	nullifyDanglingDefeats,
 	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
 	validateCitedElementId,
@@ -969,6 +970,39 @@ async function applyDeletes(
 }
 
 /**
+ * Flags, ahead of the deletes, every challenge that survives this batch but
+ * names an element the deletes remove. The database would clear the target on
+ * its own; this also sets `defeatsDangling` so the break is recorded. Runs
+ * after `detachMovedElementsFromDeletes`, so the set of elements removed
+ * with the deletes is the one that is actually about to go. A challenge the
+ * batch re-points is left for its own update.
+ */
+async function flagDefeatsOfDeletes(
+	tx: TransactionClient,
+	caseId: string,
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<void> {
+	if (deletes.length === 0) {
+		return;
+	}
+	const deletedIds = deletes.map((change) => change.elementId);
+	const descendantsByRoot = await getDescendantIdsForRoots(deletedIds, tx, {
+		includeDeleted: true,
+	});
+	const removed = new Set(deletedIds);
+	for (const descendants of descendantsByRoot.values()) {
+		for (const id of descendants) {
+			removed.add(id);
+		}
+	}
+	const repointed = updates
+		.filter((change) => change.data.defeatsElementId !== undefined)
+		.map((change) => change.elementId);
+	await nullifyDanglingDefeats(tx, caseId, [...removed], repointed);
+}
+
+/**
  * Detaches, ahead of the deletes, every element this batch moves that the
  * deletes would otherwise take with them. Deleting an element also deletes
  * everything beneath it, so an element moved out of a parent the same batch
@@ -1807,6 +1841,7 @@ export async function applyBatchUpdate(
 			// batch moves out of a parent it deletes), creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
 			await detachMovedElementsFromDeletes(tx, caseId, updates, deletes);
+			await flagDefeatsOfDeletes(tx, caseId, updates, deletes);
 			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, caseId, updates);
