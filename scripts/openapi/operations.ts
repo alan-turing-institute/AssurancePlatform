@@ -15,6 +15,7 @@
  * contract of the route.
  */
 
+import { ANSWERS, answerSchemas } from "./answer-shapes";
 import { DEFINITIONS, type Schema } from "./from-zod";
 import { bodyComponentSchemas } from "./request-bodies";
 
@@ -95,21 +96,15 @@ function image(description: string): SuccessAnswer[] {
 const NAMED_SCHEMAS: Record<string, Schema> = {
 	SuccessFlag: obj({ success: BOOLEAN }),
 	ConnectedFlag: obj({ connected: BOOLEAN }),
-	ImportResult: obj({
-		id: STRING,
-		name: STRING,
-		elementCount: NUMBER,
-		evidenceLinkCount: NUMBER,
-		warnings: { type: "array", items: STRING },
-	}),
-	ClaimHealthStatus: obj({ status: OBJECT }),
 };
 
+const ANSWER_SCHEMAS = answerSchemas();
 const BODY_SCHEMAS = bodyComponentSchemas();
 
 /** Named schemas the entries here and in request-bodies.ts refer to; added to the document's components. */
 export const SCHEMAS: Record<string, Schema> = {
 	...NAMED_SCHEMAS,
+	...ANSWER_SCHEMAS,
 	...BODY_SCHEMAS,
 	...DEFINITIONS,
 };
@@ -205,9 +200,6 @@ export const QUERY_PARAMETERS: Record<string, QueryParameter[]> = {
 const CLAIM_STATUS = ref("ClaimHealthStatus");
 
 const INTEGRATION = fields("The integration", { integration: OBJECT });
-const IMPORT_WITH_SOURCE: Schema = {
-	allOf: [ref("ImportResult"), obj({ source: OBJECT })],
-};
 const CRITERIA = object("The claim's evidence settings");
 
 export const OPERATIONS: Record<string, SuccessAnswer[]> = {
@@ -235,7 +227,11 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 	"PUT /cases/{id}": object("The updated case"),
 	"DELETE /cases/{id}": flag("The case was moved to Trash"),
 	"GET /cases/export": [
-		json(200, "The case in the export format, sent as a file download"),
+		json(
+			200,
+			"The case in the export format, sent as a file download named after the case",
+			ref("CaseExport")
+		),
 	],
 	"POST /cases/import": [json(200, "The imported case", ref("ImportResult"))],
 	"PUT /cases/import": fields("The preview of an import", {
@@ -261,14 +257,14 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		json(200, "Whether Google Drive is connected", ref("ConnectedFlag")),
 	],
 	"POST /cases/import/gdrive": [
-		json(200, "The imported case", IMPORT_WITH_SOURCE),
+		json(200, "The imported case", ref("ImportResultFromDrive")),
 	],
 	"GET /cases/import/gdrive": fields(
 		"Whether Google Drive is connected, and the files that can be imported",
 		{ connected: BOOLEAN, files: ARRAY }
 	),
 	"POST /cases/import/github": [
-		json(200, "The imported case", IMPORT_WITH_SOURCE),
+		json(200, "The imported case", ref("ImportResultFromGitHub")),
 	],
 	"GET /cases/import/github": [
 		json(200, "Whether GitHub is connected", ref("ConnectedFlag")),
@@ -305,9 +301,13 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		featureImageUrl: STRING,
 	}),
 	"DELETE /cases/{id}/information/image": flag("The feature image was removed"),
-	"GET /cases/{id}/information": object(
-		"The case information, or null if none exists"
-	),
+	"GET /cases/{id}/information": [
+		json(
+			200,
+			"The case information, or null if none exists",
+			ANSWERS.caseInformation
+		),
+	],
 	"PUT /cases/{id}/information": object("The saved case information"),
 	"GET /cases/{id}/media/feature": image("The feature image"),
 	"GET /cases/{id}/media/screenshot": image("The screenshot"),
@@ -355,20 +355,42 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 	"PUT /comments/{id}": object("The updated comment"),
 	"PATCH /comments/{id}": object("The updated comment"),
 
-	"POST /cron/health-evidence-thinning": object(
-		"What the run removed, with success set to true"
-	),
-	"POST /cron/health-staleness-sweep": object(
-		"How many people were notified, with success set to true"
-	),
-	"POST /cron/purge-trash": object(
-		"How many items were purged, with success set to true"
-	),
-	"POST /cron/retention-sweep": object(
-		"What the run warned about and deleted, with success set to true"
-	),
+	"POST /cron/health-evidence-thinning": [
+		json(
+			200,
+			"What the run removed; `dryRun` echoes the query and `more` says whether another call is needed",
+			ANSWERS.evidenceThinning
+		),
+	],
+	"POST /cron/health-staleness-sweep": [
+		json(
+			200,
+			"How many claims and cases were newly notified",
+			ANSWERS.stalenessSweep
+		),
+	],
+	"POST /cron/purge-trash": [
+		json(
+			200,
+			"The cut-off date and how many cases were purged",
+			ANSWERS.purgeTrash
+		),
+	],
+	"POST /cron/retention-sweep": [
+		json(
+			200,
+			"How many accounts were warned and deleted; with `dryRun` the counts are what would happen",
+			ANSWERS.retentionSweep
+		),
+	],
 
-	"GET /public/discover/{slug}": object("The published case"),
+	"GET /public/discover/{slug}": [
+		json(
+			200,
+			"The current published version of the item, with its frozen snapshot",
+			ref("PublishedItem")
+		),
+	],
 	"GET /public/discover/{slug}/image/{versionId}": image(
 		"The published case's feature image"
 	),
@@ -455,35 +477,47 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		redirect_url: STRING,
 	}),
 
-	"GET /machine/whoami": fields("The integration the token belongs to", {
-		name: STRING,
-		scopes: { type: "array", items: STRING },
-		tokenPrefix: STRING,
-	}),
-	"PUT /machine/health/checks": fields("The checks that were stored", {
-		checks: NUMBER,
-		warnings: ARRAY,
-	}),
-	"GET /machine/health/cases/{id}/criteria": fields(
-		"The evidence settings of the case's claims",
-		{ case_id: STRING, criteria: ARRAY }
-	),
-	"GET /machine/health/cases/{id}/status": fields(
-		"The status of the case's claims",
-		{ case_id: STRING, statuses: ARRAY }
-	),
-	"GET /machine/health/elements/{id}/criteria": object(
-		"The claim's evidence settings"
-	),
-	"GET /machine/health/elements/{id}/evidence": fields(
-		"The claim's evidence records, newest first",
-		{ evidence: ARRAY, next_before: NUMBER }
-	),
-	"POST /machine/health/elements/{id}/evidence": fields(
-		"The stored record and the claim's status",
-		{ record: OBJECT, status: OBJECT },
-		201
-	),
+	"GET /machine/whoami": [
+		json(200, "The integration the token belongs to", ANSWERS.whoami),
+	],
+	"PUT /machine/health/checks": [
+		json(
+			200,
+			"How many checks were stored, and a warning for each recommendation that would not pass as evidence settings",
+			ANSWERS.publishedChecks
+		),
+	],
+	"GET /machine/health/cases/{id}/criteria": [
+		json(
+			200,
+			"The evidence settings accepted for the case's claims",
+			ANSWERS.caseCriteria
+		),
+	],
+	"GET /machine/health/cases/{id}/status": [
+		json(
+			200,
+			"The status of each claim in the case that has one",
+			ANSWERS.caseStatuses
+		),
+	],
+	"GET /machine/health/elements/{id}/criteria": [
+		json(200, "The claim's accepted evidence settings", ref("MachineCriteria")),
+	],
+	"GET /machine/health/elements/{id}/evidence": [
+		json(
+			200,
+			"The claim's evidence records, newest first; `next_before` is the value to pass as `before` for the next page, or null on the last page",
+			ANSWERS.evidencePage
+		),
+	],
+	"POST /machine/health/elements/{id}/evidence": [
+		json(
+			201,
+			"The stored record and the claim's status",
+			ANSWERS.appendedEvidence
+		),
+	],
 	"GET /machine/health/elements/{id}/status": [
 		json(200, "The claim's status, or null", CLAIM_STATUS),
 	],

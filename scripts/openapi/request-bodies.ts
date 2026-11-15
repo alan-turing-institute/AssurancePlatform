@@ -44,7 +44,6 @@ import {
 } from "../../lib/schemas/health-criteria";
 import {
 	boundCheckRequestSchema,
-	healthEvidenceRecordSchema,
 	reinstatementRequestSchema,
 	revocationRequestSchema,
 } from "../../lib/schemas/health-evidence";
@@ -97,17 +96,12 @@ const MULTIPART_TYPE = "multipart/form-data";
 /** The schema name the case export and import bodies refer to. */
 export const CASE_EXPORT_SCHEMA = "CaseExport";
 const CASE_TREE_NODE = "CaseTreeNode";
-const JSON_VALUE = "JsonValue";
 
-function json(
-	source: string,
-	schema: z.ZodType,
-	definitionNames: string[] = []
-): RequestBody {
+function json(source: string, schema: z.ZodType): RequestBody {
 	return {
 		contentType: JSON_TYPE,
 		required: true,
-		schema: fromZod(schema, definitionNames),
+		schema: fromZod(schema),
 		sources: [source],
 	};
 }
@@ -117,13 +111,18 @@ function optionalJson(source: string, schema: z.ZodType): RequestBody {
 	return { ...json(source, schema), required: false };
 }
 
-function importBody(source: string): RequestBody {
+/** A JSON body described by a named component schema. */
+function namedBody(source: string, schemaName: string): RequestBody {
 	return {
 		contentType: JSON_TYPE,
 		required: true,
-		schema: { $ref: `#/components/schemas/${CASE_EXPORT_SCHEMA}` },
+		schema: { $ref: `#/components/schemas/${schemaName}` },
 		sources: [source],
 	};
+}
+
+function importBody(source: string): RequestBody {
+	return namedBody(source, CASE_EXPORT_SCHEMA);
 }
 
 /** The share body: a team by id, or a person by email. */
@@ -300,10 +299,9 @@ export const REQUEST_BODIES: Record<string, RequestBody> = {
 		"healthCheckListSchema",
 		healthCheckListSchema
 	),
-	"POST /machine/health/elements/{id}/evidence": json(
+	"POST /machine/health/elements/{id}/evidence": namedBody(
 		"healthEvidenceRecordSchema",
-		healthEvidenceRecordSchema,
-		[JSON_VALUE, JSON_VALUE]
+		"HealthEvidenceRecord"
 	),
 
 	"POST /teams": json("createTeamSchema", createTeamSchema),

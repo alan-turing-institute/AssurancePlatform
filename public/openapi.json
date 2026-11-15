@@ -323,9 +323,18 @@
         "type": "object",
         "properties": {
           "status": {
-            "type": "object"
+            "type": "object",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthStatus"
+              }
+            ]
           }
-        }
+        },
+        "required": [
+          "status"
+        ]
       },
       "ConnectedFlag": {
         "type": "object",
@@ -334,6 +343,1113 @@
             "type": "boolean"
           }
         }
+      },
+      "HealthEvidenceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/HealthEvidenceRecord"
+          },
+          "chain_sequence": {
+            "type": "integer"
+          },
+          "record_hash": {
+            "type": "string"
+          },
+          "previous_record_hash": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_by_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "revocation": {
+            "type": "object",
+            "properties": {
+              "cause": {
+                "type": "string",
+                "enum": [
+                  "evidence-defect",
+                  "binding-defect",
+                  "duplicate",
+                  "superseded",
+                  "other"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "revoked_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "revoked_by_name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cause",
+              "reason",
+              "revoked_at",
+              "revoked_by_name"
+            ],
+            "nullable": true
+          },
+          "echo_state": {
+            "type": "string",
+            "enum": [
+              "match",
+              "mismatch",
+              "undeclared"
+            ]
+          },
+          "echo_differences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "declared": {},
+                "used": {}
+              },
+              "required": [
+                "field"
+              ]
+            },
+            "nullable": true
+          },
+          "criteria_revision": {
+            "type": "integer",
+            "nullable": true
+          },
+          "thinned_before": {
+            "type": "object",
+            "properties": {
+              "removed_count": {
+                "type": "integer"
+              },
+              "first_removed_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "first_removed_sequence": {
+                "type": "integer"
+              },
+              "last_removed_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "last_removed_sequence": {
+                "type": "integer"
+              },
+              "rule_version": {
+                "type": "integer"
+              },
+              "thinned_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "removed_count",
+              "first_removed_at",
+              "first_removed_sequence",
+              "last_removed_at",
+              "last_removed_sequence",
+              "rule_version",
+              "thinned_at"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "record",
+          "chain_sequence",
+          "record_hash",
+          "previous_record_hash",
+          "created_by_id",
+          "created_at",
+          "expires_at",
+          "revocation",
+          "echo_state",
+          "echo_differences",
+          "criteria_revision",
+          "thinned_before"
+        ]
+      },
+      "HealthEvidenceRecord": {
+        "type": "object",
+        "properties": {
+          "format_version": {
+            "type": "string",
+            "enum": [
+              "1.1"
+            ]
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID v4 identifier"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "claim_ref": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID v4 identifier"
+          },
+          "check": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "params": {}
+            },
+            "required": [
+              "name",
+              "version",
+              "scope"
+            ],
+            "additionalProperties": false
+          },
+          "rule": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "identity",
+                  "threshold",
+                  "band",
+                  "membership"
+                ]
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "maximize",
+                  "minimize",
+                  "target"
+                ]
+              },
+              "params": {},
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "kind",
+              "version"
+            ],
+            "additionalProperties": false
+          },
+          "reduction": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "sum",
+                  "mean",
+                  "max",
+                  "min",
+                  "median",
+                  "percentile",
+                  "last"
+                ]
+              },
+              "params": {},
+              "rule": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "identity",
+                      "threshold",
+                      "band",
+                      "membership"
+                    ]
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "maximize",
+                      "minimize",
+                      "target"
+                    ]
+                  },
+                  "params": {},
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "kind",
+                  "version"
+                ],
+                "additionalProperties": false
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "kind",
+              "version"
+            ],
+            "additionalProperties": false
+          },
+          "aggregation": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "proportion",
+                  "worst-of",
+                  "percentile"
+                ]
+              },
+              "params": {},
+              "rule": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "identity",
+                      "threshold",
+                      "band",
+                      "membership"
+                    ]
+                  },
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "maximize",
+                      "minimize",
+                      "target"
+                    ]
+                  },
+                  "params": {},
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "kind",
+                  "version"
+                ],
+                "additionalProperties": false
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "kind",
+              "params",
+              "version"
+            ],
+            "additionalProperties": false
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "number": {
+                    "type": "number"
+                  },
+                  "unit": {
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "number"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "string",
+                "nullable": true,
+                "enum": [
+                  null
+                ]
+              }
+            ]
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "marginal",
+              "fail",
+              "indeterminate"
+            ]
+          },
+          "window": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "valid_for": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "valid_while": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "uncertainty": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "interval",
+                  "std",
+                  "quantiles",
+                  "probability"
+                ]
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              },
+              "level": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 1
+              },
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "validated": {
+                "type": "boolean"
+              },
+              "nature": {
+                "type": "string",
+                "enum": [
+                  "predictive",
+                  "sampling"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "params",
+              "method",
+              "nature"
+            ],
+            "additionalProperties": false
+          },
+          "judged": {
+            "type": "object",
+            "properties": {
+              "statistic": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "method": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "statistic",
+              "method",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "subject": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "session": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "pipeline_version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "run": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "twin_version": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "members": {
+                "maxItems": 5000,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "UUID v4 identifier"
+                }
+              },
+              "failed_subjects": {
+                "maxItems": 5000,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "session",
+              "pipeline_version"
+            ],
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        null
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              null
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 500
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    null
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 500
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    null
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "boolean"
+                          },
+                          {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              null
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 500
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    null
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 500
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                },
+                                {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    null
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "maxItems": 20,
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            }
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "format_version",
+          "record_id",
+          "timestamp",
+          "claim_ref",
+          "check",
+          "rule",
+          "verdict",
+          "window",
+          "valid_for",
+          "provenance"
+        ],
+        "additionalProperties": false
+      },
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "bound_check": {
+            "type": "string",
+            "nullable": true
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "mismatch": {
+            "type": "object",
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "undeclared"
+                    ]
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "mismatch"
+                    ]
+                  },
+                  "differences": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "field": {
+                          "type": "string"
+                        },
+                        "declared": {},
+                        "used": {}
+                      },
+                      "required": [
+                        "field"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "state",
+                  "differences"
+                ]
+              }
+            ],
+            "nullable": true
+          },
+          "record_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "rejected_since_last_accept": {
+            "type": "integer"
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "stale_reason": {
+            "type": "string",
+            "enum": [
+              "expired",
+              "condition",
+              "all-revoked",
+              null
+            ],
+            "nullable": true
+          },
+          "stale_since": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "marginal",
+              "fail",
+              "indeterminate",
+              null
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "bound_check",
+          "expires_at",
+          "mismatch",
+          "record_id",
+          "rejected_since_last_accept",
+          "stale",
+          "stale_reason",
+          "stale_since",
+          "timestamp",
+          "verdict"
+        ]
       },
       "ImportResult": {
         "type": "object",
@@ -345,10 +1461,10 @@
             "type": "string"
           },
           "elementCount": {
-            "type": "number"
+            "type": "integer"
           },
           "evidenceLinkCount": {
-            "type": "number"
+            "type": "integer"
           },
           "warnings": {
             "type": "array",
@@ -356,7 +1472,96 @@
               "type": "string"
             }
           }
-        }
+        },
+        "required": [
+          "id",
+          "name",
+          "elementCount",
+          "evidenceLinkCount",
+          "warnings"
+        ]
+      },
+      "ImportResultFromDrive": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ImportResult"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "gdrive"
+                    ]
+                  },
+                  "fileId": {
+                    "type": "string"
+                  },
+                  "fileName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "fileId",
+                  "fileName"
+                ]
+              }
+            },
+            "required": [
+              "source"
+            ]
+          }
+        ]
+      },
+      "ImportResultFromGitHub": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ImportResult"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "github"
+                    ]
+                  },
+                  "owner": {
+                    "type": "string"
+                  },
+                  "repo": {
+                    "type": "string"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "owner",
+                  "repo",
+                  "path",
+                  "branch"
+                ]
+              }
+            },
+            "required": [
+              "source"
+            ]
+          }
+        ]
       },
       "JsonValue": {
         "anyOf": [
@@ -388,6 +1593,249 @@
               "$ref": "#/components/schemas/JsonValue"
             }
           }
+        ]
+      },
+      "MachineCriteria": {
+        "type": "object",
+        "properties": {
+          "claim_ref": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "accepted"
+            ]
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "check": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "scope": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "name",
+              "version"
+            ]
+          },
+          "rule": {
+            "type": "object",
+            "required": [
+              "version"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "reduction": {
+            "type": "object",
+            "required": [
+              "version"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "aggregation": {
+            "type": "object",
+            "required": [
+              "version"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "window": {
+            "type": "string"
+          },
+          "valid_for": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "recommended",
+                  "edited",
+                  "hand"
+                ]
+              },
+              "rule": {
+                "type": "string",
+                "enum": [
+                  "recommended",
+                  "edited",
+                  "hand"
+                ]
+              },
+              "timing": {
+                "type": "string",
+                "enum": [
+                  "recommended",
+                  "edited",
+                  "hand"
+                ]
+              },
+              "check_version": {
+                "type": "string"
+              },
+              "check_params": {
+                "type": "string",
+                "enum": [
+                  "recommended",
+                  "edited",
+                  "hand"
+                ]
+              },
+              "reduction": {
+                "type": "string",
+                "enum": [
+                  "recommended",
+                  "edited",
+                  "hand"
+                ]
+              },
+              "aggregation": {
+                "type": "string",
+                "enum": [
+                  "recommended",
+                  "edited",
+                  "hand"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "rule",
+              "timing",
+              "check_version"
+            ]
+          },
+          "accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "claim_ref",
+          "state",
+          "revision",
+          "check",
+          "rule",
+          "window",
+          "valid_for",
+          "source",
+          "accepted_at",
+          "updated_at"
+        ]
+      },
+      "PublishedItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ASSURANCE_CASE",
+              "ARGUMENT_PATTERN"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "authors": {
+            "type": "string",
+            "nullable": true
+          },
+          "sector": {
+            "type": "string",
+            "nullable": true
+          },
+          "featureImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "content": {
+            "description": "The frozen snapshot as the publisher stored it: the case tree, plugin data and case information. Text inside it may contain HTML markup."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "type",
+          "description",
+          "authors",
+          "sector",
+          "featureImageUrl",
+          "publishedAt",
+          "archivedAt",
+          "content"
         ]
       },
       "SuccessFlag": {
@@ -926,11 +2374,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The case in the export format, sent as a file download",
+            "description": "The case in the export format, sent as a file download named after the case",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/CaseExport"
                 }
               }
             }
@@ -1160,19 +2608,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ImportResult"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "source": {
-                          "type": "object"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/ImportResultFromDrive"
                 }
               }
             }
@@ -1288,19 +2724,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ImportResult"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "source": {
-                          "type": "object"
-                        }
-                      }
-                    }
-                  ]
+                  "$ref": "#/components/schemas/ImportResultFromGitHub"
                 }
               }
             }
@@ -2989,7 +4413,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "nullable": true,
+                  "description": "The case information, or null when none has been saved yet"
                 }
               }
             }
@@ -4409,11 +5835,43 @@
         ],
         "responses": {
           "200": {
-            "description": "What the run removed, with success set to true",
+            "description": "What the run removed; `dryRun` echoes the query and `more` says whether another call is needed",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "dryRun": {
+                      "type": "boolean"
+                    },
+                    "busy": {
+                      "type": "boolean"
+                    },
+                    "claimsProcessed": {
+                      "type": "integer"
+                    },
+                    "more": {
+                      "type": "boolean"
+                    },
+                    "recordsRemoved": {
+                      "type": "integer"
+                    },
+                    "runsRecorded": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "dryRun",
+                    "busy",
+                    "claimsProcessed",
+                    "more",
+                    "recordsRemoved",
+                    "runsRecorded"
+                  ]
                 }
               }
             }
@@ -4449,11 +5907,27 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "How many people were notified, with success set to true",
+            "description": "How many claims and cases were newly notified",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "casesNotified": {
+                      "type": "integer"
+                    },
+                    "staleClaimsNotified": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "casesNotified",
+                    "staleClaimsNotified"
+                  ]
                 }
               }
             }
@@ -4489,11 +5963,27 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "How many items were purged, with success set to true",
+            "description": "The cut-off date and how many cases were purged",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "cutoffDate": {
+                      "type": "string"
+                    },
+                    "purgedCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "cutoffDate",
+                    "purgedCount"
+                  ]
                 }
               }
             }
@@ -4545,11 +6035,39 @@
         ],
         "responses": {
           "200": {
-            "description": "What the run warned about and deleted, with success set to true",
+            "description": "How many accounts were warned and deleted; with `dryRun` the counts are what would happen",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "dryRun": {
+                      "type": "boolean"
+                    },
+                    "deleted": {
+                      "type": "integer"
+                    },
+                    "skipped": {
+                      "type": "integer"
+                    },
+                    "warned7": {
+                      "type": "integer"
+                    },
+                    "warned30": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "dryRun",
+                    "deleted",
+                    "skipped",
+                    "warned7",
+                    "warned30"
+                  ]
                 }
               }
             }
@@ -6971,7 +8489,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The evidence settings of the case's claims",
+            "description": "The evidence settings accepted for the case's claims",
             "content": {
               "application/json": {
                 "schema": {
@@ -6983,10 +8501,14 @@
                     "criteria": {
                       "type": "array",
                       "items": {
-                        "type": "object"
+                        "$ref": "#/components/schemas/MachineCriteria"
                       }
                     }
-                  }
+                  },
+                  "required": [
+                    "case_id",
+                    "criteria"
+                  ]
                 }
               }
             }
@@ -7034,7 +8556,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The status of the case's claims",
+            "description": "The status of each claim in the case that has one",
             "content": {
               "application/json": {
                 "schema": {
@@ -7046,10 +8568,26 @@
                     "statuses": {
                       "type": "array",
                       "items": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "claim_ref": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/HealthStatus"
+                          }
+                        },
+                        "required": [
+                          "claim_ref",
+                          "status"
+                        ]
                       }
                     }
-                  }
+                  },
+                  "required": [
+                    "case_id",
+                    "statuses"
+                  ]
                 }
               }
             }
@@ -7398,22 +8936,38 @@
         },
         "responses": {
           "200": {
-            "description": "The checks that were stored",
+            "description": "How many checks were stored, and a warning for each recommendation that would not pass as evidence settings",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "checks": {
-                      "type": "number"
+                      "type": "integer"
                     },
                     "warnings": {
                       "type": "array",
                       "items": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "check": {
+                            "type": "string"
+                          },
+                          "problem": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "check",
+                          "problem"
+                        ]
                       }
                     }
-                  }
+                  },
+                  "required": [
+                    "checks",
+                    "warnings"
+                  ]
                 }
               }
             }
@@ -7458,11 +9012,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The claim's evidence settings",
+            "description": "The claim's accepted evidence settings",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/MachineCriteria"
                 }
               }
             }
@@ -7547,7 +9101,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The claim's evidence records, newest first",
+            "description": "The claim's evidence records, newest first; `next_before` is the value to pass as `before` for the next page, or null on the last page",
             "content": {
               "application/json": {
                 "schema": {
@@ -7556,13 +9110,18 @@
                     "evidence": {
                       "type": "array",
                       "items": {
-                        "type": "object"
+                        "$ref": "#/components/schemas/HealthEvidenceItem"
                       }
                     },
                     "next_before": {
-                      "type": "number"
+                      "type": "integer",
+                      "nullable": true
                     }
-                  }
+                  },
+                  "required": [
+                    "evidence",
+                    "next_before"
+                  ]
                 }
               }
             }
@@ -7611,845 +9170,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "format_version": {
-                    "type": "string",
-                    "enum": [
-                      "1.1"
-                    ]
-                  },
-                  "record_id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "UUID v4 identifier"
-                  },
-                  "timestamp": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "claim_ref": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "UUID v4 identifier"
-                  },
-                  "check": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "version": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "scope": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "params": {}
-                    },
-                    "required": [
-                      "name",
-                      "version",
-                      "scope"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "rule": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "identity",
-                          "threshold",
-                          "band",
-                          "membership"
-                        ]
-                      },
-                      "direction": {
-                        "type": "string",
-                        "enum": [
-                          "maximize",
-                          "minimize",
-                          "target"
-                        ]
-                      },
-                      "params": {},
-                      "version": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "version"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "reduction": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "sum",
-                          "mean",
-                          "max",
-                          "min",
-                          "median",
-                          "percentile",
-                          "last"
-                        ]
-                      },
-                      "params": {},
-                      "rule": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "identity",
-                              "threshold",
-                              "band",
-                              "membership"
-                            ]
-                          },
-                          "direction": {
-                            "type": "string",
-                            "enum": [
-                              "maximize",
-                              "minimize",
-                              "target"
-                            ]
-                          },
-                          "params": {},
-                          "version": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 200
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "version"
-                        ],
-                        "additionalProperties": false
-                      },
-                      "version": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "version"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "aggregation": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "proportion",
-                          "worst-of",
-                          "percentile"
-                        ]
-                      },
-                      "params": {},
-                      "rule": {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "identity",
-                              "threshold",
-                              "band",
-                              "membership"
-                            ]
-                          },
-                          "direction": {
-                            "type": "string",
-                            "enum": [
-                              "maximize",
-                              "minimize",
-                              "target"
-                            ]
-                          },
-                          "params": {},
-                          "version": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 200
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "version"
-                        ],
-                        "additionalProperties": false
-                      },
-                      "version": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "params",
-                      "version"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "value": {
-                    "anyOf": [
-                      {
-                        "type": "boolean"
-                      },
-                      {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "number": {
-                            "type": "number"
-                          },
-                          "unit": {
-                            "nullable": true,
-                            "type": "string",
-                            "maxLength": 100
-                          }
-                        },
-                        "required": [
-                          "number"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "string",
-                        "nullable": true,
-                        "enum": [
-                          null
-                        ]
-                      }
-                    ]
-                  },
-                  "verdict": {
-                    "type": "string",
-                    "enum": [
-                      "pass",
-                      "marginal",
-                      "fail",
-                      "indeterminate"
-                    ]
-                  },
-                  "window": {
-                    "type": "string",
-                    "maxLength": 64
-                  },
-                  "valid_for": {
-                    "type": "string",
-                    "maxLength": 64
-                  },
-                  "valid_while": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "type": "string",
-                      "maxLength": 500
-                    }
-                  },
-                  "uncertainty": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "enum": [
-                          "interval",
-                          "std",
-                          "quantiles",
-                          "probability"
-                        ]
-                      },
-                      "params": {
-                        "type": "object",
-                        "additionalProperties": {
-                          "$ref": "#/components/schemas/JsonValue"
-                        }
-                      },
-                      "level": {
-                        "type": "number",
-                        "minimum": 0,
-                        "exclusiveMinimum": true,
-                        "maximum": 1
-                      },
-                      "method": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "validated": {
-                        "type": "boolean"
-                      },
-                      "nature": {
-                        "type": "string",
-                        "enum": [
-                          "predictive",
-                          "sampling"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "params",
-                      "method",
-                      "nature"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "judged": {
-                    "type": "object",
-                    "properties": {
-                      "statistic": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "method": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "value": {
-                        "anyOf": [
-                          {
-                            "type": "number"
-                          },
-                          {
-                            "type": "string",
-                            "maxLength": 500
-                          },
-                          {
-                            "type": "boolean"
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "statistic",
-                      "method",
-                      "value"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "subject": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      },
-                      "id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 200
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "id"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "provenance": {
-                    "type": "object",
-                    "properties": {
-                      "session": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 500
-                      },
-                      "pipeline_version": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 500
-                      },
-                      "run": {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      "twin_version": {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      "members": {
-                        "maxItems": 5000,
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "format": "uuid",
-                          "description": "UUID v4 identifier"
-                        }
-                      },
-                      "failed_subjects": {
-                        "maxItems": 5000,
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 200
-                            },
-                            "id": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 200
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "id"
-                          ],
-                          "additionalProperties": false
-                        }
-                      }
-                    },
-                    "required": [
-                      "session",
-                      "pipeline_version"
-                    ],
-                    "additionalProperties": {
-                      "anyOf": [
-                        {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "maxLength": 500
-                            },
-                            {
-                              "type": "number"
-                            },
-                            {
-                              "type": "boolean"
-                            },
-                            {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                null
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "maxItems": 20,
-                          "type": "array",
-                          "items": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "maxLength": 500
-                                  },
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "type": "boolean"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "nullable": true,
-                                    "enum": [
-                                      null
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "maxItems": 20,
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "maxLength": 500
-                                        },
-                                        {
-                                          "type": "number"
-                                        },
-                                        {
-                                          "type": "boolean"
-                                        },
-                                        {
-                                          "type": "string",
-                                          "nullable": true,
-                                          "enum": [
-                                            null
-                                          ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "maxItems": 20,
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "type": "object",
-                                      "additionalProperties": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "type": "object",
-                                "additionalProperties": {
-                                  "anyOf": [
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "maxLength": 500
-                                        },
-                                        {
-                                          "type": "number"
-                                        },
-                                        {
-                                          "type": "boolean"
-                                        },
-                                        {
-                                          "type": "string",
-                                          "nullable": true,
-                                          "enum": [
-                                            null
-                                          ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "maxItems": 20,
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "type": "object",
-                                      "additionalProperties": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              }
-                            ]
-                          }
-                        },
-                        {
-                          "type": "object",
-                          "additionalProperties": {
-                            "anyOf": [
-                              {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "maxLength": 500
-                                  },
-                                  {
-                                    "type": "number"
-                                  },
-                                  {
-                                    "type": "boolean"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "nullable": true,
-                                    "enum": [
-                                      null
-                                    ]
-                                  }
-                                ]
-                              },
-                              {
-                                "maxItems": 20,
-                                "type": "array",
-                                "items": {
-                                  "anyOf": [
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "maxLength": 500
-                                        },
-                                        {
-                                          "type": "number"
-                                        },
-                                        {
-                                          "type": "boolean"
-                                        },
-                                        {
-                                          "type": "string",
-                                          "nullable": true,
-                                          "enum": [
-                                            null
-                                          ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "maxItems": 20,
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "type": "object",
-                                      "additionalProperties": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "type": "object",
-                                "additionalProperties": {
-                                  "anyOf": [
-                                    {
-                                      "anyOf": [
-                                        {
-                                          "type": "string",
-                                          "maxLength": 500
-                                        },
-                                        {
-                                          "type": "number"
-                                        },
-                                        {
-                                          "type": "boolean"
-                                        },
-                                        {
-                                          "type": "string",
-                                          "nullable": true,
-                                          "enum": [
-                                            null
-                                          ]
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "maxItems": 20,
-                                      "type": "array",
-                                      "items": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    },
-                                    {
-                                      "type": "object",
-                                      "additionalProperties": {
-                                        "anyOf": [
-                                          {
-                                            "type": "string",
-                                            "maxLength": 500
-                                          },
-                                          {
-                                            "type": "number"
-                                          },
-                                          {
-                                            "type": "boolean"
-                                          },
-                                          {
-                                            "type": "string",
-                                            "nullable": true,
-                                            "enum": [
-                                              null
-                                            ]
-                                          }
-                                        ]
-                                      }
-                                    }
-                                  ]
-                                }
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  "payload": {
-                    "type": "object",
-                    "additionalProperties": {
-                      "$ref": "#/components/schemas/JsonValue"
-                    }
-                  },
-                  "comment": {
-                    "type": "string",
-                    "maxLength": 2000
-                  }
-                },
-                "required": [
-                  "format_version",
-                  "record_id",
-                  "timestamp",
-                  "claim_ref",
-                  "check",
-                  "rule",
-                  "verdict",
-                  "window",
-                  "valid_for",
-                  "provenance"
-                ],
-                "additionalProperties": false
+                "$ref": "#/components/schemas/HealthEvidenceRecord"
               }
             }
           }
@@ -8463,12 +9184,16 @@
                   "type": "object",
                   "properties": {
                     "record": {
-                      "type": "object"
+                      "$ref": "#/components/schemas/HealthEvidenceRecord"
                     },
                     "status": {
-                      "type": "object"
+                      "$ref": "#/components/schemas/HealthStatus"
                     }
-                  }
+                  },
+                  "required": [
+                    "record",
+                    "status"
+                  ]
                 }
               }
             }
@@ -8583,7 +9308,12 @@
                     "tokenPrefix": {
                       "type": "string"
                     }
-                  }
+                  },
+                  "required": [
+                    "name",
+                    "scopes",
+                    "tokenPrefix"
+                  ]
                 }
               }
             }
@@ -8623,11 +9353,11 @@
         ],
         "responses": {
           "200": {
-            "description": "The published case",
+            "description": "The current published version of the item, with its frozen snapshot",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/PublishedItem"
                 }
               }
             }

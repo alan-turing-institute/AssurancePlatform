@@ -482,6 +482,95 @@ function documentedBody(operation: Json): Json | undefined {
 	return operation.requestBody as Json | undefined;
 }
 
+interface AnswerLiteral {
+	keys: string[];
+	spread: boolean;
+}
+
+/** The fields of each object literal a handler passes straight to `apiSuccess(`. */
+function answerLiterals(handler: Handler): AnswerLiteral[] {
+	return calls(handler.reach, "apiSuccess(")
+		.filter(
+			(args) => args.length < 2 || SUCCESS_CODE.test(args[1]?.trim() ?? "")
+		)
+		.map((args) => (args[0] ?? "").trim())
+		.filter((first) => first.startsWith("{"))
+		.map((first) => {
+			const entries = topLevelArguments(first.slice(1, first.lastIndexOf("}")))
+				.map((entry) => entry.trim())
+				.filter(Boolean);
+			return {
+				spread: entries.some((entry) => entry.startsWith("...")),
+				keys: entries
+					.filter((entry) => !entry.startsWith("..."))
+					.map((entry) => entry.split(":")[0]?.trim() ?? ""),
+			};
+		});
+}
+
+/** The property names a described schema lists, following references and `allOf` / `oneOf`. */
+function propertyNames(schema: unknown): string[] {
+	const node = (schema ?? {}) as Json;
+	const target = typeof node.$ref === "string" ? lookup(node.$ref) : node;
+	const parts = [
+		...Object.keys((target.properties ?? {}) as Json),
+		...((target.allOf ?? []) as unknown[]).flatMap(propertyNames),
+		...((target.oneOf ?? []) as unknown[]).flatMap(propertyNames),
+	];
+	return [...new Set(parts)];
+}
+
+function lookup(ref: string): Json {
+	const name = ref.slice("#/components/schemas/".length);
+	return (
+		((SPEC.components as Json).schemas as Record<string, Json>)[name] ?? {}
+	);
+}
+
+/** Names the described success answers of an operation list as properties. */
+function documentedAnswerNames(operation: Json): string[] {
+	const responses = operation.responses as Record<string, Json>;
+	return Object.entries(responses)
+		.filter(([code]) => SUCCESS_CODE.test(code))
+		.flatMap(([, response]) => {
+			const content = (response.content ?? {}) as Record<string, Json>;
+			return Object.values(content).flatMap((media) =>
+				propertyNames(media.schema)
+			);
+		});
+}
+
+/** Routes whose answers programs read, so the listed fields must be exactly what is sent. */
+const EXACT_ANSWER = /^(?:GET|POST|PUT) \/(?:machine|cron)\b/;
+
+/** What differs between the object literals a handler sends and the fields the description lists. */
+function answerFieldProblems(handler: Handler, operation: Json): string[] {
+	const documented = documentedAnswerNames(operation);
+	if (documented.length === 0) {
+		return [];
+	}
+	const literals = answerLiterals(handler);
+	const problems = literals.flatMap((literal) =>
+		literal.keys
+			.filter((key) => !documented.includes(key))
+			.map((key) => `${key} is sent but not described`)
+	);
+	const [only] = literals;
+	if (
+		EXACT_ANSWER.test(handler.id) &&
+		literals.length === 1 &&
+		only &&
+		!only.spread
+	) {
+		problems.push(
+			...documented
+				.filter((name) => !only.keys.includes(name))
+				.map((name) => `${name} is described but not sent`)
+		);
+	}
+	return problems;
+}
+
 /** The operations that ask for no sign-in on purpose. */
 const PUBLIC_OPERATIONS = [
 	"GET /auth/reset-password",
@@ -770,6 +859,52 @@ describe("the published API description matches the routes", () => {
 				"validates with otherSchema, not in the entry",
 			])
 		);
+	});
+
+	it("(i) the fields a handler sends are described, and exactly so on the machine routes", () => {
+		const byKey = new Map(operations());
+		const wrong = allHandlers().flatMap((handler) =>
+			answerFieldProblems(handler, byKey.get(handler.id) as Json).map(
+				(problem) => `${handler.id}: ${problem}`
+			)
+		);
+		expect(wrong, `${wrong.length} problems`).toEqual([]);
+	});
+
+	it("(i2) a field the handler sends and the description lacks is reported", () => {
+		const [handler] = handlersInSource(
+			"export async function GET() {\n\treturn apiSuccess({ name, extra: 1 });\n}\n",
+			"/machine/x"
+		);
+		const operation = {
+			responses: {
+				"200": {
+					content: {
+						"application/json": {
+							schema: { type: "object", properties: { name: {}, gone: {} } },
+						},
+					},
+				},
+			},
+		};
+		expect(handler ? answerFieldProblems(handler, operation) : []).toEqual([
+			"extra is sent but not described",
+			"gone is described but not sent",
+		]);
+	});
+
+	it("(i3) answers that can be null say so", () => {
+		const schemas = (SPEC.components as Json).schemas as Record<string, Json>;
+		const status = (schemas.ClaimHealthStatus?.properties as Json)
+			.status as Json;
+		expect(status.nullable).toBe(true);
+		const paths = SPEC.paths as Record<string, Record<string, Json>>;
+		const information = paths["/cases/{id}/information"]?.get as Json;
+		const answer = (information.responses as Record<string, Json>)[
+			"200"
+		] as Json;
+		const media = (answer.content as Record<string, Json>)["application/json"];
+		expect((media?.schema as Json).nullable).toBe(true);
 	});
 
 	it("(h) running the correction step on the committed file changes nothing", () => {
