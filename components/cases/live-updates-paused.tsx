@@ -11,14 +11,12 @@ interface LiveUpdatesPausedProps {
 }
 
 /**
- * A notice in the editor's overlay stack, under the header, that says the
- * live connection has given up and other people's changes will not appear
- * until it is restarted. It sits in the flow below the other banners, so it
- * never covers their controls, takes only the width of its text (at most
- * 28rem) and wraps on narrow screens. On a canvas that is fitted to the
- * screen it clears the root of the argument at tablet and desktop widths; on
- * a phone the notice can overlap the top edge of the root's card, though not
- * its text. The status region stays in the page and only its content comes
+ * A notice in the editor's overlay stack that says the live connection has
+ * given up and other people's changes will not appear until it is restarted.
+ * It sits below the other banners, so it never covers the orphaned-elements
+ * banner. It is left-aligned with a 1rem margin and is at most 28rem wide
+ * from 640 px up, and the screen width minus 2rem below that. The status
+ * region stays in the page and only its content comes
  * and goes, so screen readers announce the notice when it appears.
  * Reconnecting restarts the connection without reloading the page, and moves
  * focus to the region so it is not left on the page body when the button

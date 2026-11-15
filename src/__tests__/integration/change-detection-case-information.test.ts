@@ -214,6 +214,10 @@ describe("changes since the published copy, for the case's name and information"
 		});
 
 		expect(await hasChanges(world)).toBe(false);
+
+		await editInformation(world, { description: "Now described" });
+
+		expect(await hasChanges(world)).toBe(true);
 	});
 });
 
