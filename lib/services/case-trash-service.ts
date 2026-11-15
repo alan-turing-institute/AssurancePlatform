@@ -93,46 +93,25 @@ interface CaseImageKeys {
 	screenshot: string | null;
 }
 
-/**
- * Reads, for each case, the stored screenshot and feature-image values plus
- * the feature-image keys that surviving published snapshots still name. Must
- * run before the case rows are deleted, because the image rows cascade.
- */
-async function readCaseImageKeys(
-	db: Pick<typeof prisma, "assuranceCase" | "publishedAssuranceCase">,
+type CaseImageDb = Pick<
+	typeof prisma,
+	"assuranceCase" | "publishedAssuranceCase"
+>;
+
+/** Reads each case's own stored screenshot and feature-image values. */
+async function readStoredImageValues(
+	db: CaseImageDb,
 	caseIds: string[]
 ): Promise<Map<string, CaseImageKeys>> {
+	const cases = await db.assuranceCase.findMany({
+		where: { id: { in: caseIds } },
+		select: {
+			id: true,
+			caseImage: { select: { imageUrl: true } },
+			caseInformation: { select: { featureImageUrl: true } },
+		},
+	});
 	const result = new Map<string, CaseImageKeys>();
-	if (caseIds.length === 0) {
-		return result;
-	}
-	const [cases, snapshots, foreignSnapshots] = await Promise.all([
-		db.assuranceCase.findMany({
-			where: { id: { in: caseIds } },
-			select: {
-				id: true,
-				caseImage: { select: { imageUrl: true } },
-				caseInformation: { select: { featureImageUrl: true } },
-			},
-		}),
-		db.publishedAssuranceCase.findMany({
-			where: { assuranceCaseId: { in: caseIds } },
-			select: { assuranceCaseId: true, content: true },
-		}),
-		// A snapshot of any case can name one of these cases' live keys, and
-		// Discover serves whatever key a snapshot names.
-		db.publishedAssuranceCase.findMany({
-			where: {
-				OR: caseIds.map((id) => ({
-					content: {
-						path: ["caseInformation", "featureImageUrl"],
-						string_contains: `cases/${id}/`,
-					},
-				})),
-			},
-			select: { content: true },
-		}),
-	]);
 	for (const row of cases) {
 		result.set(row.id, {
 			screenshot: row.caseImage?.imageUrl ?? null,
@@ -140,28 +119,93 @@ async function readCaseImageKeys(
 			keep: new Set(),
 		});
 	}
+	return result;
+}
+
+/** Reads the published snapshots of the given cases. */
+function readOwnSnapshots(db: CaseImageDb, caseIds: string[]) {
+	return db.publishedAssuranceCase.findMany({
+		where: { assuranceCaseId: { in: caseIds } },
+		select: { assuranceCaseId: true, content: true },
+	});
+}
+
+/**
+ * Reads snapshots of any case that name one of these cases' live keys, since
+ * Discover serves whatever key a snapshot names.
+ */
+function readForeignSnapshots(db: CaseImageDb, caseIds: string[]) {
+	return db.publishedAssuranceCase.findMany({
+		where: {
+			OR: caseIds.map((id) => ({
+				content: {
+					path: ["caseInformation", "featureImageUrl"],
+					string_contains: `cases/${id}/`,
+				},
+			})),
+		},
+		select: { content: true },
+	});
+}
+
+/** Returns the feature-image URL a snapshot's content names, if any. */
+function snapshotFeatureUrl(content: unknown): string | null {
+	const parsed = publishedSnapshotMetaSchema.safeParse(content);
+	return parsed.success
+		? (parsed.data.caseInformation?.featureImageUrl ?? null)
+		: null;
+}
+
+/** Normalises a URL to a media key and adds it to a case's keep set. */
+function addKeepKey(
+	result: Map<string, CaseImageKeys>,
+	caseId: string,
+	url: string
+): void {
+	result.get(caseId)?.keep.add(toMediaKey(url));
+}
+
+/** Adds a snapshot's key to the keep set of each case whose folder holds it. */
+function addForeignKeepKey(
+	result: Map<string, CaseImageKeys>,
+	caseIds: string[],
+	url: string
+): void {
+	const key = toMediaKey(url);
+	for (const id of caseIds) {
+		if (key.startsWith(`cases/${id}/`)) {
+			result.get(id)?.keep.add(key);
+		}
+	}
+}
+
+/**
+ * Reads, for each case, the stored screenshot and feature-image values plus
+ * the feature-image keys that surviving published snapshots still name. Must
+ * run before the case rows are deleted, because the image rows cascade.
+ */
+async function readCaseImageKeys(
+	db: CaseImageDb,
+	caseIds: string[]
+): Promise<Map<string, CaseImageKeys>> {
+	if (caseIds.length === 0) {
+		return new Map();
+	}
+	const [result, snapshots, foreignSnapshots] = await Promise.all([
+		readStoredImageValues(db, caseIds),
+		readOwnSnapshots(db, caseIds),
+		readForeignSnapshots(db, caseIds),
+	]);
 	for (const snapshot of snapshots) {
-		const parsed = publishedSnapshotMetaSchema.safeParse(snapshot.content);
-		const url = parsed.success
-			? parsed.data.caseInformation?.featureImageUrl
-			: null;
+		const url = snapshotFeatureUrl(snapshot.content);
 		if (url && snapshot.assuranceCaseId) {
-			result.get(snapshot.assuranceCaseId)?.keep.add(toMediaKey(url));
+			addKeepKey(result, snapshot.assuranceCaseId, url);
 		}
 	}
 	for (const snapshot of foreignSnapshots) {
-		const parsed = publishedSnapshotMetaSchema.safeParse(snapshot.content);
-		const url = parsed.success
-			? parsed.data.caseInformation?.featureImageUrl
-			: null;
-		if (!url) {
-			continue;
-		}
-		const key = toMediaKey(url);
-		for (const id of caseIds) {
-			if (key.startsWith(`cases/${id}/`)) {
-				result.get(id)?.keep.add(key);
-			}
+		const url = snapshotFeatureUrl(snapshot.content);
+		if (url) {
+			addForeignKeepKey(result, caseIds, url);
 		}
 	}
 	return result;
