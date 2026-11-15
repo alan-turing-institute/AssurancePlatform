@@ -17,6 +17,7 @@ import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
+import { keepLiveSelection } from "@/lib/case/keep-live-selection";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
@@ -79,7 +80,7 @@ function Flow() {
 		try {
 			const layouted = await getLayoutedElements(nodes, edges, { direction });
 
-			setNodes(layouted.nodes);
+			setNodes(keepLiveSelection(layouted.nodes, useStore.getState().nodes));
 			setEdges(layouted.edges);
 
 			window.requestAnimationFrame(() => {

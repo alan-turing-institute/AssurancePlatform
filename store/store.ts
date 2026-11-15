@@ -12,6 +12,7 @@ import {
 	type OnNodesChange,
 } from "reactflow";
 import { create } from "zustand";
+import { keepLiveSelection } from "@/lib/case/keep-live-selection";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { logger } from "@/lib/logger";
 import type {
@@ -201,12 +202,18 @@ const useStore = create<Store>((set, get) => ({
 		try {
 			const { nodes: layoutedNodes, edges: layoutedEdges } =
 				await getLayoutedElements(nodes, edges, { direction });
-			set({ nodes: layoutedNodes, edges: layoutedEdges });
+			set((state) => ({
+				nodes: keepLiveSelection(layoutedNodes, state.nodes),
+				edges: layoutedEdges,
+			}));
 		} catch (error) {
 			logger.error("layoutNodes failed; keeping pre-layout positions", {
 				error,
 			});
-			set({ nodes, edges });
+			set((state) => ({
+				nodes: keepLiveSelection(nodes, state.nodes),
+				edges,
+			}));
 		}
 	},
 	triggerLayout: async () => {
@@ -216,7 +223,10 @@ const useStore = create<Store>((set, get) => ({
 		try {
 			const { nodes: layoutedNodes, edges: layoutedEdges } =
 				await getLayoutedElements(nodes, edges, { direction: layoutDirection });
-			set({ nodes: layoutedNodes, edges: layoutedEdges });
+			set((state) => ({
+				nodes: keepLiveSelection(layoutedNodes, state.nodes),
+				edges: layoutedEdges,
+			}));
 		} catch (error) {
 			logger.error("triggerLayout failed; keeping current positions", {
 				error,
