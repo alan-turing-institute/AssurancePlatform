@@ -16,7 +16,7 @@ vi.mock("@/actions/auth", () => ({
 		.mockResolvedValue({ valid: true, email: "alan@example.test" }),
 }));
 
-const UNUSABLE_LINK_REGEX = /can't be used\. It may have expired or already/;
+const UNUSABLE_LINK_REGEX = /^It may have expired or already been used\.$/;
 
 const STRENGTH_RULES_REGEX = /at least 8 characters.*uppercase.*number/;
 

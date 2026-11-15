@@ -868,6 +868,9 @@ export async function rotateToken(
 		if (oldToken.revokedAt) {
 			return { error: "Cannot rotate a revoked token" };
 		}
+		if (oldToken.expiresAt && oldToken.expiresAt <= new Date()) {
+			return { error: "Cannot rotate an expired token" };
+		}
 		if (oldToken.integration.status !== "ACTIVE") {
 			return { error: "Cannot rotate a token for a non-active integration" };
 		}

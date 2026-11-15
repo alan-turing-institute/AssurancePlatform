@@ -640,6 +640,40 @@ describe("IntegrationCard", () => {
 			expect(issueButton).toHaveAccessibleDescription("");
 		});
 
+		it("sends the end of the chosen day in the user's time zone", async () => {
+			vi.stubEnv("TZ", "Pacific/Auckland");
+			try {
+				const onIssueToken = vi.fn().mockResolvedValue(null);
+				const user = userEvent.setup();
+				renderWithoutProviders(
+					<IntegrationCard
+						{...baseProps}
+						integration={makeIntegration()}
+						onIssueToken={onIssueToken}
+					/>
+				);
+
+				await user.click(
+					screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+				);
+				await user.type(
+					screen.getByLabelText(END_DATE_LABEL_REGEX),
+					"2099-03-04"
+				);
+				await user.click(
+					screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+				);
+
+				await waitFor(() =>
+					expect(onIssueToken).toHaveBeenCalledWith("integration-1", {
+						expiresAt: "2099-03-04T10:59:59.999Z",
+					})
+				);
+			} finally {
+				vi.unstubAllEnvs();
+			}
+		});
+
 		it("issues with the end of the chosen day when a date is set, with no warning", async () => {
 			const onIssueToken = vi.fn().mockResolvedValue({
 				secret: "tea_live_freshsecret",

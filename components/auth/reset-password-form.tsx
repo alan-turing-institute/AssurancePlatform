@@ -135,8 +135,7 @@ const ResetPasswordForm = () => {
 						This link can&apos;t be used
 					</h3>
 					<p className="mt-2 text-sm text-warning/80">
-						This link can&apos;t be used. It may have expired or already been
-						used.
+						It may have expired or already been used.
 					</p>
 				</div>
 				<div className="mt-6 text-center">

@@ -857,6 +857,42 @@ describe("Lifecycle conflict responses (409) — route level", () => {
 		expect(response.status).toBe(409);
 	});
 
+	it("rotate: 409 and no replacement when the token is past its end date; a token still in date rotates", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const expired = await createTestApiToken(integration.id, {
+			expiresAt: new Date(Date.now() - 60_000),
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/rotate/route"
+		);
+		const refused = await POST(
+			jsonRequest(
+				`/api/integrations/${integration.id}/tokens/${expired.id}/rotate`,
+				"POST"
+			),
+			tokenParams(integration.id, expired.id)
+		);
+		expect(refused.status).toBe(409);
+		expect(
+			await prisma.apiToken.count({ where: { integrationId: integration.id } })
+		).toBe(1);
+
+		const inDate = await createTestApiToken(integration.id, {
+			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+		});
+		const accepted = await POST(
+			jsonRequest(
+				`/api/integrations/${integration.id}/tokens/${inDate.id}/rotate`,
+				"POST"
+			),
+			tokenParams(integration.id, inDate.id)
+		);
+		expect(accepted.status).toBe(200);
+	});
+
 	it("rotate: 409 when the token is already revoked", async () => {
 		const owner = await createTestUser();
 		const { integration } = await createTestIntegrationWithSystemUser(owner.id);

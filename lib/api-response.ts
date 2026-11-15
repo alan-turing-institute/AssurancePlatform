@@ -312,7 +312,7 @@ const ERROR_MAPPINGS: Array<{
 	// instead of 409. All three collapse to the same 409 CONFLICT here.
 	{
 		pattern:
-			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked|non-active) integration$|^Cannot rotate a revoked token$/,
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked|non-active) integration$|^Cannot rotate a revoked token$|^Cannot rotate an expired token$/,
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations

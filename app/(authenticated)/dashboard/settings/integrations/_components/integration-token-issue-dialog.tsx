@@ -1,7 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
-import { AlertModal } from "@/components/modals/alert-modal";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -47,9 +46,12 @@ function endOfLocalDay(dateValue: string): string {
 /**
  * Asks for an optional end date before a token is issued. A chosen date is
  * sent as the end of that day in the user's time zone. With no date the user
- * confirms in a second dialog that the token will keep working until it is
- * revoked; issuing without an end date stays allowed. The surrounding form
- * stays open if the request fails, so the date can be corrected.
+ * confirms, in a second step inside the same dialog, that the token will keep
+ * working until it is revoked; issuing without an end date stays allowed.
+ * The surrounding form stays open if the request fails, so the date can be
+ * corrected. Focus moves to the confirmation's first button when that step
+ * appears and returns to the "Issue token" button when the user steps back or
+ * a request fails.
  */
 export function IntegrationTokenIssueDialog({
 	issuing,
@@ -59,21 +61,39 @@ export function IntegrationTokenIssueDialog({
 	returnFocusRef,
 }: IntegrationTokenIssueDialogProps) {
 	const [endDate, setEndDate] = useState("");
-	const [confirmNoEndDateOpen, setConfirmNoEndDateOpen] = useState(false);
+	const [confirming, setConfirming] = useState(false);
 	const inputId = useId();
+	const submitRef = useRef<HTMLButtonElement>(null);
+	const goBackRef = useRef<HTMLButtonElement>(null);
+	const refocusSubmitRef = useRef(false);
+
+	useEffect(() => {
+		if (confirming) {
+			goBackRef.current?.focus();
+		} else if (refocusSubmitRef.current && !issuing) {
+			refocusSubmitRef.current = false;
+			submitRef.current?.focus();
+		}
+	}, [confirming, issuing]);
 
 	function close() {
 		setEndDate("");
-		setConfirmNoEndDateOpen(false);
+		setConfirming(false);
 		onOpenChange(false);
+	}
+
+	function goBack() {
+		refocusSubmitRef.current = true;
+		setConfirming(false);
 	}
 
 	async function issue() {
 		const issued = await onIssue(endDate ? endOfLocalDay(endDate) : undefined);
-		setConfirmNoEndDateOpen(false);
 		if (issued) {
 			close();
+			return;
 		}
+		goBack();
 	}
 
 	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -82,7 +102,7 @@ export function IntegrationTokenIssueDialog({
 			issue();
 			return;
 		}
-		setConfirmNoEndDateOpen(true);
+		setConfirming(true);
 	}
 
 	return (
@@ -102,50 +122,79 @@ export function IntegrationTokenIssueDialog({
 					event.preventDefault();
 					returnFocusRef.current?.focus();
 				}}
+				onEscapeKeyDown={(event) => {
+					if (confirming) {
+						event.preventDefault();
+						goBack();
+					}
+				}}
 			>
-				<DialogHeader>
-					<DialogTitle>Issue a new token</DialogTitle>
-					<DialogDescription>
-						You can give the token an end date. It stops working at the end of
-						that day, in your time zone.
-					</DialogDescription>
-				</DialogHeader>
+				{confirming ? (
+					<>
+						<DialogHeader>
+							<DialogTitle>Are you sure?</DialogTitle>
+							<DialogDescription>
+								This token has no end date and keeps working until you revoke
+								it.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter>
+							<Button
+								disabled={issuing}
+								onClick={goBack}
+								ref={goBackRef}
+								type="button"
+								variant="outline"
+							>
+								Go back
+							</Button>
+							<Button
+								disabled={issuing}
+								onClick={issue}
+								type="button"
+								variant="destructive"
+							>
+								{issuing ? "Processing" : "Issue without an end date"}
+							</Button>
+						</DialogFooter>
+					</>
+				) : (
+					<>
+						<DialogHeader>
+							<DialogTitle>Issue a new token</DialogTitle>
+							<DialogDescription>
+								You can give the token an end date. It stops working at the end
+								of that day, in your time zone.
+							</DialogDescription>
+						</DialogHeader>
 
-				<form className="space-y-4" onSubmit={handleSubmit}>
-					<div className="space-y-2">
-						<Label htmlFor={inputId}>End date (optional)</Label>
-						<Input
-							id={inputId}
-							min={todayInputValue()}
-							onChange={(event) => setEndDate(event.target.value)}
-							type="date"
-							value={endDate}
-						/>
-					</div>
-					<DialogFooter>
-						<Button
-							disabled={issuing}
-							onClick={close}
-							type="button"
-							variant="outline"
-						>
-							Cancel
-						</Button>
-						<Button disabled={issuing} type="submit">
-							{issuing ? "Issuing…" : "Issue token"}
-						</Button>
-					</DialogFooter>
-				</form>
-
-				<AlertModal
-					cancelButtonText="Go back"
-					confirmButtonText="Issue without an end date"
-					isOpen={confirmNoEndDateOpen}
-					loading={issuing}
-					message="This token has no end date and keeps working until you revoke it."
-					onClose={() => setConfirmNoEndDateOpen(false)}
-					onConfirm={issue}
-				/>
+						<form className="space-y-4" onSubmit={handleSubmit}>
+							<div className="space-y-2">
+								<Label htmlFor={inputId}>End date (optional)</Label>
+								<Input
+									id={inputId}
+									min={todayInputValue()}
+									onChange={(event) => setEndDate(event.target.value)}
+									type="date"
+									value={endDate}
+								/>
+							</div>
+							<DialogFooter>
+								<Button
+									disabled={issuing}
+									onClick={close}
+									type="button"
+									variant="outline"
+								>
+									Cancel
+								</Button>
+								<Button disabled={issuing} ref={submitRef} type="submit">
+									{issuing ? "Issuing…" : "Issue token"}
+								</Button>
+							</DialogFooter>
+						</form>
+					</>
+				)}
 			</DialogContent>
 		</Dialog>
 	);

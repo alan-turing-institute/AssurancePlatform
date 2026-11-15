@@ -63,6 +63,9 @@ describe("CaseInformationSection", () => {
 
 		expect(screen.getByTestId("case-information-view")).toBeInTheDocument();
 		expect(screen.getByText("A worked example")).toBeInTheDocument();
+		expect(screen.getByText("A worked example")).toHaveClass(
+			"whitespace-pre-line"
+		);
 		expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
 		expect(screen.getByText("Healthcare")).toBeInTheDocument();
 		expect(

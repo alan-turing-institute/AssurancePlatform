@@ -85,6 +85,7 @@ describe("IntegrationTokenRow", () => {
 		);
 
 		expect(screen.getByText("Revoked")).toBeInTheDocument();
+		expect(screen.queryByText(NO_END_DATE_REGEX)).not.toBeInTheDocument();
 		expect(screen.queryByText("Live")).not.toBeInTheDocument();
 		expect(
 			screen.queryByRole("button", { name: ROTATE_REGEX })
