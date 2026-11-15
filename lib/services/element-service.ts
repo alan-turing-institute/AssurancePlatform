@@ -2286,14 +2286,16 @@ async function nullifyDanglingCitations(
  * its descendants), a challenge elsewhere in the case that still names it is
  * left unlinked and flagged `defeatsDangling`, the same way citations are. A
  * challenge inside the removed set is left alone: it normally hangs from the
- * element it challenges and goes and comes back with it. `repointedIds` names
- * challenges the same write gives a new target, which are left alone too.
+ * element it challenges and goes and comes back with it, and that holds for a
+ * challenge in the bin as well. `keptIds` names further challenges to leave
+ * alone: those in the bin beneath the removed element, and those the same write
+ * gives a new target.
  */
 export async function nullifyDanglingDefeats(
 	tx: TxClient,
 	caseId: string,
 	removedIds: string[],
-	repointedIds: string[] = []
+	keptIds: string[] = []
 ): Promise<void> {
 	if (removedIds.length === 0) {
 		return;
@@ -2302,7 +2304,7 @@ export async function nullifyDanglingDefeats(
 		where: {
 			caseId,
 			defeatsElementId: { in: removedIds },
-			id: { notIn: [...removedIds, ...repointedIds] },
+			id: { notIn: [...removedIds, ...keptIds] },
 		},
 		data: { defeatsElementId: null, defeatsDangling: true },
 	});
@@ -2342,6 +2344,11 @@ export async function deleteElementWithin(
 ): Promise<void> {
 	const descendantIds = await getDescendantIds(elementId, tx);
 	const allIds = [elementId, ...descendantIds];
+	// A descendant binned on its own earlier is still part of this subtree: its
+	// challenge stays with the element it challenges, for a later restore.
+	const subtreeIds = await getDescendantIds(elementId, tx, {
+		includeDeleted: true,
+	});
 	await tx.assuranceElement.updateMany({
 		where: { id: { in: allIds } },
 		data: { deletedAt: new Date(), deletedById: userId },
@@ -2351,7 +2358,7 @@ export async function deleteElementWithin(
 	// `caseId` — every deleted id (the element and its
 	// descendants) may be cited from anywhere.
 	await nullifyDanglingCitations(tx, allIds);
-	await nullifyDanglingDefeats(tx, caseId, allIds);
+	await nullifyDanglingDefeats(tx, caseId, allIds, subtreeIds);
 	await touchCase(tx, caseId);
 }
 
@@ -2461,10 +2468,16 @@ export async function detachElement(
 			}
 			const descendantIds = await getDescendantIds(elementId, tx);
 			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
-			await nullifyDanglingDefeats(tx, existing.caseId, [
-				elementId,
-				...descendantIds,
-			]);
+			// A descendant binned on its own is still part of the detached subtree.
+			const subtreeIds = await getDescendantIds(elementId, tx, {
+				includeDeleted: true,
+			});
+			await nullifyDanglingDefeats(
+				tx,
+				existing.caseId,
+				[elementId, ...descendantIds],
+				subtreeIds
+			);
 			await touchCase(tx, existing.caseId);
 		});
 

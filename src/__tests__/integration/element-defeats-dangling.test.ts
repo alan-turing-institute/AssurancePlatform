@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
+	attachElement,
 	deleteElement,
 	detachElement,
 	restoreElement,
@@ -103,6 +104,20 @@ describe("a challenge whose target is deleted", () => {
 		expect(after.deletedAt).toBeNull();
 	});
 
+	it("stays linked when it was binned on its own before its target was deleted", async () => {
+		const { owner, target, childDefeater } = await challengeWorld();
+
+		expectSuccess(await deleteElement(owner.id, childDefeater.id));
+		expectSuccess(await deleteElement(owner.id, target.id));
+		// Restoring the target brings back what was binned beneath it.
+		expectSuccess(await restoreElement(owner.id, target.id));
+
+		const after = await row(childDefeater.id);
+		expect(after.defeatsElementId).toBe(target.id);
+		expect(after.defeatsDangling).toBe(false);
+		expect(after.deletedAt).toBeNull();
+	});
+
 	it("is left alone by the deletion of an unrelated element", async () => {
 		const { owner, testCase, target, outsideDefeater } = await challengeWorld();
 		const unrelated = await createTestElement(testCase.id, owner.id, {
@@ -156,6 +171,22 @@ describe("a challenge whose target is detached", () => {
 		const after = await row(childDefeater.id);
 		expect(after.defeatsElementId).toBe(target.id);
 		expect(after.defeatsDangling).toBe(false);
+	});
+});
+
+describe("a challenge binned on its own whose target is detached", () => {
+	it("stays linked through a re-attach and a restore", async () => {
+		const { owner, goal, target, childDefeater } = await challengeWorld();
+
+		expectSuccess(await deleteElement(owner.id, childDefeater.id));
+		expectSuccess(await detachElement(owner.id, target.id));
+		expectSuccess(await attachElement(owner.id, target.id, goal.id));
+		expectSuccess(await restoreElement(owner.id, childDefeater.id));
+
+		const after = await row(childDefeater.id);
+		expect(after.defeatsElementId).toBe(target.id);
+		expect(after.defeatsDangling).toBe(false);
+		expect(after.deletedAt).toBeNull();
 	});
 });
 
