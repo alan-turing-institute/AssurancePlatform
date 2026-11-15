@@ -88,6 +88,7 @@ interface ScreenBox {
 interface CanvasGeometry {
 	g1: ScreenBox | null;
 	paths: ScreenPoint[][];
+	settled: boolean;
 	texted: (ScreenBox | null)[];
 }
 
@@ -119,8 +120,10 @@ async function readSettledCanvasGeometry(
 				const r = el.getBoundingClientRect();
 				return { x: r.x, y: r.y, width: r.width, height: r.height };
 			};
-			const nodes = Array.from(document.querySelectorAll(".react-flow__node"));
 			const read = () => {
+				const nodes = Array.from(
+					document.querySelectorAll(".react-flow__node")
+				);
 				const g1Card = nodes.find((node) =>
 					Array.from(node.querySelectorAll("*")).some(
 						(child) => child.textContent?.trim() === "G1"
@@ -161,16 +164,19 @@ async function readSettledCanvasGeometry(
 					tick(count);
 				});
 			let previous = JSON.stringify(read());
-			// Bounded so a canvas that never settles still yields a reading.
+			let settled = false;
+			// Bounded so a canvas that never settles still yields a reading,
+			// flagged as unsettled.
 			for (let attempt = 0; attempt < 200; attempt++) {
 				await frames(3);
 				const current = JSON.stringify(read());
 				if (current === previous) {
+					settled = true;
 					break;
 				}
 				previous = current;
 			}
-			return JSON.parse(previous);
+			return { ...JSON.parse(previous), settled };
 		},
 		[cardTexts, pathSelector, steps] as const
 	);
@@ -344,6 +350,7 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			["First defeater on G1.", "Second defeater on G1."],
 			SUPPORT_EDGE_PATH_SELECTOR
 		);
+		expect(geometry.settled).toBe(true);
 		const g1Box = geometry.g1;
 		const [firstDefeaterBox, secondDefeaterBox] = geometry.texted;
 		expect(g1Box).toBeTruthy();
@@ -399,7 +406,7 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		await expect(page.locator(SUPPORT_EDGE_PATH_SELECTOR)).toHaveCount(2);
 
 		// Clicking inside a card (the add-child menu) selects it, and the
-		// selection now survives the redraws that follow an edit; clear it by
+		// selection survives the redraws that follow an edit; clear it by
 		// clicking empty canvas so the baseline starts with nothing selected.
 		await page
 			.locator(".react-flow__pane")
@@ -441,5 +448,14 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		await expect(
 			page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`)
 		).toHaveCount(0);
+
+		// A highlight that comes back after a later redraw must fail: sample
+		// the count across a short window instead of reading it once.
+		for (let sample = 0; sample < 10; sample++) {
+			await page.waitForTimeout(200);
+			expect(
+				await page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`).count()
+			).toBe(0);
+		}
 	});
 });

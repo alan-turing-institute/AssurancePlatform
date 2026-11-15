@@ -104,6 +104,28 @@ describe("clearEdgeHighlight", () => {
 		expect(cleared?.zIndex).toBeUndefined();
 	});
 
+	it("keeps other classes and other data fields on a cleared edge", () => {
+		const [cleared] = clearEdgeHighlight([
+			{
+				...edge("e1", "a", "b"),
+				className: `other ${CASE_EDGE_HIGHLIGHT_CLASS}`,
+				data: {
+					centerY: 120,
+					sourceElementId: "a",
+					targetElementId: "b",
+					highlighted: true,
+				},
+			},
+		]);
+
+		expect(cleared?.className).toBe("other");
+		expect(cleared?.data).toEqual({
+			centerY: 120,
+			sourceElementId: "a",
+			targetElementId: "b",
+		});
+	});
+
 	it("keeps edges that are not highlighted by reference", () => {
 		const edges = [edge("e1", "g1", "s1")];
 		expect(clearEdgeHighlight(edges)[0]).toBe(edges[0]);

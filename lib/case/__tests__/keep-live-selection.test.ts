@@ -11,11 +11,18 @@ const node = (id: string, selected?: boolean): Node => ({
 
 describe("keepLiveSelection", () => {
 	it("takes the selection of ids present in both lists from the live node", () => {
-		const result = keepLiveSelection(
-			[node("a", true), node("b", false)],
-			[node("a", false), node("b", true)]
-		);
+		const live: Node[] = [
+			{ ...node("a", false), position: { x: 5, y: 6 }, data: { live: 1 } },
+			node("b", true),
+		];
+		const next: Node[] = [
+			{ ...node("a", true), position: { x: 100, y: 200 }, data: { next: 1 } },
+			node("b", false),
+		];
+		const result = keepLiveSelection(next, live);
 		expect(result.map((n) => n.selected)).toEqual([false, true]);
+		expect(result[0]?.position).toEqual({ x: 100, y: 200 });
+		expect(result[0]?.data).toEqual({ next: 1 });
 	});
 
 	it("marks ids only in the new list as not selected", () => {

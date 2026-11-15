@@ -70,8 +70,13 @@ describe("layout writes keep the live selection", () => {
 				id: "e1",
 				source: "a",
 				target: "b",
-				className: "case-edge--highlighted",
-				data: { highlighted: true },
+				className: "other case-edge--highlighted",
+				data: {
+					centerY: 120,
+					sourceElementId: "a",
+					targetElementId: "b",
+					highlighted: true,
+				},
 			};
 			layoutMock.mockImplementationOnce(
 				(layoutNodes: Node[], layoutEdges: Edge[]) =>
@@ -81,8 +86,12 @@ describe("layout writes keep the live selection", () => {
 				.getState()
 				.layoutNodes([node("a"), node("b")], [highlighted]);
 			const stored = useStore.getState().edges[0];
-			expect(stored?.className).toBeUndefined();
-			expect(stored?.data?.highlighted).toBeUndefined();
+			expect(stored?.className).toBe("other");
+			expect(stored?.data).toEqual({
+				centerY: 120,
+				sourceElementId: "a",
+				targetElementId: "b",
+			});
 		});
 	});
 
