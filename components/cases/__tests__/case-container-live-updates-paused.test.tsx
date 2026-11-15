@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchShowUnsupportedMarkers } from "@/actions/unsupported-markers";
 import { type ConnectionStatus, useCaseEvents } from "@/hooks/use-case-events";
@@ -24,7 +25,11 @@ vi.mock("@/lib/toast", () => ({
 	toastInfo: vi.fn(),
 }));
 vi.mock("@/components/tour/check-tour", () => ({ default: () => null }));
-vi.mock("../flow", () => ({ default: () => <div data-testid="flow" /> }));
+vi.mock("../flow", () => ({
+	default: ({ liveUpdatesNotice }: { liveUpdatesNotice?: ReactNode }) => (
+		<div data-testid="flow">{liveUpdatesNotice}</div>
+	),
+}));
 vi.mock("../header", () => ({ default: () => null }));
 vi.mock("../case-details", () => ({ default: () => null }));
 
@@ -74,11 +79,11 @@ describe("a case whose live updates have stopped", () => {
 		streamStatus("connected");
 		const view = render(<CaseContainer caseId="c1" />);
 		await screen.findByTestId("flow");
-		expect(screen.queryByRole("status")).toBeNull();
+		expect(screen.queryByTestId("live-updates-paused")).toBeNull();
 
 		streamStatus("connecting");
 		view.rerender(<CaseContainer caseId="c1" />);
-		expect(screen.queryByRole("status")).toBeNull();
+		expect(screen.queryByTestId("live-updates-paused")).toBeNull();
 
 		streamStatus("error");
 		view.rerender(<CaseContainer caseId="c1" />);
@@ -86,6 +91,51 @@ describe("a case whose live updates have stopped", () => {
 			"Live updates have stopped. Changes other people make will not appear until you reconnect."
 		);
 		expect(screen.getByTestId("flow")).toBeTruthy();
+	});
+
+	it("keeps a named status region in the page whether or not the notice shows", async () => {
+		streamStatus("connected");
+		const view = render(<CaseContainer caseId="c1" />);
+		await screen.findByTestId("flow");
+		const region = screen.getByRole("status", { name: "Live updates stopped" });
+		expect(region.textContent).toBe("");
+
+		streamStatus("error");
+		view.rerender(<CaseContainer caseId="c1" />);
+
+		expect(screen.getByRole("status", { name: "Live updates stopped" })).toBe(
+			region
+		);
+		expect(region.textContent).toContain("Live updates have stopped.");
+		expect(region.querySelector("p")).toBeNull();
+	});
+
+	it("moves focus to the status region when Reconnect is pressed, not the page body", async () => {
+		streamStatus("error");
+		const view = render(<CaseContainer caseId="c1" />);
+		await screen.findByTestId("flow");
+
+		await userEvent.click(screen.getByRole("button", { name: "Reconnect" }));
+		streamStatus("connecting");
+		view.rerender(<CaseContainer caseId="c1" />);
+
+		expect(screen.queryByRole("button", { name: "Reconnect" })).toBeNull();
+		expect(document.activeElement).toBe(screen.getByRole("status"));
+	});
+
+	it("does not read the case again when the connection after the failure ends in removed access", async () => {
+		streamStatus("connecting");
+		const view = render(<CaseContainer caseId="c1" />);
+		await screen.findByTestId("flow");
+
+		act(() => onStatusChange?.("error"));
+		act(() => onStatusChange?.("connecting"));
+		streamStatus("access-removed");
+		view.rerender(<CaseContainer caseId="c1" />);
+		act(() => onStatusChange?.("access-removed"));
+
+		expect(await screen.findByText("Access removed")).toBeTruthy();
+		expect(fetchAndRefreshCase).not.toHaveBeenCalled();
 	});
 
 	it("restarts the stream, without reloading, when Reconnect is pressed", async () => {

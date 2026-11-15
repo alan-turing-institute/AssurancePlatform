@@ -1,33 +1,62 @@
 "use client";
 
 import { WifiOff } from "lucide-react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 
 interface LiveUpdatesPausedProps {
 	onReconnect: () => void;
+	/** True while the live connection has given up. */
+	stopped: boolean;
 }
 
 /**
- * A notice at the top right of the editor, under the header, that says the
+ * A notice in the editor's overlay stack, under the header, that says the
  * live connection has given up and other people's changes will not appear
- * until it is restarted. It takes only the width of its text, so it leaves
- * the root of the argument, which sits at the top centre, uncovered.
- * Reconnecting restarts the connection without reloading the page.
+ * until it is restarted. It sits in the flow with the other banners, so it
+ * never covers their controls, takes only the width of its text, wraps on
+ * narrow screens and leaves the root of the argument uncovered. The status
+ * region stays in the page and only its content comes and goes, so screen
+ * readers announce the notice when it appears. Reconnecting restarts the
+ * connection without reloading the page, and moves focus to the region so it
+ * is not left on the page body when the button goes.
  */
-export function LiveUpdatesPaused({ onReconnect }: LiveUpdatesPausedProps) {
+export function LiveUpdatesPaused({
+	stopped,
+	onReconnect,
+}: LiveUpdatesPausedProps) {
+	const region = useRef<HTMLOutputElement>(null);
+
 	return (
 		<output
-			className="pointer-events-auto fixed top-16 right-0 z-40 mx-4 mt-2 flex w-fit max-w-xs items-center gap-3 rounded-md border bg-card px-3 py-2 text-foreground text-sm shadow-sm"
-			data-testid="live-updates-paused"
+			aria-label="Live updates stopped"
+			className="block outline-none"
+			ref={region}
+			tabIndex={-1}
 		>
-			<WifiOff aria-hidden="true" className="h-4 w-4 shrink-0" />
-			<p>
-				Live updates have stopped. Changes other people make will not appear
-				until you reconnect.
-			</p>
-			<Button onClick={onReconnect} size="sm" type="button" variant="outline">
-				Reconnect
-			</Button>
+			{stopped && (
+				<span
+					className="pointer-events-auto mx-4 mt-2 flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-x-3 gap-y-2 rounded-md border bg-card px-3 py-2 text-foreground text-sm shadow-sm sm:max-w-md"
+					data-testid="live-updates-paused"
+				>
+					<WifiOff aria-hidden="true" className="h-4 w-4 shrink-0" />
+					<span className="min-w-0 flex-1">
+						Live updates have stopped. Changes other people make will not appear
+						until you reconnect.
+					</span>
+					<Button
+						onClick={() => {
+							onReconnect();
+							region.current?.focus();
+						}}
+						size="sm"
+						type="button"
+						variant="outline"
+					>
+						Reconnect
+					</Button>
+				</span>
+			)}
 		</output>
 	);
 }

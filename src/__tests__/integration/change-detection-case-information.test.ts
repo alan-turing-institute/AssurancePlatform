@@ -85,6 +85,13 @@ async function publishedWorld(externalImage?: string): Promise<VariableWorld> {
 describe("changes since the published copy, for the case's name and information", () => {
 	it("sees none straight after publishing with an uploaded image", async () => {
 		const world = await publishedWorld();
+		const row = await prisma.publishedAssuranceCase.findFirstOrThrow({
+			where: { assuranceCaseId: world.caseId },
+		});
+		const published = (
+			row.content as { caseInformation?: { featureImageUrl?: string | null } }
+		).caseInformation?.featureImageUrl;
+		expect(published?.startsWith("published/")).toBe(true);
 
 		expect(await hasChanges(world)).toBe(false);
 	});
@@ -174,6 +181,24 @@ describe("changes since the published copy, for the case's name and information"
 		await prisma.publishedAssuranceCase.update({
 			where: { id: row.id },
 			data: { content: withoutInformation as object },
+		});
+
+		expect(await hasChanges(world)).toBe(true);
+	});
+
+	it("sees case information on a case whose published copy cannot be read", async () => {
+		const world = await publishedWorld();
+		const row = await prisma.publishedAssuranceCase.findFirstOrThrow({
+			where: { assuranceCaseId: world.caseId },
+		});
+		await prisma.publishedAssuranceCase.update({
+			where: { id: row.id },
+			data: {
+				content: {
+					...(row.content as Record<string, unknown>),
+					caseInformation: { description: 42, featureImageUrl: ["not text"] },
+				},
+			},
 		});
 
 		expect(await hasChanges(world)).toBe(true);

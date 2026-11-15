@@ -385,9 +385,6 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
 				/>
 				<Header setOpen={setCaseDetailsOpen} />
-				{eventsStatus === "error" && (
-					<LiveUpdatesPaused onReconnect={reconnect} />
-				)}
 				<ErrorBoundary
 					fallback={
 						<div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -395,7 +392,14 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 						</div>
 					}
 				>
-					<Flow />
+					<Flow
+						liveUpdatesNotice={
+							<LiveUpdatesPaused
+								onReconnect={reconnect}
+								stopped={eventsStatus === "error"}
+							/>
+						}
+					/>
 				</ErrorBoundary>
 				<CaseDetails isOpen={caseDetailsOpen} setOpen={setCaseDetailsOpen} />
 			</ReactFlowProvider>

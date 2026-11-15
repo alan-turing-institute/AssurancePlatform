@@ -34,6 +34,12 @@ class Source {
 		this.onerror?.();
 	}
 
+	/** The server answered the request with an error status, so the browser gave up. */
+	refuse() {
+		this.readyState = 2;
+		this.onerror?.();
+	}
+
 	emit(type: string, data: unknown) {
 		for (const listener of this.listeners.get(type) ?? []) {
 			listener({ data: JSON.stringify(data) } as MessageEvent);
@@ -55,6 +61,21 @@ function failUntilGivenUp() {
 		act(() => Source.all.at(-1)?.fail());
 		act(() => vi.advanceTimersByTime(60_000));
 	}
+}
+
+/** Lets a probe's request and the code waiting on it finish. */
+const settle = () =>
+	act(async () => {
+		await vi.advanceTimersByTimeAsync(0);
+	});
+
+/** A promise that the test settles by hand. */
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((res) => {
+		resolve = res;
+	});
+	return { promise, resolve };
 }
 
 const goOnline = () => act(() => window.dispatchEvent(new Event("online")));
@@ -152,5 +173,58 @@ describe("the browser coming back online after live updates gave up", () => {
 		goOnline();
 
 		expect(Source.all).toHaveLength(before);
+	});
+
+	it("opens nothing for a stream whose last subscriber has left but which is not yet closed", () => {
+		const hook = renderHook(() => useCaseEvents(settings("A")));
+		failUntilGivenUp();
+		const before = Source.all.length;
+
+		// The stream is closed on the next tick, so it is still known here.
+		hook.unmount();
+		goOnline();
+
+		expect(Source.all).toHaveLength(before);
+	});
+
+	it("opens nothing while a probe of a refused connection is in flight", async () => {
+		const answer = deferred<Response>();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(() => answer.promise)
+		);
+		const hook = renderHook(() => useCaseEvents(settings("A")));
+		act(() => Source.all[0]?.refuse());
+		expect(fetch).toHaveBeenCalledTimes(1);
+
+		goOnline();
+
+		expect(Source.all).toHaveLength(1);
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(hook.result.current.status).toBe("connecting");
+		answer.resolve(new Response(null, { status: 404 }));
+		await settle();
+		expect(hook.result.current.status).toBe("access-removed");
+	});
+
+	it("ends in access-removed when the reopened connection is refused and the probe gets a 404", async () => {
+		const fetchMock = vi.fn(() =>
+			Promise.resolve(new Response(null, { status: 404 }))
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		const hook = renderHook(() => useCaseEvents(settings("A")));
+		failUntilGivenUp();
+		expect(hook.result.current.status).toBe("error");
+
+		goOnline();
+		expect(hook.result.current.status).toBe("connecting");
+		act(() => Source.all.at(-1)?.refuse());
+		await settle();
+
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(hook.result.current.status).toBe("access-removed");
+		const opened = Source.all.length;
+		goOnline();
+		expect(Source.all).toHaveLength(opened);
 	});
 });
