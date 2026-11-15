@@ -896,6 +896,203 @@ describe("applyBatchUpdate", () => {
 			expect(unchanged?.parentId).toBeNull();
 		});
 
+		describe("loops the pre-batch check cannot see", () => {
+			const LOOP_TIMEOUT = 10_000;
+
+			async function expectLoopRefused(
+				userId: string,
+				caseId: string,
+				changes: ElementChange[],
+				refusedId: string,
+				unchanged: Record<string, string | null>
+			) {
+				const { applyBatchUpdate } = await import(
+					"@/lib/services/case-batch-update-service"
+				);
+				expectError(
+					await applyBatchUpdate(userId, caseId, changes),
+					`Circular reference detected when moving element ${refusedId}`
+				);
+				for (const [id, parentId] of Object.entries(unchanged)) {
+					const row = await prisma.assuranceElement.findUnique({
+						where: { id },
+					});
+					// biome-ignore lint/suspicious/noMisplacedAssertion: Called from within test blocks
+					expect(row?.parentId).toBe(parentId);
+				}
+			}
+
+			const move = (elementId: string, parentId: string): ElementChange => ({
+				type: "update",
+				elementId,
+				data: { parentId },
+			});
+
+			it(
+				"refuses two strategies moved under each other",
+				async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const goal = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+					});
+					const s1 = await createTestElement(testCase.id, user.id, {
+						elementType: "STRATEGY",
+						parentId: goal.id,
+					});
+					const s2 = await createTestElement(testCase.id, user.id, {
+						elementType: "STRATEGY",
+						parentId: goal.id,
+					});
+
+					await expectLoopRefused(
+						user.id,
+						testCase.id,
+						[move(s1.id, s2.id), move(s2.id, s1.id)],
+						s1.id,
+						{ [s1.id]: goal.id, [s2.id]: goal.id }
+					);
+				},
+				LOOP_TIMEOUT
+			);
+
+			it(
+				"refuses a claim and a strategy moved under each other",
+				async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const goal = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+					});
+					const strategy = await createTestElement(testCase.id, user.id, {
+						elementType: "STRATEGY",
+						parentId: goal.id,
+					});
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: goal.id,
+					});
+
+					await expectLoopRefused(
+						user.id,
+						testCase.id,
+						[move(strategy.id, claim.id), move(claim.id, strategy.id)],
+						strategy.id,
+						{ [strategy.id]: goal.id, [claim.id]: goal.id }
+					);
+				},
+				LOOP_TIMEOUT
+			);
+
+			it(
+				"refuses two counter-goals on one claim moved under each other",
+				async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const goal = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+					});
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: goal.id,
+					});
+					const cg1 = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+						isDefeater: true,
+						parentId: claim.id,
+					});
+					const cg2 = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+						isDefeater: true,
+						parentId: claim.id,
+					});
+
+					await expectLoopRefused(
+						user.id,
+						testCase.id,
+						[move(cg1.id, cg2.id), move(cg2.id, cg1.id)],
+						cg1.id,
+						{ [cg1.id]: claim.id, [cg2.id]: claim.id }
+					);
+				},
+				LOOP_TIMEOUT
+			);
+
+			it(
+				"refuses a ring that runs through an edge the batch did not change",
+				async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const goal = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+					});
+					const s1 = await createTestElement(testCase.id, user.id, {
+						elementType: "STRATEGY",
+						parentId: goal.id,
+					});
+					const p1 = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: s1.id,
+					});
+					const s2 = await createTestElement(testCase.id, user.id, {
+						elementType: "STRATEGY",
+						parentId: goal.id,
+					});
+
+					await expectLoopRefused(
+						user.id,
+						testCase.id,
+						[move(s2.id, p1.id), move(s1.id, s2.id)],
+						s2.id,
+						{ [s1.id]: goal.id, [s2.id]: goal.id, [p1.id]: s1.id }
+					);
+				},
+				LOOP_TIMEOUT
+			);
+
+			it(
+				"refuses an existing claim moved under a claim created beneath it",
+				async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const goal = await createTestElement(testCase.id, user.id, {
+						elementType: "GOAL",
+					});
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						parentId: goal.id,
+					});
+					const newId = `element-loop-${Date.now()}`;
+
+					await expectLoopRefused(
+						user.id,
+						testCase.id,
+						[
+							{
+								type: "create",
+								elementId: newId,
+								parentId: claim.id,
+								data: {
+									id: newId,
+									type: "PROPERTY_CLAIM",
+									name: "P9",
+									description: "Created beneath the claim",
+									inSandbox: false,
+								},
+							},
+							move(claim.id, newId),
+						],
+						claim.id,
+						{ [claim.id]: goal.id }
+					);
+					expect(
+						await prisma.assuranceElement.findUnique({ where: { id: newId } })
+					).toBeNull();
+				},
+				LOOP_TIMEOUT
+			);
+		});
+
 		it("allows a valid re-parent that does not create a cycle", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);

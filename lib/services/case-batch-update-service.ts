@@ -47,7 +47,10 @@ import {
 	validateModuleReferenceId,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
-import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
+import {
+	findParentLoopStart,
+	getDescendantIdsForRoots,
+} from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
@@ -1514,13 +1517,11 @@ async function regenerateNamesForDefeaterFlips(
  * before its parent-move (or the reverse) always lands on the parent's
  * POST-batch level rather than a stale pre-batch snapshot.
  *
- * Cycles created purely by this batch's own moves — e.g. two elements each
- * moved under the other, where neither is currently a descendant of the
- * other in the database, so `validateUpdateParents`'s pre-batch descendant
- * check can't see it — are caught here (via the `visiting` set) and
- * reported with the same "Circular reference detected" message the
- * pre-batch check uses, so callers see one consistent error shape either
- * way.
+ * Cycles that run through moved property claims are caught here (via the
+ * `visiting` set) and reported with the same "Circular reference detected"
+ * message the pre-batch check uses. Cycles through other element types, or
+ * through edges the batch did not change, are caught after the writes by
+ * `assertNoParentLoop`.
  */
 function resolveFinalLevelsForBatch(
 	moveMap: Map<string, string>,
@@ -2089,6 +2090,7 @@ export async function applyBatchUpdate(
 			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, caseId, updates);
+			await assertNoParentLoop(tx, updates);
 			await applyLinkEvidence(tx, links);
 
 			// Update the case's updatedAt timestamp
@@ -2117,6 +2119,24 @@ export async function applyBatchUpdate(
 		}
 		log.error("Batch update failed", { error });
 		return { error: shownMessage(error) };
+	}
+}
+
+/**
+ * Refuses the batch when a moved element now sits beneath itself. Runs after
+ * the writes and under the case lock, so it judges parents exactly as the
+ * batch leaves them; the throw rolls the transaction back.
+ */
+async function assertNoParentLoop(
+	tx: TransactionClient,
+	updates: UpdateChange[]
+): Promise<void> {
+	const movedIds = updates
+		.filter((update) => typeof update.data.parentId === "string")
+		.map((update) => update.elementId);
+	const loopStart = await findParentLoopStart(movedIds, tx);
+	if (loopStart) {
+		throw new BatchMoveCycleError(loopStart);
 	}
 }
 

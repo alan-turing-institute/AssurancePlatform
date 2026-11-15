@@ -147,3 +147,48 @@ export async function getDeletedDescendantIds(
 	}
 	return allIds;
 }
+
+/**
+ * Finds a start element that sits beneath itself. Each start walks up its
+ * `parentId` chain with its own seen set; all live walks share one query per
+ * round, and deleted elements count. A walk that comes back to its start
+ * returns that start; a walk that reaches an element with no parent, or one it
+ * has already passed, ends. Returns the first such start, or undefined.
+ */
+export async function findParentLoopStart(
+	startIds: string[],
+	tx: TxClient
+): Promise<string | undefined> {
+	const walks = new Map<string, { current: string; seen: Set<string> }>(
+		[...new Set(startIds)].map((id) => [
+			id,
+			{ current: id, seen: new Set<string>([id]) },
+		])
+	);
+
+	while (walks.size > 0) {
+		const rows = await tx.assuranceElement.findMany({
+			where: {
+				id: { in: [...new Set([...walks.values()].map((w) => w.current))] },
+			},
+			select: { id: true, parentId: true },
+		});
+		const parentById = new Map(rows.map((row) => [row.id, row.parentId]));
+
+		for (const [start, walk] of [...walks]) {
+			const parent = parentById.get(walk.current);
+			if (!parent) {
+				walks.delete(start);
+			} else if (parent === start) {
+				return start;
+			} else if (walk.seen.has(parent)) {
+				walks.delete(start);
+			} else {
+				walk.seen.add(parent);
+				walk.current = parent;
+			}
+		}
+	}
+
+	return;
+}

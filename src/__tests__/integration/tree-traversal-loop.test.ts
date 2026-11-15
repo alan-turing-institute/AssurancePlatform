@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
+	findParentLoopStart,
 	getDeletedDescendantIds,
 	getDescendantIds,
 	getDescendantIdsForRoots,
@@ -145,6 +146,18 @@ describe("walks down the element tree on a stored parent loop", () => {
 				{ params: Promise.resolve({ id: a.id }) }
 			);
 			expect(response.status).toBe(200);
+		},
+		TIMEOUT
+	);
+
+	it(
+		"findParentLoopStart names a start on a loop and not one beneath it",
+		async () => {
+			const { a, c } = await buildLoop();
+			await prisma.$transaction(async (tx) => {
+				expect(await findParentLoopStart([a.id], tx)).toBe(a.id);
+				expect(await findParentLoopStart([c.id], tx)).toBeUndefined();
+			});
 		},
 		TIMEOUT
 	);
