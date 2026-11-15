@@ -271,6 +271,18 @@ describe("serviceErrorToAppError", () => {
 		expect(err.message).toBe("Case not found");
 	});
 
+	it("maps the three move-under-itself refusals to VALIDATION", () => {
+		for (const message of [
+			"Circular reference detected when moving element abc",
+			"Cannot set element as its own parent",
+			"Cannot move element to one of its descendants",
+		]) {
+			const err = serviceErrorToAppError(message);
+			expect(err.code).toBe("VALIDATION");
+			expect(err.message).toBe(message);
+		}
+	});
+
 	it("maps 'already' errors to CONFLICT", () => {
 		const err = serviceErrorToAppError("Case is already in trash");
 		expect(err.code).toBe("CONFLICT");

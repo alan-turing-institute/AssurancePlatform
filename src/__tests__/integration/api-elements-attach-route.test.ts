@@ -212,4 +212,30 @@ describe("POST /api/elements/[id]/attach", () => {
 		const body = await response.json();
 		expect(body.error).toBe("Invalid parent ID format");
 	});
+
+	it("answers 400 when a detached claim is attached beneath its own child", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			inSandbox: true,
+		});
+		const child = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: claim.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postAttach(claim.id, { parentId: child.id });
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"Cannot move element to one of its descendants"
+		);
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: claim.id },
+		});
+		expect(inDb?.parentId).toBeNull();
+		expect(inDb?.inSandbox).toBe(true);
+	});
 });

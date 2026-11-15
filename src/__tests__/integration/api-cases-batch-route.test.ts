@@ -417,8 +417,72 @@ describe("POST /api/cases/[id]/batch — failures inside the transaction", () =>
 			],
 		});
 
+		expect(response.status).toBe(400);
 		const body = await response.json();
 		expect(body.error).toMatch(CYCLE_MESSAGE_PATTERN);
+		expect(body.code).toBe("VALIDATION");
+	});
+
+	it("answers 400 for two strategies moved under each other and keeps both under the goal", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			role: "TOP_LEVEL",
+		});
+		const s1 = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		const s2 = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{ type: "update", elementId: s1.id, data: { parentId: s2.id } },
+				{ type: "update", elementId: s2.id, data: { parentId: s1.id } },
+			],
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(CYCLE_MESSAGE_PATTERN);
+		expect(body.code).toBe("VALIDATION");
+		const rows = await prisma.assuranceElement.findMany({
+			where: { id: { in: [s1.id, s2.id] } },
+			select: { parentId: true },
+		});
+		expect(rows.map((row) => row.parentId)).toEqual([goal.id, goal.id]);
+	});
+
+	it("answers 400 for an element made its own parent", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			role: "TOP_LEVEL",
+		});
+		const strategy = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{
+					type: "update",
+					elementId: strategy.id,
+					data: { parentId: strategy.id },
+				},
+			],
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).code).toBe("VALIDATION");
 	});
 });
 

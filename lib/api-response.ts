@@ -291,6 +291,19 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^A batch can change an element only once/,
 		factory: () => validationError(""),
 	},
+	// A move that would put an element beneath itself, directly or through
+	// other moves: the batch's "Circular reference detected" refusal, and the
+	// single-element edit, move and attach refusals. A validation failure
+	// (400), not a 500.
+	{
+		pattern: /^Circular reference detected when moving element /,
+		factory: () => validationError(""),
+	},
+	{
+		pattern:
+			/^Cannot (set element as its own parent|move element to one of its descendants)$/,
+		factory: () => validationError(""),
+	},
 	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
 	// element-name prefix validation): a name that doesn't match its type's
 	// registered prefix format is a validation failure (400), not a 500.
