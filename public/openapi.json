@@ -298,7 +298,7 @@
                   "type": "integer"
                 },
                 "assertionStatus": {
-                  "description": "Per-assertion status (ADR 0004 D3); null/unset means ASSERTED",
+                  "description": "Per-assertion status; null or unset means ASSERTED",
                   "nullable": true,
                   "type": "string",
                   "enum": [
@@ -311,7 +311,7 @@
                   ]
                 },
                 "citedElementId": {
-                  "description": "ID of the element cited by an AWAY_GOAL (ADR 0004 D5)",
+                  "description": "ID of the element an AWAY_GOAL cites",
                   "nullable": true,
                   "type": "string",
                   "format": "uuid"
@@ -2424,36 +2424,6 @@
                 }
               }
             }
-          },
-          "401": {
-            "description": "Unauthorised",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
           }
         }
       }
@@ -2843,7 +2813,33 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/400"
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "isValid",
+                    "errors"
+                  ],
+                  "properties": {
+                    "isValid": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "errors": {
+                      "type": "array",
+                      "description": "What is wrong with the file",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/401"
@@ -2862,7 +2858,7 @@
       "post": {
         "operationId": "post-cases-import",
         "summary": "Import an assurance case from JSON",
-        "description": "Imports a case from JSON data. Accepts the nested",
+        "description": "Imports a case from JSON data in the nested (v1.0 and v1.1) or flat (v2.0) format, and creates a new case with all its elements and evidence links.",
         "tags": [
           "Cases"
         ],
@@ -4540,16 +4536,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorMessage"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {

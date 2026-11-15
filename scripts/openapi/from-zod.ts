@@ -27,6 +27,8 @@ const FORMATS_WITH_OWN_PATTERN = new Set([
 ]);
 /** Zod's date-time pattern ends this way only when it accepts UTC times and no offsets. */
 const UTC_ONLY_ENDING = "(?:Z))$";
+/** How Zod's pattern ends for any number of fractional digits; a fixed precision ends differently. */
+const ANY_PRECISION_ENDING = ":[0-5]\\d(?:\\.\\d+)?(?:Z))$";
 /** What a UTC-only date-time looks like; `format: date-time` alone would also allow offsets. */
 const UTC_DATE_TIME_PATTERN =
 	"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$";
@@ -70,6 +72,11 @@ function isFormatPattern(key: string, node: Json): boolean {
 function withUtcNote(node: Json, rewritten: Json): Json {
 	if (!isUtcOnlyDateTime(node)) {
 		return rewritten;
+	}
+	if (!(node.pattern as string).endsWith(ANY_PRECISION_ENDING)) {
+		throw new Error(
+			"A date-time field fixes its precision, which the published pattern cannot state; describe it by hand"
+		);
 	}
 	const described =
 		typeof rewritten.description === "string"

@@ -50,6 +50,8 @@ const REDIRECT_DEFAULT = 307;
 interface Handler {
 	/** "METHOD /path", as the description writes it. */
 	id: string;
+	/** Names of the file's own functions and constants that hold the `RATE_LIMITED` code. */
+	rateLimitedNames: string[];
 	/** Text of the handler and of every function in its file that it calls, directly or not. */
 	reach: string;
 	text: string;
@@ -159,6 +161,9 @@ function handlersInSource(source: string, route: string): Handler[] {
 				id: `${method} ${route}`,
 				text: block,
 				reach: reachableText(block, local),
+				rateLimitedNames: [...local.entries()]
+					.filter(([, body]) => body.includes('"RATE_LIMITED"'))
+					.map(([name]) => name),
 			});
 		}
 	});
@@ -403,6 +408,41 @@ function cronGuardedServiceCalls(): string[] {
 				)
 				.map(([name]) => `${name}(`);
 		});
+}
+
+const LIB_DIR = path.join(ROOT, "lib");
+
+/**
+ * The calls that can end in a rate limited answer: `apiRateLimited(` itself and
+ * every function in lib/ whose body reaches it or names the `RATE_LIMITED` code.
+ */
+function rateLimitedCalls(): string[] {
+	const names = walk(LIB_DIR)
+		.filter((file) => file.endsWith(".ts") && !file.includes("__tests__"))
+		.flatMap((file) => {
+			const local = localFunctions(
+				stripComments(readFileSync(file, "utf8")).split(TOP_LEVEL_START),
+				true
+			);
+			return [...local.entries()]
+				.filter(([, body]) => {
+					const text = reachableText(body, local);
+					return (
+						text.includes("apiRateLimited(") || text.includes('"RATE_LIMITED"')
+					);
+				})
+				.map(([name]) => `${name}(`);
+		});
+	return [...new Set(names)];
+}
+
+const RATE_LIMITED_CALLS = rateLimitedCalls();
+
+function canAnswerRateLimited(handler: Handler): boolean {
+	return (
+		handler.rateLimitedNames.some((name) => mentions(handler.reach, name)) ||
+		RATE_LIMITED_CALLS.some((call) => handler.reach.includes(call))
+	);
 }
 
 /** What each call in a handler's reach asks of the caller. */
@@ -948,7 +988,7 @@ describe("the published API description matches the routes", () => {
 		}
 	});
 
-	it("(j) a handler that reads a body documents 413, and a machine-token handler documents 429", () => {
+	it("(j) a handler that reads a body documents 413, and a handler that can be rate limited documents 429", () => {
 		const byKey = new Map(operations());
 		const wrong = allHandlers().flatMap((handler) => {
 			const codes = Object.keys(
@@ -964,11 +1004,7 @@ describe("the published API description matches the routes", () => {
 			) {
 				problems.push("takes a machine token but lacks 429");
 			}
-			if (
-				(handler.reach.includes("apiRateLimited(") ||
-					handler.reach.includes('"RATE_LIMITED"')) &&
-				!codes.includes("429")
-			) {
+			if (canAnswerRateLimited(handler) && !codes.includes("429")) {
 				problems.push("can answer rate limited but lacks 429");
 			}
 			return problems.map((problem) => `${handler.id}: ${problem}`);
@@ -1015,6 +1051,44 @@ describe("the published API description matches the routes", () => {
 		const description = String(schemes.SessionAuth?.description);
 		expect(description).toContain("__Secure-next-auth.session-token");
 		expect(description).toContain("`next-auth.session-token`");
+	});
+
+	it("(j5) the description cites no internal design record", () => {
+		expect(SPEC_TEXT).not.toContain("ADR ");
+	});
+
+	it("(j6) a rate limit is found through a code constant and through a library call", () => {
+		const [viaConstant] = handlersInSource(
+			'const MAP = { RATE_LIMITED: "RATE_LIMITED" };\nexport async function POST() {\n\treturn MAP[code];\n}\n',
+			"/x"
+		);
+		const [viaLibrary] = handlersInSource(
+			"export async function POST() {\n\treturn await takeModelCall(userId);\n}\n",
+			"/y"
+		);
+		const [neither] = handlersInSource(
+			"export async function POST() {\n\treturn apiSuccess({});\n}\n",
+			"/z"
+		);
+		expect(viaConstant && canAnswerRateLimited(viaConstant)).toBe(true);
+		expect(viaLibrary && canAnswerRateLimited(viaLibrary)).toBe(true);
+		expect(neither && canAnswerRateLimited(neither)).toBe(false);
+	});
+
+	it("(j7) the two plain-error routes document only the answers they send, and the import preview its own 400", () => {
+		const paths = SPEC.paths as Record<string, Record<string, Json>>;
+		const link = paths["/auth/link/{provider}"]?.get?.responses as Json;
+		const events = paths["/cases/{id}/events"]?.get?.responses as Json;
+		expect(Object.keys(link)).not.toEqual(
+			expect.arrayContaining(["401", "403", "500"])
+		);
+		expect(Object.keys(link)).toContain("400");
+		expect(Object.keys(events)).not.toContain("500");
+		const refusal = JSON.stringify(
+			(paths["/cases/import"]?.put?.responses as Json)["400"]
+		);
+		expect(refusal).toContain("isValid");
+		expect(refusal).not.toContain("ApiError");
 	});
 
 	it("(h) running the correction step on the committed file changes nothing", () => {

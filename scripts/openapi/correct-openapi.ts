@@ -34,6 +34,7 @@ import {
 	PLAIN_ERROR_SCHEMA,
 	withExtraErrors,
 	withPlainErrors,
+	withPreviewRefusal,
 } from "./errors";
 import {
 	OPERATIONS,
@@ -198,8 +199,15 @@ function correctOperation(
 		{
 			...withRequestBody(operation, key),
 			parameters: withParameters(operation.parameters, routePath, queries),
-			responses: withPlainErrors(
-				withExtraErrors(withSuccessAnswers(operation.responses, answers), key),
+			responses: withPreviewRefusal(
+				withPlainErrors(
+					withExtraErrors(
+						withSuccessAnswers(operation.responses, answers),
+						key
+					),
+					key,
+					shared
+				),
 				key,
 				shared
 			),

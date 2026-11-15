@@ -57,11 +57,14 @@ export const PLAIN_ERROR_BODY: Json = {
 	},
 };
 
-/** Operations whose error answers carry `{ error }` only. */
-const PLAIN_ERROR_OPERATIONS = new Set([
-	"GET /cases/{id}/events",
-	"GET /auth/link/{provider}",
-]);
+/**
+ * Operations whose error answers carry `{ error }` only, with the shared
+ * answers the operation never sends.
+ */
+const PLAIN_ERROR_OPERATIONS: Record<string, string[]> = {
+	"GET /cases/{id}/events": ["500"],
+	"GET /auth/link/{provider}": ["401", "403", "500"],
+};
 
 const SHARED_RESPONSE_PREFIX = "#/components/responses/";
 
@@ -71,31 +74,78 @@ export function withPlainErrors(
 	key: string,
 	shared: Record<string, Json>
 ): Json {
-	if (!PLAIN_ERROR_OPERATIONS.has(key)) {
+	const never = PLAIN_ERROR_OPERATIONS[key];
+	if (!never) {
 		return responses;
 	}
 	return Object.fromEntries(
-		Object.entries(responses).map(([code, response]) => {
-			const target = (response as Json).$ref;
-			if (
-				typeof target !== "string" ||
-				!target.startsWith(SHARED_RESPONSE_PREFIX)
-			) {
-				return [code, response];
-			}
-			return [
-				code,
-				{
-					description: shared[code]?.description,
-					content: {
-						[JSON_TYPE]: {
-							schema: { $ref: `#/components/schemas/${PLAIN_ERROR_SCHEMA}` },
+		Object.entries(responses)
+			.filter(([code]) => !never.includes(code))
+			.map(([code, response]) => {
+				const target = (response as Json).$ref;
+				if (
+					typeof target !== "string" ||
+					!target.startsWith(SHARED_RESPONSE_PREFIX)
+				) {
+					return [code, response];
+				}
+				return [
+					code,
+					{
+						description: sharedDescription(shared, code),
+						content: {
+							[JSON_TYPE]: {
+								schema: { $ref: `#/components/schemas/${PLAIN_ERROR_SCHEMA}` },
+							},
+						},
+					},
+				];
+			})
+	);
+}
+
+function sharedDescription(shared: Record<string, Json>, code: string): string {
+	const description = shared[code]?.description;
+	if (typeof description !== "string") {
+		throw new Error(`The shared answers have no description for ${code}`);
+	}
+	return description;
+}
+
+/** The operation that answers 400 with the preview body instead of the shared error body. */
+const PREVIEW_REFUSAL_OPERATION = "PUT /cases/import";
+
+/** Replaces the shared 400 of the import preview with the body that route sends. */
+export function withPreviewRefusal(
+	responses: Json,
+	key: string,
+	shared: Record<string, Json>
+): Json {
+	if (key !== PREVIEW_REFUSAL_OPERATION) {
+		return responses;
+	}
+	return {
+		...responses,
+		"400": {
+			description: sharedDescription(shared, "400"),
+			content: {
+				[JSON_TYPE]: {
+					schema: {
+						type: "object",
+						required: ["isValid", "errors"],
+						properties: {
+							isValid: { type: "boolean", enum: [false] },
+							errors: {
+								type: "array",
+								description: "What is wrong with the file",
+								items: { type: "string" },
+							},
 						},
 					},
 				},
-			];
-		})
-	);
+			},
+		},
+	};
 }
 
 const RETRY_AFTER = {

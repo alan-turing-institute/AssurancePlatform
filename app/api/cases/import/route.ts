@@ -12,9 +12,7 @@ import { importCase } from "@/lib/services/case-import-service";
 /**
  * Import an assurance case from JSON
  *
- * @description Imports a case from JSON data. Accepts the nested
- * (v1.0 and v1.1) and flat (v2.0) formats. Creates a new case with
- * all elements and evidence links.
+ * @description Imports a case from JSON data in the nested (v1.0 and v1.1) or flat (v2.0) format, and creates a new case with all its elements and evidence links.
  * A goal defeater (counter-goal) needs a parent in the file and a case has one
  * ordinary goal; a file that breaks either is refused. Anything but a goal
  * defeater found beneath evidence is left out and named in `warnings`.

@@ -4,7 +4,7 @@
  * Supports three formats:
  * - Nested: Tree structure with children[] (current export format, version "1.0")
  * - Flat: Elements array + evidenceLinks (internal import format)
- * - Legacy: Django schema (nested goals/strategies/claims, no version field)
+ * - Legacy: nested goals/strategies/claims with no version field
  *
  * Legacy and Flat are supported for import (backward compatibility).
  * Export always produces Nested format.
@@ -122,9 +122,7 @@ export const ElementV2Schema = z
 			.describe("Hierarchy level for property claims"),
 		assertionStatus: AssertionStatusSchema.nullable()
 			.optional()
-			.describe(
-				"Per-assertion status (ADR 0004 D3); null/unset means ASSERTED"
-			),
+			.describe("Per-assertion status; null or unset means ASSERTED"),
 		// Element-level citation (ADR 0004 D5) — AWAY_GOAL only. Names the
 		// specific element cited within the case named by moduleReferenceId.
 		citedElementId: z
@@ -132,7 +130,7 @@ export const ElementV2Schema = z
 			.uuid()
 			.nullable()
 			.optional()
-			.describe("ID of the element cited by an AWAY_GOAL (ADR 0004 D5)"),
+			.describe("ID of the element an AWAY_GOAL cites"),
 		// Module reference — MODULE (required) and AWAY_GOAL (required) name
 		// the case they reference/cite into. Nullable/optional here (like
 		// citedElementId above) for import leniency with pre-existing exports
