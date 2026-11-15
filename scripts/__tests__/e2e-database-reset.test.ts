@@ -138,6 +138,9 @@ describe("decideE2eDatabaseReset", () => {
 			"postgresql://tea_owner:12/s3cret-pw@host/tea_dev",
 			"postgresql://tea_owner:12/s3cret?pw@localhost:5433/tea_dev",
 			"postgresql://tea_owner:/s3cret#pw@localhost:5433/tea_dev",
+			"postgresql://tea_owner:x@s3cret/tea_dev?pw@localhost:5433/tea_dev",
+			"postgresql://tea_owner:Pa@s3cret/word_e2e?1@localhost:5433/tea_dev",
+			"postgresql://tea_owner:Pa@s3cret/word_e2e#1@localhost:5433/tea_dev",
 			"postgresql://tea_owner:/x_e2e?s3cret@localhost:5433/tea_dev",
 		]) {
 			const decision = decideE2eDatabaseReset({ DATABASE_URL: value });

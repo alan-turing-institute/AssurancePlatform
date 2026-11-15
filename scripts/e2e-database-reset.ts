@@ -59,10 +59,12 @@ function parseDatabaseUrl(
 	if (!DATABASE_NAME.test(database)) {
 		return null;
 	}
-	// An "@" with no user name and no password means an unencoded "/", "?" or
-	// "#" in the credentials made the parser read part of them as the host and
-	// port, so nothing it reports can be echoed.
-	if (raw.includes("@") && !parsed.username && !parsed.password) {
+	// An unencoded "/", "?" or "#" in the credentials ends the host part early,
+	// so the real separating "@" lands in the query or fragment (or the path,
+	// refused above) and the parsed host and database come from the password.
+	// Nothing the parser reports can then be echoed. An "@" in a query value
+	// must be written "%40".
+	if (parsed.search.includes("@") || parsed.hash.includes("@")) {
 		return null;
 	}
 	// The drivers let these query parameters override the host part.
