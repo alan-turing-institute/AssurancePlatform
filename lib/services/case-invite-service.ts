@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
@@ -47,6 +47,15 @@ export function generateInviteToken(): string {
 }
 
 /**
+ * SHA-256 of an invite token, as stored in `case_invites.invite_token_hash`.
+ * The token carries 256 bits of entropy, so a fast unsalted hash is enough; it
+ * is only ever compared for an exact match.
+ */
+export function hashInviteToken(token: string): string {
+	return createHash("sha256").update(token, "utf8").digest("hex");
+}
+
+/**
  * Creates a case invite record and returns the token.
  */
 export async function createCaseInvite(params: {
@@ -65,7 +74,7 @@ export async function createCaseInvite(params: {
 				caseId: params.caseId,
 				email: params.email,
 				permission: params.permission,
-				inviteToken: token,
+				inviteTokenHash: hashInviteToken(token),
 				inviteExpiresAt: expiresAt,
 				invitedById: params.invitedById,
 			},
@@ -91,6 +100,7 @@ export async function acceptInvite(
 	securityContext: SecurityContext = { ipAddress: null, userAgent: null }
 ): ServiceResult<AcceptInviteResult> {
 	const { ipAddress, userAgent } = securityContext;
+	const inviteTokenHash = hashInviteToken(inviteToken);
 
 	try {
 		// Validate user exists first (explicit null check)
@@ -116,7 +126,7 @@ export async function acceptInvite(
 			async (tx) => {
 				// Find invite with implicit row lock
 				const invite = await tx.caseInvite.findUnique({
-					where: { inviteToken },
+					where: { inviteTokenHash },
 				});
 
 				if (!invite) {
@@ -162,7 +172,7 @@ export async function acceptInvite(
 
 				// Mark invite as accepted (atomic with permission grant)
 				await tx.caseInvite.update({
-					where: { inviteToken },
+					where: { id: invite.id },
 					data: {
 						acceptedAt: new Date(),
 						acceptedById: userId,

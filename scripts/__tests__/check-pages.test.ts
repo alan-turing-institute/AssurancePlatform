@@ -246,6 +246,7 @@ describe("buildRouteRegex / matchRouteTemplate", () => {
 
 const NO_DATABASE_URL_RE = /DATABASE_URL/;
 const NO_SEED_CASE_RE = /no seed case/;
+const STORED_AS_HASHES_RE = /stored only as hashes/;
 const NO_SEED_LOOKUP_RE = /no seed lookup defined/;
 
 function fakeClient(rows: Record<string, unknown>[]): Client {
@@ -270,16 +271,22 @@ describe("resolveParam", () => {
 		expect(result.reason).toMatch(NO_SEED_CASE_RE);
 	});
 
-	it("resolves slug, id and token from their respective columns", async () => {
+	it("resolves slug and id from their respective columns", async () => {
 		await expect(
 			resolveParam(fakeClient([{ slug: "s1" }]), "slug")
 		).resolves.toEqual({ value: "s1" });
 		await expect(
 			resolveParam(fakeClient([{ id: "team-1" }]), "id")
 		).resolves.toEqual({ value: "team-1" });
-		await expect(
-			resolveParam(fakeClient([{ invite_token: "tok" }]), "token")
-		).resolves.toEqual({ value: "tok" });
+	});
+
+	it("skips the invite token parameter, because only hashes are stored", async () => {
+		const result = await resolveParam(
+			fakeClient([{ invite_token_hash: "abc" }]),
+			"token"
+		);
+		expect(result.value).toBeUndefined();
+		expect(result.reason).toMatch(STORED_AS_HASHES_RE);
 	});
 
 	it("reports a reason for a parameter with no seed lookup defined", async () => {

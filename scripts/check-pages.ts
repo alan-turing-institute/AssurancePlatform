@@ -352,14 +352,9 @@ export async function resolveParam(
 				: { reason: "seed user chris is not a member of any seed team" };
 		}
 		case "token": {
-			const r = await client.query(
-				`SELECT invite_token FROM case_invites
-				 WHERE accepted_at IS NULL AND invite_expires_at > now()
-				 ORDER BY created_at DESC LIMIT 1`
-			);
-			return r.rows[0]
-				? { value: r.rows[0].invite_token }
-				: { reason: "no pending seed case invite" };
+			// Invite tokens are stored only as hashes, so no token in the
+			// database can be put into a link.
+			return { reason: "invite tokens are stored only as hashes" };
 		}
 		default:
 			return {

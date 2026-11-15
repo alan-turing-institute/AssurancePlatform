@@ -370,7 +370,7 @@ model CaseInvite {
   email           String    /// Email address of the invitee
   permission      PermissionLevel /// Permission level granted when accepted
 
-  inviteToken     String    @unique @map("invite_token") /// Unique token for the invite URL
+  inviteTokenHash String    @unique @map("invite_token_hash") /// SHA-256 of the token in the invite URL; the token itself is never stored
   inviteExpiresAt DateTime  @map("invite_expires_at") /// Invitation expiry timestamp
   acceptedAt      DateTime? @map("accepted_at") /// When the invite was accepted (null if pending)
   acceptedById    String?   @map("accepted_by_id") /// User who accepted (may differ from email if account existed)
