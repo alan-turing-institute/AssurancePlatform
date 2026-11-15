@@ -9,7 +9,8 @@ import { detachElement } from "@/lib/services/element-service";
 
 /**
  * POST /api/elements/[id]/detach
- * Detaches an element (moves to sandbox)
+ * Detaches an element (moves to sandbox). Detached evidence leaves every claim
+ * it supported.
  */
 export async function POST(
 	_request: Request,

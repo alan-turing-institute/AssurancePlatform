@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
 import {
+	attachElement,
 	deleteElement,
 	detachElement,
 	moveElement,
@@ -133,11 +134,8 @@ const BREAKERS: Breaker[] = [
 		breakIt: async (world, nodeId) => {
 			ok(await detachElement(world.owner.id, nodeId));
 		},
-		undo: async (_world, nodeId) => {
-			await prisma.assuranceElement.update({
-				where: { id: nodeId },
-				data: { inSandbox: false },
-			});
+		undo: async (world, nodeId) => {
+			ok(await attachElement(world.owner.id, nodeId, world.claim.id));
 		},
 	},
 	{

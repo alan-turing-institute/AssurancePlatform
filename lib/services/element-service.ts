@@ -2149,7 +2149,7 @@ export async function detachElement(
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, deletedAt: true },
+			select: { caseId: true, elementType: true, deletedAt: true },
 		});
 
 		if (!existing) {
@@ -2181,6 +2181,11 @@ export async function detachElement(
 					inSandbox: true,
 				},
 			});
+			// Evidence hangs from its claims through links, so leaving the
+			// tree means leaving every claim it supported.
+			if (existing.elementType === "EVIDENCE") {
+				await tx.evidenceLink.deleteMany({ where: { evidenceId: elementId } });
+			}
 			const descendantIds = await getDescendantIds(elementId, tx);
 			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
 			await touchCase(tx, existing.caseId);
@@ -2191,6 +2196,41 @@ export async function detachElement(
 		log.error("Failed to detach element", { error });
 		return { error: "Failed to detach element" };
 	}
+}
+
+/**
+ * Attaches a piece of evidence to a claim. Evidence hangs from claims through
+ * links, never through `parentId`, so this adds the link and takes the
+ * evidence (and anything beneath it) out of the side area.
+ */
+async function attachEvidence(
+	evidenceId: string,
+	caseId: string,
+	claimId: string,
+	claimType: PrismaElementType
+): ServiceResult {
+	if (claimType !== "PROPERTY_CLAIM") {
+		return { error: "parentId must be a property claim to attach evidence" };
+	}
+	await prisma.$transaction(async (tx) => {
+		await tx.evidenceLink.createMany({
+			data: [{ evidenceId, claimId }],
+			skipDuplicates: true,
+		});
+		await tx.assuranceElement.update({
+			where: { id: evidenceId },
+			data: { inSandbox: false },
+		});
+		const descendantIds = await getDescendantIds(evidenceId, tx);
+		if (descendantIds.length > 0) {
+			await tx.assuranceElement.updateMany({
+				where: { id: { in: descendantIds } },
+				data: { inSandbox: false },
+			});
+		}
+		await touchCase(tx, caseId);
+	});
+	return { data: true };
 }
 
 /**
@@ -2235,7 +2275,7 @@ export async function attachElement(
 		// Validate parent exists, is not deleted, and belongs to the same case
 		const parentElement = await prisma.assuranceElement.findUnique({
 			where: { id: parentId },
-			select: { caseId: true, deletedAt: true },
+			select: { caseId: true, elementType: true, deletedAt: true },
 		});
 
 		if (
@@ -2244,6 +2284,15 @@ export async function attachElement(
 			parentElement.caseId !== existing.caseId
 		) {
 			return { error: "Element not found" };
+		}
+
+		if (existing.elementType === "EVIDENCE") {
+			return await attachEvidence(
+				elementId,
+				existing.caseId,
+				parentId,
+				parentElement.elementType
+			);
 		}
 
 		// Validate parent change doesn't create circular reference

@@ -11,7 +11,9 @@ import { attachElement } from "@/lib/services/element-service";
 
 /**
  * POST /api/elements/[id]/attach
- * Attaches an element to a parent (moves from sandbox)
+ * Attaches an element to a parent (moves from sandbox). Evidence is linked to
+ * the named property claim instead of taking a parentId; any other parent
+ * answers 400.
  */
 export async function POST(
 	request: Request,
