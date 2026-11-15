@@ -1187,6 +1187,7 @@ export async function retireCriteria(
 	try {
 		const outcome = await prisma.$transaction(
 			async (tx): Promise<RetireOutcome> => {
+				await lockCaseForElementWrite(tx, caseId);
 				await lockClaim(tx, claimId);
 				const row = await tx.pluginHealthCriteria.findUnique({
 					where: { claimId },
