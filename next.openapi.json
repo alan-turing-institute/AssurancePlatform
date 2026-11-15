@@ -21,7 +21,7 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "next-auth.session-token",
-        "description": "NextAuth.js session cookie"
+        "description": "NextAuth.js session cookie. The cookie is named `__Secure-next-auth.session-token` over HTTPS and `next-auth.session-token` over plain HTTP"
       },
       "BearerAuth": {
         "type": "http",

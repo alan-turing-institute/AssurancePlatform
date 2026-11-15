@@ -46,6 +46,34 @@ describe("the correction step", () => {
 		).toEqual(["name"]);
 	});
 
+	it("gives the shared answers the error body, adds 413 and 429, and references them", () => {
+		const spec = freshSpec();
+		spec.components.responses = {
+			"400": {
+				description: "Bad Request",
+				content: {
+					"application/json": { schema: { type: "object", properties: {} } },
+				},
+			},
+		};
+		const corrected = correctOpenApi(spec) as Json;
+		expect(Object.keys(corrected.components.responses)).toEqual([
+			"400",
+			"413",
+			"429",
+		]);
+		expect(
+			corrected.components.responses["400"].content["application/json"].schema
+		).toEqual({ $ref: "#/components/schemas/ApiError" });
+		expect(corrected.paths["/teams"].post.responses["413"]).toEqual({
+			$ref: "#/components/responses/413",
+		});
+		expect(
+			corrected.paths["/machine/whoami"].get.responses["429"]
+		).toBeDefined();
+		expect(corrected.paths["/health"].get.responses["413"]).toBeUndefined();
+	});
+
 	it("throws on a reference to a schema that does not exist", () => {
 		const spec = freshSpec();
 		spec.paths["/health"].get.responses["400"] = {

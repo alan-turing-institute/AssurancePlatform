@@ -907,6 +907,68 @@ describe("the published API description matches the routes", () => {
 		expect((media?.schema as Json).nullable).toBe(true);
 	});
 
+	it("(j) a handler that reads a body documents 413, and a machine-token handler documents 429", () => {
+		const byKey = new Map(operations());
+		const wrong = allHandlers().flatMap((handler) => {
+			const codes = Object.keys(
+				(byKey.get(handler.id) as Json).responses as Json
+			);
+			const problems: string[] = [];
+			if (readsBody(handler) && !codes.includes("413")) {
+				problems.push("reads a body but lacks 413");
+			}
+			if (
+				handler.reach.includes("requireApiToken(") &&
+				!codes.includes("429")
+			) {
+				problems.push("takes a machine token but lacks 429");
+			}
+			return problems.map((problem) => `${handler.id}: ${problem}`);
+		});
+		expect(wrong, `${wrong.length} problems`).toEqual([]);
+	});
+
+	it("(j2) every shared error answer carries the shared error body", () => {
+		const shared = (SPEC.components as Json).responses as Record<string, Json>;
+		const bodies = Object.entries(shared).map(([code, response]) => [
+			code,
+			JSON.stringify(response.content),
+		]);
+		for (const [code, body] of bodies) {
+			expect(body, code).toContain("#/components/schemas/ApiError");
+		}
+		expect(Object.keys(shared)).toEqual(
+			expect.arrayContaining(["400", "413", "429"])
+		);
+	});
+
+	it("(j3) the error body lists exactly the error codes the routes can raise", () => {
+		const source = readFileSync(path.join(ROOT, "lib/errors.ts"), "utf8");
+		const union = source.slice(
+			source.indexOf("export type ErrorCode"),
+			source.indexOf(";", source.indexOf("export type ErrorCode"))
+		);
+		const raised = [...union.matchAll(/"([A-Z_]+)"/g)].map((m) => m[1]);
+		const schemas = (SPEC.components as Json).schemas as Record<string, Json>;
+		const listed = (
+			(schemas.ApiError?.properties as Json).code as { enum: string[] }
+		).enum;
+		expect([...listed].sort()).toEqual([...raised].sort());
+		expect(Object.keys((schemas.ApiError?.properties as Json) ?? {})).toEqual(
+			expect.arrayContaining(["error", "code", "fieldErrors"])
+		);
+	});
+
+	it("(j4) the session scheme names both cookies", () => {
+		const schemes = (SPEC.components as Json).securitySchemes as Record<
+			string,
+			Json
+		>;
+		const description = String(schemes.SessionAuth?.description);
+		expect(description).toContain("__Secure-next-auth.session-token");
+		expect(description).toContain("`next-auth.session-token`");
+	});
+
 	it("(h) running the correction step on the committed file changes nothing", () => {
 		expect(serialiseOpenApi(correctOpenApi(SPEC))).toBe(SPEC_TEXT);
 	});

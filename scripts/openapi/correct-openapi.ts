@@ -11,7 +11,9 @@
  * success answers (taken from operations.ts), a path parameter for every
  * `{name}` in a path, the query parameters in operations.ts, each request
  * body (taken from request-bodies.ts; an operation with no entry there has
- * none), and the named schemas those refer to. Schemas nothing refers to are
+ * none), the shared error answers (errors.ts: the error body with `code` and
+ * `fieldErrors`, 413 on every operation that reads a body, 429 on the machine
+ * routes), and the named schemas those refer to. Schemas nothing refers to are
  * removed. Anything the generator reads correctly is fixed in the route's
  * comment instead.
  *
@@ -24,6 +26,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+	API_ERROR_SCHEMA,
+	correctErrorResponses,
+	ERROR_SCHEMA,
+	withExtraErrors,
+} from "./errors";
 import {
 	OPERATIONS,
 	QUERY_PARAMETERS,
@@ -186,7 +194,10 @@ function correctOperation(
 		{
 			...withRequestBody(operation, key),
 			parameters: withParameters(operation.parameters, routePath, queries),
-			responses: withSuccessAnswers(operation.responses, answers),
+			responses: withExtraErrors(
+				withSuccessAnswers(operation.responses, answers),
+				key
+			),
 		},
 		OPERATION_KEY_ORDER
 	);
@@ -355,10 +366,18 @@ export function correctOpenApi(input: OpenApiDocument): OpenApiDocument {
 	const document = structuredClone(input);
 	const paths = correctPaths(asRecord(document.paths));
 	checkTableHasNoStrays(paths);
-	const components = asRecord(document.components);
-	checkTableReferences(asRecord(components.schemas));
-	const known = { ...asRecord(components.schemas), ...SCHEMAS };
-	const withPaths = { ...document, paths };
+	const generated = asRecord(document.components);
+	const components: Json = {
+		...generated,
+		responses: correctErrorResponses(generated.responses),
+	};
+	checkTableReferences(asRecord(generated.schemas));
+	const known = {
+		...asRecord(generated.schemas),
+		...SCHEMAS,
+		[ERROR_SCHEMA]: API_ERROR_SCHEMA,
+	};
+	const withPaths = { ...document, components, paths };
 	const schemas = pruneSchemas(withPaths, known);
 	const corrected = {
 		...withPaths,
