@@ -18,15 +18,31 @@ describe("the Zod to OpenAPI 3.0 conversion", () => {
 	});
 
 	it("leaves out a format's long pattern and the plain integer bounds", () => {
-		const schema = fromZod(
-			z.object({ id: z.uuid(), at: z.iso.datetime(), n: z.number().int() })
-		) as { properties: Record<string, Record<string, unknown>> };
+		const schema = fromZod(z.object({ id: z.uuid(), n: z.number().int() })) as {
+			properties: Record<string, Record<string, unknown>>;
+		};
 		expect(schema.properties.id).toEqual({ type: "string", format: "uuid" });
-		expect(schema.properties.at).toEqual({
+		expect(schema.properties.n).toEqual({ type: "integer" });
+	});
+
+	it("keeps a short UTC-only rule for a date-time that refuses offsets, and none for one that allows them", () => {
+		const schema = fromZod(
+			z.object({
+				utc: z.string().datetime(),
+				any: z.string().datetime({ offset: true }),
+			})
+		) as { properties: Record<string, Record<string, string>> };
+		const utc = schema.properties.utc ?? {};
+		expect(utc.format).toBe("date-time");
+		expect(utc.description).toContain("UTC");
+		const pattern = new RegExp(utc.pattern ?? "(?!)");
+		expect(pattern.test("2026-11-15T10:00:00Z")).toBe(true);
+		expect(pattern.test("2026-11-15T10:00:00.250Z")).toBe(true);
+		expect(pattern.test("2026-11-15T10:00:00+01:00")).toBe(false);
+		expect(schema.properties.any).toEqual({
 			type: "string",
 			format: "date-time",
 		});
-		expect(schema.properties.n).toEqual({ type: "integer" });
 	});
 
 	it("stops on a recursive part that has no name", () => {

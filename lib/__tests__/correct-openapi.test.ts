@@ -23,15 +23,37 @@ function schemaOf(document: Json, route: string, method: string): Json {
 }
 
 describe("the correction step", () => {
-	it("describes both import bodies by the case export schema", () => {
+	it("describes both import bodies as the nested or the flat case export", () => {
 		const corrected = correctOpenApi(freshSpec()) as Json;
 		for (const method of ["post", "put"]) {
 			expect(
 				corrected.paths["/cases/import"][method].requestBody.content[
 					"application/json"
 				].schema
-			).toEqual({ $ref: "#/components/schemas/CaseExport" });
+			).toEqual({
+				oneOf: [
+					{ $ref: "#/components/schemas/CaseExport" },
+					{ $ref: "#/components/schemas/CaseExportFlat" },
+				],
+			});
 		}
+	});
+
+	it("gives the event stream and the account-link route an error body with a message and no code", () => {
+		const corrected = correctOpenApi(freshSpec()) as Json;
+		const events = corrected.paths["/cases/{id}/events"].get.responses;
+		const link = corrected.paths["/auth/link/{provider}"].get.responses;
+		for (const answer of [events["401"], link["400"]]) {
+			expect(answer.content["application/json"].schema).toEqual({
+				$ref: "#/components/schemas/ErrorMessage",
+			});
+		}
+		expect(corrected.components.schemas.ErrorMessage.required).toEqual([
+			"error",
+		]);
+		expect(corrected.paths["/teams"].post.responses["401"].$ref).toBe(
+			"#/components/responses/401"
+		);
 	});
 
 	it("replaces a request body the generator wrote with the table's, and drops one the table lacks", () => {

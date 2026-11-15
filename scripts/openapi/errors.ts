@@ -46,6 +46,58 @@ export const API_ERROR_SCHEMA: Json = {
 	},
 };
 
+export const PLAIN_ERROR_SCHEMA = "ErrorMessage";
+
+/** The error body of the routes that send a message and no `code`. */
+export const PLAIN_ERROR_BODY: Json = {
+	type: "object",
+	required: ["error"],
+	properties: {
+		error: { type: "string", description: "A message a person can read" },
+	},
+};
+
+/** Operations whose error answers carry `{ error }` only. */
+const PLAIN_ERROR_OPERATIONS = new Set([
+	"GET /cases/{id}/events",
+	"GET /auth/link/{provider}",
+]);
+
+const SHARED_RESPONSE_PREFIX = "#/components/responses/";
+
+/** The operation's responses, with each shared error answer swapped for one that has the `{ error }` body. */
+export function withPlainErrors(
+	responses: Json,
+	key: string,
+	shared: Record<string, Json>
+): Json {
+	if (!PLAIN_ERROR_OPERATIONS.has(key)) {
+		return responses;
+	}
+	return Object.fromEntries(
+		Object.entries(responses).map(([code, response]) => {
+			const target = (response as Json).$ref;
+			if (
+				typeof target !== "string" ||
+				!target.startsWith(SHARED_RESPONSE_PREFIX)
+			) {
+				return [code, response];
+			}
+			return [
+				code,
+				{
+					description: shared[code]?.description,
+					content: {
+						[JSON_TYPE]: {
+							schema: { $ref: `#/components/schemas/${PLAIN_ERROR_SCHEMA}` },
+						},
+					},
+				},
+			];
+		})
+	);
+}
+
 const RETRY_AFTER = {
 	description:
 		"Seconds to wait before trying again; sent when the server knows how long that is",

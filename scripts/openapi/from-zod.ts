@@ -19,13 +19,18 @@ const SCHEMA_REF_PREFIX = "#/components/schemas/";
 const DEFINITION_REF_PREFIX = "#/definitions/";
 const PLACEHOLDER = /^__schema(\d+)$/;
 const FORMATS_WITH_OWN_PATTERN = new Set([
-	"date-time",
 	"email",
 	"uri",
 	"uuid",
 	"date",
 	"time",
 ]);
+/** Zod's date-time pattern ends this way only when it accepts UTC times and no offsets. */
+const UTC_ONLY_ENDING = "(?:Z))$";
+/** What a UTC-only date-time looks like; `format: date-time` alone would also allow offsets. */
+const UTC_DATE_TIME_PATTERN =
+	"^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$";
+const UTC_NOTE = "Must be a UTC time ending in Z.";
 
 /** Component schemas collected from recursive parts, by name. */
 export const DEFINITIONS: Record<string, Schema> = {};
@@ -42,13 +47,39 @@ function isSafeIntegerBound(key: string, value: unknown): boolean {
 	);
 }
 
+/** A date-time that accepts UTC times only, which `format: date-time` alone does not say. */
+function isUtcOnlyDateTime(node: Json): boolean {
+	return (
+		node.format === "date-time" &&
+		typeof node.pattern === "string" &&
+		node.pattern.endsWith(UTC_ONLY_ENDING)
+	);
+}
+
 /** A format such as `uuid` already says what its long pattern says. */
 function isFormatPattern(key: string, node: Json): boolean {
-	return (
-		key === "pattern" &&
-		typeof node.format === "string" &&
-		FORMATS_WITH_OWN_PATTERN.has(node.format)
-	);
+	if (key !== "pattern" || typeof node.format !== "string") {
+		return false;
+	}
+	return node.format === "date-time"
+		? !isUtcOnlyDateTime(node)
+		: FORMATS_WITH_OWN_PATTERN.has(node.format);
+}
+
+/** Replaces Zod's long UTC-only pattern with a short one and says so in the description. */
+function withUtcNote(node: Json, rewritten: Json): Json {
+	if (!isUtcOnlyDateTime(node)) {
+		return rewritten;
+	}
+	const described =
+		typeof rewritten.description === "string"
+			? `${rewritten.description}. ${UTC_NOTE}`
+			: UTC_NOTE;
+	return {
+		...rewritten,
+		pattern: UTC_DATE_TIME_PATTERN,
+		description: described,
+	};
 }
 
 function refTarget(value: string, names: Map<string, string>): string {
@@ -81,9 +112,12 @@ function rewrite(node: unknown, names: Map<string, string>): unknown {
 	if (!isRecord(node)) {
 		return node;
 	}
-	return Object.fromEntries(
-		Object.entries(node).flatMap(([key, value]) =>
-			rewriteEntry(key, value, node, names)
+	return withUtcNote(
+		node,
+		Object.fromEntries(
+			Object.entries(node).flatMap(([key, value]) =>
+				rewriteEntry(key, value, node, names)
+			)
 		)
 	);
 }

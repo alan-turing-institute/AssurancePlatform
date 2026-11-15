@@ -79,6 +79,7 @@ function resolveGitHubLocation(body: GitHubImportInput): GitHubLocation {
  * @body GitHubImportSchema
  * @response ImportResult
  * @response 413 - Payload too large
+ * @add 429
  * @auth SessionAuth
  * @tag Cases
  */

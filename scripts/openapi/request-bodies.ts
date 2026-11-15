@@ -17,7 +17,10 @@ import {
 	resetPasswordSchema,
 } from "../../lib/schemas/auth";
 import { batchUpdateRequestSchema } from "../../lib/schemas/batch-update";
-import { CaseExportNestedSchema } from "../../lib/schemas/case-export";
+import {
+	CaseExportNestedSchema,
+	CaseExportV2Schema,
+} from "../../lib/schemas/case-export";
 import { caseImageUploadSchema } from "../../lib/schemas/case-image";
 import { upsertCaseInformationSchema } from "../../lib/schemas/case-information";
 import {
@@ -95,6 +98,8 @@ const MULTIPART_TYPE = "multipart/form-data";
 
 /** The schema name the case export and import bodies refer to. */
 export const CASE_EXPORT_SCHEMA = "CaseExport";
+/** The flat (version 2.0) export format, which the import routes also accept. */
+export const CASE_EXPORT_FLAT_SCHEMA = "CaseExportFlat";
 const CASE_TREE_NODE = "CaseTreeNode";
 
 function json(source: string, schema: z.ZodType): RequestBody {
@@ -121,8 +126,19 @@ function namedBody(source: string, schemaName: string): RequestBody {
 	};
 }
 
+/** The import body: the nested export (version 1.0 or 1.1) or the flat one (version 2.0). */
 function importBody(source: string): RequestBody {
-	return namedBody(source, CASE_EXPORT_SCHEMA);
+	return {
+		contentType: JSON_TYPE,
+		required: true,
+		schema: {
+			oneOf: [
+				{ $ref: `#/components/schemas/${CASE_EXPORT_SCHEMA}` },
+				{ $ref: `#/components/schemas/${CASE_EXPORT_FLAT_SCHEMA}` },
+			],
+		},
+		sources: [source],
+	};
 }
 
 /** The share body: a team by id, or a person by email. */
@@ -191,6 +207,7 @@ function imageUploadBody(): RequestBody {
 export function bodyComponentSchemas(): Record<string, Schema> {
 	return {
 		[CASE_EXPORT_SCHEMA]: fromZod(CaseExportNestedSchema, [CASE_TREE_NODE]),
+		[CASE_EXPORT_FLAT_SCHEMA]: fromZod(CaseExportV2Schema),
 	};
 }
 

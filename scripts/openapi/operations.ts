@@ -35,7 +35,6 @@ const IMAGE_TYPE = "image/*";
 
 const STRING: Schema = { type: "string" };
 const BOOLEAN: Schema = { type: "boolean" };
-const NUMBER: Schema = { type: "number" };
 const OBJECT: Schema = { type: "object" };
 const ARRAY: Schema = { type: "array", items: { type: "object" } };
 const BINARY: Schema = { type: "string", format: "binary" };
@@ -234,14 +233,33 @@ export const OPERATIONS: Record<string, SuccessAnswer[]> = {
 		),
 	],
 	"POST /cases/import": [json(200, "The imported case", ref("ImportResult"))],
-	"PUT /cases/import": fields("The preview of an import", {
-		isValid: BOOLEAN,
-		version: STRING,
-		caseName: STRING,
-		elementCount: NUMBER,
-		evidenceLinkCount: NUMBER,
-		warnings: { type: "array", items: STRING },
-	}),
+	"PUT /cases/import": [
+		json(200, "The preview of an import", {
+			type: "object",
+			required: [
+				"isValid",
+				"version",
+				"caseName",
+				"elementCount",
+				"evidenceLinkCount",
+				"warnings",
+			],
+			properties: {
+				isValid: BOOLEAN,
+				version: {
+					type: "string",
+					nullable: true,
+					enum: ["nested", "flat", null],
+					description:
+						"The format found in the file, or null when none matched",
+				},
+				caseName: STRING,
+				elementCount: { type: "integer" },
+				evidenceLinkCount: { type: "integer" },
+				warnings: { type: "array", items: STRING },
+			},
+		}),
+	],
 	"GET /cases/trash": list("The caller's cases in Trash"),
 	"GET /cases/trash/archived": list("The caller's archived copies"),
 	"DELETE /cases/trash/archived/{publishedId}": flag(

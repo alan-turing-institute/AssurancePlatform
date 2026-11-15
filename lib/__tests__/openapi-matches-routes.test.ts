@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import { cronDryRunQuerySchema } from "@/lib/schemas/cron-dry-run";
 import { evidenceListQuerySchema } from "@/lib/schemas/health-evidence";
 import {
+	detectAndValidate,
+	detectVersion,
+} from "@/lib/schemas/version-detection";
+import {
 	correctOpenApi,
 	serialiseOpenApi,
 } from "@/scripts/openapi/correct-openapi";
@@ -907,6 +911,43 @@ describe("the published API description matches the routes", () => {
 		expect((media?.schema as Json).nullable).toBe(true);
 	});
 
+	it("(i4) both import bodies describe every format the import accepts, each by its own schema", () => {
+		const schemas = (SPEC.components as Json).schemas as Record<string, Json>;
+		const paths = SPEC.paths as Record<string, Record<string, Json>>;
+		const flatDocument = {
+			version: "2.0",
+			exportedAt: "2026-01-01T00:00:00Z",
+			case: { name: "A case", description: "" },
+			elements: [],
+			evidenceLinks: [],
+		};
+		expect(detectAndValidate(flatDocument)).toMatchObject({
+			isValid: true,
+			version: "flat",
+		});
+		for (const method of ["post", "put"]) {
+			const body = (
+				(paths["/cases/import"]?.[method]?.requestBody as Json).content as Json
+			)["application/json"] as Json;
+			const names = ((body.schema as Json).oneOf as Json[]).map((option) =>
+				String(option.$ref).replace("#/components/schemas/", "")
+			);
+			expect(names).toEqual(["CaseExport", "CaseExportFlat"]);
+			const versions = names.flatMap(
+				(name) =>
+					((schemas[name]?.properties as Json).version as { enum: string[] })
+						.enum
+			);
+			expect(versions).toEqual(["1.0", "1.1", "2.0"]);
+			for (const version of versions) {
+				expect(detectVersion({ version })).not.toBeNull();
+			}
+			for (const field of schemas.CaseExportFlat?.required as string[]) {
+				expect(Object.keys(flatDocument)).toContain(field);
+			}
+		}
+	});
+
 	it("(j) a handler that reads a body documents 413, and a machine-token handler documents 429", () => {
 		const byKey = new Map(operations());
 		const wrong = allHandlers().flatMap((handler) => {
@@ -922,6 +963,13 @@ describe("the published API description matches the routes", () => {
 				!codes.includes("429")
 			) {
 				problems.push("takes a machine token but lacks 429");
+			}
+			if (
+				(handler.reach.includes("apiRateLimited(") ||
+					handler.reach.includes('"RATE_LIMITED"')) &&
+				!codes.includes("429")
+			) {
+				problems.push("can answer rate limited but lacks 429");
 			}
 			return problems.map((problem) => `${handler.id}: ${problem}`);
 		});

@@ -30,7 +30,10 @@ import {
 	API_ERROR_SCHEMA,
 	correctErrorResponses,
 	ERROR_SCHEMA,
+	PLAIN_ERROR_BODY,
+	PLAIN_ERROR_SCHEMA,
 	withExtraErrors,
+	withPlainErrors,
 } from "./errors";
 import {
 	OPERATIONS,
@@ -186,7 +189,8 @@ function correctOperation(
 	operation: Json,
 	routePath: string,
 	method: string,
-	answers: SuccessAnswer[]
+	answers: SuccessAnswer[],
+	shared: Record<string, Json>
 ): Json {
 	const key = operationKey(method, routePath);
 	const queries = QUERY_PARAMETERS[key] ?? [];
@@ -194,9 +198,10 @@ function correctOperation(
 		{
 			...withRequestBody(operation, key),
 			parameters: withParameters(operation.parameters, routePath, queries),
-			responses: withExtraErrors(
-				withSuccessAnswers(operation.responses, answers),
-				key
+			responses: withPlainErrors(
+				withExtraErrors(withSuccessAnswers(operation.responses, answers), key),
+				key,
+				shared
 			),
 		},
 		OPERATION_KEY_ORDER
@@ -207,7 +212,12 @@ function operationKey(method: string, routePath: string): string {
 	return `${method.toUpperCase()} ${routePath}`;
 }
 
-function correctPathItem(routePath: string, item: Json, unknown: string[]) {
+function correctPathItem(
+	routePath: string,
+	item: Json,
+	unknown: string[],
+	shared: Record<string, Json>
+) {
 	const methods = Object.keys(item).sort(
 		(a, b) => METHOD_ORDER.indexOf(a) - METHOD_ORDER.indexOf(b)
 	);
@@ -220,7 +230,8 @@ function correctPathItem(routePath: string, item: Json, unknown: string[]) {
 				asRecord(item[method]),
 				routePath,
 				method,
-				answers
+				answers,
+				shared
 			);
 		} else {
 			unknown.push(key);
@@ -229,14 +240,15 @@ function correctPathItem(routePath: string, item: Json, unknown: string[]) {
 	return corrected;
 }
 
-function correctPaths(paths: Json): Json {
+function correctPaths(paths: Json, shared: Record<string, Json>): Json {
 	const missing: string[] = [];
 	const corrected: Json = {};
 	for (const routePath of sortedKeys(paths)) {
 		corrected[routePath] = correctPathItem(
 			routePath,
 			asRecord(paths[routePath]),
-			missing
+			missing,
+			shared
 		);
 	}
 	if (missing.length > 0) {
@@ -364,18 +376,22 @@ function correctComponents(components: Json, schemas: Json): Json {
  */
 export function correctOpenApi(input: OpenApiDocument): OpenApiDocument {
 	const document = structuredClone(input);
-	const paths = correctPaths(asRecord(document.paths));
-	checkTableHasNoStrays(paths);
 	const generated = asRecord(document.components);
 	const components: Json = {
 		...generated,
 		responses: correctErrorResponses(generated.responses),
 	};
+	const paths = correctPaths(
+		asRecord(document.paths),
+		components.responses as Record<string, Json>
+	);
+	checkTableHasNoStrays(paths);
 	checkTableReferences(asRecord(generated.schemas));
 	const known = {
 		...asRecord(generated.schemas),
 		...SCHEMAS,
 		[ERROR_SCHEMA]: API_ERROR_SCHEMA,
+		[PLAIN_ERROR_SCHEMA]: PLAIN_ERROR_BODY,
 	};
 	const withPaths = { ...document, components, paths };
 	const schemas = pruneSchemas(withPaths, known);
