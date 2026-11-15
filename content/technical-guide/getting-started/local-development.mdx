@@ -50,7 +50,7 @@ pnpm build
 `pnpm format` applies formatting changes. `pnpm test:coverage:check` runs the unit suite with the same coverage floors CI enforces. The integration suite needs its dedicated PostgreSQL test service and setup.
 
 <Callout type="warn">
-Outside CI, `pnpm test:e2e` runs `prisma migrate reset --force` and reseeds whatever database `DATABASE_URL` names. Run it only against a disposable database, after checking that URL.
+Outside CI, `pnpm test:e2e` runs `prisma migrate reset --force` and reseeds the database that `DATABASE_URL` names in the shell running the command; it does not read the `.env` file for this. It refuses to run unless that database's name ends `_test` or `_e2e`, or `E2E_ALLOW_RESET=1` is set. To run it, start the `postgres-test` service (port 5433), create a database whose name ends `_e2e` in it, stop any server on port 3000 (or set `E2E_BASE_URL`), and set `DATABASE_URL` to that database in the shell.
 </Callout>
 
 The [code style guide](/docs/technical-guide/contributing/code-style) gives the intended use of each check.

@@ -169,7 +169,9 @@ Test secured operations across owner, direct and team permissions, no permission
 Keep Playwright to the critical journeys: auth, case management, sharing, publishing.
 Presentational component tests are optional; snapshot tests are not the convention.
 Install the browser with `pnpm exec playwright install chromium`.
-Outside CI, `e2e/global-setup.ts` runs `prisma migrate reset --force` and reseeds, so point it only at a disposable database.
+Outside CI, `e2e/global-setup.ts` runs `prisma migrate reset --force` and reseeds the database that `DATABASE_URL` names in the shell running Playwright; it never reads `.env` for this.
+It refuses to run unless that database's name ends `_test` or `_e2e`, or `E2E_ALLOW_RESET=1` is set for a disposable database with another name.
+For a disposable setup, start `postgres-test` (port 5433), create a database whose name ends `_e2e` in it, stop any server on port 3000 (or set `E2E_BASE_URL`), then run with `DATABASE_URL` set in the shell.
 Playwright starts `pnpm dev` locally or reuses a server on port 3000, so that server must use the intended test database too.
 Set `E2E_BASE_URL` to point the suite at a server that is already running; with it set, Playwright neither starts nor stops a server itself.
 Set `E2E_SKIP_DB_RESET=1` to skip global setup's reset and reseed.
