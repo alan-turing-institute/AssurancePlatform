@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { TreeDiffResult } from "@/lib/case/tree-diff";
 import type { LayoutControlsProps } from "../json-editor-toolbar";
 import { JsonEditorToolbar } from "../json-editor-toolbar";
 
@@ -131,3 +132,42 @@ describe("JsonEditorToolbar — format button", () => {
 // still blocks a document the JSON Schema's own checks wouldn't catch. A
 // toolbar-level "Apply is disabled when isValid is false" test can't fail
 // on anything this PR changes, so it isn't duplicated here.
+
+describe("JsonEditorToolbar — status and Apply follow the diff", () => {
+	const emptyDiff: TreeDiffResult = {
+		changes: [],
+		summary: { created: 0, updated: 0, deleted: 0, moved: 0 },
+	};
+
+	it("reads No changes, with Apply disabled and Discard enabled, when the buffer is dirty but the diff is empty", () => {
+		render(
+			<JsonEditorToolbar {...baseProps()} diffResult={emptyDiff} isDirty />
+		);
+
+		expect(screen.getByText("No changes")).toBeInTheDocument();
+		expect(screen.queryByText("Validating...")).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Discard" })).toBeEnabled();
+	});
+
+	it("reads Validating... while the diff has not been computed yet", () => {
+		render(<JsonEditorToolbar {...baseProps()} diffResult={null} isDirty />);
+
+		expect(screen.getByText("Validating...")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+	});
+
+	it("names evidence-link changes in the summary and keeps Apply enabled", () => {
+		const diff: TreeDiffResult = {
+			changes: [
+				{ type: "unlink_evidence", evidenceId: "e1", claimId: "c1" },
+				{ type: "link_evidence", evidenceId: "e1", claimId: "c2" },
+			],
+			summary: { created: 0, updated: 0, deleted: 0, moved: 0 },
+		};
+		render(<JsonEditorToolbar {...baseProps()} diffResult={diff} isDirty />);
+
+		expect(screen.getByText("2 evidence links changed")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+	});
+});

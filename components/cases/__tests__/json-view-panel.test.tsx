@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportCase } from "@/actions/export-case";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -259,6 +259,89 @@ describe("JsonViewPanel — Format button (real content effect)", () => {
 			expect(docLines(content).length).toBeGreaterThan(1);
 		});
 		expect(docText(content)).toBe(JSON.stringify(sampleExport(), null, 2));
+	});
+});
+
+const CLAIM_A_ID = "22222222-2222-4222-8222-222222222222";
+const CLAIM_B_ID = "33333333-3333-4333-8333-333333333333";
+
+function exportWithTwoClaims(order: "ab" | "ba") {
+	const claim = (id: string, name: string) => ({
+		id,
+		type: "PROPERTY_CLAIM" as const,
+		name,
+		description: `Claim ${name}`,
+		inSandbox: false,
+		children: [],
+	});
+	const a = claim(CLAIM_A_ID, "P1");
+	const b = claim(CLAIM_B_ID, "P2");
+	const base = sampleExport();
+	return {
+		...base,
+		tree: { ...base.tree, children: order === "ab" ? [a, b] : [b, a] },
+	};
+}
+
+describe("JsonViewPanel — edits that change only layout", () => {
+	beforeEach(() => {
+		resetStore();
+	});
+
+	afterEach(() => {
+		vi.mocked(exportCase).mockImplementation((async () => ({
+			data: sampleExport(),
+		})) as unknown as typeof exportCase);
+	});
+
+	async function pasteAndSettle(
+		original: ReturnType<typeof exportWithTwoClaims>,
+		pasted: string
+	) {
+		const user = userEvent.setup();
+		vi.mocked(exportCase).mockImplementation((async () => ({
+			data: original,
+		})) as unknown as typeof exportCase);
+		render(<JsonViewPanel isOpen={true} onClose={vi.fn()} />);
+
+		const content = await waitFor(() => {
+			const el = document.querySelector(".cm-content");
+			expect(el).not.toBeNull();
+			expect(el?.textContent).toContain("Claim P1");
+			return el as HTMLElement;
+		});
+
+		await user.click(content);
+		await user.keyboard("{Control>}a{/Control}");
+		await user.paste(pasted);
+
+		await waitFor(() => {
+			expect(screen.getByRole("button", { name: "Discard" })).toBeEnabled();
+		});
+		await waitFor(() => {
+			expect(screen.queryByText("Validating...")).not.toBeInTheDocument();
+		});
+	}
+
+	it("reads No changes with Apply disabled after a minified paste of the same content", async () => {
+		const original = exportWithTwoClaims("ab");
+		await pasteAndSettle(original, JSON.stringify(original));
+
+		expect(screen.getByText("No changes")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Discard" })).toBeEnabled();
+	});
+
+	it("reads No changes with Apply disabled after sibling claims are reordered", async () => {
+		const original = exportWithTwoClaims("ab");
+		await pasteAndSettle(
+			original,
+			JSON.stringify(exportWithTwoClaims("ba"), null, 2)
+		);
+
+		expect(screen.getByText("No changes")).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: APPLY_PATTERN })).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Discard" })).toBeEnabled();
 	});
 });
 
