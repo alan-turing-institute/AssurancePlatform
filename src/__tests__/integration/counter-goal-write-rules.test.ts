@@ -25,6 +25,9 @@ vi.mock("@/lib/services/sse-connection-manager", () => ({
 	sseConnectionManager: { broadcast: vi.fn() },
 }));
 
+const TOP_GOAL_NO_PARENT_MESSAGE_START =
+	/^parentId cannot be set on the top goal/;
+
 beforeEach(async () => {
 	await mockNoAuth();
 });
@@ -573,5 +576,91 @@ describe("two PUT requests that turn elements into defeaters at once", () => {
 			})
 		).map((row) => row.name);
 		expect(new Set(names).size).toBe(2);
+	});
+});
+
+describe("goal writes that meet another write to the same case", () => {
+	/** A case with no ordinary goal and two counter-goals hung from a claim. */
+	async function buildCaseWithTwoCounterGoals() {
+		const owner = await createTestUser();
+		const fx = await buildArgument(owner.id);
+		await prisma.assuranceElement.update({
+			where: { id: fx.goal.id },
+			data: { deletedAt: new Date() },
+		});
+		const first = await addCounterGoal(fx, {
+			name: "CG1",
+			description: "first counter-goal",
+			parentId: fx.claim.id,
+		});
+		const second = await addCounterGoal(fx, {
+			name: "CG2",
+			description: "second counter-goal",
+			parentId: fx.claim.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+		return { fx, first, second };
+	}
+
+	it("answers 404 to a PUT whose counter-goal is removed while it waits for the case", async () => {
+		const { fx, first } = await buildCaseWithTwoCounterGoals();
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${fx.caseId} FOR UPDATE`;
+			await tx.assuranceElement.delete({ where: { id: first.id } });
+		});
+		const putting = putElement(first.id, { description: "edited" });
+		await waitForLockWait();
+		await lock.release();
+
+		const response = await putting;
+
+		expect(response.status).toBe(404);
+	});
+
+	it("refuses a batch that would make a second ordinary goal once another write made one", async () => {
+		const { fx, first, second } = await buildCaseWithTwoCounterGoals();
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${fx.caseId} FOR UPDATE`;
+			await tx.assuranceElement.update({
+				where: { id: second.id },
+				data: { isDefeater: false, parentId: null },
+			});
+		});
+		const batching = postBatch(fx.caseId, [
+			{
+				type: "update",
+				elementId: first.id,
+				data: { isDefeater: false, parentId: null },
+			},
+		]);
+		await waitForLockWait();
+		await lock.release();
+
+		const response = await batching;
+
+		expect(response.status).toBe(422);
+		expect((await response.json()).error).toBe(
+			"A case can only have one goal claim"
+		);
+		const stored = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: first.id },
+		});
+		expect(stored.isDefeater).toBe(true);
+		expect(stored.parentId).toBe(fx.claim.id);
+	});
+
+	it("refuses a batch that makes a counter-goal ordinary without sending a parent, since it keeps the stored one", async () => {
+		const { fx, first } = await buildCaseWithTwoCounterGoals();
+		const before = await storedGoals(fx.caseId);
+
+		const response = await postBatch(fx.caseId, [
+			{ type: "update", elementId: first.id, data: { isDefeater: false } },
+		]);
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toMatch(
+			TOP_GOAL_NO_PARENT_MESSAGE_START
+		);
+		expect(await storedGoals(fx.caseId)).toEqual(before);
 	});
 });
