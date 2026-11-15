@@ -20,7 +20,7 @@ import { createElement } from "@/lib/services/element-service";
  * @pathParam id - Case ID (UUID)
  * @body { type, name?, description?, parentId?, url?, assumption?, justification? }
  * @response 201 - Created element data
- * @response 400 - Validation error (including a goal defeater without a parent)
+ * @response 400 - Validation error (including a goal defeater without a parent, and a parent that is a piece of evidence when the element is not a counter-goal)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 413 - Payload too large

@@ -3,6 +3,10 @@ import {
 	patternMarkersForEdit,
 	storedElementText,
 } from "@/lib/case/placeholders";
+import {
+	isBeneathEvidenceRefused,
+	ONLY_COUNTER_GOALS_BENEATH_EVIDENCE,
+} from "@/lib/element-compatibility";
 import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { logger } from "@/lib/logger";
@@ -413,14 +417,18 @@ async function enforceDefeatsElementIdRules(
 async function validateParentIdInCase(
 	caseId: string,
 	parentId: string,
+	child: { elementType: string; isDefeater?: boolean | null },
 	db: TxClient = prisma
 ): Promise<string | undefined> {
 	const parent = await db.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null, caseId },
-		select: { id: true },
+		select: { elementType: true },
 	});
 	if (!parent) {
 		return "Parent element not found";
+	}
+	if (isBeneathEvidenceRefused(child, parent.elementType)) {
+		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
 	}
 	return;
 }
@@ -1197,7 +1205,12 @@ async function validateElementReferences(
 	}
 
 	if (parentId) {
-		const parentError = await validateParentIdInCase(caseId, parentId, db);
+		const parentError = await validateParentIdInCase(
+			caseId,
+			parentId,
+			{ elementType, isDefeater: input.isDefeater },
+			db
+		);
 		if (parentError) {
 			return { error: parentError };
 		}
@@ -1712,6 +1725,49 @@ async function enforceGoalRulesOnUpdate(
 }
 
 /**
+ * Only counter-goals hang from evidence, judged on what the element will be
+ * once the update is applied: the new parent (input, else stored) and the
+ * counter-goal flag (input, else stored). An update that moves nothing and
+ * leaves the flag alone is not held to it, so an element already stored
+ * beneath evidence can still be edited. A parent outside the case or in the
+ * bin is left to the parent change, which answers "Element not found".
+ */
+async function enforceBeneathEvidenceOnUpdate(
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	},
+	input: UpdateElementInput
+): Promise<{ error: string } | undefined> {
+	const newParentId = resolveParentId(input);
+	if (newParentId === undefined && input.isDefeater === undefined) {
+		return;
+	}
+	const parentId = newParentId === undefined ? existing.parentId : newParentId;
+	if (!parentId) {
+		return;
+	}
+	const parent = await prisma.assuranceElement.findFirst({
+		where: { id: parentId, caseId: existing.caseId, deletedAt: null },
+		select: { elementType: true },
+	});
+	if (
+		parent &&
+		isBeneathEvidenceRefused(
+			{
+				elementType: existing.elementType,
+				isDefeater: input.isDefeater ?? existing.isDefeater,
+			},
+			parent.elementType
+		)
+	) {
+		return { error: ONLY_COUNTER_GOALS_BENEATH_EVIDENCE };
+	}
+}
+
+/**
  * Runs every field-level validation guard `updateElement` needs before it
  * touches the update itself, in the exact order it previously ran them
  * inline: assertionStatus, moduleReferenceId, citedElementId,
@@ -1832,6 +1888,14 @@ async function validateUpdateElementFields(
 	);
 	if (goalRuleError) {
 		return goalRuleError;
+	}
+
+	const beneathEvidenceError = await enforceBeneathEvidenceOnUpdate(
+		existing,
+		input
+	);
+	if (beneathEvidenceError) {
+		return beneathEvidenceError;
 	}
 
 	// Named context entries: unique names on this element, and ids unique in
@@ -2287,7 +2351,12 @@ export async function attachElement(
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, elementType: true, deletedAt: true },
+			select: {
+				caseId: true,
+				elementType: true,
+				deletedAt: true,
+				isDefeater: true,
+			},
 		});
 
 		if (!existing) {
@@ -2325,6 +2394,10 @@ export async function attachElement(
 				parentId,
 				parentElement.elementType
 			);
+		}
+
+		if (isBeneathEvidenceRefused(existing, parentElement.elementType)) {
+			return { error: ONLY_COUNTER_GOALS_BENEATH_EVIDENCE };
 		}
 
 		// Validate parent change doesn't create circular reference

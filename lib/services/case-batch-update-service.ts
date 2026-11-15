@@ -16,6 +16,10 @@ import type {
 	ElementChange,
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
+import {
+	isBeneathEvidenceRefused,
+	ONLY_COUNTER_GOALS_BENEATH_EVIDENCE,
+} from "@/lib/element-compatibility";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { isWriteConflict } from "@/lib/prisma-errors";
@@ -791,6 +795,115 @@ async function validateCreateParents(
 	}
 
 	return null;
+}
+
+/**
+ * Only counter-goals hang from evidence, judged on where the batch leaves each
+ * element: a create under stored evidence or evidence created in the same
+ * batch, and an update that moves an element under evidence or changes the
+ * counter-goal flag of one already there. Updates that move nothing and leave
+ * the flag alone are not looked at, so elements already stored beneath
+ * evidence can still be edited.
+ */
+async function validateBeneathEvidence(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const placed = updates.filter(
+		(change) =>
+			change.data.parentId !== undefined || change.data.isDefeater !== undefined
+	);
+	const stored = new Map<
+		string,
+		{
+			elementType: PrismaElementType;
+			isDefeater: boolean;
+			parentId: string | null;
+		}
+	>();
+	if (placed.length > 0) {
+		const rows = await prisma.assuranceElement.findMany({
+			where: { id: { in: placed.map((change) => change.elementId) } },
+			select: {
+				id: true,
+				elementType: true,
+				isDefeater: true,
+				parentId: true,
+			},
+		});
+		for (const row of rows) {
+			stored.set(row.id, row);
+		}
+	}
+
+	const placements: {
+		child: { elementType: string; isDefeater: boolean | undefined };
+		elementId: string;
+		parentId: string;
+	}[] = [];
+	for (const change of creates) {
+		if (change.parentId) {
+			placements.push({
+				child: {
+					elementType: mapElementType(change.data.type),
+					isDefeater: change.data.isDefeater,
+				},
+				elementId: change.elementId,
+				parentId: change.parentId,
+			});
+		}
+	}
+	for (const change of placed) {
+		const row = stored.get(change.elementId);
+		const parentId =
+			change.data.parentId === undefined ? row?.parentId : change.data.parentId;
+		if (row && parentId) {
+			placements.push({
+				child: {
+					elementType: row.elementType,
+					isDefeater: change.data.isDefeater ?? row.isDefeater,
+				},
+				elementId: change.elementId,
+				parentId,
+			});
+		}
+	}
+
+	const createdTypes = new Map(
+		creates.map((change) => [
+			change.elementId,
+			mapElementType(change.data.type),
+		])
+	);
+	const storedParentIds = [
+		...new Set(
+			placements
+				.map((placement) => placement.parentId)
+				.filter((id) => !createdTypes.has(id))
+		),
+	];
+	const parentRows =
+		storedParentIds.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: storedParentIds } },
+					select: { id: true, elementType: true },
+				})
+			: [];
+	const parentTypes = new Map<string, string>([
+		...createdTypes,
+		...parentRows.map((row) => [row.id, row.elementType] as const),
+	]);
+
+	const refused = placements.find((placement) => {
+		const parentType = parentTypes.get(placement.parentId);
+		return (
+			parentType !== undefined &&
+			isBeneathEvidenceRefused(placement.child, parentType)
+		);
+	});
+	return refused
+		? `${ONLY_COUNTER_GOALS_BENEATH_EVIDENCE} (element ${refused.elementId})`
+		: null;
 }
 
 /**
@@ -1818,6 +1931,11 @@ export async function applyBatchUpdate(
 	const updateParentError = await validateUpdateParents(updates);
 	if (updateParentError) {
 		return { error: updateParentError };
+	}
+
+	const beneathEvidenceError = await validateBeneathEvidence(creates, updates);
+	if (beneathEvidenceError) {
+		return { error: beneathEvidenceError };
 	}
 
 	// TEA-syntax element-name prefix validation — same rule, same choke

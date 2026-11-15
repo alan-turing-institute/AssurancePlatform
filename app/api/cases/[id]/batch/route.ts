@@ -26,7 +26,7 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
  * @pathParam id - Case ID (UUID)
  * @body { changes: ElementChange[], expectedVersion?: string }
  * @response 200 - Success with summary of changes
- * @response 400 - Validation error (including a goal defeater without a parent, and an element changed more than once)
+ * @response 400 - Validation error (including a goal defeater without a parent, an element changed more than once, and anything but a counter-goal placed beneath evidence)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 409 - Conflict (case was modified)

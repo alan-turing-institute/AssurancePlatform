@@ -12,6 +12,8 @@
  *   module        → (terminal — leaf in 1.0 core, ADR 0005 D3)
  */
 
+import { isGoalDefeater } from "@/lib/transforms/build-tree";
+
 /**
  * Canonical lowercase type representation used internally.
  * All public functions normalise input before lookup.
@@ -150,4 +152,27 @@ export function canBeChildOf(childType: string, parentType: string): boolean {
 	}
 
 	return validChildren.includes(canonicalChild);
+}
+
+/**
+ * The refusal when something other than a counter-goal is put beneath a piece
+ * of evidence. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a
+ * 400.
+ */
+export const ONLY_COUNTER_GOALS_BENEATH_EVIDENCE =
+	"parentId cannot be a piece of evidence unless the element is a counter-goal";
+
+/**
+ * Whether placing a child beneath a parent of the given type breaks the rule
+ * that only counter-goals hang from evidence. A goal with `isDefeater` set is a
+ * counter-goal.
+ */
+export function isBeneathEvidenceRefused(
+	child: { elementType: string; isDefeater?: boolean | null },
+	parentType: string
+): boolean {
+	return (
+		normalise(parentType) === "evidence" &&
+		!isGoalDefeater(child.elementType.toUpperCase(), child.isDefeater ?? false)
+	);
 }

@@ -261,7 +261,8 @@ const ERROR_MAPPINGS: Array<{
 	// a goal defeater without a `parentId` would be a second root goal — a
 	// validation failure (400), not a 500. The same pattern answers a parentId
 	// on evidence through the general edit, and attaching evidence to anything
-	// other than a property claim.
+	// other than a property claim, and putting anything but a counter-goal
+	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
 	// A second ordinary goal in a case is a rule refusal (422), not a 500. It is
 	// not a 409: that code on the batch endpoint means another person changed
