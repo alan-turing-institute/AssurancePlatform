@@ -30,10 +30,7 @@ export type PatternSource = z.infer<typeof patternSourceSchema>;
  * the import takes them as given, so a blank value would name the new case
  * with nothing.
  */
-export const startedCaseNameSchema = newCaseNameSchema.refine(
-	(name) => name.length > 0,
-	"Case name is required"
-);
+export const startedCaseNameSchema = newCaseNameSchema;
 export const startedCaseDescriptionSchema = newCaseDescriptionSchema.refine(
 	(description) => description.length > 0,
 	"Description is required"

@@ -33,9 +33,9 @@ export const requiredString = (
 ) =>
 	z
 		.string()
+		.trim()
 		.min(minLength, `${fieldName} is required`)
 		.max(maxLength, `${fieldName} must be less than ${maxLength} characters`)
-		.transform((v) => v.trim())
 		.describe(`Required ${fieldName} field`);
 
 /**
