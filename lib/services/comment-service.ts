@@ -356,7 +356,8 @@ export async function createElementComment(
 
 /**
  * Deletes a comment by ID.
- * Returns "Permission denied" if the user is not the author and lacks EDIT access.
+ * Authors need COMMENT access to the case, everyone else needs EDIT.
+ * A case in Trash refuses everyone with "Permission denied".
  */
 export async function deleteComment(
 	commentId: string,
@@ -397,7 +398,8 @@ interface UpdatedCommentData {
 
 /**
  * Updates the content of a comment by ID.
- * Returns "Permission denied" if the user is not the author and lacks EDIT access.
+ * Authors need COMMENT access to the case, everyone else needs EDIT.
+ * A case in Trash refuses everyone with "Permission denied".
  */
 export async function updateComment(
 	commentId: string,
@@ -447,7 +449,8 @@ export async function updateComment(
 
 /**
  * Resolves or unresolves a comment thread.
- * Returns "Permission denied" if the user is not the author and lacks EDIT access.
+ * Authors need COMMENT access to the case, everyone else needs EDIT.
+ * A case in Trash refuses everyone with "Permission denied".
  */
 export async function resolveComment(
 	commentId: string,

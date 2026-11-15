@@ -174,6 +174,26 @@ describe.each(VERBS)("%s /api/comments/[id]", (verb) => {
 		expect(await stored(comment.id)).toEqual(UNTOUCHED);
 	});
 
+	it("refuses an author whose share was removed, on a case-notes comment", async () => {
+		const s = await scene();
+		const user = await createTestUser();
+		const permission = await createTestPermission(
+			s.caseId,
+			user.id,
+			s.owner.id,
+			"COMMENT"
+		);
+		const comment = await createTestComment(user.id, {
+			caseId: s.caseId,
+			content: ORIGINAL,
+		});
+		await prisma.casePermission.delete({ where: { id: permission.id } });
+		await signInAs(user);
+
+		expect(await outcome(await call(verb, comment.id))).toMatchObject(REFUSED);
+		expect(await stored(comment.id)).toEqual(UNTOUCHED);
+	});
+
 	it("refuses an author who was removed from the team that had the case", async () => {
 		const s = await scene();
 		const user = await createTestUser();
