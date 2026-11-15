@@ -10,7 +10,7 @@
 export type Env = Record<string, string | undefined>;
 
 export type ResetDecision =
-	| { action: "skip"; reason: string }
+	| { action: "skip"; reason: string; quiet: boolean }
 	| { action: "refuse"; message: string }
 	| {
 			action: "reset";
@@ -52,7 +52,9 @@ function parseDatabaseUrl(
 	if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
 		return null;
 	}
-	if (!database) {
+	// A name holding "/" or "@" means the path or credentials were malformed
+	// (for example an unencoded "/" in a password); the real target is unclear.
+	if (!database || database.includes("/") || database.includes("@")) {
 		return null;
 	}
 	return {
@@ -64,12 +66,13 @@ function parseDatabaseUrl(
 
 export function decideE2eDatabaseReset(env: Env): ResetDecision {
 	if (env.CI) {
-		return { action: "skip", reason: "CI is set" };
+		return { action: "skip", reason: "CI is set", quiet: true };
 	}
 	if (isSwitchOn(env.E2E_SKIP_DB_RESET)) {
 		return {
 			action: "skip",
 			reason: "E2E_SKIP_DB_RESET is set; skipping database reset and seed",
+			quiet: false,
 		};
 	}
 
@@ -115,7 +118,7 @@ export function runE2eDatabaseReset(env: Env, exec: ExecFn): void {
 	const decision = decideE2eDatabaseReset(env);
 
 	if (decision.action === "skip") {
-		if (decision.reason !== "CI is set") {
+		if (!decision.quiet) {
 			console.log(decision.reason);
 		}
 		return;

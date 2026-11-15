@@ -57,13 +57,30 @@ describe("decideE2eDatabaseReset", () => {
 		});
 	});
 
-	it("resets a differently named database when E2E_ALLOW_RESET is set", () => {
+	it.each([
+		"1",
+		"true",
+	])("resets a differently named database when E2E_ALLOW_RESET is %s", (value) => {
 		expect(
 			decideE2eDatabaseReset({
 				DATABASE_URL: url("tea_dev"),
-				E2E_ALLOW_RESET: "1",
+				E2E_ALLOW_RESET: value,
 			}).action
 		).toBe("reset");
+	});
+
+	it("falls through to the guard when CI is blank", () => {
+		expect(
+			decideE2eDatabaseReset({ CI: "", DATABASE_URL: url("tea_dev") }).action
+		).toBe("refuse");
+	});
+
+	it("reads the default port when the address has none", () => {
+		expect(
+			decideE2eDatabaseReset({
+				DATABASE_URL: "postgresql://u:p@localhost/tea_e2e",
+			})
+		).toMatchObject({ action: "reset", port: "5432" });
 	});
 
 	it("ignores a query string when reading the database name", () => {
@@ -80,14 +97,32 @@ describe("decideE2eDatabaseReset", () => {
 		"not a url",
 		"mysql://u:p@localhost/tea_test",
 		"postgresql://u:p@localhost:5433",
+		"postgresql://u:p@localhost:5433/tea_dev/x_e2e",
+		"postgresql://user:12/secret@host/tea_dev",
 	])("refuses an unusable URL %j", (value) => {
 		expect(decideE2eDatabaseReset({ DATABASE_URL: value }).action).toBe(
 			"refuse"
 		);
 	});
 
+	it("refuses a malformed address with the generic message", () => {
+		expect(
+			decideE2eDatabaseReset({
+				DATABASE_URL: "postgresql://user:12/secret@host/tea_dev",
+			})
+		).toEqual({
+			action: "refuse",
+			message: expect.stringContaining("is not a postgres URL"),
+		});
+	});
+
 	it("never puts the user name or password in a refusal", () => {
-		for (const value of [url("tea_dev"), "postgresql://tea_owner:s3cret-pw@"]) {
+		for (const value of [
+			url("tea_dev"),
+			"postgresql://tea_owner:s3cret-pw@",
+			"postgresql://tea_owner:s3cret-pw@localhost:5433/tea_dev/x_e2e",
+			"postgresql://tea_owner:12/s3cret-pw@host/tea_dev",
+		]) {
 			const decision = decideE2eDatabaseReset({ DATABASE_URL: value });
 			expect(decision.action).toBe("refuse");
 			const text = JSON.stringify(decision);
@@ -125,5 +160,19 @@ describe("runE2eDatabaseReset", () => {
 		const exec = vi.fn();
 		runE2eDatabaseReset({ CI: "true", DATABASE_URL: url("tea_dev") }, exec);
 		expect(exec).not.toHaveBeenCalled();
+	});
+
+	it("logs the skip when E2E_SKIP_DB_RESET is set but stays quiet under CI", () => {
+		const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		const exec = vi.fn();
+		try {
+			runE2eDatabaseReset({ CI: "true" }, exec);
+			expect(log).not.toHaveBeenCalled();
+			runE2eDatabaseReset({ E2E_SKIP_DB_RESET: "1" }, exec);
+			expect(log).toHaveBeenCalledWith(expect.stringContaining("skipping"));
+			expect(exec).not.toHaveBeenCalled();
+		} finally {
+			log.mockRestore();
+		}
 	});
 });
