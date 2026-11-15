@@ -11,6 +11,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { usePermissionsModal } from "@/hooks/modal-hooks";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 
 interface Member {
@@ -111,7 +112,10 @@ export const PermissionsModal = () => {
 	};
 
 	useEffect(() => {
-		if (assuranceCase && assuranceCase.permissions === "manage") {
+		if (
+			assuranceCase &&
+			caseAccessAtLeast(assuranceCase.permissions, "manage")
+		) {
 			fetchCaseMembers().then((result) => {
 				if (result?.user_permissions) {
 					// Map Prisma permission levels to UI categories

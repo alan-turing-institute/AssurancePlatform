@@ -47,7 +47,7 @@ async function renderNotes(
 		caseNotes: [],
 	});
 	render(<NotesFeed />);
-	await screen.findByText(notes[0].content);
+	await screen.findByText(notes[0]?.content ?? "");
 	await waitFor(() => expect(fetchCaseComments).toHaveBeenCalled());
 }
 

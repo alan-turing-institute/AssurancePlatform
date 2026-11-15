@@ -1,6 +1,7 @@
 "use client";
 
 import { Shapes } from "lucide-react";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 
 /**
@@ -13,7 +14,7 @@ import useStore from "@/store/store";
 export function PatternBanner() {
 	const kind = useStore((state) => state.assuranceCase?.kind);
 	const permissions = useStore((state) => state.assuranceCase?.permissions);
-	const canEdit = permissions === "edit" || permissions === "manage";
+	const canEdit = caseAccessAtLeast(permissions, "edit");
 
 	if (kind !== "PATTERN") {
 		return null;

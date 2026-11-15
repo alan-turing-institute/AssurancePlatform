@@ -373,13 +373,14 @@ describe("comments panel — Resolve follows a change of access while the panel 
 });
 
 describe("comments panel — permission values outside the four", () => {
-	it("with no case loaded, Resolve is offered on the viewer's own comment and not on anyone else's", async () => {
+	it("with no case loaded, there is no form and no comment action", async () => {
 		const theirs = makeComment(1, SOMEONE_ELSE);
 		const mine = makeComment(2, SIGNED_IN_AS);
 		await renderPanel(null, [theirs, mine]);
 
-		expect(actionsOn(theirs)).not.toContain("Resolve");
-		expect(actionsOn(mine)).toContain("Resolve");
+		expect(screen.queryByPlaceholderText(FORM_PLACEHOLDER)).toBeNull();
+		expect(actionsOn(theirs)).toEqual([]);
+		expect(actionsOn(mine)).toEqual([]);
 	});
 
 	it.each([

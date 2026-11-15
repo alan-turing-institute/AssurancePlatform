@@ -56,12 +56,13 @@ describe("edit forms keep the stored comment's state", () => {
 		await userEvent.click(screen.getByRole("button", { name: SAVE }));
 
 		await waitFor(() =>
-			expect(useStore.getState().nodeComments[0].content).toBe("Changed")
+			expect(useStore.getState().nodeComments[0]?.content).toBe("Changed")
 		);
 		const after = useStore.getState().nodeComments[0];
-		expect(after.replies).toHaveLength(1);
-		expect(after.resolved).toBe(true);
-		expect(after.authorId).toBe("u1");
+		expect(after).toBeDefined();
+		expect(after?.replies).toHaveLength(1);
+		expect(after?.resolved).toBe(true);
+		expect(after?.authorId).toBe("u1");
 	});
 
 	it("names the comment edit box", () => {
@@ -79,8 +80,8 @@ describe("edit forms keep the stored comment's state", () => {
 		await userEvent.click(screen.getByRole("button", { name: SAVE }));
 
 		await waitFor(() =>
-			expect(useStore.getState().caseNotes[0].content).toBe("Changed")
+			expect(useStore.getState().caseNotes[0]?.content).toBe("Changed")
 		);
-		expect(useStore.getState().caseNotes[0].authorId).toBe("u1");
+		expect(useStore.getState().caseNotes[0]?.authorId).toBe("u1");
 	});
 });

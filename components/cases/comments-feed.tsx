@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import { wroteComment } from "@/lib/case/comment-authorship";
 import { formatShortDate } from "@/lib/date";
 import type { CommentResponse } from "@/lib/services/comment-service";
@@ -322,12 +323,10 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
 	const currentUserId = session?.user?.id;
 	const currentUsername = session?.user?.name || session?.user?.email;
-	const canEdit = assuranceCase?.permissions !== "view";
+	const canEdit = caseAccessAtLeast(assuranceCase?.permissions, "comment");
 	// A commenter may resolve only their own threads; edit and manage access
 	// may resolve any thread.
-	const canResolveAny =
-		assuranceCase?.permissions === "edit" ||
-		assuranceCase?.permissions === "manage";
+	const canResolveAny = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	const handleDelete = async (id: number | string) => {
 		try {

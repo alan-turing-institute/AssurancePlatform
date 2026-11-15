@@ -15,6 +15,7 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
 import { Button } from "../ui/button";
@@ -42,6 +43,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 	setUnresolvedChanges,
 }) => {
 	const { assuranceCase } = useStore();
+	const canManage = caseAccessAtLeast(assuranceCase?.permissions, "manage");
 	const [loading, setLoading] = useState(false);
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -111,7 +113,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 						<FormItem>
 							<FormLabel className="flex items-center justify-start gap-2">
 								Name
-								{assuranceCase?.permissions !== "manage" && (
+								{!canManage && (
 									<span
 										className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
 										title="Read Only"
@@ -121,10 +123,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 								)}
 							</FormLabel>
 							<FormControl>
-								<Input
-									{...field}
-									readOnly={assuranceCase?.permissions !== "manage"}
-								/>
+								<Input {...field} readOnly={!canManage} />
 							</FormControl>
 							<FormMessage />
 						</FormItem>
@@ -137,7 +136,7 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 						<FormItem>
 							<FormLabel className="flex items-center justify-start gap-2">
 								Description
-								{assuranceCase?.permissions !== "manage" && (
+								{!canManage && (
 									<span
 										className="flex items-center justify-start gap-2 py-2 text-muted-foreground text-xs"
 										title="Read Only"
@@ -147,18 +146,14 @@ const CaseEditForm: React.FC<CaseEditFormProps> = ({
 								)}
 							</FormLabel>
 							<FormControl>
-								<Textarea
-									rows={8}
-									{...field}
-									readOnly={assuranceCase?.permissions !== "manage"}
-								/>
+								<Textarea rows={8} {...field} readOnly={!canManage} />
 							</FormControl>
 							<FormMessage />
 						</FormItem>
 					)}
 				/>
 				<div className="flex items-center justify-start gap-3">
-					{assuranceCase?.permissions === "manage" && (
+					{canManage && (
 						<Button
 							className="bg-primary text-primary-foreground hover:bg-primary/90"
 							disabled={loading}

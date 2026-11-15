@@ -3,6 +3,7 @@
 import { MessageCircle, Pencil } from "lucide-react";
 import type { Node } from "reactflow";
 import ActionTooltip from "@/components/ui/action-tooltip";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 import type { DiagramNodeType } from "./node-config";
 import NodeOptionsMenu from "./node-options-menu";
@@ -49,10 +50,7 @@ export default function NodeActionGroup({
 		readOnlyCanvas,
 	} = useStore();
 
-	const readOnly = !!(
-		assuranceCase?.permissions === "view" ||
-		assuranceCase?.permissions === "comment"
-	);
+	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	const handleEditClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
