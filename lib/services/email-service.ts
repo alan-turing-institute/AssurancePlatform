@@ -26,6 +26,21 @@ function renderEmailHeader(): string {
 `;
 }
 
+// A provider's own error text can quote the recipient, so a failed send is
+// reported as a fixed message plus the provider's short error code, and only
+// when that code looks like a code.
+const PROVIDER_CODE_PATTERN = /^[A-Za-z0-9_.-]{1,64}$/;
+
+function safeProviderCode(code: unknown): string | undefined {
+	return typeof code === "string" && PROVIDER_CODE_PATTERN.test(code)
+		? code
+		: undefined;
+}
+
+function sendFailureMessage(code: string | undefined): string {
+	return code ? `Email sending failed (${code})` : "Email sending failed";
+}
+
 // Types
 type EmailResult = { data: { messageId: string } } | { error: string };
 
@@ -205,14 +220,16 @@ async function sendEmail(
 			return { data: { messageId: result.id } };
 		}
 
-		return {
-			error: result.error?.message || "Email sending failed",
-		};
+		const code = safeProviderCode(result.error?.code);
+		log.error("Email sending failed", { code });
+		return { error: sendFailureMessage(code) };
 	} catch (error) {
-		log.error("Email sending error", { error });
-		return {
-			error: error instanceof Error ? error.message : "Unknown email error",
-		};
+		const code = safeProviderCode((error as { code?: unknown } | null)?.code);
+		log.error("Email sending error", {
+			name: error instanceof Error ? error.name : "UnknownError",
+			code,
+		});
+		return { error: sendFailureMessage(code) };
 	}
 }
 

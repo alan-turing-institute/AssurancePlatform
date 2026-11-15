@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { identifierFingerprint } from "@/lib/auth/sign-in-identifier";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
@@ -210,8 +211,10 @@ export async function acceptInvite(
 				metadata: {
 					inviteToken: `${inviteToken.substring(0, 8)}...`,
 					...("inviteId" in result && { inviteId: result.inviteId }),
-					...("inviteEmail" in result && { inviteEmail: result.inviteEmail }),
-					userEmail: user.email,
+					...("inviteEmail" in result && {
+						inviteIdentifier: identifierFingerprint(result.inviteEmail),
+					}),
+					userIdentifier: identifierFingerprint(user.email),
 				},
 			});
 

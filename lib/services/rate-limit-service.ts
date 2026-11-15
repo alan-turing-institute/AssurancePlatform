@@ -1,5 +1,6 @@
 import {
 	countedName,
+	identifierFingerprint,
 	isEmailName,
 	signInIdentifierKey,
 } from "@/lib/auth/sign-in-identifier";
@@ -432,7 +433,7 @@ export async function checkAndRecordRateLimit(
 				reason: result.reason,
 				identifiers: {
 					ip: identifiers.ipAddress,
-					email: identifiers.email,
+					identifier: identifierFingerprint(identifiers.email),
 					userId: identifiers.userId,
 				},
 				securityContext,
