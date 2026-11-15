@@ -8,6 +8,7 @@ import {
 	serialiseOpenApi,
 } from "@/scripts/openapi/correct-openapi";
 import { OPERATIONS } from "@/scripts/openapi/operations";
+import { REQUEST_BODIES } from "@/scripts/openapi/request-bodies";
 
 /**
  * The published API description (public/openapi.json) must say what the
@@ -417,6 +418,70 @@ const SCHEME_MARKERS: [string, string][] = [
 	]),
 ];
 
+/** Calls that read a request body, and which argument holds the schema (-1: none passed). */
+const BODY_READERS: [string, number][] = [
+	["parseJsonBody(", 1],
+	["parseHealthBody(", 1],
+	["handleHealthRecordAction(", 2],
+	["readJsonBody(", -1],
+	["readFormDataWithLimit(", -1],
+];
+
+/** A body read the checks do not know how to compare with the description. */
+const UNRECOGNISED_BODY_READ =
+	/\b(?:request|req)\.(?:json|text|formData|arrayBuffer|blob)\(|\.formData\(/;
+
+function readsBody(handler: Handler): boolean {
+	return BODY_READERS.some(([marker]) => handler.reach.includes(marker));
+}
+
+/** The schema names a handler passes to its body readers. */
+function bodySchemaArguments(handler: Handler): string[] {
+	return BODY_READERS.filter(([, position]) => position >= 0).flatMap(
+		([marker, position]) =>
+			calls(handler.reach, marker).map((args) => args[position]?.trim() ?? "")
+	);
+}
+
+function mentions(text: string, name: string): boolean {
+	return new RegExp(`\\b${name}\\b`).test(text);
+}
+
+/** What is wrong with the body a handler reads compared with the table's entry; empty when nothing. */
+function bodyProblems(handler: Handler): string[] {
+	const entry = REQUEST_BODIES[handler.id];
+	const problems: string[] = [];
+	if (UNRECOGNISED_BODY_READ.test(handler.reach)) {
+		problems.push("reads the body in a way the checks do not recognise");
+	}
+	if (readsBody(handler) !== (entry !== undefined)) {
+		problems.push(
+			entry ? "has a body entry but reads none" : "reads a body with no entry"
+		);
+	}
+	if (!entry) {
+		return problems;
+	}
+	for (const source of entry.sources) {
+		if (!mentions(handler.reach, source)) {
+			problems.push(`does not use ${source}`);
+		}
+	}
+	for (const schema of bodySchemaArguments(handler)) {
+		if (!entry.sources.includes(schema)) {
+			problems.push(`validates with ${schema}, not in the entry`);
+		}
+	}
+	if (entry.required === handler.reach.includes("emptyBodyAs")) {
+		problems.push(`required is ${entry.required}`);
+	}
+	return problems;
+}
+
+function documentedBody(operation: Json): Json | undefined {
+	return operation.requestBody as Json | undefined;
+}
+
 /** The operations that ask for no sign-in on purpose. */
 const PUBLIC_OPERATIONS = [
 	"GET /auth/reset-password",
@@ -641,6 +706,70 @@ describe("the published API description matches the routes", () => {
 					`${id}: documented [${documented}] / requires [${required}]`
 			);
 		expect(wrong, `${wrong.length} operations differ`).toEqual([]);
+	});
+
+	it("(f) every handler that reads a body has the right body, and none else has one", () => {
+		const byKey = new Map(operations());
+		const wrong = allHandlers().flatMap((handler) => {
+			const documented = documentedBody(byKey.get(handler.id) as Json);
+			const entry = REQUEST_BODIES[handler.id];
+			const problems = bodyProblems(handler);
+			if (Boolean(documented) !== Boolean(entry)) {
+				problems.push("the description and the table disagree");
+			}
+			return problems.map((problem) => `${handler.id}: ${problem}`);
+		});
+		expect(wrong, `${wrong.length} problems`).toEqual([]);
+	});
+
+	it("(f2) the described body is the table's schema", () => {
+		const byKey = new Map(operations());
+		const wrong = Object.entries(REQUEST_BODIES)
+			.filter(([key, entry]) => {
+				const content = (documentedBody(byKey.get(key) as Json)?.content ??
+					{}) as Record<string, Json>;
+				return (
+					JSON.stringify(content[entry.contentType]?.schema) !==
+					JSON.stringify(entry.schema)
+				);
+			})
+			.map(([key]) => key);
+		expect(wrong).toEqual([]);
+	});
+
+	it("(f3) a body read the checks do not recognise is reported", () => {
+		const reads = [
+			"const body = await request.json();",
+			"const form = await request.formData();",
+		];
+		const problems = reads.map((read, i) => {
+			const [handler] = handlersInSource(
+				`export async function POST(request: Request) {\n\t${read}\n\treturn apiSuccess({});\n}\n`,
+				`/f${i}`
+			);
+			return handler ? bodyProblems(handler) : [];
+		});
+		expect(problems.map((list) => list.length > 0)).toEqual([true, true]);
+	});
+
+	it("(f4) a body read with no table entry, or the wrong schema, is reported", () => {
+		const [none] = handlersInSource(
+			"export async function POST(request: Request) {\n\tawait parseJsonBody(request, someSchema);\n\treturn apiSuccess({});\n}\n",
+			"/f-none"
+		);
+		expect(none ? bodyProblems(none) : []).toContain(
+			"reads a body with no entry"
+		);
+		const [wrong] = handlersInSource(
+			"export async function POST(request: Request) {\n\tawait parseJsonBody(request, otherSchema);\n\treturn apiSuccess({});\n}\n",
+			"/teams"
+		);
+		expect(wrong ? bodyProblems(wrong) : []).toEqual(
+			expect.arrayContaining([
+				"does not use createTeamSchema",
+				"validates with otherSchema, not in the entry",
+			])
+		);
 	});
 
 	it("(h) running the correction step on the committed file changes nothing", () => {

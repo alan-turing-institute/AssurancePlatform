@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { correctOpenApi } from "@/scripts/openapi/correct-openapi";
 import { OPERATIONS, QUERY_PARAMETERS } from "@/scripts/openapi/operations";
+import { REQUEST_BODIES } from "@/scripts/openapi/request-bodies";
 
 type Json = Record<string, any>;
 
@@ -22,41 +23,33 @@ function schemaOf(document: Json, route: string, method: string): Json {
 }
 
 describe("the correction step", () => {
-	it("replaces the two import references that point at nothing", () => {
-		const spec = freshSpec();
-		const body = {
-			content: {
-				"application/json": {
-					schema: { $ref: "#/components/schemas/JSON case data to validate" },
-				},
-			},
-		};
-		spec.paths["/cases/import"].put.requestBody = body;
-		spec.paths["/cases/import"].post.requestBody = {
-			content: {
-				"application/json": {
-					schema: {
-						$ref: "#/components/schemas/JSON case data in any supported format",
-					},
-				},
-			},
-		};
-		const corrected = correctOpenApi(spec) as Json;
-		expect(
-			corrected.paths["/cases/import"].put.requestBody.content[
-				"application/json"
-			].schema
-		).toEqual({ type: "object" });
-		expect(
-			corrected.paths["/cases/import"].post.requestBody.content[
-				"application/json"
-			].schema
-		).toEqual({ type: "object" });
+	it("describes both import bodies by the case export schema", () => {
+		const corrected = correctOpenApi(freshSpec()) as Json;
+		for (const method of ["post", "put"]) {
+			expect(
+				corrected.paths["/cases/import"][method].requestBody.content[
+					"application/json"
+				].schema
+			).toEqual({ $ref: "#/components/schemas/CaseExport" });
+		}
 	});
 
-	it("throws on a reference to any other missing schema", () => {
+	it("replaces a request body the generator wrote with the table's, and drops one the table lacks", () => {
 		const spec = freshSpec();
-		spec.paths["/health"].get.requestBody = {
+		spec.paths["/health"].get.requestBody = { content: {} };
+		spec.paths["/teams"].post.requestBody = { content: {} };
+		const corrected = correctOpenApi(spec) as Json;
+		expect(corrected.paths["/health"].get.requestBody).toBeUndefined();
+		expect(
+			corrected.paths["/teams"].post.requestBody.content["application/json"]
+				.schema.required
+		).toEqual(["name"]);
+	});
+
+	it("throws on a reference to a schema that does not exist", () => {
+		const spec = freshSpec();
+		spec.paths["/health"].get.responses["400"] = {
+			description: "x",
 			content: {
 				"application/json": {
 					schema: { $ref: "#/components/schemas/Teem" },
@@ -66,25 +59,14 @@ describe("the correction step", () => {
 		expect(() => correctOpenApi(spec)).toThrow("Teem");
 	});
 
-	it("throws when an import reference appears on any other operation", () => {
-		const spec = freshSpec();
-		spec.paths["/health"].get.requestBody = {
-			content: {
-				"application/json": {
-					schema: { $ref: "#/components/schemas/JSON case data to validate" },
-				},
-			},
-		};
-		expect(() => correctOpenApi(spec)).toThrow("JSON case data to validate");
-	});
-
 	it("throws on a missing schema referred to from a kept schema", () => {
 		const spec = freshSpec();
 		spec.components.schemas.Holder = {
 			type: "object",
 			properties: { inner: { $ref: "#/components/schemas/Gone" } },
 		};
-		spec.paths["/health"].get.requestBody = {
+		spec.paths["/health"].get.responses["400"] = {
+			description: "x",
 			content: {
 				"application/json": {
 					schema: { $ref: "#/components/schemas/Holder" },
@@ -92,6 +74,19 @@ describe("the correction step", () => {
 			},
 		};
 		expect(() => correctOpenApi(spec)).toThrow("Gone");
+	});
+
+	it("throws for a request body entry with no operation", () => {
+		const entry = REQUEST_BODIES["POST /teams"];
+		if (!entry) {
+			throw new Error("fixture missing");
+		}
+		REQUEST_BODIES["POST /not-a-route"] = entry;
+		try {
+			expect(() => correctOpenApi(freshSpec())).toThrow("POST /not-a-route");
+		} finally {
+			Reflect.deleteProperty(REQUEST_BODIES, "POST /not-a-route");
+		}
 	});
 
 	it("throws when a table entry names a schema that does not exist", () => {

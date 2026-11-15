@@ -37,6 +37,288 @@
       }
     },
     "schemas": {
+      "CaseExport": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "enum": [
+              "1.0",
+              "1.1"
+            ],
+            "description": "Schema version identifier. \"1.1\" adds named context entries (which can be variables), references in element text, case.kind and placeholders"
+          },
+          "exportedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of export"
+          },
+          "case": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Name of the assurance case"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the assurance case"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "CASE",
+                  "PATTERN"
+                ],
+                "description": "What the case is - CASE for an ordinary case, PATTERN for a reusable pattern that cases are started from. Omitted means CASE"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "description": "Case metadata"
+          },
+          "tree": {
+            "description": "Root element of the case tree",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CaseTreeNode"
+              }
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "exportedAt",
+          "case",
+          "tree"
+        ],
+        "description": "Assurance case export in nested tree format (v1.0 and v1.1)"
+      },
+      "CaseTreeNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the element"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "GOAL",
+              "CONTEXT",
+              "STRATEGY",
+              "PROPERTY_CLAIM",
+              "EVIDENCE",
+              "JUSTIFICATION",
+              "ASSUMPTION",
+              "MODULE",
+              "AWAY_GOAL",
+              "CONTRACT"
+            ],
+            "description": "The type of element in an assurance case"
+          },
+          "name": {
+            "nullable": true,
+            "description": "Display name (e.g., G1, S1, P1, E1)",
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "The element's content/description"
+          },
+          "inSandbox": {
+            "default": false,
+            "description": "Whether this element is in the sandbox (draft state)",
+            "type": "boolean"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/CaseTreeNode"
+                }
+              ]
+            },
+            "description": "Child elements"
+          },
+          "role": {
+            "nullable": true,
+            "type": "string",
+            "enum": [
+              "TOP_LEVEL",
+              "SUPPORTING"
+            ],
+            "description": "The role of an element - TOP_LEVEL for root goals, SUPPORTING for child elements"
+          },
+          "assumption": {
+            "nullable": true,
+            "type": "string"
+          },
+          "justification": {
+            "nullable": true,
+            "type": "string"
+          },
+          "context": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]{10}$",
+                      "description": "Identifier of the entry, unique within the case"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
+                      "description": "Name other text can refer to"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "What the name means"
+                    },
+                    "value": {
+                      "description": "Optional value for the name, such as a threshold",
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "variable": {
+                      "description": "True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "text"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A context entry with a name, a meaning and an optional value"
+                }
+              ],
+              "description": "A piece of context: plain text, or a named entry"
+            }
+          },
+          "url": {
+            "nullable": true,
+            "type": "string"
+          },
+          "level": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "moduleReferenceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "moduleEmbedType": {
+            "type": "string",
+            "enum": [
+              "COPY",
+              "REFERENCE"
+            ],
+            "description": "How a module is embedded - COPY creates independent copy, REFERENCE links to original"
+          },
+          "modulePublicSummary": {
+            "nullable": true,
+            "type": "string"
+          },
+          "citedElementId": {
+            "nullable": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromPattern": {
+            "description": "Whether this element was created from a pattern template",
+            "default": false,
+            "type": "boolean"
+          },
+          "modifiedFromPattern": {
+            "description": "Whether this element has been modified since being created from a pattern",
+            "default": false,
+            "type": "boolean"
+          },
+          "isPlaceholder": {
+            "description": "Whether the person using the case or pattern writes this element's text",
+            "default": false,
+            "type": "boolean"
+          },
+          "placeholderHint": {
+            "description": "Guidance for whoever fills in a placeholder element",
+            "nullable": true,
+            "type": "string",
+            "maxLength": 500
+          },
+          "isDefeater": {
+            "description": "Whether this element is a defeater (dialogical reasoning)",
+            "type": "boolean"
+          },
+          "defeatsElementId": {
+            "description": "ID of the element this defeater targets",
+            "type": "string",
+            "format": "uuid"
+          },
+          "assertionStatus": {
+            "nullable": true,
+            "type": "string",
+            "enum": [
+              "ASSERTED",
+              "NEEDS_SUPPORT",
+              "ASSUMED",
+              "AXIOMATIC",
+              "DEFEATED",
+              "AS_CITED"
+            ],
+            "description": "Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+          },
+          "comments": {
+            "description": "Comments attached to this element. Can be added to any element type.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "author": {
+                  "type": "string",
+                  "description": "Username of the comment author"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Comment text content"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO 8601 timestamp of comment creation"
+                }
+              },
+              "required": [
+                "author",
+                "content",
+                "createdAt"
+              ],
+              "description": "A comment attached to an element"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "description",
+          "children"
+        ]
+      },
       "ClaimHealthStatus": {
         "type": "object",
         "properties": {
@@ -52,10 +334,6 @@
             "type": "boolean"
           }
         }
-      },
-      "GitHubImportSchema": {
-        "type": "string",
-        "description": "GitHub import request parameters"
       },
       "ImportResult": {
         "type": "object",
@@ -80,6 +358,38 @@
           }
         }
       },
+      "JsonValue": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              null
+            ]
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonValue"
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            }
+          }
+        ]
+      },
       "SuccessFlag": {
         "type": "object",
         "properties": {
@@ -87,19 +397,6 @@
             "type": "boolean"
           }
         }
-      },
-      "createConnectionSchema": {
-        "type": "string"
-      },
-      "multipart": {},
-      "quickSetupSchema": {
-        "type": "string"
-      },
-      "setRolesSchema": {
-        "type": "string"
-      },
-      "updateConnectionSchema": {
-        "type": "string"
       }
     },
     "responses": {
@@ -259,6 +556,26 @@
           "Auth"
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The same answer whether or not the account exists",
@@ -395,6 +712,31 @@
           "Auth"
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "token",
+                  "password"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The password was reset",
@@ -481,6 +823,30 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "caseId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "includeComments": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "caseId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The backup file",
@@ -599,10 +965,11 @@
         ],
         "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/CaseExport"
               }
             }
           }
@@ -669,10 +1036,11 @@
         ],
         "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/CaseExport"
               }
             }
           }
@@ -766,6 +1134,26 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "fileId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The imported case",
@@ -857,10 +1245,39 @@
         ],
         "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GitHubImportSchema"
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "GitHub URL or shorthand path to the JSON file"
+                  },
+                  "owner": {
+                    "description": "Repository owner (overrides URL parsing)",
+                    "type": "string"
+                  },
+                  "repo": {
+                    "description": "Repository name (overrides URL parsing)",
+                    "type": "string"
+                  },
+                  "path": {
+                    "description": "File path (overrides URL parsing)",
+                    "type": "string"
+                  },
+                  "branch": {
+                    "description": "Branch name (optional, uses default branch if not specified)",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false,
+                "description": "GitHub import request parameters"
               }
             }
           }
@@ -1108,6 +1525,40 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  },
+                  "colourProfile": {
+                    "type": "string"
+                  },
+                  "layoutDirection": {
+                    "type": "string",
+                    "enum": [
+                      "TB",
+                      "LR"
+                    ]
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Input schema for updating an assurance case"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated case",
@@ -1217,6 +1668,67 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "messages"
+                ],
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "role",
+                        "parts"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "assistant"
+                          ]
+                        },
+                        "parts": {
+                          "type": "array",
+                          "maxItems": 200,
+                          "items": {}
+                        }
+                      }
+                    }
+                  },
+                  "selectedElementId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "suggestionOutcomes": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": [
+                        "applied",
+                        "dismissed",
+                        "changed"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The assistant's reply as a stream of messages",
@@ -1266,6 +1778,429 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "changes": {
+                    "maxItems": 1000,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "create"
+                              ]
+                            },
+                            "elementId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "parentId": {
+                              "nullable": true,
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "data": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "type": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "inSandbox": {
+                                  "type": "boolean"
+                                },
+                                "role": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "assertionStatus": {
+                                  "nullable": true,
+                                  "type": "string",
+                                  "enum": [
+                                    "ASSERTED",
+                                    "NEEDS_SUPPORT",
+                                    "ASSUMED",
+                                    "AXIOMATIC",
+                                    "DEFEATED",
+                                    "AS_CITED"
+                                  ],
+                                  "description": "Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+                                },
+                                "assumption": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "justification": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "context": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "pattern": "^[a-z0-9]{10}$",
+                                            "description": "Identifier of the entry, unique within the case"
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 40,
+                                            "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
+                                            "description": "Name other text can refer to"
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "description": "What the name means"
+                                          },
+                                          "value": {
+                                            "description": "Optional value for the name, such as a threshold",
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          "variable": {
+                                            "description": "True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out",
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "text"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "A context entry with a name, a meaning and an optional value"
+                                      }
+                                    ],
+                                    "description": "A piece of context: plain text, or a named entry"
+                                  }
+                                },
+                                "url": {
+                                  "description": "Nullable web address field — null means 'clear this value'",
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "level": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "moduleReferenceId": {
+                                  "type": "string"
+                                },
+                                "moduleEmbedType": {
+                                  "type": "string"
+                                },
+                                "modulePublicSummary": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "isDefeater": {
+                                  "type": "boolean"
+                                },
+                                "defeatsElementId": {
+                                  "type": "string"
+                                },
+                                "isPlaceholder": {
+                                  "type": "boolean"
+                                },
+                                "placeholderHint": {
+                                  "description": "Guidance for whoever fills in a placeholder element",
+                                  "nullable": true,
+                                  "type": "string",
+                                  "maxLength": 500
+                                },
+                                "fromPattern": {
+                                  "type": "boolean"
+                                },
+                                "modifiedFromPattern": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "type",
+                                "name",
+                                "description",
+                                "inSandbox"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "elementId",
+                            "parentId",
+                            "data"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "update"
+                              ]
+                            },
+                            "elementId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "data": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "inSandbox": {
+                                  "type": "boolean"
+                                },
+                                "parentId": {
+                                  "nullable": true,
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "role": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "assertionStatus": {
+                                  "nullable": true,
+                                  "type": "string",
+                                  "enum": [
+                                    "ASSERTED",
+                                    "NEEDS_SUPPORT",
+                                    "ASSUMED",
+                                    "AXIOMATIC",
+                                    "DEFEATED",
+                                    "AS_CITED"
+                                  ],
+                                  "description": "Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+                                },
+                                "assumption": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "justification": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "context": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "pattern": "^[a-z0-9]{10}$",
+                                            "description": "Identifier of the entry, unique within the case"
+                                          },
+                                          "name": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 40,
+                                            "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
+                                            "description": "Name other text can refer to"
+                                          },
+                                          "text": {
+                                            "type": "string",
+                                            "description": "What the name means"
+                                          },
+                                          "value": {
+                                            "description": "Optional value for the name, such as a threshold",
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          "variable": {
+                                            "description": "True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out",
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "id",
+                                          "name",
+                                          "text"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "A context entry with a name, a meaning and an optional value"
+                                      }
+                                    ],
+                                    "description": "A piece of context: plain text, or a named entry"
+                                  }
+                                },
+                                "url": {
+                                  "description": "Nullable web address field — null means 'clear this value'",
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "level": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "moduleReferenceId": {
+                                  "type": "string"
+                                },
+                                "moduleEmbedType": {
+                                  "type": "string"
+                                },
+                                "modulePublicSummary": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "isDefeater": {
+                                  "type": "boolean"
+                                },
+                                "defeatsElementId": {
+                                  "type": "string"
+                                },
+                                "isPlaceholder": {
+                                  "type": "boolean"
+                                },
+                                "placeholderHint": {
+                                  "description": "Guidance for whoever fills in a placeholder element",
+                                  "nullable": true,
+                                  "type": "string",
+                                  "maxLength": 500
+                                },
+                                "fromPattern": {
+                                  "type": "boolean"
+                                },
+                                "modifiedFromPattern": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "elementId",
+                            "data"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "delete"
+                              ]
+                            },
+                            "elementId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "elementId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "link_evidence"
+                              ]
+                            },
+                            "evidenceId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "claimId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "evidenceId",
+                            "claimId"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "unlink_evidence"
+                              ]
+                            },
+                            "evidenceId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "claimId": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "evidenceId",
+                            "claimId"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "expectedVersion": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "changes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "A summary of the changes made",
@@ -1441,6 +2376,34 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "description": "Required Content field",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  },
+                  "parentId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID v4 identifier"
+                  }
+                },
+                "required": [
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new comment",
@@ -1490,6 +2453,169 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Element type (e.g. goal, strategy, property, evidence)"
+                  },
+                  "elementType": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Element type (e.g. goal, strategy, property, evidence)"
+                  },
+                  "name": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "parentId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "url": {
+                    "description": "Optional web address field",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "URL": {
+                    "description": "Optional web address field",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "urls": {
+                    "type": "array",
+                    "items": {
+                      "description": "Web address, normalised to always include a scheme",
+                      "type": "string"
+                    }
+                  },
+                  "assumption": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "justification": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "context": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[a-z0-9]{10}$",
+                              "description": "Identifier of the entry, unique within the case"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 40,
+                              "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
+                              "description": "Name other text can refer to"
+                            },
+                            "text": {
+                              "type": "string",
+                              "description": "What the name means"
+                            },
+                            "value": {
+                              "description": "Optional value for the name, such as a threshold",
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "variable": {
+                              "description": "True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out",
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "text"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A context entry with a name, a meaning and an optional value"
+                        }
+                      ],
+                      "description": "A piece of context: plain text, or a named entry"
+                    }
+                  },
+                  "assertionStatus": {
+                    "nullable": true,
+                    "type": "string",
+                    "enum": [
+                      "ASSERTED",
+                      "NEEDS_SUPPORT",
+                      "ASSUMED",
+                      "AXIOMATIC",
+                      "DEFEATED",
+                      "AS_CITED"
+                    ],
+                    "description": "Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+                  },
+                  "citedElementId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "moduleReferenceId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "moduleEmbedType": {
+                    "type": "string",
+                    "enum": [
+                      "COPY",
+                      "REFERENCE"
+                    ]
+                  },
+                  "isDefeater": {
+                    "type": "boolean"
+                  },
+                  "defeatsElementId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "isPlaceholder": {
+                    "type": "boolean"
+                  },
+                  "placeholderHint": {
+                    "description": "Guidance for whoever fills in a placeholder element",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new element",
@@ -1788,6 +2914,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "image"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The saved image, or a notice that the upload was throttled",
@@ -1884,6 +3030,43 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "authors": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "sector": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "featureImageUrl": {
+                    "description": "Feature image URL — null clears it, omitted leaves it untouched",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The saved case information",
@@ -1934,10 +3117,20 @@
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/multipart"
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
               }
             }
           }
@@ -2196,6 +3389,82 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "team"
+                        ]
+                      },
+                      "teamId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "UUID v4 identifier"
+                      },
+                      "permission": {
+                        "type": "string",
+                        "enum": [
+                          "VIEW",
+                          "COMMENT",
+                          "EDIT",
+                          "ADMIN"
+                        ],
+                        "description": "Permission level for case access"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "teamId",
+                      "permission"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "user"
+                        ]
+                      },
+                      "email": {
+                        "description": "Valid email address",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 254,
+                        "format": "email"
+                      },
+                      "permission": {
+                        "type": "string",
+                        "enum": [
+                          "VIEW",
+                          "COMMENT",
+                          "EDIT",
+                          "ADMIN"
+                        ],
+                        "description": "Permission level for case access"
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "permission"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The user already has access",
@@ -2331,6 +3600,39 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "permission": {
+                    "type": "string",
+                    "enum": [
+                      "VIEW",
+                      "COMMENT",
+                      "EDIT",
+                      "ADMIN"
+                    ],
+                    "description": "Permission level for case access"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "team"
+                    ]
+                  }
+                },
+                "required": [
+                  "permission"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated permission",
@@ -2438,6 +3740,25 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The case was published",
@@ -2739,6 +4060,35 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetStatus": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PUBLISHED"
+                    ]
+                  },
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  }
+                },
+                "required": [
+                  "targetStatus"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The status was changed",
@@ -2856,6 +4206,28 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "description": "Required Content field",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  }
+                },
+                "required": [
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated comment",
@@ -2950,6 +4322,25 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resolved": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "resolved"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated comment",
@@ -3248,6 +4639,167 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "shortDescription": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "longDescription": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 10000
+                  },
+                  "parentId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "url": {
+                    "description": "Optional web address field",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "URL": {
+                    "description": "Optional web address field",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "urls": {
+                    "type": "array",
+                    "items": {
+                      "description": "Web address, normalised to always include a scheme",
+                      "type": "string"
+                    }
+                  },
+                  "assumption": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "justification": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "context": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^[a-z0-9]{10}$",
+                              "description": "Identifier of the entry, unique within the case"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 40,
+                              "pattern": "^\\p{L}[\\p{L}\\p{M}\\p{Nd} _-]*$",
+                              "description": "Name other text can refer to"
+                            },
+                            "text": {
+                              "type": "string",
+                              "description": "What the name means"
+                            },
+                            "value": {
+                              "description": "Optional value for the name, such as a threshold",
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            "variable": {
+                              "description": "True when the name is a variable: wherever it is mentioned, the case shows its value. False is accepted and means the same as leaving it out",
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "text"
+                          ],
+                          "additionalProperties": false,
+                          "description": "A context entry with a name, a meaning and an optional value"
+                        }
+                      ],
+                      "description": "A piece of context: plain text, or a named entry"
+                    }
+                  },
+                  "assertionStatus": {
+                    "nullable": true,
+                    "type": "string",
+                    "enum": [
+                      "ASSERTED",
+                      "NEEDS_SUPPORT",
+                      "ASSUMED",
+                      "AXIOMATIC",
+                      "DEFEATED",
+                      "AS_CITED"
+                    ],
+                    "description": "Per-assertion status of an element (SACM §11.8); unset is treated as ASSERTED"
+                  },
+                  "citedElementId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "moduleReferenceId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "isDefeater": {
+                    "type": "boolean"
+                  },
+                  "defeatsElementId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "isPlaceholder": {
+                    "type": "boolean"
+                  },
+                  "placeholderHint": {
+                    "description": "Guidance for whoever fills in a placeholder element",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "inSandbox": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated element",
@@ -3347,6 +4899,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "parentId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The element was attached",
@@ -3446,6 +5018,31 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "comment": {
+                    "type": "string"
+                  },
+                  "parentId": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID v4 identifier"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new comment",
@@ -3593,6 +5190,33 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "name",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The claim's status",
@@ -3689,6 +5313,210 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "integration_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID v4 identifier"
+                  },
+                  "settings": {
+                    "type": "object",
+                    "properties": {
+                      "check": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "version": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "scope": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "params": {}
+                        },
+                        "required": [
+                          "name",
+                          "version"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "rule": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "identity",
+                              "threshold",
+                              "band",
+                              "membership"
+                            ]
+                          },
+                          "direction": {
+                            "type": "string",
+                            "enum": [
+                              "maximize",
+                              "minimize",
+                              "target"
+                            ]
+                          },
+                          "params": {}
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "reduction": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "sum",
+                              "mean",
+                              "max",
+                              "min",
+                              "median",
+                              "percentile",
+                              "last"
+                            ]
+                          },
+                          "params": {},
+                          "rule": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "identity",
+                                  "threshold",
+                                  "band",
+                                  "membership"
+                                ]
+                              },
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "maximize",
+                                  "minimize",
+                                  "target"
+                                ]
+                              },
+                              "params": {}
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "aggregation": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "proportion",
+                              "worst-of",
+                              "percentile"
+                            ]
+                          },
+                          "params": {},
+                          "rule": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "identity",
+                                  "threshold",
+                                  "band",
+                                  "membership"
+                                ]
+                              },
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "maximize",
+                                  "minimize",
+                                  "target"
+                                ]
+                              },
+                              "params": {}
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "params"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "window": {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      "valid_for": {
+                        "type": "string",
+                        "maxLength": 64
+                      }
+                    },
+                    "required": [
+                      "check",
+                      "rule",
+                      "window",
+                      "valid_for"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "accept": {
+                    "type": "boolean"
+                  },
+                  "expected_revision": {
+                    "nullable": true,
+                    "type": "integer"
+                  },
+                  "add_evidence_node": {
+                    "type": "boolean"
+                  },
+                  "update_evidence_node_text": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "integration_id",
+                  "settings",
+                  "accept"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The claim's evidence settings",
@@ -3738,6 +5566,31 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "evidence_node": {
+                    "type": "string",
+                    "enum": [
+                      "keep",
+                      "remove"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The claim's evidence settings",
@@ -3844,6 +5697,27 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The claim's status after the record was reinstated",
@@ -3901,6 +5775,38 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cause": {
+                    "type": "string",
+                    "enum": [
+                      "evidence-defect",
+                      "binding-defect",
+                      "duplicate",
+                      "superseded",
+                      "other"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "cause",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The revocation and the claim's status",
@@ -3958,6 +5864,26 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "parentId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The element was moved",
@@ -4128,6 +6054,50 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Required Name field",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "scopes": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "case:read",
+                        "health:checks:write",
+                        "health:criteria:read",
+                        "health:evidence:read",
+                        "health:evidence:write"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "scopes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new integration, without a token",
@@ -4235,6 +6205,40 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "scopes": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "case:read",
+                        "health:checks:write",
+                        "health:criteria:read",
+                        "health:evidence:read",
+                        "health:evidence:write"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The integration",
@@ -4350,6 +6354,36 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "caseId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID v4 identifier"
+                  },
+                  "permission": {
+                    "type": "string",
+                    "enum": [
+                      "VIEW",
+                      "COMMENT",
+                      "EDIT"
+                    ]
+                  }
+                },
+                "required": [
+                  "caseId",
+                  "permission"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The grant already had this permission level",
@@ -4652,6 +6686,20 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expiresAt": {}
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new token and its secret, shown once",
@@ -5038,6 +7086,316 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pipeline": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "checks": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "version": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "scope": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "scope_label": {
+                          "type": "object",
+                          "properties": {
+                            "one": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "many": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            }
+                          },
+                          "required": [
+                            "one",
+                            "many"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "value": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "boolean"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "number"
+                                  ]
+                                },
+                                "unit": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "string"
+                                  ]
+                                },
+                                "allowed": {
+                                  "maxItems": 200,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  }
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "datetime"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "params": {},
+                        "recommended": {
+                          "type": "object",
+                          "properties": {
+                            "rule": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "identity",
+                                    "threshold",
+                                    "band",
+                                    "membership"
+                                  ]
+                                },
+                                "direction": {
+                                  "type": "string",
+                                  "enum": [
+                                    "maximize",
+                                    "minimize",
+                                    "target"
+                                  ]
+                                },
+                                "params": {},
+                                "version": {
+                                  "type": "string",
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "reduction": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "sum",
+                                    "mean",
+                                    "max",
+                                    "min",
+                                    "median",
+                                    "percentile",
+                                    "last"
+                                  ]
+                                },
+                                "params": {},
+                                "version": {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                "rule": {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "identity",
+                                        "threshold",
+                                        "band",
+                                        "membership"
+                                      ]
+                                    },
+                                    "direction": {
+                                      "type": "string",
+                                      "enum": [
+                                        "maximize",
+                                        "minimize",
+                                        "target"
+                                      ]
+                                    },
+                                    "params": {},
+                                    "version": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "aggregation": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "proportion",
+                                    "worst-of",
+                                    "percentile"
+                                  ]
+                                },
+                                "params": {},
+                                "rule": {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "identity",
+                                        "threshold",
+                                        "band",
+                                        "membership"
+                                      ]
+                                    },
+                                    "direction": {
+                                      "type": "string",
+                                      "enum": [
+                                        "maximize",
+                                        "minimize",
+                                        "target"
+                                      ]
+                                    },
+                                    "params": {},
+                                    "version": {
+                                      "type": "string",
+                                      "maxLength": 200
+                                    }
+                                  },
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "maxLength": 200
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "params"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "window": {
+                              "type": "string",
+                              "maxLength": 64
+                            },
+                            "valid_for": {
+                              "type": "string",
+                              "maxLength": 64
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "version",
+                        "scope",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "pipeline",
+                  "checks"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The checks that were stored",
@@ -5248,6 +7606,854 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "format_version": {
+                    "type": "string",
+                    "enum": [
+                      "1.1"
+                    ]
+                  },
+                  "record_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID v4 identifier"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "claim_ref": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID v4 identifier"
+                  },
+                  "check": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "scope": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "params": {}
+                    },
+                    "required": [
+                      "name",
+                      "version",
+                      "scope"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "rule": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "identity",
+                          "threshold",
+                          "band",
+                          "membership"
+                        ]
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "maximize",
+                          "minimize",
+                          "target"
+                        ]
+                      },
+                      "params": {},
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "version"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "reduction": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "sum",
+                          "mean",
+                          "max",
+                          "min",
+                          "median",
+                          "percentile",
+                          "last"
+                        ]
+                      },
+                      "params": {},
+                      "rule": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "identity",
+                              "threshold",
+                              "band",
+                              "membership"
+                            ]
+                          },
+                          "direction": {
+                            "type": "string",
+                            "enum": [
+                              "maximize",
+                              "minimize",
+                              "target"
+                            ]
+                          },
+                          "params": {},
+                          "version": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "version"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "version"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "aggregation": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "proportion",
+                          "worst-of",
+                          "percentile"
+                        ]
+                      },
+                      "params": {},
+                      "rule": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "identity",
+                              "threshold",
+                              "band",
+                              "membership"
+                            ]
+                          },
+                          "direction": {
+                            "type": "string",
+                            "enum": [
+                              "maximize",
+                              "minimize",
+                              "target"
+                            ]
+                          },
+                          "params": {},
+                          "version": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "version"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "params",
+                      "version"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "number": {
+                            "type": "number"
+                          },
+                          "unit": {
+                            "nullable": true,
+                            "type": "string",
+                            "maxLength": 100
+                          }
+                        },
+                        "required": [
+                          "number"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          null
+                        ]
+                      }
+                    ]
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "pass",
+                      "marginal",
+                      "fail",
+                      "indeterminate"
+                    ]
+                  },
+                  "window": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "valid_for": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "valid_while": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  },
+                  "uncertainty": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "interval",
+                          "std",
+                          "quantiles",
+                          "probability"
+                        ]
+                      },
+                      "params": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "$ref": "#/components/schemas/JsonValue"
+                        }
+                      },
+                      "level": {
+                        "type": "number",
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "maximum": 1
+                      },
+                      "method": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "validated": {
+                        "type": "boolean"
+                      },
+                      "nature": {
+                        "type": "string",
+                        "enum": [
+                          "predictive",
+                          "sampling"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "params",
+                      "method",
+                      "nature"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "judged": {
+                    "type": "object",
+                    "properties": {
+                      "statistic": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "method": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "value": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "statistic",
+                      "method",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "subject": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "provenance": {
+                    "type": "object",
+                    "properties": {
+                      "session": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                      },
+                      "pipeline_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 500
+                      },
+                      "run": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "twin_version": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "members": {
+                        "maxItems": 5000,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "UUID v4 identifier"
+                        }
+                      },
+                      "failed_subjects": {
+                        "maxItems": 5000,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "id": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "session",
+                      "pipeline_version"
+                    ],
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                null
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "payload": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/JsonValue"
+                    }
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "format_version",
+                  "record_id",
+                  "timestamp",
+                  "claim_ref",
+                  "check",
+                  "rule",
+                  "verdict",
+                  "window",
+                  "valid_for",
+                  "provenance"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The stored record and the claim's status",
@@ -5552,6 +8758,34 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Required Team name field",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new team",
@@ -5695,6 +8929,31 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Required Team name field",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated team",
@@ -5843,6 +9102,35 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "ADMIN",
+                      "MEMBER"
+                    ]
+                  }
+                },
+                "required": [
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The user is already a member, or has no account",
@@ -5965,6 +9253,29 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "ADMIN",
+                      "MEMBER"
+                    ]
+                  }
+                },
+                "required": [
+                  "role"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated member",
@@ -6117,10 +9428,43 @@
         ],
         "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/createConnectionSchema"
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "OPENROUTER",
+                      "OLLAMA",
+                      "OPENAI_COMPATIBLE",
+                      "ANTHROPIC",
+                      "OPENAI"
+                    ]
+                  },
+                  "baseUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "apiKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "label",
+                  "type"
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -6231,10 +9575,30 @@
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/updateConnectionSchema"
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "baseUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "apiKey": {
+                    "nullable": true,
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "additionalProperties": false
               }
             }
           }
@@ -6344,10 +9708,22 @@
         ],
         "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/quickSetupSchema"
+                "type": "object",
+                "properties": {
+                  "openRouterKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  }
+                },
+                "required": [
+                  "openRouterKey"
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -6422,10 +9798,85 @@
         ],
         "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/setRolesSchema"
+                "type": "object",
+                "properties": {
+                  "chat": {
+                    "nullable": true,
+                    "type": "object",
+                    "properties": {
+                      "connectionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "connectionId",
+                      "model"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "ranking": {
+                    "nullable": true,
+                    "type": "object",
+                    "properties": {
+                      "connectionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "connectionId",
+                      "model"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "search": {
+                    "nullable": true,
+                    "type": "object",
+                    "properties": {
+                      "connectionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "model": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    },
+                    "required": [
+                      "connectionId",
+                      "model"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "recheckSearch": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "chat",
+                  "ranking",
+                  "search"
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -6533,6 +9984,426 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pluginId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "settings": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 500
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                null
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 500
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      null
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "maxItems": 20,
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "maxLength": 500
+                                        },
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "nullable": true,
+                                          "enum": [
+                                            null
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "maxItems": 20,
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "maxLength": 500
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "nullable": true,
+                                            "enum": [
+                                              null
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "pluginId",
+                  "enabled"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The plugin's new state",
@@ -6679,6 +10550,30 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tourId": {
+                    "type": "string",
+                    "enum": [
+                      "dashboard",
+                      "case-canvas",
+                      "demo-case"
+                    ]
+                  }
+                },
+                "required": [
+                  "tourId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The tours the caller has completed",
@@ -6765,6 +10660,22 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The account was deleted",
@@ -6803,6 +10714,44 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "description": "Required Username field",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150
+                  },
+                  "firstName": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 150
+                  },
+                  "lastName": {
+                    "description": "Optional string field",
+                    "nullable": true,
+                    "type": "string",
+                    "maxLength": 150
+                  },
+                  "email": {
+                    "description": "Valid email address",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 254,
+                    "format": "email"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated profile",
@@ -6883,6 +10832,31 @@
           }
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The password was changed",
@@ -6918,6 +10892,48 @@
           "Users"
         ],
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "description": "Valid username",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                  },
+                  "email": {
+                    "description": "Valid email address",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 254,
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "password1": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "password2": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "username",
+                  "email"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The new account",

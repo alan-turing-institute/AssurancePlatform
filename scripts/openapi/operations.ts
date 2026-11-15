@@ -15,7 +15,10 @@
  * contract of the route.
  */
 
-export type Schema = Record<string, unknown>;
+import { DEFINITIONS, type Schema } from "./from-zod";
+import { bodyComponentSchemas } from "./request-bodies";
+
+export type { Schema } from "./from-zod";
 
 export interface SuccessAnswer {
 	/** Media type of the body; absent when the answer has no body. */
@@ -89,7 +92,7 @@ function image(description: string): SuccessAnswer[] {
 }
 
 /** Named schemas the entries below refer to; added to the document's components. */
-export const SCHEMAS: Record<string, Schema> = {
+const NAMED_SCHEMAS: Record<string, Schema> = {
 	SuccessFlag: obj({ success: BOOLEAN }),
 	ConnectedFlag: obj({ connected: BOOLEAN }),
 	ImportResult: obj({
@@ -100,6 +103,15 @@ export const SCHEMAS: Record<string, Schema> = {
 		warnings: { type: "array", items: STRING },
 	}),
 	ClaimHealthStatus: obj({ status: OBJECT }),
+};
+
+const BODY_SCHEMAS = bodyComponentSchemas();
+
+/** Named schemas the entries here and in request-bodies.ts refer to; added to the document's components. */
+export const SCHEMAS: Record<string, Schema> = {
+	...NAMED_SCHEMAS,
+	...BODY_SCHEMAS,
+	...DEFINITIONS,
 };
 
 export interface QueryParameter {
