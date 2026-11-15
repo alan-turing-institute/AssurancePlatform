@@ -2,23 +2,18 @@ import { expect, type Locator } from "@playwright/test";
 
 /**
  * Opens a Radix Select and waits until it is ready to receive an outside
- * press. The listbox appears before the Select has armed its outside-press
- * listener; Radix moves keyboard focus to the option for the current value
- * only after that step, so focus on that option marks the point from which
- * a press outside the Select closes it.
+ * press. Radix queues the timer that arms its outside-press listener when the
+ * dropdown mounts. It moves focus to the current option only after
+ * positioning, which is later, so focus on that option proves the timer is
+ * queued; a zero-delay timer queued afterwards then proves it has run.
  */
-export async function openSelect(
-	trigger: Locator,
-	currentOptionName: string
-): Promise<void> {
+export async function openSelect(trigger: Locator): Promise<void> {
 	await trigger.click();
 	await expect(
-		trigger.page().getByRole("option", { name: currentOptionName, exact: true })
+		trigger.page().getByRole("listbox").getByRole("option", { selected: true })
 	).toBeFocused();
-	// The Select arms its outside-press listener in a zero-delay timer queued
-	// when it mounts, which can still be pending when focus lands. Timers of
-	// equal delay run in the order they were queued, so a zero-delay timer
-	// queued now runs after it.
+	// Timers of equal delay run in the order they were queued, so this timer
+	// runs after the one that arms the outside-press listener.
 	await trigger.page().evaluate(
 		() =>
 			new Promise<void>((resolve) => {

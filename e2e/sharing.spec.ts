@@ -114,7 +114,7 @@ test.describe("Sharing and permissions", () => {
 		const permissionTrigger = page.getByRole("combobox", {
 			name: PERMISSION_LEVEL_PATTERN,
 		});
-		await openSelect(permissionTrigger, "Can view");
+		await openSelect(permissionTrigger);
 
 		// Click the dialog description — well clear of the open dropdown's
 		// own popper — without choosing an option. `force: true` because,

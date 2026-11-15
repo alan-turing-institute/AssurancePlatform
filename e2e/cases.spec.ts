@@ -160,7 +160,7 @@ test.describe("Case management", () => {
 		const assertionStatusTrigger = page.getByRole("combobox", {
 			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
 		});
-		await openSelect(assertionStatusTrigger, "Asserted");
+		await openSelect(assertionStatusTrigger);
 
 		// Click on the dialog body — the dialog's own title, well clear of
 		// the open dropdown's own popper — without choosing an option from
