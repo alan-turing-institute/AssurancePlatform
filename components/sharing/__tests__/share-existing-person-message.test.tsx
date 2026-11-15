@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
@@ -92,6 +92,13 @@ describe("sharing again with someone who already has access", () => {
 			)
 		).toBeVisible();
 		expect(screen.queryByText(ALREADY_HAS_ACCESS)).toBeNull();
+		const row = screen
+			.getByText("vera@example.com")
+			.closest(".justify-between");
+		expect(row).not.toBeNull();
+		expect(within(row as HTMLElement).getByRole("combobox")).toHaveTextContent(
+			"VIEW"
+		);
 		const patches = vi
 			.mocked(fetch)
 			.mock.calls.filter(([, init]) => init?.method === "PATCH");

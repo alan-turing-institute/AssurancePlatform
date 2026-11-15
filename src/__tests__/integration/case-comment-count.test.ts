@@ -112,4 +112,14 @@ describe("GET /api/cases/[id] — comments on each element", () => {
 
 		expect((await getCase(testCase.id)).goals[0]?.commentCount).toBe(1);
 	});
+
+	it("gives a viewer the same counts as the owner", async () => {
+		const { owner, testCase, goal } = await buildCase();
+		const viewer = await createTestUser();
+		await createTestPermission(testCase.id, viewer.id, owner.id, "VIEW");
+		await createTestComment(owner.id, { elementId: goal.id });
+		await mockAuth(viewer.id, viewer.username, viewer.email);
+
+		expect((await getCase(testCase.id)).goals[0]?.commentCount).toBe(1);
+	});
 });

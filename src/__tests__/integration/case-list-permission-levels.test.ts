@@ -127,6 +127,19 @@ describe("listSharedCases — the level on each card", () => {
 		expect(levelOf(cases, adminCase.id)).toBe("manage");
 		expect(levelOf(cases, viewCase.id)).toBe("view");
 	});
+
+	it("leaves the caller at their own level when another person holds Admin on the same case", async () => {
+		const owner = await createTestUser();
+		const reader = await createTestUser();
+		const admin = await createTestUser();
+		const shared = await createStoredCase(owner.id);
+		await createTestPermission(shared.id, reader.id, owner.id, "VIEW");
+		await createTestPermission(shared.id, admin.id, owner.id, "ADMIN");
+
+		const cases = expectSuccess(await listSharedCases(reader.id));
+
+		expect(levelOf(cases, shared.id)).toBe("view");
+	});
 });
 
 describe("listUserPatterns — the level on each card", () => {
