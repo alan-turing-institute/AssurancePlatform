@@ -153,6 +153,19 @@ describe("comments panel and comment service agree", () => {
 			expect(PANEL_ACCESS[panelPermission].resolveOwn).toBe(true);
 			expect(await resolveAccepted(own.id, user)).toBe(true);
 		});
+
+		it("VIEW: Resolve on the person's own comment is not offered, and the server refuses it", async () => {
+			const scene = await sceneWithComment();
+			const user = await grant(scene, "VIEW");
+			const own = await createTestComment(user.id, {
+				elementId: scene.elementId,
+			});
+
+			expect(PANEL_ACCESS.view.resolveOwn).toBe(false);
+			expect(await resolveAccepted(own.id, user)).toBe(false);
+			const stored = await prisma.comment.findUnique({ where: { id: own.id } });
+			expect(stored?.resolved).toBe(false);
+		});
 	});
 
 	it("the owner is sent manage, may comment, and may resolve anyone's comment", async () => {

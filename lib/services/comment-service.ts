@@ -149,10 +149,16 @@ async function getCommentWithPermission(
 		return { error: "Comment not associated with a case" };
 	}
 
+	// An author keeps their own comment only while they can still comment on
+	// the case; anyone else needs edit access. A trashed case counts as no
+	// access for everyone.
 	const isAuthor = comment.authorId === userId;
-	const hasEditAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	const allowed = await canAccessCase(
+		{ userId, caseId },
+		isAuthor ? "COMMENT" : "EDIT"
+	);
 
-	if (!(isAuthor || hasEditAccess)) {
+	if (!allowed) {
 		return { error: "Permission denied" };
 	}
 
