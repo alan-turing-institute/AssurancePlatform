@@ -22,7 +22,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "docs:generate": "next-openapi-gen generate",
+    "docs:generate": "next-openapi-gen generate && tsx scripts/openapi/correct-openapi.ts",
     "schema:generate": "tsx scripts/generate-json-schema.ts",
     "typecheck": "tsc --noEmit"
   },
