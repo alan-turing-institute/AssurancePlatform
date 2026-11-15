@@ -25,6 +25,7 @@ import CaseDetails from "./case-details";
 import { CaseSignedOut } from "./case-signed-out";
 import Flow from "./flow";
 import Header from "./header";
+import { LiveUpdatesPaused } from "./live-updates-paused";
 
 interface CaseContainerProps {
 	caseId?: string;
@@ -279,9 +280,21 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 	);
 
 	// Subscribe to real-time case events via SSE
-	const { status: eventsStatus } = useCaseEvents({
+	// The server keeps no record of events sent while the stream was down, so
+	// the first connection after the stream gave up reads the case again.
+	const streamFailedRef = useRef(false);
+	const { status: eventsStatus, reconnect } = useCaseEvents({
 		caseId: effectiveCaseId || "",
 		enabled: Boolean(effectiveCaseId) && !loading && caseLoaded,
+		onStatusChange: (status) => {
+			if (status === "error") {
+				streamFailedRef.current = true;
+			} else if (status === "connected" && streamFailedRef.current) {
+				streamFailedRef.current = false;
+				refetchCase();
+				loadOrphanedElementsData();
+			}
+		},
 		onEvent: (event) => {
 			// Suppress toasts for self-events (acting user)
 			const isSelfEvent = event.userId && event.userId === session?.user?.id;
@@ -372,6 +385,9 @@ const CaseContainer = ({ caseId }: CaseContainerProps) => {
 					tourId={assuranceCase?.isDemo ? "demo-case" : "case-canvas"}
 				/>
 				<Header setOpen={setCaseDetailsOpen} />
+				{eventsStatus === "error" && (
+					<LiveUpdatesPaused onReconnect={reconnect} />
+				)}
 				<ErrorBoundary
 					fallback={
 						<div className="flex min-h-screen items-center justify-center text-muted-foreground">
