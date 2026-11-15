@@ -31,7 +31,7 @@ export function hasPermissionLevel(
 /**
  * Returns the higher of two permission levels.
  */
-function maxPermission(
+export function maxPermission(
 	a: PermissionLevel | null,
 	b: PermissionLevel | null
 ): PermissionLevel | null {
