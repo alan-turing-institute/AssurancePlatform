@@ -104,6 +104,28 @@ describe("PUT /api/elements/[id] — a parentId on evidence", () => {
 	});
 });
 
+describe("POST /api/cases/[id]/batch — a null parentId on evidence", () => {
+	it("answers 400 and keeps the links", async () => {
+		const { testCase, claim, evidence } = await linkedEvidence();
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{
+					type: "update",
+					elementId: evidence.id,
+					data: { parentId: null },
+				},
+			],
+		});
+
+		expect(response.status).toBe(400);
+		const links = await prisma.evidenceLink.findMany({
+			where: { evidenceId: evidence.id, claimId: claim.id },
+		});
+		expect(links).toHaveLength(1);
+	});
+});
+
 describe("POST /api/cases/[id]/batch — a parentId on evidence", () => {
 	it("answers 400 and changes nothing", async () => {
 		const { testCase, claim, evidence } = await linkedEvidence();

@@ -103,6 +103,41 @@ describe("POST /api/elements/[id]/detach — evidence", () => {
 		expect(row?.parentId).toBeNull();
 	});
 
+	it.each([
+		"VIEW",
+		"COMMENT",
+	] as const)("answers 404 for a user with only %s access, and keeps the links", async (level) => {
+		const { owner, testCase, evidence } = await world();
+		const reader = await createTestUser();
+		await createTestPermission(testCase.id, reader.id, owner.id, level);
+		await mockAuth(reader.id, reader.username, reader.email);
+
+		const response = await postDetach(evidence.id);
+
+		expect(response.status).toBe(404);
+		expect(await linksOf(evidence.id)).toHaveLength(2);
+	});
+
+	it("answers 404 for a user with no access, and keeps the links", async () => {
+		const { evidence } = await world();
+		const stranger = await createTestUser();
+		await mockAuth(stranger.id, stranger.username, stranger.email);
+
+		const response = await postDetach(evidence.id);
+
+		expect(response.status).toBe(404);
+		expect(await linksOf(evidence.id)).toHaveLength(2);
+	});
+
+	it("answers 404 for a missing element", async () => {
+		const { owner } = await world();
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postDetach(NONEXISTENT_ID);
+
+		expect(response.status).toBe(404);
+	});
+
 	it("leaves a link of other evidence on the same claim", async () => {
 		const { owner, testCase, claimA, evidence } = await world();
 		const other = await createTestElement(testCase.id, owner.id, {
@@ -205,6 +240,82 @@ describe("POST /api/elements/[id]/attach — evidence", () => {
 
 		expect(response.status).toBe(404);
 		expect(await linksOf(evidence.id)).toHaveLength(0);
+	});
+
+	it("answers 404 for a claim in another case the caller owns, and writes no link", async () => {
+		const { owner, evidence } = await world();
+		const otherCase = await createTestCase(owner.id);
+		const foreignClaim = await createTestElement(otherCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+		await postDetach(evidence.id);
+
+		const response = await postAttach(evidence.id, {
+			parentId: foreignClaim.id,
+		});
+
+		expect(response.status).toBe(404);
+		expect(await linksOf(evidence.id)).toHaveLength(0);
+		expect(
+			await prisma.evidenceLink.count({ where: { claimId: foreignClaim.id } })
+		).toBe(0);
+	});
+
+	it("answers 404 for a parent that does not exist, and writes no link", async () => {
+		const { owner, evidence } = await world();
+		await mockAuth(owner.id, owner.username, owner.email);
+		await postDetach(evidence.id);
+
+		const response = await postAttach(evidence.id, {
+			parentId: NONEXISTENT_ID,
+		});
+
+		expect(response.status).toBe(404);
+		expect(await linksOf(evidence.id)).toHaveLength(0);
+	});
+
+	it.each([
+		"VIEW",
+		"COMMENT",
+	] as const)("answers 404 for a user with only %s access, and writes no link", async (level) => {
+		const { owner, testCase, claimB, evidence } = await world();
+		const reader = await createTestUser();
+		await createTestPermission(testCase.id, reader.id, owner.id, level);
+		await mockAuth(owner.id, owner.username, owner.email);
+		await postDetach(evidence.id);
+		await mockAuth(reader.id, reader.username, reader.email);
+
+		const response = await postAttach(evidence.id, { parentId: claimB.id });
+
+		expect(response.status).toBe(404);
+		expect(await linksOf(evidence.id)).toHaveLength(0);
+	});
+
+	it("takes everything beneath the evidence out of the side area with it", async () => {
+		const { owner, testCase, claimB, evidence } = await world();
+		const counterGoal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "CG1",
+			parentId: evidence.id,
+			isDefeater: true,
+			defeatsElementId: evidence.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+		await postDetach(evidence.id);
+		await prisma.assuranceElement.update({
+			where: { id: counterGoal.id },
+			data: { inSandbox: true },
+		});
+
+		const response = await postAttach(evidence.id, { parentId: claimB.id });
+
+		expect(response.status).toBe(200);
+		const row = await prisma.assuranceElement.findUnique({
+			where: { id: counterGoal.id },
+		});
+		expect(row?.inSandbox).toBe(false);
 	});
 
 	it("answers 401 with no session", async () => {

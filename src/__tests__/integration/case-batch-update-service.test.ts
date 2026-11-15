@@ -2696,6 +2696,48 @@ describe("applyBatchUpdate", () => {
 	});
 
 	describe("moving an element out of a parent the same batch deletes", () => {
+		it("applies a move the deletes do not take, and leaves the deleted parent's other children alone", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const first = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const second = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P2",
+				parentId: goal.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: first.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			// P2 is deleted, but P1.1 does not hang from it: its move is its own.
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: second.id },
+					{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+				])
+			);
+
+			expect(data.summary).toEqual({ created: 0, updated: 1, deleted: 1 });
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: moved.id },
+			});
+			expect(row?.parentId).toBe(goal.id);
+			expect(row?.deletedAt).toBeNull();
+		});
+
 		it("keeps the moved element, under its new parent, at the right level", async () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
