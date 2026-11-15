@@ -1665,9 +1665,6 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.context !== undefined) {
 		updateData.context = input.context;
 	}
-	if (input.inSandbox !== undefined) {
-		updateData.inSandbox = input.inSandbox;
-	}
 	if (input.assertionStatus !== undefined) {
 		updateData.assertionStatus = input.assertionStatus;
 	}
@@ -1929,6 +1926,7 @@ async function enforceTypeRulesOnUpdate(
 	existing: {
 		caseId: string;
 		elementType: PrismaElementType;
+		inSandbox: boolean;
 		isDefeater: boolean;
 		parentId: string | null;
 	},
@@ -1941,10 +1939,37 @@ async function enforceTypeRulesOnUpdate(
 	if (misplacedFieldError) {
 		return { error: misplacedFieldError };
 	}
+	const sideAreaError = rejectSideAreaChange(
+		existing.inSandbox,
+		input.inSandbox
+	);
+	if (sideAreaError) {
+		return { error: sideAreaError };
+	}
 	return (
 		(await enforceGoalRulesOnUpdate(elementId, existing, input)) ??
 		(await enforceBeneathEvidenceOnUpdate(existing, input))
 	);
+}
+
+export const IN_SANDBOX_SET_ERROR =
+	"inSandbox cannot be set on the general edit; use the detach route";
+export const IN_SANDBOX_CLEAR_ERROR =
+	"inSandbox cannot be cleared on the general edit; use the attach route";
+
+/**
+ * The general edit never moves an element into or out of the side area: a
+ * value equal to the stored one is accepted and ignored, any other is refused
+ * and names the route that does it.
+ */
+function rejectSideAreaChange(
+	stored: boolean,
+	sent: boolean | undefined
+): string | undefined {
+	if (sent === undefined || sent === stored) {
+		return;
+	}
+	return sent ? IN_SANDBOX_SET_ERROR : IN_SANDBOX_CLEAR_ERROR;
 }
 
 /**
@@ -1963,6 +1988,7 @@ async function validateUpdateElementFields(
 		caseId: string;
 		citedElementId: string | null;
 		elementType: PrismaElementType;
+		inSandbox: boolean;
 		isDefeater: boolean;
 		moduleReferenceId: string | null;
 		parentId: string | null;
@@ -2234,6 +2260,7 @@ export async function updateElement(
 				moduleReferenceId: true,
 				citedElementId: true,
 				isDefeater: true,
+				inSandbox: true,
 				parentId: true,
 				// What the pattern-marker rules compare an edit with
 				description: true,

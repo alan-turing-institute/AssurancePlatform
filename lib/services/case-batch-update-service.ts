@@ -636,12 +636,47 @@ async function validateElementFields(
 ): Promise<string | null> {
 	return (
 		validateEachElementChangedOnce(updates, deletes) ??
+		(await validateSideAreaFlag(creates, updates)) ??
 		(await validateBeneathEvidence(creates, updates)) ??
 		(await validateFieldsFitTypes(creates, updates)) ??
 		(await validateElementNames(userId, creates, updates)) ??
 		(await validateContextEntries(caseId, creates, updates, deletes)) ??
 		(await validateGoalChanges(caseId, creates, updates, deletes))
 	);
+}
+
+/**
+ * A batch never moves an element into or out of the side area: a new element
+ * has the flag off, and an update leaves it as stored. Detach and attach are
+ * the routes that change it.
+ */
+async function validateSideAreaFlag(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const refused = (elementId: string) =>
+		`inSandbox cannot be changed in a batch; use the detach or attach route (element ${elementId})`;
+	const flaggedCreate = creates.find((change) => change.data.inSandbox);
+	if (flaggedCreate) {
+		return refused(flaggedCreate.elementId);
+	}
+	const withFlag = updates.filter(
+		(change) => change.data.inSandbox !== undefined
+	);
+	if (withFlag.length === 0) {
+		return null;
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: withFlag.map((change) => change.elementId) } },
+		select: { id: true, inSandbox: true },
+	});
+	const storedById = new Map(rows.map((row) => [row.id, row.inSandbox]));
+	const changed = withFlag.find(
+		(change) =>
+			storedById.has(change.elementId) &&
+			storedById.get(change.elementId) !== change.data.inSandbox
+	);
+	return changed ? refused(changed.elementId) : null;
 }
 
 /**
@@ -1407,7 +1442,6 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 	const fields: (keyof UpdateElementData)[] = [
 		"name",
 		"description",
-		"inSandbox",
 		"parentId",
 		"role",
 		"assertionStatus",

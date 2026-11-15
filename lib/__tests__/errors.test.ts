@@ -283,6 +283,18 @@ describe("serviceErrorToAppError", () => {
 		}
 	});
 
+	it("maps the three side-area flag refusals to VALIDATION", () => {
+		for (const message of [
+			"inSandbox cannot be set on the general edit; use the detach route",
+			"inSandbox cannot be cleared on the general edit; use the attach route",
+			"inSandbox cannot be changed in a batch; use the detach or attach route (element abc)",
+		]) {
+			const err = serviceErrorToAppError(message);
+			expect(err.code).toBe("VALIDATION");
+			expect(err.message).toBe(message);
+		}
+	});
+
 	it("maps 'already' errors to CONFLICT", () => {
 		const err = serviceErrorToAppError("Case is already in trash");
 		expect(err.code).toBe("CONFLICT");

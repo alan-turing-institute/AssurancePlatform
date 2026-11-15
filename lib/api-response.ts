@@ -264,6 +264,12 @@ const ERROR_MAPPINGS: Array<{
 	// other than a property claim, and putting anything but a counter-goal
 	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// The general edit and the batch never move an element into or out of the
+	// side area; detach and attach do. A validation failure (400).
+	{
+		pattern: /^inSandbox cannot be (set|cleared|changed) /,
+		factory: () => validationError(""),
+	},
 	// `element-service.ts`'s `rejectFieldsNotApplicable`: a text field filled in
 	// on an element type that does not hold it (an assumption on evidence) is a
 	// validation failure (400), not a silent drop.
