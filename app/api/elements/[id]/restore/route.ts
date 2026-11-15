@@ -44,7 +44,10 @@ export async function POST(
 			const username = session.username || session.email || "Someone";
 			emitSSEEvent("element:restored", element.caseId, {
 				elementId,
-				elementName: noticeElementName(element),
+				elementName: noticeElementName({
+					description: element.description,
+					name: result.data.name,
+				}),
 				username,
 				userId: session.userId,
 			});

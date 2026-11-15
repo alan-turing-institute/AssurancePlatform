@@ -178,6 +178,9 @@ describe("PUT /api/elements/[id] beneath evidence", () => {
 		const response = await putElement(counterGoal.id, { isDefeater: false });
 
 		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"parentId cannot be set on the top goal; only a counter-goal has a parent"
+		);
 		const row = await prisma.assuranceElement.findUnique({
 			where: { id: counterGoal.id },
 		});

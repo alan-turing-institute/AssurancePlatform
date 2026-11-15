@@ -177,6 +177,12 @@ export function isBeneathEvidenceRefused(
 	);
 }
 
+const STARTS_WITH_VOWEL = /^[aeiou]/;
+
+function withArticle(word: string): string {
+	return STARTS_WITH_VOWEL.test(word) ? `an ${word}` : `a ${word}`;
+}
+
 /**
  * The refusal when a new element's type cannot hang from the parent it names,
  * or undefined when it can. The one parent-type rule: a counter-goal may hang
@@ -197,7 +203,7 @@ export function parentTypeRefusal(
 		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
 	}
 	if (!canBeChildOf(child.elementType, parentType)) {
-		return `parentId cannot be a ${normalise(parentType)} for a ${normalise(child.elementType)}`;
+		return `parentId cannot be ${withArticle(normalise(parentType))} for ${withArticle(normalise(child.elementType))}`;
 	}
 	return;
 }

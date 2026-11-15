@@ -171,12 +171,12 @@ describe("element citation integrity (ADR 0004 D5)", () => {
 			const owner = await createTestUser();
 			const homeCase = await createTestCase(owner.id);
 			const awayCase = await createTestCase(owner.id);
-			const parentGoal = await createTestElement(awayCase.id, owner.id, {
+			const parentStrategy = await createTestElement(awayCase.id, owner.id, {
 				elementType: "STRATEGY",
 			});
 			const citedChild = await createTestElement(awayCase.id, owner.id, {
 				elementType: "PROPERTY_CLAIM",
-				parentId: parentGoal.id,
+				parentId: parentStrategy.id,
 			});
 			const awayGoal = await createTestElement(homeCase.id, owner.id, {
 				elementType: "AWAY_GOAL",
@@ -184,7 +184,7 @@ describe("element citation integrity (ADR 0004 D5)", () => {
 				citedElementId: citedChild.id,
 			});
 			// An unrelated citation, elsewhere in the SAME case but under a
-			// different root — not a descendant of parentGoal — that must stay
+			// different root — not a descendant of parentStrategy — that must stay
 			// untouched by the detach.
 			const otherRoot = await createTestElement(awayCase.id, owner.id, {
 				elementType: "STRATEGY",
@@ -201,8 +201,8 @@ describe("element citation integrity (ADR 0004 D5)", () => {
 
 			// Detaching the PARENT moves the whole subtree — citedChild included
 			// — out of the case tree, so a citation to citedChild is just as
-			// dangling as one to parentGoal itself.
-			expectSuccess(await detachElement(owner.id, parentGoal.id));
+			// dangling as one to parentStrategy itself.
+			expectSuccess(await detachElement(owner.id, parentStrategy.id));
 
 			const inDb = await prisma.assuranceElement.findUnique({
 				where: { id: awayGoal.id },

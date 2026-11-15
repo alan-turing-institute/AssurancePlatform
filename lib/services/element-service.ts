@@ -2878,7 +2878,15 @@ function followRenamedPrefix(
 	name: string,
 	renames: { from: string; to: string }[]
 ): string {
-	const rename = renames.find((r) => name.startsWith(`${r.from}.`));
+	let rename: { from: string; to: string } | undefined;
+	for (const candidate of renames) {
+		if (
+			name.startsWith(`${candidate.from}.`) &&
+			(!rename || candidate.from.length > rename.from.length)
+		) {
+			rename = candidate;
+		}
+	}
 	return rename ? `${rename.to}${name.slice(rename.from.length)}` : name;
 }
 
@@ -2919,12 +2927,14 @@ async function freshNameFor(
 }
 
 /**
- * Restores a soft-deleted element and all its descendants
+ * Restores a soft-deleted element and all its descendants. Returns the name
+ * the element carries once restored, which differs from the one it was
+ * deleted with when another element took that name in the meantime.
  */
 export async function restoreElement(
 	userId: string,
 	elementId: string
-): ServiceResult {
+): ServiceResult<{ name: string | null }> {
 	try {
 		// Get the element (including deleted ones)
 		const element = await prisma.assuranceElement.findUnique({
@@ -2966,25 +2976,35 @@ export async function restoreElement(
 		// Gather deleted descendants and restore atomically
 		// A deleted top goal comes back only while the case has no other one,
 		// judged under the case lock so a goal made in the meantime counts.
-		return await prisma.$transaction(async (tx): ServiceResult => {
-			await lockCaseForElementWrite(tx, element.caseId);
-			if (
-				element.elementType === "GOAL" &&
-				!element.isDefeater &&
-				(await caseHasGoal(element.caseId, tx, elementId))
-			) {
-				return { error: ONE_GOAL_PER_CASE };
+		return await prisma.$transaction(
+			async (
+				tx
+			): ServiceResult<{
+				name: string | null;
+			}> => {
+				await lockCaseForElementWrite(tx, element.caseId);
+				if (
+					element.elementType === "GOAL" &&
+					!element.isDefeater &&
+					(await caseHasGoal(element.caseId, tx, elementId))
+				) {
+					return { error: ONE_GOAL_PER_CASE };
+				}
+				const descendantIds = await getDeletedDescendantIds(elementId, tx);
+				const allIds = [elementId, ...descendantIds];
+				await tx.assuranceElement.updateMany({
+					where: { id: { in: allIds } },
+					data: { deletedAt: null, deletedById: null },
+				});
+				await renameRestoredOnClash(tx, element.caseId, allIds);
+				await touchCase(tx, element.caseId);
+				const restored = await tx.assuranceElement.findUnique({
+					where: { id: elementId },
+					select: { name: true },
+				});
+				return { data: { name: restored?.name ?? null } };
 			}
-			const descendantIds = await getDeletedDescendantIds(elementId, tx);
-			const allIds = [elementId, ...descendantIds];
-			await tx.assuranceElement.updateMany({
-				where: { id: { in: allIds } },
-				data: { deletedAt: null, deletedById: null },
-			});
-			await renameRestoredOnClash(tx, element.caseId, allIds);
-			await touchCase(tx, element.caseId);
-			return { data: true };
-		});
+		);
 	} catch (error) {
 		log.error("Failed to restore element", { error });
 		return { error: "Failed to restore element" };
