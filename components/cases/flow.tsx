@@ -42,7 +42,7 @@ const edgeTypes = {
 };
 
 interface FlowProps {
-	/** Shown in the overlay stack under the header, above the other banners. */
+	/** Shown in the overlay stack under the header, below the other banners. */
 	liveUpdatesNotice?: ReactNode;
 }
 

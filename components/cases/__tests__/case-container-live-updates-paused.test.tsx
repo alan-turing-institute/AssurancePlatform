@@ -97,15 +97,13 @@ describe("a case whose live updates have stopped", () => {
 		streamStatus("connected");
 		const view = render(<CaseContainer caseId="c1" />);
 		await screen.findByTestId("flow");
-		const region = screen.getByRole("status", { name: "Live updates stopped" });
+		const region = screen.getByRole("status", { name: "Live updates" });
 		expect(region.textContent).toBe("");
 
 		streamStatus("error");
 		view.rerender(<CaseContainer caseId="c1" />);
 
-		expect(screen.getByRole("status", { name: "Live updates stopped" })).toBe(
-			region
-		);
+		expect(screen.getByRole("status", { name: "Live updates" })).toBe(region);
 		expect(region.textContent).toContain("Live updates have stopped.");
 		expect(region.querySelector("p")).toBeNull();
 	});

@@ -186,8 +186,10 @@ describe("changes since the published copy, for the case's name and information"
 		expect(await hasChanges(world)).toBe(true);
 	});
 
-	it("sees case information on a case whose published copy cannot be read", async () => {
-		const world = await publishedWorld();
+	it("treats an unreadable published image as no information, so a case with none shows no change", async () => {
+		const world = await variableWorld("CASE");
+		const response = await publishCase(world.caseId);
+		expect(response.status).toBe(200);
 		const row = await prisma.publishedAssuranceCase.findFirstOrThrow({
 			where: { assuranceCaseId: world.caseId },
 		});
@@ -196,12 +198,22 @@ describe("changes since the published copy, for the case's name and information"
 			data: {
 				content: {
 					...(row.content as Record<string, unknown>),
-					caseInformation: { description: 42, featureImageUrl: ["not text"] },
+					caseInformation: { featureImageUrl: ["not text"] },
 				},
 			},
 		});
 
-		expect(await hasChanges(world)).toBe(true);
+		await prisma.caseInformation.update({
+			where: { caseId: world.caseId },
+			data: {
+				authors: null,
+				description: null,
+				featureImageUrl: null,
+				sector: null,
+			},
+		});
+
+		expect(await hasChanges(world)).toBe(false);
 	});
 });
 
