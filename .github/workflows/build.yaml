@@ -120,6 +120,7 @@ on:
       - "tsconfig.json"
       - "biome.json"
       - ".a11y-baseline.json"
+      - ".advisory-baseline.json"
       - ".fallow-baseline*.json"
       - ".fallowrc.json"
       - ".github/workflows/**"
@@ -199,6 +200,7 @@ jobs:
               - "tsconfig.json"
               - "biome.json"
               - ".a11y-baseline.json"
+              - ".advisory-baseline.json"
               - ".fallow-baseline*.json"
               - ".fallowrc.json"
               - ".github/workflows/**"
@@ -250,9 +252,13 @@ jobs:
           TSC_EXIT=0; wait $TSC_PID || TSC_EXIT=$?
           if [ $LINT_EXIT -ne 0 ] || [ $TSC_EXIT -ne 0 ]; then exit 1; fi
 
-      - name: Security audit
-        run: pnpm audit --audit-level=high
-        continue-on-error: true
+      - name: Security audit (new high or critical advisories)
+        # Pull requests only: a push run gates the deploy, and a newly
+        # published advisory, an expired baseline entry or a registry outage
+        # must not block a deploy. Accepted advisories live in
+        # .advisory-baseline.json with a reason, owner and expiry.
+        if: github.event_name == 'pull_request'
+        run: pnpm exec tsx scripts/check-advisories.ts
 
       - name: Check generated OpenAPI spec is up to date
         # AGENTS.md requires `pnpm docs:generate` after documented route

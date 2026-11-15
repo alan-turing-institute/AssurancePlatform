@@ -1,0 +1,119 @@
+[
+  {
+    "ghsa": "GHSA-ggr8-5vv4-36mx",
+    "package": "deepmerge-ts",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "bundled inside prisma 7.10's own config package; the fix is deepmerge-ts 8.0.0, a major that cannot be applied without a Prisma release; only merges the project's own Prisma config",
+    "owner": "cid",
+    "expires": "2027-03-31"
+  },
+  {
+    "ghsa": "GHSA-qhr7-859c-m2p7",
+    "package": "brace-expansion",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "reported by audit --prod through prisma-dbml-generator (schema documentation tooling); an in-range fix exists and is taken in the next dependency refresh",
+    "owner": "cid",
+    "expires": "2026-12-18"
+  },
+  {
+    "ghsa": "GHSA-6j4f-fj2g-mc7p",
+    "package": "brace-expansion",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "reported by audit --prod through prisma-dbml-generator (schema documentation tooling); an in-range fix exists and is taken in the next dependency refresh",
+    "owner": "cid",
+    "expires": "2026-12-18"
+  },
+  {
+    "ghsa": "GHSA-68fv-2mgg-jv7q",
+    "package": "source-map-js",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "reported by audit --prod through @tailwindcss/node (stylesheet build); an in-range fix exists and is taken in the next dependency refresh",
+    "owner": "cid",
+    "expires": "2026-12-18"
+  },
+  {
+    "ghsa": "GHSA-587h-7wmj-h5pm",
+    "package": "vite",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "reported by audit --prod as the vite package pinned by the override; an in-range fix exists and is taken in the next dependency refresh",
+    "owner": "cid",
+    "expires": "2026-12-18"
+  },
+  {
+    "ghsa": "GHSA-gfr2-rv44-r23c",
+    "package": "markdown-it",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "reported by audit --prod through codemirror-json-schema; an in-range fix exists and is taken in the next dependency refresh",
+    "owner": "cid",
+    "expires": "2026-12-18"
+  },
+  {
+    "ghsa": "GHSA-mrhx-c7xc-m3w5",
+    "package": "zod",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "reported by audit --prod through fumadocs-mdx (documentation build); an in-range fix exists and is taken in the next dependency refresh",
+    "owner": "cid",
+    "expires": "2026-12-18"
+  },
+  {
+    "ghsa": "GHSA-8r5x-fm3f-whwj",
+    "package": "handlebars",
+    "severity": "critical",
+    "scope": "dev",
+    "reason": "release tooling only (semantic-release changelog writer); never part of the app or its image",
+    "owner": "cid",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-p8wg-vrv2-v86f",
+    "package": "handlebars",
+    "severity": "critical",
+    "scope": "dev",
+    "reason": "release tooling only (semantic-release changelog writer); never part of the app or its image",
+    "owner": "cid",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-xjj6-f33q-929c",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only copy via jsdom and semantic-release; production loads 6.29.1",
+    "owner": "cid",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-4w7w-5xrc-9h26",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only copy via jsdom and semantic-release; production loads 6.29.1",
+    "owner": "cid",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-2m5v-pch6-74hx",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only copy via jsdom and semantic-release; production loads 6.29.1",
+    "owner": "cid",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-qrxm-fqhp-jwvm",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only copy via jsdom and semantic-release; production loads 6.29.1",
+    "owner": "cid",
+    "expires": "2027-01-31"
+  }
+]
