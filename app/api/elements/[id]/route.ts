@@ -16,7 +16,8 @@ import {
 
 /**
  * GET /api/elements/[id]
- * Gets a single element by ID
+ *
+ * @description Gets a single element by ID. A challenge whose target was deleted or detached comes back with no `defeatsElementId` and `defeatsDangling` true.
  */
 export async function GET(
 	_request: Request,
@@ -40,12 +41,9 @@ export async function GET(
 
 /**
  * PUT /api/elements/[id] (400 without a parent, 422 for a second goal)
- * Updates an existing element. A `parentId` on evidence, including `null`,
- * answers 400: evidence is moved with the move route and detached with the
- * detach route. Moving an element beneath evidence, or turning a counter-goal
- * beneath evidence into an ordinary goal, also answers 400: only counter-goals
- * hang from evidence. The top goal never takes a parent, so a `parentId` on it
- * answers 400.
+ *
+ * @description Updates an existing element. A `parentId` on evidence, including `null`, answers 400: evidence is moved with the move route and detached with the detach route. Moving an element beneath evidence, or turning a counter-goal beneath evidence into an ordinary goal, also answers 400: only counter-goals hang from evidence. The top goal never takes a parent, so a `parentId` on it answers 400. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. An empty assumption or justification (an empty string, spaces or null) clears the stored text; leaving the field out keeps it.
+ *
  * @add 422
  */
 export async function PUT(
@@ -89,8 +87,8 @@ export async function PUT(
 
 /**
  * DELETE /api/elements/[id]
- * Deletes an element. A challenge elsewhere in the case that named it is left
- * unlinked and marked `defeatsDangling`.
+ *
+ * @description Deletes an element. A challenge elsewhere in the case that named it is left unlinked and marked `defeatsDangling`.
  */
 export async function DELETE(
 	_request: Request,

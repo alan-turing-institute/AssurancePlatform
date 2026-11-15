@@ -10,12 +10,10 @@ import { restoreElement } from "@/lib/services/element-service";
 
 /**
  * POST /api/elements/[id]/restore
- * Restores a soft-deleted element and its descendants. Restoring a deleted
- * top goal while the case has another answers 422.
- * @response 200 - Restored
- * @response 401 - Unauthorised
- * @response 404 - Element not found
- * @response 422 - The case already has its ordinary goal
+ *
+ * @description Restores a soft-deleted element and its descendants. Restoring a deleted top goal while the case has another answers 422. An element whose name another live element now carries is given a new name, and so are any descendants that still clash.
+ *
+ * @add 422
  */
 export async function POST(
 	_request: Request,

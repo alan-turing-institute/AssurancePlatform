@@ -18,10 +18,7 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 /**
  * Apply batch updates to case elements
  *
- * @description Applies multiple element changes (create, update, delete) atomically.
- * Used by the JSON editor to sync changes back to the database.
- * The goal rules hold for the goals as the batch leaves them: a goal defeater
- * (counter-goal) has a parent, and a case has one ordinary goal.
+ * @description Applies multiple element changes (create, update, delete) atomically. Used by the JSON editor to sync changes back to the database. The goal rules hold for the goals as the batch leaves them: a goal defeater (counter-goal) has a parent, the top goal has none, and a case has one ordinary goal. The element rules of the single-element routes hold too: a new element's type fits its parent, only counter-goals hang from evidence, the old element types cannot be created, and a filled-in field belongs to the element's type.
  *
  * @pathParam id - Case ID (UUID)
  * @body { changes: ElementChange[], expectedVersion?: string }
