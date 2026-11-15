@@ -141,3 +141,52 @@ describe("PUT /api/elements/[id] — non-conforming element name", () => {
 		expect(unchanged?.name).toBe("G1");
 	});
 });
+
+describe("POST /api/cases/[id]/elements — a field the element type does not hold", () => {
+	async function create(body: Record<string, unknown>) {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const { POST } = await import("@/app/api/cases/[id]/elements/route");
+		const response = await POST(
+			new NextRequest(
+				`http://localhost:3000/api/cases/${testCase.id}/elements`,
+				{
+					method: "POST",
+					body: JSON.stringify(body),
+					headers: { "Content-Type": "application/json" },
+				}
+			),
+			{ params: Promise.resolve({ id: testCase.id }) }
+		);
+		const stored = await prisma.assuranceElement.findMany({
+			where: { caseId: testCase.id },
+		});
+		return { response, stored };
+	}
+
+	it("refuses an assumption on evidence with 400 and stores nothing", async () => {
+		const { response, stored } = await create({
+			type: "evidence",
+			description: "Test report",
+			assumption: "Tests were run on the final build",
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"assumption is not applicable to EVIDENCE elements"
+		);
+		expect(stored).toHaveLength(0);
+	});
+
+	it("still creates evidence when the field is sent empty", async () => {
+		const { response, stored } = await create({
+			type: "evidence",
+			description: "Test report",
+			assumption: "",
+		});
+
+		expect(response.status).toBe(201);
+		expect(stored).toHaveLength(1);
+	});
+});

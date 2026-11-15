@@ -1454,6 +1454,10 @@ async function prepareElementCreate(
 	if (retiredTypeError) {
 		return { error: retiredTypeError };
 	}
+	const misplacedFieldError = rejectFieldsNotApplicable(elementType, input);
+	if (misplacedFieldError) {
+		return { error: misplacedFieldError };
+	}
 	const parentId = resolveParentId(input);
 	const isDefeater = input.isDefeater ?? false;
 
