@@ -2418,9 +2418,10 @@ export async function deleteElement(
 
 		// Gather descendants, soft-delete, and nullify+flag any dangling
 		// citations (ADR 0004 D5) atomically
-		await prisma.$transaction((tx) =>
-			deleteElementWithin(tx, userId, elementId, existing.caseId)
-		);
+		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, existing.caseId);
+			await deleteElementWithin(tx, userId, elementId, existing.caseId);
+		});
 
 		return { data: true };
 	} catch (error) {
@@ -2480,6 +2481,7 @@ export async function detachElement(
 		// the detached element — see attachElement's cascade below), so the
 		// sweep covers descendants too, the same way deleteElement's does.
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, existing.caseId);
 			await tx.assuranceElement.update({
 				where: { id: elementId },
 				data: {
@@ -2529,6 +2531,7 @@ async function attachEvidence(
 		return { error: "parentId must be a property claim to attach evidence" };
 	}
 	await prisma.$transaction(async (tx) => {
+		await lockCaseForElementWrite(tx, caseId);
 		await tx.evidenceLink.createMany({
 			data: [{ evidenceId, claimId }],
 			skipDuplicates: true,
@@ -2632,6 +2635,7 @@ export async function attachElement(
 
 		// Calculate level, attach, and cascade sandbox removal atomically
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, existing.caseId);
 			let level: number | undefined;
 			if (existing.elementType === "PROPERTY_CLAIM") {
 				const parent = await tx.assuranceElement.findFirst({
@@ -2747,6 +2751,7 @@ export async function moveElement(
 
 		// Perform the move atomically
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, element.caseId);
 			if (element.elementType === "EVIDENCE") {
 				// Evidence uses EvidenceLink rather than parentId
 				// Remove existing evidence link(s) for this evidence element
