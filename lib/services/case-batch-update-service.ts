@@ -19,6 +19,7 @@ import type {
 import {
 	isBeneathEvidenceRefused,
 	ONLY_COUNTER_GOALS_BENEATH_EVIDENCE,
+	parentTypeRefusal,
 } from "@/lib/element-compatibility";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -39,6 +40,8 @@ import {
 	nullifyDanglingDefeats,
 	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
+	rejectFieldsNotApplicable,
+	retiredElementTypeRefusal,
 	TOP_GOAL_NEEDS_NO_PARENT,
 	validateCitedElementId,
 	validateModuleReferenceId,
@@ -857,62 +860,115 @@ async function validateBeneathEvidence(
 		(change) =>
 			change.data.parentId !== undefined || change.data.isDefeater !== undefined
 	);
-	const stored = new Map<
-		string,
-		{
-			elementType: PrismaElementType;
-			isDefeater: boolean;
-			parentId: string | null;
+	const placements = collectPlacements(
+		creates,
+		placed,
+		await readStoredPlaced(placed)
+	);
+	const parentTypes = await readParentTypes(creates, placements);
+
+	for (const placement of placements) {
+		const parentType = parentTypes.get(placement.parentId);
+		if (parentType === undefined) {
+			continue;
 		}
-	>();
-	if (placed.length > 0) {
-		const rows = await prisma.assuranceElement.findMany({
-			where: { id: { in: placed.map((change) => change.elementId) } },
-			select: {
-				id: true,
-				elementType: true,
-				isDefeater: true,
-				parentId: true,
-			},
-		});
-		for (const row of rows) {
-			stored.set(row.id, row);
+		// A new element must fit its parent's type; an element that moves, or
+		// whose counter-goal flag changes, is held only to the evidence rule.
+		const refusal = placement.isNew
+			? parentTypeRefusal(placement.child, parentType)
+			: isBeneathEvidenceRefused(placement.child, parentType) &&
+				ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+		if (refusal) {
+			return `${refusal} (element ${placement.elementId})`;
 		}
 	}
+	return null;
+}
 
-	const placements: {
-		child: { elementType: string; isDefeater: boolean | undefined };
-		elementId: string;
-		parentId: string;
-	}[] = [];
+/**
+ * The single-element routes' rules for the type-specific text fields, applied
+ * to a batch: no new element of a retired type, and no filled-in assumption,
+ * justification, context or link on an element type that does not hold it.
+ * Empty values pass, so a round trip through the editor of an older case
+ * still applies.
+ */
+async function validateFieldsFitTypes(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
 	for (const change of creates) {
-		if (change.parentId) {
-			placements.push({
-				child: {
-					elementType: mapElementType(change.data.type),
-					isDefeater: change.data.isDefeater,
-				},
-				elementId: change.elementId,
-				parentId: change.parentId,
-			});
+		const type = mapElementType(change.data.type);
+		const error =
+			retiredElementTypeRefusal(type) ??
+			rejectFieldsNotApplicable(type, change.data);
+		if (error) {
+			return `${error} (element ${change.elementId})`;
 		}
 	}
-	for (const change of placed) {
-		const row = stored.get(change.elementId);
-		const parentId =
-			change.data.parentId === undefined ? row?.parentId : change.data.parentId;
-		if (row && parentId) {
-			placements.push({
-				child: {
-					elementType: row.elementType,
-					isDefeater: change.data.isDefeater ?? row.isDefeater,
-				},
-				elementId: change.elementId,
-				parentId,
-			});
+	const withText = updates.filter(
+		(change) =>
+			change.data.assumption !== undefined ||
+			change.data.justification !== undefined ||
+			change.data.context !== undefined ||
+			change.data.url !== undefined
+	);
+	if (withText.length === 0) {
+		return null;
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: withText.map((change) => change.elementId) } },
+		select: { id: true, elementType: true },
+	});
+	const typeById = new Map(rows.map((row) => [row.id, row.elementType]));
+	for (const change of withText) {
+		const type = typeById.get(change.elementId);
+		const error = type && rejectFieldsNotApplicable(type, change.data);
+		if (error) {
+			return `${error} (element ${change.elementId})`;
 		}
 	}
+	return null;
+}
 
+/** An element the batch puts under a parent: a new one, or one that moves or changes its counter-goal flag. */
+interface Placement {
+	child: { elementType: string; isDefeater: boolean | undefined };
+	elementId: string;
+	isNew: boolean;
+	parentId: string;
+}
+
+/** The stored type, flag and parent of the elements an update places. */
+type StoredPlaced = Map<
+	string,
+	{
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	}
+>;
+
+async function readStoredPlaced(placed: UpdateChange[]): Promise<StoredPlaced> {
+	if (placed.length === 0) {
+		return new Map();
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: placed.map((change) => change.elementId) } },
+		select: {
+			id: true,
+			elementType: true,
+			isDefeater: true,
+			parentId: true,
+		},
+	});
+	return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** The type of every parent the placements name: created in the batch, or stored. */
+async function readParentTypes(
+	creates: CreateChange[],
+	placements: Placement[]
+): Promise<Map<string, string>> {
 	const createdTypes = new Map(
 		creates.map((change) => [
 			change.elementId,
@@ -933,21 +989,48 @@ async function validateBeneathEvidence(
 					select: { id: true, elementType: true },
 				})
 			: [];
-	const parentTypes = new Map<string, string>([
+	return new Map<string, string>([
 		...createdTypes,
 		...parentRows.map((row) => [row.id, row.elementType] as const),
 	]);
+}
 
-	const refused = placements.find((placement) => {
-		const parentType = parentTypes.get(placement.parentId);
-		return (
-			parentType !== undefined &&
-			isBeneathEvidenceRefused(placement.child, parentType)
-		);
-	});
-	return refused
-		? `${ONLY_COUNTER_GOALS_BENEATH_EVIDENCE} (element ${refused.elementId})`
-		: null;
+function collectPlacements(
+	creates: CreateChange[],
+	placed: UpdateChange[],
+	stored: StoredPlaced
+): Placement[] {
+	const placements: Placement[] = [];
+	for (const change of creates) {
+		if (change.parentId) {
+			placements.push({
+				child: {
+					elementType: mapElementType(change.data.type),
+					isDefeater: change.data.isDefeater,
+				},
+				elementId: change.elementId,
+				isNew: true,
+				parentId: change.parentId,
+			});
+		}
+	}
+	for (const change of placed) {
+		const row = stored.get(change.elementId);
+		const parentId =
+			change.data.parentId === undefined ? row?.parentId : change.data.parentId;
+		if (row && parentId) {
+			placements.push({
+				child: {
+					elementType: row.elementType,
+					isDefeater: change.data.isDefeater ?? row.isDefeater,
+				},
+				elementId: change.elementId,
+				isNew: false,
+				parentId,
+			});
+		}
+	}
+	return placements;
 }
 
 /**
@@ -1985,6 +2068,11 @@ export async function applyBatchUpdate(
 	const beneathEvidenceError = await validateBeneathEvidence(creates, updates);
 	if (beneathEvidenceError) {
 		return { error: beneathEvidenceError };
+	}
+
+	const fieldFitError = await validateFieldsFitTypes(creates, updates);
+	if (fieldFitError) {
+		return { error: fieldFitError };
 	}
 
 	// TEA-syntax element-name prefix validation — same rule, same choke

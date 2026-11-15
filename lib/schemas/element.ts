@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AuthorAssertionStatusSchema } from "@/lib/assertion-status";
 import {
+	clearableString,
 	lenientUrlSchema,
 	optionalString,
 	optionalStringAllowingEmpty,
@@ -99,9 +100,9 @@ export const updateElementSchema = z.strictObject({
 	URL: optionalUrlSchema,
 	urls: z.array(lenientUrlSchema).optional(),
 
-	// GSN-specific
-	assumption: optionalString(5000),
-	justification: optionalString(5000),
+	// GSN-specific. Emptying either field clears it.
+	assumption: clearableString(5000),
+	justification: clearableString(5000),
 	context: z.array(ContextEntrySchema).optional(),
 
 	// Per-assertion status (ADR 0004 D3)

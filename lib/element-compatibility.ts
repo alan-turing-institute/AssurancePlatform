@@ -176,3 +176,28 @@ export function isBeneathEvidenceRefused(
 		!isGoalDefeater(child.elementType.toUpperCase(), child.isDefeater ?? false)
 	);
 }
+
+/**
+ * The refusal when a new element's type cannot hang from the parent it names,
+ * or undefined when it can. The one parent-type rule: a counter-goal may hang
+ * from anything; beneath evidence only a counter-goal may hang; otherwise the
+ * child must be one `canBeChildOf` admits. Both messages start with
+ * `parentId ` so `ERROR_MAPPINGS` answers them with a 400.
+ */
+export function parentTypeRefusal(
+	child: { elementType: string; isDefeater?: boolean | null },
+	parentType: string
+): string | undefined {
+	if (
+		isGoalDefeater(child.elementType.toUpperCase(), child.isDefeater ?? false)
+	) {
+		return;
+	}
+	if (isBeneathEvidenceRefused(child, parentType)) {
+		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+	}
+	if (!canBeChildOf(child.elementType, parentType)) {
+		return `parentId cannot be a ${normalise(parentType)} for a ${normalise(child.elementType)}`;
+	}
+	return;
+}

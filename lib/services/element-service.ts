@@ -6,6 +6,7 @@ import {
 import {
 	isBeneathEvidenceRefused,
 	ONLY_COUNTER_GOALS_BENEATH_EVIDENCE,
+	parentTypeRefusal,
 } from "@/lib/element-compatibility";
 import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
@@ -441,10 +442,73 @@ async function validateParentIdInCase(
 	if (!parent) {
 		return "Parent element not found";
 	}
-	if (isBeneathEvidenceRefused(child, parent.elementType)) {
-		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+	return parentTypeRefusal(child, parent.elementType);
+}
+
+/**
+ * The element types kept from the previous platform. Existing ones stay; no new
+ * one can be created.
+ */
+const RETIRED_ELEMENT_TYPES: ReadonlySet<string> = new Set([
+	"CONTEXT",
+	"JUSTIFICATION",
+	"ASSUMPTION",
+	"CONTRACT",
+]);
+
+/** The refusal for creating an element of a retired type, or undefined for any other type. */
+export function retiredElementTypeRefusal(
+	elementType: string
+): string | undefined {
+	return RETIRED_ELEMENT_TYPES.has(elementType)
+		? `Unknown element type '${elementType}': it can no longer be created`
+		: undefined;
+}
+
+/** Whether a field value written by an update says something (an empty one does not). */
+function carriesValue(value: unknown): boolean {
+	if (typeof value === "string") {
+		return value.trim() !== "";
 	}
-	return;
+	if (Array.isArray(value)) {
+		return value.length > 0;
+	}
+	return value !== null && value !== undefined;
+}
+
+/**
+ * The first type-specific text field an update fills in that does not belong
+ * to the element's type (an assumption on a piece of evidence, a link on a
+ * claim), or undefined. Empty values pass: an undo, a form that sends every
+ * field, or an older row may carry them, and an empty value changes nothing
+ * the type could not hold.
+ */
+export function rejectFieldsNotApplicable(
+	elementType: string,
+	input: {
+		assumption?: string | null;
+		context?: unknown[];
+		justification?: string | null;
+		url?: string | null;
+		URL?: string | null;
+		urls?: string[];
+	}
+): string | undefined {
+	const written: [string, string, unknown][] = [
+		["assumption", "assumption", input.assumption],
+		["justification", "justification", input.justification],
+		["context", "context", input.context],
+		["url", "url", input.url],
+		["url", "URL", input.URL],
+		["urls", "urls", input.urls],
+	];
+	const misplaced = written.find(
+		([rule, , value]) =>
+			carriesValue(value) && !fieldAppliesTo(rule, elementType)
+	);
+	return misplaced
+		? `${misplaced[1]} is not applicable to ${elementType} elements`
+		: undefined;
 }
 
 /**
@@ -1254,6 +1318,14 @@ async function validateElementReferences(
 		return { error: GOAL_DEFEATER_NEEDS_PARENT };
 	}
 
+	if (
+		elementType === "GOAL" &&
+		!input.isDefeater &&
+		(await caseHasGoal(caseId, db))
+	) {
+		return { error: ONE_GOAL_PER_CASE };
+	}
+
 	if (parentId) {
 		const parentError = await validateParentIdInCase(
 			caseId,
@@ -1264,14 +1336,6 @@ async function validateElementReferences(
 		if (parentError) {
 			return { error: parentError };
 		}
-	}
-
-	if (
-		elementType === "GOAL" &&
-		!input.isDefeater &&
-		(await caseHasGoal(caseId, db))
-	) {
-		return { error: ONE_GOAL_PER_CASE };
 	}
 
 	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
@@ -1383,6 +1447,10 @@ async function prepareElementCreate(
 	// an unmapped 500, not a validation error).
 	if (!getCorePrefix(elementType)) {
 		return { error: `Unknown element type '${input.elementType}'` };
+	}
+	const retiredTypeError = retiredElementTypeRefusal(elementType);
+	if (retiredTypeError) {
+		return { error: retiredTypeError };
 	}
 	const parentId = resolveParentId(input);
 	const isDefeater = input.isDefeater ?? false;
@@ -1846,6 +1914,14 @@ async function validateUpdateElementFields(
 	input: UpdateElementInput,
 	userId: string
 ): Promise<{ error: string } | undefined> {
+	const misplacedFieldError = rejectFieldsNotApplicable(
+		existing.elementType,
+		input
+	);
+	if (misplacedFieldError) {
+		return { error: misplacedFieldError };
+	}
+
 	// ADR 0004 D3 write rule: assertionStatus is author-declared only —
 	// see guardAssertionStatusWrite's docstring for why case-level EDIT
 	// access alone isn't a sufficient gate.
@@ -2501,14 +2577,18 @@ export async function attachElement(
 			);
 		}
 
-		if (isBeneathEvidenceRefused(existing, parentElement.elementType)) {
-			return { error: ONLY_COUNTER_GOALS_BENEATH_EVIDENCE };
-		}
-
 		// Validate parent change doesn't create circular reference
 		const validationError = await validateParentChange(elementId, parentId);
 		if (validationError) {
 			return { error: validationError };
+		}
+
+		const parentRefusal = parentTypeRefusal(
+			existing,
+			parentElement.elementType
+		);
+		if (parentRefusal) {
+			return { error: parentRefusal };
 		}
 
 		// Calculate level, attach, and cascade sandbox removal atomically

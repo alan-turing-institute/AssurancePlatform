@@ -264,6 +264,14 @@ const ERROR_MAPPINGS: Array<{
 	// other than a property claim, and putting anything but a counter-goal
 	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// `element-service.ts`'s `rejectFieldsNotApplicable`: a text field filled in
+	// on an element type that does not hold it (an assumption on evidence) is a
+	// validation failure (400), not a silent drop.
+	{
+		pattern:
+			/^(assumption|justification|context|url|URL|urls) is not applicable to /,
+		factory: () => validationError(""),
+	},
 	// Detaching the top goal would leave the case without a root: a validation
 	// failure (400), as for a counter-goal detached from its parent.
 	{
