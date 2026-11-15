@@ -159,12 +159,18 @@ async function applyEdit(
 			)
 		);
 	}
-	// The element read back leaves `context` out when it is empty, and Undo
-	// sends back only what the saved entry holds, so an empty list is spelled
-	// out when the suggestion fills it.
-	const before = suggestion.changes.context
-		? { ...element, context: element.context ?? [] }
-		: element;
+	// The element read back leaves `context`, `assumption` and `justification`
+	// out when they are empty, and Undo sends back only what the saved entry
+	// holds, so an empty value is spelled out when the suggestion fills it.
+	const { changes } = suggestion;
+	const before = {
+		...element,
+		...(changes.context ? { context: element.context ?? [] } : {}),
+		...(changes.assumption ? { assumption: element.assumption ?? "" } : {}),
+		...(changes.justification
+			? { justification: element.justification ?? "" }
+			: {}),
+	};
 	// Writing the description of a placeholder in a case takes its marker off,
 	// so the entry records the element without it; see recordedStates.
 	const recorded = recordedStates(
