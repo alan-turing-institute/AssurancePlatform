@@ -3309,6 +3309,12 @@
           "403": {
             "$ref": "#/components/responses/403"
           },
+          "409": {
+            "$ref": "#/components/responses/409"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
           "500": {
             "$ref": "#/components/responses/500"
           }

@@ -25,6 +25,7 @@ import {
  * @response 403 - The invitation was sent to a different email address
  * @response 409 - The invitation has already been used
  * @response 429 - Too many attempts
+ * @add 409,429
  * @auth SessionAuth
  * @tag Invites
  */
