@@ -23,6 +23,11 @@ import {
 	createTestUser,
 	enableTestPlugin,
 } from "../utils/prisma-factories";
+import {
+	elementRowIsFree,
+	holdRowLock,
+	waitForLockWait,
+} from "../utils/row-lock-test-utils";
 
 const GOAL_NAME_PATTERN = /^G\d+$/;
 const STRATEGY_NAME_PATTERN = /^S\d+$/;
@@ -574,6 +579,28 @@ describe("element-service", () => {
 				where: { id: created.id },
 			});
 			expect(inDb?.deletedAt).not.toBeNull();
+		});
+
+		it("waits for the case lock before it touches any element row", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const created = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const lock = await holdRowLock(async (tx) => {
+				await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${testCase.id} FOR UPDATE`;
+			});
+			const deleting = deleteElement(user.id, created.id);
+			await waitForLockWait();
+
+			const free = await elementRowIsFree(created.id);
+			await lock.release();
+			expectSuccess(await deleting);
+
+			expect(free).toBe(true);
 		});
 
 		it("cascades soft-deletion to children across three levels (goal → strategy → claim)", async () => {

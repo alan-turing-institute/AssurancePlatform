@@ -649,6 +649,29 @@ describe("goal writes that meet another write to the same case", () => {
 		expect(stored.parentId).toBe(fx.claim.id);
 	});
 
+	it("refuses a PUT that would make a second ordinary goal once another write made one", async () => {
+		const { fx, first, second } = await buildCaseWithTwoCounterGoals();
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${fx.caseId} FOR UPDATE`;
+			await tx.assuranceElement.update({
+				where: { id: second.id },
+				data: { isDefeater: false, parentId: null },
+			});
+		});
+		const putting = putElement(first.id, { isDefeater: false, parentId: null });
+		await waitForLockWait();
+		await lock.release();
+
+		const response = await putting;
+
+		expect(response.status).toBe(422);
+		const stored = await prisma.assuranceElement.findUniqueOrThrow({
+			where: { id: first.id },
+		});
+		expect(stored.isDefeater).toBe(true);
+		expect(stored.parentId).toBe(fx.claim.id);
+	});
+
 	it("refuses a batch that makes a counter-goal ordinary without sending a parent, since it keeps the stored one", async () => {
 		const { fx, first } = await buildCaseWithTwoCounterGoals();
 		const before = await storedGoals(fx.caseId);

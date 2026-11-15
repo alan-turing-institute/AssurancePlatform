@@ -9,6 +9,11 @@ import {
 	createTestPermission,
 	createTestUser,
 } from "../utils/prisma-factories";
+import {
+	elementRowIsFree,
+	holdRowLock,
+	waitForLockWait,
+} from "../utils/row-lock-test-utils";
 
 const P1_CHILD_PATTERN = /^P1\.\d+$/;
 
@@ -450,6 +455,30 @@ describe("identifier-service", () => {
 					},
 				}),
 			]);
+		});
+	});
+
+	describe("resetIdentifiers lock order", () => {
+		it("waits for the case lock before it touches any element row", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const lock = await holdRowLock(async (tx) => {
+				await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${testCase.id} FOR UPDATE`;
+			});
+			const resetting = resetIdentifiers(testCase.id, user.id);
+			await waitForLockWait();
+
+			const free = await elementRowIsFree(goal.id);
+			await lock.release();
+			await resetting;
+
+			expect(free).toBe(true);
 		});
 	});
 

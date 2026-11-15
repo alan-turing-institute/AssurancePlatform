@@ -180,6 +180,9 @@ export function isBeneathEvidenceRefused(
 const STARTS_WITH_VOWEL = /^[aeiou]/;
 
 function withArticle(word: string): string {
+	if (word === "evidence") {
+		return "a piece of evidence";
+	}
 	return STARTS_WITH_VOWEL.test(word) ? `an ${word}` : `a ${word}`;
 }
 

@@ -169,7 +169,8 @@ describe("PUT /api/elements/[id] beneath evidence", () => {
 			description: "counter-goal",
 			parentId: fx.evidenceOne.id,
 		});
-		// The case already has its top goal, so remove it to isolate the rule.
+		// Remove the top goal so the case could take an ordinary goal: the refusal
+		// is then the rule that an ordinary goal has no parent.
 		await prisma.assuranceElement.update({
 			where: { id: fx.goal.id },
 			data: { deletedAt: new Date() },

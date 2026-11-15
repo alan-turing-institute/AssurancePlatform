@@ -466,6 +466,28 @@ export function retiredElementTypeRefusal(
 		: undefined;
 }
 
+/**
+ * The refusal when attach puts an element beneath a parent of the given type.
+ * An element of a retired type has no place in the parent-type table, so it
+ * keeps only the rules that hold for every element: nothing but a counter-goal
+ * hangs from evidence, and away goals and modules are leaves.
+ */
+function attachParentRefusal(
+	child: { elementType: string; isDefeater?: boolean | null },
+	parentType: string
+): string | undefined {
+	if (!RETIRED_ELEMENT_TYPES.has(child.elementType)) {
+		return parentTypeRefusal(child, parentType);
+	}
+	if (isBeneathEvidenceRefused(child, parentType)) {
+		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+	}
+	if (parentType === "AWAY_GOAL" || parentType === "MODULE") {
+		return "parentId cannot be an away goal or a module";
+	}
+	return;
+}
+
 /** Whether a field value written by an update says something (an empty one does not). */
 function carriesValue(value: unknown): boolean {
 	if (typeof value === "string") {
@@ -478,7 +500,7 @@ function carriesValue(value: unknown): boolean {
 }
 
 /**
- * The first type-specific text field an update fills in that does not belong
+ * The first type-specific text field an update or a create fills in that does not belong
  * to the element's type (an assumption on a piece of evidence, a link on a
  * claim), or undefined. Empty values pass: an undo, a form that sends every
  * field, or an older row may carry them, and an empty value changes nothing
@@ -2629,11 +2651,10 @@ export async function attachElement(
 			return { error: validationError };
 		}
 
-		// An element of a retired type has no place in the parent-type table, so
-		// attach keeps refusing it only what it always refused (a circular move).
-		const parentRefusal = RETIRED_ELEMENT_TYPES.has(existing.elementType)
-			? undefined
-			: parentTypeRefusal(existing, parentElement.elementType);
+		const parentRefusal = attachParentRefusal(
+			existing,
+			parentElement.elementType
+		);
 		if (parentRefusal) {
 			return { error: parentRefusal };
 		}

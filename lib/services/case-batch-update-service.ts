@@ -1433,23 +1433,18 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 
 /**
  * Regenerates names for updates that flip `isDefeater` without an explicit
- * rename (Chris's ruling, fix round 1, 2026-09-15 — "identifiers are
- * always set by the app"; mirrors element-service.ts's `updateElement`
- * path via the shared `regenerateNameForIsDefeaterChange`). Returns
- * elementId -> new name for only the updates where the flip is a REAL
+ * rename (identifiers are always set by the app; mirrors element-service.ts's
+ * `updateElement` path via the shared `regenerateNameForIsDefeaterChange`).
+ * Returns elementId -> new name for only the updates where the flip is a REAL
  * change (differs from the stored value) and no name was supplied — the
  * write loop below applies each onto that update's `updateData.name`.
  *
- * KNOWN LIMITATION (not fixed here — narrow, and pre-existing for every
- * other `generateElementName` caller): `regenerateNameForIsDefeaterChange`
- * counts existing elements via the GLOBAL `prisma` client, not the `tx`
- * this batch runs in, so a count here can miss another create/update this
- * SAME batch makes before this function runs. A flip-without-rename
- * change landing in the same batch as a create/rename that shifts the
- * relevant count is rare enough not to warrant threading `tx` through
- * generateElementName's whole call graph for this fix round.
+ * Names are counted through the batch's transaction, so the creates and
+ * renames the batch has already made are seen, and the case lock the batch
+ * holds keeps other writers from adding names meanwhile.
  */
 async function regenerateNamesForDefeaterFlips(
+	tx: TransactionClient,
 	updates: UpdateChange[]
 ): Promise<Map<string, string>> {
 	const flips = updates.filter(
@@ -1459,7 +1454,7 @@ async function regenerateNamesForDefeaterFlips(
 		return new Map();
 	}
 
-	const existingRows = await prisma.assuranceElement.findMany({
+	const existingRows = await tx.assuranceElement.findMany({
 		where: { id: { in: flips.map((c) => c.elementId) } },
 		select: {
 			id: true,
@@ -1499,7 +1494,8 @@ async function regenerateNamesForDefeaterFlips(
 			existing.caseId,
 			effectiveParentId,
 			nextIsDefeater,
-			given
+			given,
+			tx
 		);
 		given.add(name);
 		regenerated.set(change.elementId, name);
@@ -1903,10 +1899,8 @@ async function applyUpdates(
 		finalLevels
 	);
 
-	// isDefeater-flip name regeneration (Chris's ruling, fix round 1) — see
-	// regenerateNamesForDefeaterFlips's own docstring for the known
-	// same-batch-count limitation.
-	const regeneratedNames = await regenerateNamesForDefeaterFlips(updates);
+	// A flip of isDefeater without a rename gets a regenerated name.
+	const regeneratedNames = await regenerateNamesForDefeaterFlips(tx, updates);
 	const patternMarkers = await resolvePatternMarkers(tx, caseId, updates);
 
 	for (const change of updates) {

@@ -120,6 +120,41 @@ describe("POST /api/elements/[id]/restore", () => {
 		return world;
 	}
 
+	it("answers 401 when signed out and restores nothing", async () => {
+		const { strategy } = await buildDeleted();
+
+		const response = await postRestore(strategy.id);
+
+		expect(response.status).toBe(401);
+		expect((await storedState(strategy.id))?.deletedAt).not.toBeNull();
+	});
+
+	it("lets a person with a direct EDIT share restore", async () => {
+		const { owner, testCase, strategy } = await buildDeleted();
+		const editor = await createTestUser();
+		await createTestPermission(testCase.id, editor.id, owner.id, "EDIT");
+		await mockAuth(editor.id, editor.username, editor.email);
+
+		const response = await postRestore(strategy.id);
+
+		expect(response.status).toBe(200);
+		expect((await storedState(strategy.id))?.deletedAt).toBeNull();
+	});
+
+	it("lets a member of a team with an EDIT share restore", async () => {
+		const { owner, testCase, strategy } = await buildDeleted();
+		const member = await createTestUser();
+		const team = await createTestTeam(owner.id);
+		await addTeamMember(team.id, member.id, "MEMBER");
+		await createTestTeamPermission(testCase.id, team.id, owner.id, "EDIT");
+		await mockAuth(member.id, member.username, member.email);
+
+		const response = await postRestore(strategy.id);
+
+		expect(response.status).toBe(200);
+		expect((await storedState(strategy.id))?.deletedAt).toBeNull();
+	});
+
 	it("answers 404 for an element that does not exist", async () => {
 		const { owner } = await build();
 		await mockAuth(owner.id, owner.username, owner.email);

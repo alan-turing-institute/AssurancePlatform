@@ -248,6 +248,41 @@ describe("restoring an element", () => {
 		expect(restored?.name).toMatch(RENAMED_EVIDENCE);
 	});
 
+	it("renames a grandchild after its nearest renamed ancestor, not a further one", async () => {
+		const { owner, caseId, goal } = await setUp();
+		const claim = (name: string, parentId: string) =>
+			createTestElement(caseId, owner.id, {
+				elementType: "PROPERTY_CLAIM",
+				name,
+				parentId,
+			});
+		const p1 = await claim("P1", goal.id);
+		await claim("P1.1", p1.id);
+		const p12 = await claim("P1.2", p1.id);
+		const child = await claim("P1.2.1", p12.id);
+		const grandchild = await claim("P1.2.1.1", child.id);
+		await claim("P1.3", p1.id);
+		expect((await deleteViaRoute(p12.id)).status).toBe(200);
+		// Typed names may repeat one in the bin: P1.2 is taken again, and so is
+		// the first child name under the name the restored claim is given.
+		await claim("P1.2", p1.id);
+		await claim("P1.6.1", p1.id);
+
+		expect((await restoreViaRoute(p12.id)).status).toBe(200);
+
+		const nameOf = async (id: string) =>
+			(
+				await prisma.assuranceElement.findUniqueOrThrow({
+					where: { id },
+					select: { name: true },
+				})
+			).name;
+		const childName = await nameOf(child.id);
+		expect(await nameOf(p12.id)).toBe("P1.6");
+		expect(childName).not.toBe("P1.6.1");
+		expect(await nameOf(grandchild.id)).toBe(`${childName}.1`);
+	});
+
 	it("leaves a name nobody else holds as it was", async () => {
 		const { owner, caseId } = await setUp();
 		const evidence = await createTestElement(caseId, owner.id, {
