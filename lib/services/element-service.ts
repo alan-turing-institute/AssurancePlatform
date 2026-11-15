@@ -653,29 +653,32 @@ type ParentInfoForNaming = {
 } | null;
 
 /**
- * Returns the flat identifier `<prefix><n>` for the lowest `n` at or above
- * `startAt` that no live element in the case already carries.
+ * Returns the identifier `<prefix><n>` for the lowest `n` at or above `startAt`
+ * that no element in the case carries, deleted ones included (so a restore
+ * never meets a repeat), and that is not in `alsoTaken` (names given earlier in
+ * the same write).
  *
- * The flat tallies in the property-claim namers count only the claims that
- * do not dot-continue a parent's name. A claim placed under a parent whose
- * own name is not a well-formed identifier is named flat as well, yet falls
- * outside those tallies, so the tally alone can name several claims alike.
- * Skipping the names in use keeps every flat identifier unique, and leaves
- * the tally's own choice untouched whenever it is already free.
+ * The tallies in the namers count live siblings of one kind, and the kinds
+ * differ by branch: direct children, children through a strategy, claims under
+ * a parent whose own name is not a well-formed identifier. The tally alone can
+ * therefore name two elements alike, and a deleted element's number would come
+ * round again. Skipping the names in use keeps every generated identifier
+ * unique, and leaves the tally's own choice untouched whenever it is free.
  */
-async function nextFreeFlatName(
+async function nextFreeName(
 	caseId: string,
 	prefix: string,
 	startAt: number,
-	db: TxClient
+	db: TxClient,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	const named = await db.assuranceElement.findMany({
-		where: { caseId, deletedAt: null, name: { startsWith: prefix } },
+		where: { caseId, name: { startsWith: prefix } },
 		select: { name: true },
 	});
 	const inUse = new Set(named.map((element) => element.name));
 	let next = startAt;
-	while (inUse.has(`${prefix}${next}`)) {
+	while (inUse.has(`${prefix}${next}`) || alsoTaken?.has(`${prefix}${next}`)) {
 		next += 1;
 	}
 	return `${prefix}${next}`;
@@ -702,7 +705,8 @@ async function generateDefeaterPropertyClaimName(
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
 	prefix: string,
-	db: TxClient
+	db: TxClient,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
@@ -723,7 +727,13 @@ async function generateDefeaterPropertyClaimName(
 				deletedAt: null,
 			},
 		});
-		return `${parentInfo.name}.${siblingCount + 1}`;
+		return await nextFreeName(
+			caseId,
+			`${parentInfo.name}.`,
+			siblingCount + 1,
+			db,
+			alsoTaken
+		);
 	}
 
 	const caseWideCount = await db.assuranceElement.count({
@@ -735,7 +745,7 @@ async function generateDefeaterPropertyClaimName(
 			NOT: { parent: { elementType: "PROPERTY_CLAIM", isDefeater: true } },
 		},
 	});
-	return await nextFreeFlatName(caseId, prefix, caseWideCount + 1, db);
+	return await nextFreeName(caseId, prefix, caseWideCount + 1, db, alsoTaken);
 }
 
 /**
@@ -763,7 +773,8 @@ async function generatePlainPropertyClaimName(
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
 	prefix: string,
-	db: TxClient
+	db: TxClient,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
@@ -784,7 +795,13 @@ async function generatePlainPropertyClaimName(
 				deletedAt: null,
 			},
 		});
-		return `${parentInfo.name}.${siblingCount + 1}`;
+		return await nextFreeName(
+			caseId,
+			`${parentInfo.name}.`,
+			siblingCount + 1,
+			db,
+			alsoTaken
+		);
 	}
 
 	if (parentId && parentInfo?.elementType === "STRATEGY") {
@@ -832,7 +849,13 @@ async function generatePlainPropertyClaimName(
 						deletedAt: null,
 					},
 				});
-				return `${ancestor.name}.${siblingCount + 1}`;
+				return await nextFreeName(
+					caseId,
+					`${ancestor.name}.`,
+					siblingCount + 1,
+					db,
+					alsoTaken
+				);
 			}
 		}
 		// Strategy is under a goal, or under a defeater property claim —
@@ -874,7 +897,7 @@ async function generatePlainPropertyClaimName(
 			},
 		},
 	});
-	return await nextFreeFlatName(caseId, prefix, caseWideCount + 1, db);
+	return await nextFreeName(caseId, prefix, caseWideCount + 1, db, alsoTaken);
 }
 
 /**
@@ -899,7 +922,8 @@ async function generateElementName(
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
 	isDefeater: boolean,
-	db: TxClient = prisma
+	db: TxClient = prisma,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	const prefix = toPrefix(elementType, isDefeater);
 
@@ -910,14 +934,16 @@ async function generateElementName(
 					parentId,
 					parentInfo,
 					prefix,
-					db
+					db,
+					alsoTaken
 				)
 			: await generatePlainPropertyClaimName(
 					caseId,
 					parentId,
 					parentInfo,
 					prefix,
-					db
+					db,
+					alsoTaken
 				);
 	}
 
@@ -933,7 +959,7 @@ async function generateElementName(
 			deletedAt: null,
 		},
 	});
-	return `${prefix}${caseWideCount + 1}`;
+	return await nextFreeName(caseId, prefix, caseWideCount + 1, db, alsoTaken);
 }
 
 /**
@@ -1044,7 +1070,8 @@ export async function regenerateNameForIsDefeaterChange(
 	elementType: PrismaElementType,
 	caseId: string,
 	parentId: string | null,
-	isDefeater: boolean
+	isDefeater: boolean,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	const { parentInfo } =
 		elementType === "PROPERTY_CLAIM" && parentId
@@ -1055,7 +1082,9 @@ export async function regenerateNameForIsDefeaterChange(
 		caseId,
 		parentId,
 		parentInfo,
-		isDefeater
+		isDefeater,
+		prisma,
+		alsoTaken
 	);
 }
 
@@ -2680,6 +2709,68 @@ export async function getSandboxElements(
 }
 
 /**
+ * After elements are restored, renames any whose name a live element of the
+ * case now also carries (a typed, imported or renumbered name taken while the
+ * element was in the bin). `restoredIds` lists parents before their children.
+ * A renamed element's dotted descendants follow it (P1.2.1 becomes P1.4.1);
+ * any that still clash are named afresh. Names no live element shares are left
+ * as they are.
+ */
+async function renameRestoredOnClash(
+	tx: TxClient,
+	caseId: string,
+	restoredIds: string[]
+): Promise<void> {
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: restoredIds } },
+		select: {
+			id: true,
+			name: true,
+			elementType: true,
+			isDefeater: true,
+			parentId: true,
+		},
+	});
+	const byId = new Map(rows.map((row) => [row.id, row]));
+	const renames: { from: string; to: string }[] = [];
+	for (const id of restoredIds) {
+		const row = byId.get(id);
+		if (!row?.name) {
+			continue;
+		}
+		let name = row.name;
+		for (const rename of renames) {
+			if (name.startsWith(`${rename.from}.`)) {
+				name = `${rename.to}${name.slice(rename.from.length)}`;
+				break;
+			}
+		}
+		const clash = await tx.assuranceElement.findFirst({
+			where: { caseId, deletedAt: null, name, id: { not: id } },
+			select: { id: true },
+		});
+		if (clash) {
+			const { parentInfo } =
+				row.elementType === "PROPERTY_CLAIM" && row.parentId
+					? await calculatePropertyClaimLevel(row.parentId, tx)
+					: { parentInfo: null };
+			name = await generateElementName(
+				row.elementType,
+				caseId,
+				row.parentId,
+				parentInfo,
+				row.isDefeater,
+				tx
+			);
+		}
+		if (name !== row.name) {
+			renames.push({ from: row.name, to: name });
+			await tx.assuranceElement.update({ where: { id }, data: { name } });
+		}
+	}
+}
+
+/**
  * Restores a soft-deleted element and all its descendants
  */
 export async function restoreElement(
@@ -2742,6 +2833,7 @@ export async function restoreElement(
 				where: { id: { in: allIds } },
 				data: { deletedAt: null, deletedById: null },
 			});
+			await renameRestoredOnClash(tx, element.caseId, allIds);
 			await touchCase(tx, element.caseId);
 			return { data: true };
 		});

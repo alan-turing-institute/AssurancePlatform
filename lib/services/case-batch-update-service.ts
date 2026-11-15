@@ -1387,6 +1387,9 @@ async function regenerateNamesForDefeaterFlips(
 	const existingById = new Map(existingRows.map((r) => [r.id, r]));
 
 	const regenerated = new Map<string, string>();
+	// Names given earlier in this loop are not stored yet, so each later flip
+	// is told about them.
+	const given = new Set<string>();
 	for (const change of flips) {
 		const existing = existingById.get(change.elementId);
 		const nextIsDefeater = change.data.isDefeater;
@@ -1410,8 +1413,10 @@ async function regenerateNamesForDefeaterFlips(
 			existing.elementType,
 			existing.caseId,
 			effectiveParentId,
-			nextIsDefeater
+			nextIsDefeater,
+			given
 		);
+		given.add(name);
 		regenerated.set(change.elementId, name);
 	}
 	return regenerated;
