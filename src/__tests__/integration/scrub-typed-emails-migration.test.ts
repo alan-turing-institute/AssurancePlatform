@@ -46,7 +46,15 @@ describe("migration: remove typed email addresses from the audit log", () => {
 			userEmail: "e@example.com",
 		});
 
-		expect(STATEMENTS.length).toBe(3);
+		const failedWithAddress = await seed("password_reset_email_failed", {
+			error: "Recipient d.person@example.com was rejected",
+			userId: "u1",
+		});
+		const failedWithoutAddress = await seed("password_reset_email_failed", {
+			error: "Email sending failed (Throttled)",
+		});
+
+		expect(STATEMENTS.length).toBe(4);
 		for (const statement of STATEMENTS) {
 			await prisma.$executeRawUnsafe(statement);
 		}
@@ -61,6 +69,13 @@ describe("migration: remove typed email addresses from the audit log", () => {
 			identifiers: { ip: "198.51.100.1" },
 		});
 		expect(await read(invite.id)).toEqual({ inviteId: "i1" });
+		expect(await read(failedWithAddress.id)).toEqual({
+			error: "Email sending failed",
+			userId: "u1",
+		});
+		expect(await read(failedWithoutAddress.id)).toEqual({
+			error: "Email sending failed (Throttled)",
+		});
 	});
 
 	it("leaves entries of other event types alone", async () => {

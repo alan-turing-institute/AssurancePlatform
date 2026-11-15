@@ -30,3 +30,12 @@ WHERE "event_type" IN (
         'invite_acceptance_email_mismatch'
       )
   AND ("metadata" ? 'inviteEmail' OR "metadata" ? 'userEmail');
+
+-- A failed password-reset email stored the email provider's own error text,
+-- which can quote the recipient's address. Entries whose text contains an
+-- address get the fixed message the service now writes.
+UPDATE "security_audit_logs"
+SET "metadata" = jsonb_set("metadata", '{error}', '"Email sending failed"')
+WHERE "event_type" = 'password_reset_email_failed'
+  AND jsonb_typeof("metadata"->'error') = 'string'
+  AND "metadata"->>'error' LIKE '%@%';
