@@ -2,7 +2,8 @@
 /**
  * check-advisories.ts — fail when `pnpm audit` reports a high or critical
  * advisory that is not in .advisory-baseline.json, or when a baseline entry
- * has expired.
+ * has expired. It audits twice, once for everything and once with --prod, so
+ * a "dev" entry cannot accept the same advisory when it reaches production.
  *
  * Usage:
  *   pnpm exec tsx scripts/check-advisories.ts [--baseline <file>]
@@ -10,8 +11,10 @@
  * Needs the network (the audit queries the registry), so it runs in CI on
  * pull requests and is not part of the pre-push hook. A baseline entry is
  *   { ghsa, package, severity, scope: "prod" | "dev", reason, owner, expires }
- * with `expires` as YYYY-MM-DD. An entry no longer reported by the audit is
- * a warning, not a failure, so the file can be pruned in its own change.
+ * with `expires` as YYYY-MM-DD and `owner` naming who renews the entry. An
+ * advisory reported at a higher severity than its entry records fails until
+ * the entry is re-accepted. An entry no longer reported by the audit is a
+ * warning, not a failure, so the file can be pruned in its own change.
  *
  * Fails closed: output that is missing, is not JSON or lacks an `advisories`
  * object is an error, never a pass.
@@ -48,6 +51,8 @@ export interface Evaluation {
 	warnings: string[];
 }
 
+const SEVERITY_RANK: Record<string, number> = { high: 1, critical: 2 };
+
 export class AdvisoryCheckError extends Error {}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -70,7 +75,7 @@ export function parseAuditOutput(text: string): Advisory[] {
 			"The audit output has no advisories object, so it cannot be trusted."
 		);
 	}
-	const found = new Map<string, Advisory>();
+	const found: Advisory[] = [];
 	for (const raw of Object.values(parsed.advisories)) {
 		if (!isRecord(raw)) {
 			throw new AdvisoryCheckError("The audit output holds a malformed entry.");
@@ -88,10 +93,10 @@ export function parseAuditOutput(text: string): Advisory[] {
 			);
 		}
 		if (BLOCKING_SEVERITIES.has(severity)) {
-			found.set(ghsa, { ghsa, package: name, severity });
+			found.push({ ghsa, package: name, severity });
 		}
 	}
-	return [...found.values()];
+	return mergeReports(found);
 }
 
 const REQUIRED_KEYS = [
@@ -145,30 +150,79 @@ export function parseBaseline(text: string): BaselineEntry[] {
 	return parsed.map(validateEntry);
 }
 
-/** Compares the reported advisories with the baseline as of `today`. */
+function rank(severity: string): number {
+	return SEVERITY_RANK[severity] ?? 0;
+}
+
+/** Merges the reports of one advisory, keeping the highest severity. */
+function mergeReports(...lists: Advisory[][]): Advisory[] {
+	const merged = new Map<string, Advisory>();
+	for (const advisory of lists.flat()) {
+		const known = merged.get(advisory.ghsa);
+		if (!known || rank(advisory.severity) > rank(known.severity)) {
+			merged.set(advisory.ghsa, advisory);
+		}
+	}
+	return [...merged.values()];
+}
+
+function checkEntry(
+	advisory: Advisory,
+	entry: BaselineEntry,
+	reachesProduction: boolean,
+	today: string
+): string[] {
+	const failures: string[] = [];
+	const label = `${advisory.ghsa} (${advisory.package})`;
+	if (entry.expires < today) {
+		failures.push(
+			`The baseline entry for ${label} expired on ${entry.expires}: fix it or renew the entry with a reason.`
+		);
+	}
+	if (rank(advisory.severity) > rank(entry.severity)) {
+		failures.push(
+			`Advisory ${label} is now ${advisory.severity} but its baseline entry records ${entry.severity}: the entry must be re-accepted.`
+		);
+	}
+	if (reachesProduction && entry.scope !== "prod") {
+		failures.push(
+			`Advisory ${label} is reported by the production audit but its baseline entry has scope "${entry.scope}": upgrade the package, or record a production entry with a reason.`
+		);
+	}
+	return failures;
+}
+
+/**
+ * Compares the reported advisories with the baseline as of `today`.
+ * `production` holds the advisories that `pnpm audit --prod` reports; each one
+ * needs an entry with scope "prod", because a "dev" entry only covers a
+ * development-only copy of the package.
+ */
 export function evaluate(
 	advisories: Advisory[],
+	production: Advisory[],
 	baseline: BaselineEntry[],
 	today: string
 ): Evaluation {
 	const failures: string[] = [];
 	const warnings: string[] = [];
 	const approved = new Map(baseline.map((entry) => [entry.ghsa, entry]));
-	const seen = new Set<string>();
+	const inProduction = new Set(production.map((advisory) => advisory.ghsa));
+	const reported = mergeReports(advisories, production);
 
-	for (const advisory of advisories) {
-		seen.add(advisory.ghsa);
+	for (const advisory of reported) {
 		const entry = approved.get(advisory.ghsa);
-		if (!entry) {
+		if (entry) {
+			failures.push(
+				...checkEntry(advisory, entry, inProduction.has(advisory.ghsa), today)
+			);
+		} else {
 			failures.push(
 				`New ${advisory.severity} advisory ${advisory.ghsa} in ${advisory.package}: upgrade the package, or add a reasoned entry to .advisory-baseline.json.`
 			);
-		} else if (entry.expires < today) {
-			failures.push(
-				`The baseline entry for ${advisory.ghsa} (${advisory.package}) expired on ${entry.expires}: fix it or renew the entry with a reason.`
-			);
 		}
 	}
+	const seen = new Set(reported.map((advisory) => advisory.ghsa));
 	for (const entry of baseline) {
 		if (!seen.has(entry.ghsa)) {
 			warnings.push(
@@ -179,10 +233,13 @@ export function evaluate(
 	return { failures, warnings };
 }
 
-function runAudit(): string {
+function runAudit(productionOnly: boolean): string {
 	// `pnpm audit` exits non-zero when it finds anything, so the exit code says
 	// nothing about whether the output is usable; the parser decides that.
-	const result = spawnSync("pnpm", ["audit", "--json"], {
+	const args = productionOnly
+		? ["audit", "--prod", "--json"]
+		: ["audit", "--json"];
+	const result = spawnSync("pnpm", args, {
 		encoding: "utf8",
 		maxBuffer: MAX_AUDIT_OUTPUT_BYTES,
 	});
@@ -197,7 +254,7 @@ function runAudit(): string {
 /** Runs the check and returns the process exit code. */
 export function run(
 	argv: string[],
-	readAudit: () => string,
+	readAudit: (productionOnly: boolean) => string,
 	today: string
 ): number {
 	const flag = argv.indexOf("--baseline");
@@ -207,8 +264,14 @@ export function run(
 			throw new AdvisoryCheckError("--baseline needs a file path.");
 		}
 		const baseline = parseBaseline(fs.readFileSync(baselinePath, "utf8"));
-		const advisories = parseAuditOutput(readAudit());
-		const { failures, warnings } = evaluate(advisories, baseline, today);
+		const advisories = parseAuditOutput(readAudit(false));
+		const production = parseAuditOutput(readAudit(true));
+		const { failures, warnings } = evaluate(
+			advisories,
+			production,
+			baseline,
+			today
+		);
 		for (const warning of warnings) {
 			console.warn(`::warning::${warning}`);
 		}
@@ -216,7 +279,7 @@ export function run(
 			console.error(`::error::${failure}`);
 		}
 		console.log(
-			`${advisories.length} high or critical advisories reported, ${baseline.length} baselined, ${failures.length} failing.`
+			`${advisories.length} high or critical advisories reported (${production.length} in production), ${baseline.length} baselined, ${failures.length} failing.`
 		);
 		return failures.length === 0 ? 0 : 1;
 	} catch (error) {

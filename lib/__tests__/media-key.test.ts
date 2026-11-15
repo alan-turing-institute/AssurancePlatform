@@ -76,6 +76,19 @@ describe("isLegacyBlobUrl", () => {
 		).toBe(false);
 	});
 
+	it("refuses a value whose host is cut short by a query or fragment marker", () => {
+		expect(
+			isLegacyBlobUrl(
+				"https://example.com?.blob.core.windows.net/media/cases/2/a.png"
+			)
+		).toBe(false);
+		expect(
+			isLegacyBlobUrl(
+				"https://example.com#.blob.core.windows.net/media/cases/2/a.png"
+			)
+		).toBe(false);
+	});
+
 	it("refuses a bare key and a plain http address", () => {
 		expect(isLegacyBlobUrl("cases/1/a.png")).toBe(false);
 		expect(

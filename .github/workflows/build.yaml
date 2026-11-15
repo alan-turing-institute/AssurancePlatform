@@ -258,7 +258,17 @@ jobs:
         # must not block a deploy. Accepted advisories live in
         # .advisory-baseline.json with a reason, owner and expiry.
         if: github.event_name == 'pull_request'
-        run: pnpm exec tsx scripts/check-advisories.ts
+        run: |
+          # The step also fails when the summary line is missing, so a script
+          # that exits 0 without checking anything cannot pass.
+          status=0
+          pnpm exec tsx scripts/check-advisories.ts > "$RUNNER_TEMP/advisories.log" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/advisories.log"
+          if ! grep -q 'high or critical advisories reported' "$RUNNER_TEMP/advisories.log"; then
+            echo "::error::The advisory check printed no summary line."
+            exit 1
+          fi
+          exit "$status"
 
       - name: Check generated OpenAPI spec is up to date
         # AGENTS.md requires `pnpm docs:generate` after documented route
