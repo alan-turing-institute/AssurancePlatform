@@ -419,3 +419,42 @@ describe("POST /api/cases/[id]/batch — failures inside the transaction", () =>
 		);
 	});
 });
+
+describe("POST /api/cases/[id]/batch — a move out of a parent the same edit deletes", () => {
+	it("answers 200 and keeps the moved element", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		const parent = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+			parentId: goal.id,
+		});
+		const moved = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1.1",
+			parentId: parent.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{ type: "delete", elementId: parent.id },
+				{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+			],
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			success: true,
+			summary: { created: 0, updated: 1, deleted: 1 },
+		});
+		const row = await prisma.assuranceElement.findUnique({
+			where: { id: moved.id },
+		});
+		expect(row?.parentId).toBe(goal.id);
+	});
+});

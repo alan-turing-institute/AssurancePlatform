@@ -954,6 +954,57 @@ async function applyDeletes(
 }
 
 /**
+ * Detaches, ahead of the deletes, every element this batch moves that the
+ * deletes would otherwise take with them. Deleting an element also deletes
+ * everything beneath it, so an element moved out of a parent the same batch
+ * deletes would be gone before its own update ran. Setting its parent to null
+ * first lets it, and everything beneath it, survive; `applyUpdates` then sets
+ * the parent the batch names. Runs inside the transaction, so the temporary
+ * null is never visible to anyone else.
+ */
+async function detachMovedElementsFromDeletes(
+	tx: TransactionClient,
+	caseId: string,
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<void> {
+	if (deletes.length === 0) {
+		return;
+	}
+	const deletedIds = new Set(deletes.map((change) => change.elementId));
+	const movers = updates
+		.filter(
+			(change) =>
+				change.data.parentId !== undefined && !deletedIds.has(change.elementId)
+		)
+		.map((change) => change.elementId);
+	if (movers.length === 0) {
+		return;
+	}
+	const descendantsByRoot = await getDescendantIdsForRoots(
+		[...deletedIds],
+		tx,
+		{
+			includeDeleted: true,
+		}
+	);
+	const doomed = new Set(deletedIds);
+	for (const descendants of descendantsByRoot.values()) {
+		for (const id of descendants) {
+			doomed.add(id);
+		}
+	}
+	const rescued = movers.filter((id) => doomed.has(id));
+	if (rescued.length === 0) {
+		return;
+	}
+	await tx.assuranceElement.updateMany({
+		where: { id: { in: rescued }, caseId },
+		data: { parentId: null },
+	});
+}
+
+/**
  * Applies create operations in dependency order
  */
 async function applyCreates(
@@ -1737,8 +1788,10 @@ export async function applyBatchUpdate(
 
 	try {
 		await prisma.$transaction(async (tx) => {
-			// Order: unlinks first, then deletes, creates, updates, links last
+			// Order: unlinks first, then deletes (after freeing any element the
+			// batch moves out of a parent it deletes), creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
+			await detachMovedElementsFromDeletes(tx, caseId, updates, deletes);
 			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, caseId, updates);

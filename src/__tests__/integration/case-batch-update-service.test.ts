@@ -2695,6 +2695,200 @@ describe("applyBatchUpdate", () => {
 		});
 	});
 
+	describe("moving an element out of a parent the same batch deletes", () => {
+		it("keeps the moved element, under its new parent, at the right level", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const parent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: parent.id,
+			});
+			const staying = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.2",
+				parentId: parent.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: parent.id },
+					{ type: "delete", elementId: staying.id },
+					{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+				])
+			);
+
+			expect(data.summary).toEqual({ created: 0, updated: 1, deleted: 2 });
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: moved.id },
+			});
+			expect(row?.parentId).toBe(goal.id);
+			expect(row?.level).toBe(1);
+			expect(
+				await prisma.assuranceElement.count({
+					where: { id: { in: [parent.id, staying.id] } },
+				})
+			).toBe(0);
+		});
+
+		it("keeps the moved element when its new parent is created in the same batch", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const parent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: parent.id,
+			});
+			const newId = crypto.randomUUID();
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: parent.id },
+					{
+						type: "create",
+						elementId: newId,
+						parentId: goal.id,
+						data: {
+							id: newId,
+							type: "PROPERTY_CLAIM",
+							name: "P2",
+							description: "Made in the same edit",
+							inSandbox: false,
+						},
+					},
+					{ type: "update", elementId: moved.id, data: { parentId: newId } },
+				])
+			);
+
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: moved.id },
+			});
+			expect(row?.parentId).toBe(newId);
+		});
+
+		it("keeps the subtree of a moved element when only a grandparent is deleted", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const grandparent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const middle = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: grandparent.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1.1",
+				parentId: middle.id,
+			});
+			const leaf = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1.1.1",
+				parentId: moved.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: grandparent.id },
+					{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+				])
+			);
+
+			const kept = await prisma.assuranceElement.findMany({
+				where: { id: { in: [moved.id, leaf.id] } },
+				orderBy: { name: "asc" },
+			});
+			expect(kept.map((row) => row.parentId)).toEqual([goal.id, moved.id]);
+			expect(
+				await prisma.assuranceElement.count({
+					where: { id: { in: [grandparent.id, middle.id] } },
+				})
+			).toBe(0);
+		});
+
+		it("keeps a counter-goal moved from evidence the same batch deletes", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const claim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const evidence = await createTestElement(testCase.id, user.id, {
+				elementType: "EVIDENCE",
+				name: "E1",
+			});
+			const counterGoal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "CG1",
+				isDefeater: true,
+				parentId: evidence.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: evidence.id },
+					{
+						type: "update",
+						elementId: counterGoal.id,
+						data: { parentId: claim.id },
+					},
+				])
+			);
+
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: counterGoal.id },
+			});
+			expect(row?.parentId).toBe(claim.id);
+			expect(
+				await prisma.assuranceElement.findUnique({
+					where: { id: evidence.id },
+				})
+			).toBeNull();
+		});
+	});
+
 	describe("defeatsElementId cross-case reference (regression)", () => {
 		it("rejects a create whose defeatsElementId belongs to a different case", async () => {
 			const user = await createTestUser();
