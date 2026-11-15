@@ -28,7 +28,8 @@ SEED_USER_PASSWORD=<printed password> pnpm exec tsx scripts/check-pages.ts --bas
 List every page the change can affect, not only the one you edited.
 For a UI-library upgrade, or a change to a shared component or layout, use `--all`.
 Each page reports its status, page errors, console errors, layout shift, accessibility violations and placeholder text.
-A page fails on a status of 400 or above, any page error, placeholder text, or a redirect to the sign-in page.
+A page fails on a status of 400 or above, any page error, placeholder text, a redirect to the sign-in page, or an accessibility scan that did not run.
+`--write-baseline` refuses to write, exits non-zero and changes nothing when any page's scan did not run or any page did not load properly (no response, a status of 400 or above, a page error, or a redirect to the sign-in page).
 Accessibility and layout shift are compared with `.a11y-baseline.json`, which records what each page has today.
 Counts are kinds of failing element, not elements: repeated elements with the same tag, role and sorted class list (read from the element's full opening tag) count once, and colour contrast counts distinct foreground and background colour pairs with the large-text flag.
 The raw element counts are reported as `axe.nodeCounts` and are not compared.

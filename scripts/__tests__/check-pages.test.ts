@@ -9,6 +9,7 @@ import {
 	buildFailReasons,
 	buildRouteRegex,
 	checkPage,
+	checkThrewResult,
 	compareToBaseline,
 	describeRedirect,
 	discoverAllPaths,
@@ -36,6 +37,8 @@ const BASELINE_FILENAME_RE = /\.a11y-baseline\.json$/;
 const NEW_A11Y_RULE_RE = /new accessibility rule/;
 const SCAN_DID_NOT_RUN_RE = /accessibility scan did not run: .*scan broke/;
 const REFUSING_RE = /refusing to write the baseline.*\/x/;
+const NOT_LOADED_RE =
+	/refusing to write the baseline.*did not load properly.*\/x/;
 const NAVIGATION_FAILED_RE = /navigation failed: boom/;
 
 // ============================================
@@ -271,6 +274,7 @@ const NO_SEED_LOOKUP_RE = /no seed lookup defined/;
 const CASE_ORDERED_BY_ELEMENTS_RE =
 	/ORDER BY\s*\(SELECT COUNT\(\*\) FROM assurance_elements[^)]*\)\s*DESC/;
 const ARCHIVED_EXCLUDED_RE = /archived_at IS NULL/;
+const NOT_DELETED_RE = /deleted_at IS NULL/;
 
 function fakeClient(rows: Record<string, unknown>[]): Client {
 	return { query: async () => ({ rows }) } as unknown as Client;
@@ -313,6 +317,7 @@ describe("resolveParam", () => {
 		} as unknown as Client;
 		await resolveParam(client, "caseId");
 		expect(queries[0]).toMatch(CASE_ORDERED_BY_ELEMENTS_RE);
+		expect(queries[0]).toMatch(NOT_DELETED_RE);
 	});
 
 	it("skips archived copies for slug", async () => {
@@ -1001,6 +1006,30 @@ describe("checkPage", () => {
 		expect(result.axe.violations).toEqual({ "button-name": 2 });
 	});
 
+	it("keeps axe's html for failing elements inside a shadow root, so they count as separate kinds", async () => {
+		const context = makeFakeContext({
+			bodyHtml: '<div id="host" class="viewer"></div>',
+			axeViolations: [
+				{
+					id: "button-name",
+					impact: "critical",
+					nodes: [
+						{
+							target: [["#host", "#inner-a"]],
+							html: '<button id="inner-a" class="icon-a">',
+						},
+						{
+							target: [["#host", "#inner-b"]],
+							html: '<button id="inner-b" class="icon-b">',
+						},
+					],
+				},
+			],
+		});
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.axe.violations).toEqual({ "button-name": 2 });
+	});
+
 	it("fails a page whose accessibility scan did not run", async () => {
 		const context = makeFakeContext();
 		(window as unknown as { axe: unknown }).axe = {
@@ -1183,6 +1212,59 @@ describe("mergeBaseline", () => {
 		expect(() => mergeBaseline({}, [failed])).toThrow(REFUSING_RE);
 	});
 
+	describe("refuses a page that did not load properly", () => {
+		const loaded = {
+			path: "/x",
+			routeTemplate: "/x",
+			cls: 0,
+			axe: { violations: {} },
+		};
+
+		it("on an error status", () => {
+			expect(() => mergeBaseline({}, [{ ...loaded, status: 500 }])).toThrow(
+				NOT_LOADED_RE
+			);
+		});
+
+		it("when navigation produced no status", () => {
+			expect(() => mergeBaseline({}, [{ ...loaded, status: null }])).toThrow(
+				NOT_LOADED_RE
+			);
+		});
+
+		it("on page errors", () => {
+			expect(() =>
+				mergeBaseline({}, [{ ...loaded, status: 200, pageErrors: ["boom"] }])
+			).toThrow(NOT_LOADED_RE);
+		});
+
+		it("on a redirect to sign-in", () => {
+			expect(() =>
+				mergeBaseline({}, [
+					{ ...loaded, status: 200, finalUrl: "http://localhost:3000/login" },
+				])
+			).toThrow(NOT_LOADED_RE);
+		});
+
+		it("but writes a page that loaded", () => {
+			const merged = mergeBaseline({}, [
+				{
+					...loaded,
+					status: 200,
+					pageErrors: [],
+					finalUrl: "http://localhost:3000/x",
+				},
+			]);
+			expect(merged["/x"]).toEqual({ violations: {}, cls: 0 });
+		});
+	});
+
+	it("refuses the result of a check that threw", () => {
+		expect(() =>
+			mergeBaseline({}, [checkThrewResult("/x", "/x", 0.1, new Error("e"))])
+		).toThrow(REFUSING_RE);
+	});
+
 	it("writes a page to its own entry when its exact path already has one", () => {
 		const existing: Baseline = {
 			"/docs": { violations: { label: 1 }, cls: 0 },
@@ -1267,6 +1349,22 @@ describe("violationKind", () => {
 		expect(violationKind("button-name", { html })).toBe(
 			"button||[&>span]:flex a z"
 		);
+	});
+
+	it("reads the role from the role attribute, not a data-role attribute", () => {
+		expect(
+			violationKind("button-name", {
+				html: '<div data-role="row" role="button">',
+			})
+		).toBe("div|button|");
+	});
+
+	it("reads the classes from the class attribute, not a data-slot-class attribute", () => {
+		expect(
+			violationKind("button-name", {
+				html: '<div data-slot-class="x" class="b a">',
+			})
+		).toBe("div||a b");
 	});
 
 	it("separates two buttons whose long class lists differ late", () => {

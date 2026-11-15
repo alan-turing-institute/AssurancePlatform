@@ -575,13 +575,33 @@ export function axeFailureOf(axe: {
 	return axe.byImpact.error ? (axe.topRules[0] ?? "unknown error") : null;
 }
 
+/**
+ * Why a page did not load properly (no response, an error status, page
+ * errors, or a redirect to sign-in), or null when it did. Fields a caller
+ * leaves out are not checked.
+ */
+function loadFailureOf(
+	r: Partial<Pick<PageResult, "finalUrl" | "pageErrors" | "status">> & {
+		path: string;
+	}
+): string | null {
+	if (r.status !== undefined && (r.status === null || r.status >= 400)) {
+		return `status ${r.status ?? "none"}`;
+	}
+	if (r.pageErrors && r.pageErrors.length > 0) {
+		return `${r.pageErrors.length} page error(s)`;
+	}
+	return describeRedirect(r.path, r.finalUrl ?? null).failReason;
+}
+
 /** The path without its query string. */
 function pathnameOf(routePath: string): string {
 	return routePath.split("?")[0] ?? routePath;
 }
 
 /**
- * Folds a run's results into an existing baseline. Only the entries for the
+ * Refuses (throws) when any result's accessibility scan did not run or its
+ * page did not load properly. Folds a run's results into an existing baseline. Only the entries for the
  * pages checked in the run are replaced; every other entry is kept as it was.
  * A page whose exact path already has an entry in the baseline writes to that
  * entry; every other page writes to its route template's entry. When several
@@ -591,13 +611,14 @@ function pathnameOf(routePath: string): string {
 export function mergeBaseline(
 	existing: Baseline,
 	results: Array<
-		Pick<PageResult, "cls" | "path" | "routeTemplate"> & {
-			axe: {
-				byImpact?: Record<string, number>;
-				topRules?: string[];
-				violations: Record<string, number>;
-			};
-		}
+		Pick<PageResult, "cls" | "path" | "routeTemplate"> &
+			Partial<Pick<PageResult, "finalUrl" | "pageErrors" | "status">> & {
+				axe: {
+					byImpact?: Record<string, number>;
+					topRules?: string[];
+					violations: Record<string, number>;
+				};
+			}
 	>
 ): Baseline {
 	const failed = results.filter((r) =>
@@ -609,6 +630,12 @@ export function mergeBaseline(
 	if (failed.length > 0) {
 		throw new Error(
 			`refusing to write the baseline: the accessibility scan did not run on ${failed.map((r) => r.path).join(", ")}`
+		);
+	}
+	const notLoaded = results.filter((r) => loadFailureOf(r));
+	if (notLoaded.length > 0) {
+		throw new Error(
+			`refusing to write the baseline: the page did not load properly: ${notLoaded.map((r) => `${r.path} (${loadFailureOf(r)})`).join(", ")}`
 		);
 	}
 	const merged: Baseline = { ...existing };
@@ -744,8 +771,8 @@ interface AxeRunResults {
 }
 
 const OPENING_TAG_RE = /^<\s*([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>?/;
-const ROLE_ATTR_RE = /\brole\s*=\s*"([^"]*)"/;
-const CLASS_ATTR_RE = /\bclass\s*=\s*"([^"]*)"/;
+const ROLE_ATTR_RE = /(?:^|\s)role\s*=\s*"([^"]*)"/;
+const CLASS_ATTR_RE = /(?:^|\s)class\s*=\s*"([^"]*)"/;
 const WHITESPACE_RE = /\s+/;
 
 function contrastKind(node: AxeNode): string {
@@ -838,15 +865,17 @@ async function runAxe(page: Page): Promise<AxeSummary> {
 			).axe.run();
 			// axe cuts each attribute value to 20 characters on elements with long
 			// attributes, so swap in the element's full opening tag where the
-			// target is a single selector in this document.
+			// target is a single selector string in this document. An element in an
+			// iframe or shadow root has a longer or nested-array target and keeps
+			// axe's own html.
 			// (No named inner functions here: this body is serialised into the page,
 			// and a compiler-inserted helper name would not exist there.)
 			for (const violation of axeResults.violations ?? []) {
 				for (const n of violation.nodes) {
 					try {
 						const el =
-							n.target?.length === 1
-								? document.querySelector(String(n.target[0]))
+							n.target?.length === 1 && typeof n.target[0] === "string"
+								? document.querySelector(n.target[0])
 								: null;
 						if (el) {
 							n.html = (el.cloneNode(false) as Element).outerHTML;
@@ -1133,7 +1162,7 @@ export async function checkPage(
 	};
 }
 
-function checkThrewResult(
+export function checkThrewResult(
 	routePath: string,
 	routeTemplate: string,
 	clsBudget: number,
