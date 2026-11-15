@@ -30,6 +30,8 @@ const DISPOSABLE_SUFFIXES = ["_test", "_e2e"];
 const DEFAULT_POSTGRES_PORT = "5432";
 const DATABASE_NAME = /^[A-Za-z0-9_$-]+$/;
 const AUTHORITY_END = /[/?#]/;
+const URL_STRIPPED_CONTROL = /[\t\r\n]/;
+const SCHEME_THEN_SLASHES = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 const isSwitchOn = (value: string | undefined) =>
 	TRUTHY.has((value ?? "").trim().toLowerCase());
@@ -62,10 +64,16 @@ function parseDatabaseUrl(
 	}
 	// An unencoded "/", "?" or "#" in the credentials ends the host part early,
 	// so the real separating "@" lands after the authority and the parsed host
-	// and database come from the password. The parser can also drop that part
+	// and database come from the credentials. The parser can also drop that part
 	// (for example a "/../" or "/%2e%2e/" segment), so the raw text is checked:
 	// any literal "@" after the authority is refused, and nothing the parser
 	// reports is echoed. An "@" after the authority must be written "%40".
+	// The parser deletes tabs and line breaks anywhere, so an address holding
+	// one is refused, and the raw check below only reads an address that opens
+	// with a scheme followed directly by "//".
+	if (URL_STRIPPED_CONTROL.test(raw) || !SCHEME_THEN_SLASHES.test(raw)) {
+		return null;
+	}
 	const afterScheme = raw.slice(raw.indexOf("//") + 2);
 	const authorityEnd = afterScheme.search(AUTHORITY_END);
 	if (authorityEnd !== -1 && afterScheme.slice(authorityEnd).includes("@")) {

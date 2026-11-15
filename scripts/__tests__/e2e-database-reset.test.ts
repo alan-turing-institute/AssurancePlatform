@@ -103,6 +103,8 @@ describe("decideE2eDatabaseReset", () => {
 		"postgresql://localhost:5433/tea_dev%00_e2e",
 		"postgresql://localhost:5433/tea_e2e?host=elsewhere",
 		"postgresql://localhost:5433/tea_e2e?port=5432",
+		"postgresql:/tea_e2e",
+		"postgresql:tea_e2e",
 	])("refuses an unusable URL %j", (value) => {
 		expect(decideE2eDatabaseReset({ DATABASE_URL: value }).action).toBe(
 			"refuse"
@@ -146,6 +148,9 @@ describe("decideE2eDatabaseReset", () => {
 			"postgresql://tea_owner:12/s3cret@localhost:5433/%2e%2e/tea_e2e",
 			"postgresql://tea_owner:12/s3cret@localhost:5433/../tea_dev",
 			"postgresql://tea_owner:x@s3cret/a@localhost:5433/../tea_e2e",
+			"postgresql:/\t/tea_owner:12/s3cret@localhost:5433//../../tea_e2e",
+			"postgresql:/\n/tea_owner:12/s3cret@localhost:5433//../../tea_e2e",
+			"postgresql:/\t/tea_owner:x@s3cret/a@localhost:5433//../../tea_e2e",
 		]) {
 			const decision = decideE2eDatabaseReset({ DATABASE_URL: value });
 			expect(decision.action).toBe("refuse");
