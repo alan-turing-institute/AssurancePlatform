@@ -30,6 +30,7 @@ const SPEC = JSON.parse(SPEC_TEXT) as Json;
 const METHODS = ["GET", "PUT", "POST", "DELETE", "PATCH", "OPTIONS", "HEAD"];
 const STATUS_OPTION = /status:\s*([^},]*(?:\?[^},]*)?)/;
 const SUCCESS_CODE = /^[23]/;
+const DESIGN_RECORD_CITATION = /\bADR\b/;
 const AUTH_LIBRARY_DIR = "[...nextauth]";
 const HANDLER = new RegExp(
 	`^export (?:async )?(?:function|const) (${METHODS.join("|")})\\b`
@@ -1054,7 +1055,7 @@ describe("the published API description matches the routes", () => {
 	});
 
 	it("(j5) the description cites no internal design record", () => {
-		expect(SPEC_TEXT).not.toContain("ADR ");
+		expect(SPEC_TEXT).not.toMatch(DESIGN_RECORD_CITATION);
 	});
 
 	it("(j6) a rate limit is found through a code constant and through a library call", () => {
@@ -1079,16 +1080,16 @@ describe("the published API description matches the routes", () => {
 		const paths = SPEC.paths as Record<string, Record<string, Json>>;
 		const link = paths["/auth/link/{provider}"]?.get?.responses as Json;
 		const events = paths["/cases/{id}/events"]?.get?.responses as Json;
-		expect(Object.keys(link)).not.toEqual(
-			expect.arrayContaining(["401", "403", "500"])
-		);
+		expect(Object.keys(link)).not.toContain("401");
+		expect(Object.keys(link)).not.toContain("403");
+		expect(Object.keys(link)).not.toContain("500");
 		expect(Object.keys(link)).toContain("400");
 		expect(Object.keys(events)).not.toContain("500");
 		const refusal = JSON.stringify(
 			(paths["/cases/import"]?.put?.responses as Json)["400"]
 		);
 		expect(refusal).toContain("isValid");
-		expect(refusal).not.toContain("ApiError");
+		expect(refusal).toContain("ApiError");
 	});
 
 	it("(h) running the correction step on the committed file changes nothing", () => {

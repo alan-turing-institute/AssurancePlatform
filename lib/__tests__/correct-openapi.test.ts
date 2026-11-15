@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { correctOpenApi } from "@/scripts/openapi/correct-openapi";
+import { withPlainErrors } from "@/scripts/openapi/errors";
 import { OPERATIONS, QUERY_PARAMETERS } from "@/scripts/openapi/operations";
 import { REQUEST_BODIES } from "@/scripts/openapi/request-bodies";
 
@@ -124,6 +125,16 @@ describe("the correction step", () => {
 			},
 		};
 		expect(() => correctOpenApi(spec)).toThrow("Gone");
+	});
+
+	it("throws when a shared answer has no description to reuse", () => {
+		expect(() =>
+			withPlainErrors(
+				{ "400": { $ref: "#/components/responses/BadRequest" } },
+				"GET /auth/link/{provider}",
+				{}
+			)
+		).toThrow("no description for 400");
 	});
 
 	it("throws for a request body entry with no operation", () => {

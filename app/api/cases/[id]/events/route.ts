@@ -199,7 +199,7 @@ function createAccessRecheck(
  *
  * @pathParam id - Case ID (UUID)
  * @responseSet none
- * @add 401,404,500
+ * @add 401,404
  * @auth SessionAuth
  * @tag Cases
  */

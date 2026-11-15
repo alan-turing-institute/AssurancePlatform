@@ -13,7 +13,9 @@
  * body (taken from request-bodies.ts; an operation with no entry there has
  * none), the shared error answers (errors.ts: the error body with `code` and
  * `fieldErrors`, 413 on every operation that reads a body, 429 on the machine
- * routes), and the named schemas those refer to. Schemas nothing refers to are
+ * routes; the two routes that send a plain error body keep only the answers
+ * they send; PUT /cases/import answers 400 with either its preview refusal or
+ * the shared error body), and the named schemas those refer to. Schemas nothing refers to are
  * removed. Anything the generator reads correctly is fixed in the route's
  * comment instead.
  *

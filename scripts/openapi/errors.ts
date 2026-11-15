@@ -131,16 +131,21 @@ export function withPreviewRefusal(
 			content: {
 				[JSON_TYPE]: {
 					schema: {
-						type: "object",
-						required: ["isValid", "errors"],
-						properties: {
-							isValid: { type: "boolean", enum: [false] },
-							errors: {
-								type: "array",
-								description: "What is wrong with the file",
-								items: { type: "string" },
+						oneOf: [
+							{
+								type: "object",
+								required: ["isValid", "errors"],
+								properties: {
+									isValid: { type: "boolean", enum: [false] },
+									errors: {
+										type: "array",
+										description: "What is wrong with the file",
+										items: { type: "string" },
+									},
+								},
 							},
-						},
+							ERROR_REF,
+						],
 					},
 				},
 			},

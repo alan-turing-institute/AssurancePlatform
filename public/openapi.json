@@ -2817,26 +2817,33 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "isValid",
-                    "errors"
-                  ],
-                  "properties": {
-                    "isValid": {
-                      "type": "boolean",
-                      "enum": [
-                        false
-                      ]
-                    },
-                    "errors": {
-                      "type": "array",
-                      "description": "What is wrong with the file",
-                      "items": {
-                        "type": "string"
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "isValid",
+                        "errors"
+                      ],
+                      "properties": {
+                        "isValid": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        },
+                        "errors": {
+                          "type": "array",
+                          "description": "What is wrong with the file",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
                       }
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiError"
                     }
-                  }
+                  ]
                 }
               }
             }

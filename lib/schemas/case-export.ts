@@ -1,12 +1,10 @@
 /**
  * Zod schemas for case export/import functionality.
  *
- * Supports three formats:
- * - Nested: Tree structure with children[] (current export format, version "1.0")
- * - Flat: Elements array + evidenceLinks (internal import format)
- * - Legacy: nested goals/strategies/claims with no version field
+ * Import accepts two formats:
+ * - Nested: Tree structure with children[] (the export format)
+ * - Flat: Elements array + evidenceLinks
  *
- * Legacy and Flat are supported for import (backward compatibility).
  * Export always produces Nested format.
  */
 

@@ -45,6 +45,12 @@ describe("the Zod to OpenAPI 3.0 conversion", () => {
 		});
 	});
 
+	it("stops on a date-time field that fixes its precision", () => {
+		expect(() =>
+			fromZod(z.object({ at: z.iso.datetime({ precision: 3 }) }))
+		).toThrow("fixes its precision");
+	});
+
 	it("stops on a recursive part that has no name", () => {
 		interface Node {
 			child?: Node;
