@@ -48,13 +48,11 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const [isLayouting, setIsLayouting] = useState(false);
 
 	const { assuranceCase, layoutDirection, setCaseDetailsOpen } = useStore();
-	const canEditCase = caseAccessAtLeast(assuranceCase?.permissions, "edit");
-	const canManageCase = caseAccessAtLeast(assuranceCase?.permissions, "manage");
-	// Export needs only comment access or above on this page.
-	const canExportCase = caseAccessAtLeast(
-		assuranceCase?.permissions,
-		"comment"
-	);
+	const permissions = assuranceCase?.permissions;
+	const canEditCase = caseAccessAtLeast(permissions, "edit");
+	const canManageCase = caseAccessAtLeast(permissions, "manage");
+	// Export is offered from comment access up; the server allows view access.
+	const canExportCase = caseAccessAtLeast(permissions, "comment");
 	const router = useRouter();
 
 	const { onLayout } = actions;
@@ -129,7 +127,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 				data-tour="toolbar"
 			>
 				<div className="flex shrink-0 items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
-					{assuranceCase && canEditCase && <HistoryControls />}
+					{canEditCase && <HistoryControls />}
 					<ActionTooltip label="Focus">
 						<Button
 							className="rounded-full p-3 disabled:opacity-50"
@@ -149,7 +147,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							<span className="sr-only">Focus</span>
 						</Button>
 					</ActionTooltip>
-					{assuranceCase && canEditCase && (
+					{canEditCase && (
 						<ActionTooltip label="Reset Identifiers">
 							<Button
 								className="rounded-full p-3"
@@ -191,7 +189,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					</ActionTooltip>
 				</div>
 				<div className="flex shrink-0 items-center justify-center gap-2">
-					{assuranceCase && canManageCase && (
+					{canManageCase && (
 						<ActionTooltip label="Share">
 							<Button
 								className="rounded-full p-3"
@@ -208,7 +206,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							</Button>
 						</ActionTooltip>
 					)}
-					{assuranceCase && canExportCase && (
+					{canExportCase && (
 						<ActionTooltip label="Export">
 							<Button
 								className="rounded-full p-3"
@@ -253,7 +251,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>
-					{assuranceCase && canManageCase && (
+					{canManageCase && (
 						<>
 							<CaseKindMenu />
 							<ActionTooltip label="Delete">

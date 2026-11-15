@@ -108,4 +108,26 @@ describe("ActionButtons toolbar — editing controls follow the access level", (
 		expect(screen.getByRole("button", { name: "Redo" })).toBeInTheDocument();
 		expect(screen.getByTestId("toolbar-reset-ids")).toBeInTheDocument();
 	});
+
+	it("offers Share, the kind menu and Delete to someone who can manage", () => {
+		renderWithPermission("manage");
+
+		expect(screen.getByTestId("toolbar-share")).toBeInTheDocument();
+		expect(screen.getByTestId("toolbar-more-actions")).toBeInTheDocument();
+		expect(screen.getByTestId("toolbar-delete")).toBeInTheDocument();
+	});
+
+	it("offers no Export and no Share to someone who can only view", () => {
+		renderWithPermission("view");
+
+		expect(screen.queryByTestId("toolbar-export")).toBeNull();
+		expect(screen.queryByTestId("toolbar-share")).toBeNull();
+	});
+
+	it("offers Export but not Share to someone who can comment", () => {
+		renderWithPermission("comment");
+
+		expect(screen.getByTestId("toolbar-export")).toBeInTheDocument();
+		expect(screen.queryByTestId("toolbar-share")).toBeNull();
+	});
 });
