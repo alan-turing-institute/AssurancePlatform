@@ -57,6 +57,7 @@ export function CaseSharingDialog() {
 		inviteUrl,
 		copied,
 		error,
+		notice,
 		getInitials,
 		copyInviteUrl,
 		clearInviteUrl,
@@ -116,6 +117,12 @@ export function CaseSharingDialog() {
 								<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
 									{error}
 								</div>
+							)}
+
+							{notice && (
+								<output className="block rounded-md bg-muted p-3 text-muted-foreground text-sm">
+									{notice}
+								</output>
 							)}
 
 							{inviteUrl ? (
