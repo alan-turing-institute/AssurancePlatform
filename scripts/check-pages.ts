@@ -816,22 +816,20 @@ async function runAxe(page: Page): Promise<AxeSummary> {
 			// axe cuts each attribute value to 20 characters on elements with long
 			// attributes, so swap in the element's full opening tag where the
 			// target is a single selector in this document.
-			const fullTag = (n: AxeNode): string | undefined => {
-				if (n.target?.length !== 1) {
-					return;
-				}
-				try {
-					const el = document.querySelector(String(n.target[0]));
-					return (el?.cloneNode(false) as Element | undefined)?.outerHTML;
-				} catch {
-					return; // invalid selector: keep axe's own html
-				}
-			};
+			// (No named inner functions here: this body is serialised into the page,
+			// and a compiler-inserted helper name would not exist there.)
 			for (const violation of axeResults.violations ?? []) {
 				for (const n of violation.nodes) {
-					const full = fullTag(n);
-					if (full) {
-						n.html = full;
+					try {
+						const el =
+							n.target?.length === 1
+								? document.querySelector(String(n.target[0]))
+								: null;
+						if (el) {
+							n.html = (el.cloneNode(false) as Element).outerHTML;
+						}
+					} catch {
+						// invalid selector: keep axe's own html
 					}
 				}
 			}
