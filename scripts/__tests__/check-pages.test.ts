@@ -13,6 +13,7 @@ import {
 	describeRedirect,
 	discoverAllPaths,
 	findPageFiles,
+	isSignedOutRoute,
 	matchPlaceholders,
 	matchRouteTemplate,
 	mergeBaseline,
@@ -27,6 +28,8 @@ import {
 	signInFailureMessage,
 	summariseAxeViolations,
 	toRouteTemplate,
+	violationKind,
+	writeBaselineFile,
 } from "../check-pages";
 
 const BASELINE_FILENAME_RE = /\.a11y-baseline\.json$/;
@@ -237,6 +240,12 @@ describe("buildRouteRegex / matchRouteTemplate", () => {
 			matchRouteTemplate("/docs/a/b", ["/docs", "/discover"], ["/docs"])
 		).toBe("/docs");
 		expect(matchRouteTemplate("/docs", ["/docs"], ["/docs"])).toBe("/docs");
+	});
+
+	it("does not match a path that only starts with the catch-all prefix", () => {
+		expect(matchRouteTemplate("/docsearch", ["/docs"], ["/docs"])).toBe(
+			"/docsearch"
+		);
 	});
 
 	it("falls back to the bare path when nothing matches", () => {
@@ -939,6 +948,57 @@ describe("checkPage", () => {
 		expect(result.pass).toBe(true);
 	});
 
+	it("compares a page with the entry for its exact path before its template", async () => {
+		const violations = [
+			{ id: "nested-interactive", impact: "serious", nodes: [1] },
+		];
+		const baseline: Baseline = {
+			"/docs": { violations: {}, cls: 0 },
+			"/docs/a": { violations: { "nested-interactive": 1 }, cls: 0 },
+		};
+		const exact = await checkPage(
+			makeFakeContext({ axeViolations: violations }),
+			"/docs/a",
+			0.1,
+			baseline,
+			"/docs"
+		);
+		expect(exact.pass).toBe(true);
+		const other = await checkPage(
+			makeFakeContext({ axeViolations: violations }),
+			"/docs/b",
+			0.1,
+			baseline,
+			"/docs"
+		);
+		expect(other.pass).toBe(false);
+	});
+
+	it("keys a node on its full opening tag when axe's html is cut short", async () => {
+		const long = "inline-flex items-center justify-center gap-2 rounded-md";
+		const context = makeFakeContext({
+			bodyHtml: `<button id="a" class="${long} bg-red-500"></button><button id="b" class="${long} bg-blue-500"></button>`,
+			axeViolations: [
+				{
+					id: "button-name",
+					impact: "critical",
+					nodes: [
+						{
+							target: ["#a"],
+							html: '<button id="a" class="inline-flex items-c',
+						},
+						{
+							target: ["#b"],
+							html: '<button id="b" class="inline-flex items-c',
+						},
+					],
+				},
+			],
+		});
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.axe.violations).toEqual({ "button-name": 2 });
+	});
+
 	it("with --only status,errors,placeholders, a new a11y violation is measured but does not fail the page", async () => {
 		const context = makeFakeContext({
 			axeViolations: [{ id: "button-name", impact: "critical", nodes: [1] }],
@@ -1056,8 +1116,9 @@ describe("mergeBaseline", () => {
 	const result = (
 		routeTemplate: string,
 		violations: Record<string, number>,
-		cls = 0
-	) => ({ routeTemplate, cls, axe: { violations } });
+		cls = 0,
+		path = routeTemplate
+	) => ({ path, routeTemplate, cls, axe: { violations } });
 
 	it("keeps entries for routes not checked", () => {
 		const existing: Baseline = {
@@ -1078,5 +1139,87 @@ describe("mergeBaseline", () => {
 			violations: { "color-contrast": 5, label: 2 },
 			cls: 0.02,
 		});
+	});
+
+	it("writes a page to its own entry when its exact path already has one", () => {
+		const existing: Baseline = {
+			"/docs": { violations: { label: 1 }, cls: 0 },
+			"/docs/a": { violations: { "nested-interactive": 9 }, cls: 0 },
+		};
+		const merged = mergeBaseline(existing, [
+			result("/docs", { "nested-interactive": 1 }, 0, "/docs/a"),
+			result("/docs", { label: 2 }, 0, "/docs/b"),
+		]);
+		expect(merged["/docs/a"]).toEqual({
+			violations: { "nested-interactive": 1 },
+			cls: 0,
+		});
+		expect(merged["/docs"]).toEqual({ violations: { label: 2 }, cls: 0 });
+		expect(merged["/docs/b"]).toBeUndefined();
+	});
+});
+
+// ============================================
+// writeBaselineFile
+// ============================================
+
+describe("writeBaselineFile", () => {
+	it("keeps entries already in the file for pages not checked", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "write-baseline-test-"));
+		const outPath = path.join(dir, "baseline.json");
+		fs.writeFileSync(
+			outPath,
+			JSON.stringify({ "/a": { violations: { label: 4 }, cls: 0.01 } })
+		);
+		writeBaselineFile(outPath, [
+			{
+				path: "/b",
+				routeTemplate: "/b",
+				cls: 0,
+				axe: { violations: { "image-alt": 1 } },
+			} as unknown as PageResult,
+		]);
+		const written = JSON.parse(fs.readFileSync(outPath, "utf8"));
+		fs.rmSync(dir, { recursive: true, force: true });
+		expect(written["/a"]).toEqual({ violations: { label: 4 }, cls: 0.01 });
+		expect(written["/b"]).toEqual({ violations: { "image-alt": 1 }, cls: 0 });
+	});
+});
+
+// ============================================
+// isSignedOutRoute
+// ============================================
+
+describe("isSignedOutRoute", () => {
+	it("treats a sign-in page with a query string as signed out", () => {
+		expect(isSignedOutRoute("/reset-password?token=x")).toBe(true);
+	});
+
+	it("treats other pages as signed in", () => {
+		expect(isSignedOutRoute("/dashboard")).toBe(false);
+	});
+});
+
+// ============================================
+// violationKind
+// ============================================
+
+describe("violationKind", () => {
+	it("keeps the class list of a tag whose class contains a >", () => {
+		const html = '<button class="[&>span]:flex z a" type="button">';
+		expect(violationKind("button-name", { html })).toBe(
+			"button||[&>span]:flex a z"
+		);
+	});
+
+	it("separates two buttons whose long class lists differ late", () => {
+		const common = "inline-flex items-center justify-center gap-2 rounded-md";
+		const a = violationKind("button-name", {
+			html: `<button class="${common} bg-red-500">`,
+		});
+		const b = violationKind("button-name", {
+			html: `<button class="${common} bg-blue-500">`,
+		});
+		expect(a).not.toBe(b);
 	});
 });

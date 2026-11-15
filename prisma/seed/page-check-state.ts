@@ -14,7 +14,7 @@ import { prisma } from "../../lib/prisma";
 import { softDeleteCase } from "../../lib/services/case-trash-service";
 import { publishAssuranceCase } from "../../lib/services/publish-service";
 
-async function main() {
+async function findSeedUserId(): Promise<string> {
 	const chris = await prisma.user.findUnique({
 		where: { username: "chris" },
 		select: { id: true },
@@ -24,12 +24,15 @@ async function main() {
 			"Seed user chris not found; run the development seed first"
 		);
 	}
+	return chris.id;
+}
 
+async function createFixtureCase(userId: string): Promise<string> {
 	const created = await prisma.assuranceCase.create({
 		data: {
 			name: "Archived Discover Case",
 			description: "A small case that is published and then trashed",
-			createdById: chris.id,
+			createdById: userId,
 			mode: "STANDARD",
 			publishStatus: "DRAFT",
 		},
@@ -41,20 +44,29 @@ async function main() {
 			role: "TOP_LEVEL",
 			name: "G1",
 			description: "The system is safe to use",
-			createdById: chris.id,
+			createdById: userId,
 		},
 	});
+	return created.id;
+}
 
-	const published = await publishAssuranceCase(chris.id, created.id);
+async function publishThenTrash(userId: string, caseId: string): Promise<void> {
+	const published = await publishAssuranceCase(userId, caseId);
 	if ("error" in published) {
 		throw new Error(`Failed to publish the fixture case: ${published.error}`);
 	}
-	const trashed = await softDeleteCase(chris.id, created.id, {
+	const trashed = await softDeleteCase(userId, caseId, {
 		publishedCopy: "archive",
 	});
-	if (trashed && "error" in trashed) {
+	if ("error" in trashed) {
 		throw new Error(`Failed to trash the fixture case: ${trashed.error}`);
 	}
+}
+
+async function main() {
+	const userId = await findSeedUserId();
+	const caseId = await createFixtureCase(userId);
+	await publishThenTrash(userId, caseId);
 	console.log(
 		"Page-check state: one trashed case with an archived published copy."
 	);

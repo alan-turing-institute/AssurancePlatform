@@ -292,7 +292,7 @@ export function buildRouteRegex(template: string): RegExp {
  * Finds which known route template a filled path belongs to, so an
  * explicitly-listed path (not just --all) can be looked up in the
  * baseline. Static templates are tried before dynamic ones, so
- * "/discover/{slug}". Optional catch-all templates (`catchAllTemplates`) are
+ * "/discover/new" wins over "/discover/{slug}". Optional catch-all templates (`catchAllTemplates`) are
  * tried last and match their own path and anything beneath it, so every docs
  * page shares the "/docs" entry. Falls back to the bare pathname (its own
  * "template") when nothing matches, which the baseline then treats as
@@ -354,7 +354,7 @@ export async function resolveParam(
 				`SELECT ac.id FROM assurance_cases ac
 				 JOIN users u ON u.id = ac.created_by_id
 				 WHERE u.username = 'chris' AND ac.deleted_at IS NULL
-				 ORDER BY (SELECT COUNT(*) FROM assurance_elements ae WHERE ae.case_id = ac.id) DESC,
+				 ORDER BY (SELECT COUNT(*) FROM assurance_elements ae WHERE ae.case_id = ac.id AND ae.deleted_at IS NULL) DESC,
 				   ac.created_at ASC LIMIT 1`
 			);
 			return r.rows[0]
@@ -567,16 +567,23 @@ export function roundCls(cls: number): number {
 	return Math.round(cls * 1e4) / 1e4;
 }
 
+/** The path without its query string. */
+function pathnameOf(routePath: string): string {
+	return routePath.split("?")[0] ?? routePath;
+}
+
 /**
- * Folds a run's results into an existing baseline. Only the route templates
- * checked in the run are replaced; every other entry is kept as it was. When
- * several checked paths share one template, each rule keeps its highest count
- * and the entry keeps the highest layout shift.
+ * Folds a run's results into an existing baseline. Only the entries for the
+ * pages checked in the run are replaced; every other entry is kept as it was.
+ * A page whose exact path already has an entry in the baseline writes to that
+ * entry; every other page writes to its route template's entry. When several
+ * checked paths share one entry, each rule keeps its highest count and the
+ * entry keeps the highest layout shift.
  */
 export function mergeBaseline(
 	existing: Baseline,
 	results: Array<
-		Pick<PageResult, "cls" | "routeTemplate"> & {
+		Pick<PageResult, "cls" | "path" | "routeTemplate"> & {
 			axe: { violations: Record<string, number> };
 		}
 	>
@@ -584,20 +591,25 @@ export function mergeBaseline(
 	const merged: Baseline = { ...existing };
 	const replaced = new Set<string>();
 	for (const r of results) {
-		const entry: BaselineEntry = replaced.has(r.routeTemplate)
-			? (merged[r.routeTemplate] as BaselineEntry)
+		const pathname = pathnameOf(r.path);
+		const key = pathname in existing ? pathname : r.routeTemplate;
+		const entry: BaselineEntry = replaced.has(key)
+			? (merged[key] as BaselineEntry)
 			: { violations: {}, cls: 0 };
-		replaced.add(r.routeTemplate);
+		replaced.add(key);
 		for (const [rule, count] of Object.entries(r.axe.violations)) {
 			entry.violations[rule] = Math.max(entry.violations[rule] ?? 0, count);
 		}
 		entry.cls = Math.max(entry.cls, roundCls(r.cls));
-		merged[r.routeTemplate] = entry;
+		merged[key] = entry;
 	}
 	return merged;
 }
 
-function writeBaselineFile(outPath: string, results: PageResult[]): void {
+export function writeBaselineFile(
+	outPath: string,
+	results: PageResult[]
+): void {
 	const existing: Baseline = fs.existsSync(outPath)
 		? (JSON.parse(fs.readFileSync(outPath, "utf8")) as Baseline)
 		: {};
@@ -687,7 +699,7 @@ interface AxeSummary {
 	/** serious+critical failing-element count per rule id, for reporting only; the baseline does not use it */
 	nodeCounts: Record<string, number>;
 	topRules: string[];
-	/** serious+critical node count per rule id — what the baseline compares against */
+	/** serious+critical count of kinds of failing element per rule id — what the baseline compares against */
 	violations: Record<string, number>;
 }
 
@@ -696,6 +708,8 @@ interface AxeNode {
 	any?: Array<{ data?: unknown }>;
 	/** outer HTML of the failing element, as axe reports it */
 	html?: string;
+	/** selector path to the element; more than one entry means it sits in an iframe or shadow root */
+	target?: unknown[];
 }
 
 interface AxeRunResults {
@@ -706,7 +720,7 @@ interface AxeRunResults {
 	}>;
 }
 
-const OPENING_TAG_RE = /^<\s*([a-zA-Z][\w-]*)([^>]*)>?/;
+const OPENING_TAG_RE = /^<\s*([a-zA-Z][\w-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>?/;
 const ROLE_ATTR_RE = /\brole\s*=\s*"([^"]*)"/;
 const CLASS_ATTR_RE = /\bclass\s*=\s*"([^"]*)"/;
 const WHITESPACE_RE = /\s+/;
@@ -732,7 +746,10 @@ function contrastKind(node: AxeNode): string {
  * Names the kind of element a violation is on, so repeated elements of one
  * kind count once. Colour contrast is keyed by its foreground colour,
  * background colour and large-text flag; every other rule by the tag, role
- * and sorted class list in the element's opening tag.
+ * and sorted class list in the element's opening tag. The page check first
+ * replaces each node's html with the element's full opening tag (axe
+ * truncates long attribute values); only elements inside an iframe or shadow
+ * root keep axe's html, so their class lists may be cut to 20 characters.
  */
 export function violationKind(ruleId: string, node: AxeNode): string {
 	if (ruleId === "color-contrast") {
@@ -793,9 +810,32 @@ async function runAxe(page: Page): Promise<AxeSummary> {
 	try {
 		await page.addScriptTag({ path: AXE_SCRIPT_PATH });
 		const results = await page.evaluate<AxeRunResults>(async () => {
-			return await (
+			const axeResults = await (
 				window as unknown as { axe: { run: () => Promise<AxeRunResults> } }
 			).axe.run();
+			// axe cuts each attribute value to 20 characters on elements with long
+			// attributes, so swap in the element's full opening tag where the
+			// target is a single selector in this document.
+			const fullTag = (n: AxeNode): string | undefined => {
+				if (n.target?.length !== 1) {
+					return;
+				}
+				try {
+					const el = document.querySelector(String(n.target[0]));
+					return (el?.cloneNode(false) as Element | undefined)?.outerHTML;
+				} catch {
+					return; // invalid selector: keep axe's own html
+				}
+			};
+			for (const violation of axeResults.violations ?? []) {
+				for (const n of violation.nodes) {
+					const full = fullTag(n);
+					if (full) {
+						n.html = full;
+					}
+				}
+			}
+			return axeResults;
 		});
 		return summariseAxeViolations(results.violations ?? []);
 	} catch (err) {
@@ -1030,7 +1070,7 @@ export async function checkPage(
 	);
 	const delta = compareToBaseline(
 		{ violations: axe.violations, cls },
-		baseline[routeTemplate],
+		baseline[pathnameOf(routePath)] ?? baseline[routeTemplate],
 		clsBudget
 	);
 	const failReasons = buildFailReasons({
