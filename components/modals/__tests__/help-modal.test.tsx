@@ -45,6 +45,10 @@ describe("HelpModal", () => {
 		useTourControls.setState({ startTour: startTourSpy });
 	});
 
+	afterEach(() => {
+		mockUsePathname.mockReturnValue("/");
+	});
+
 	it("opens from the hook and renders the sheet title", () => {
 		render(<HelpModal />);
 
@@ -138,7 +142,6 @@ describe("HelpModal", () => {
 		rerender(<HelpModal />);
 
 		expect(onCloseSpy).toHaveBeenCalledTimes(1);
-		mockUsePathname.mockReturnValue("/");
 	});
 
 	it("keeps the sheet open when Read more in the docs is clicked", async () => {

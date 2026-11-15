@@ -150,6 +150,19 @@ describe("JsonEditorToolbar — status and Apply follow the diff", () => {
 		expect(screen.getByRole("button", { name: "Discard" })).toBeEnabled();
 	});
 
+	it("explains the disabled Apply button as No changes to apply when the diff is empty", async () => {
+		const user = userEvent.setup();
+		render(
+			<JsonEditorToolbar {...baseProps()} diffResult={emptyDiff} isDirty />
+		);
+
+		await user.hover(screen.getByRole("button", { name: "Apply" }));
+
+		expect(await screen.findByRole("tooltip")).toHaveTextContent(
+			"No changes to apply"
+		);
+	});
+
 	it("reads Validating... while the diff has not been computed yet", () => {
 		render(<JsonEditorToolbar {...baseProps()} diffResult={null} isDirty />);
 

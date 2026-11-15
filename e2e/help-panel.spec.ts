@@ -4,7 +4,7 @@ import { CaseEditorPage } from "./pages/case-editor-page";
 import { DashboardPage } from "./pages/dashboard-page";
 
 const ANY_VALUE_PATTERN = /.+/;
-const DOCS_PAGE_PATTERN = /\/docs\//;
+const PLATFORM_GUIDE_PATTERN = /\/docs\/platform-guide$/;
 
 test.describe("Help panel", () => {
 	test("Full documentation opens the docs with the panel closed", async ({
@@ -24,6 +24,7 @@ test.describe("Help panel", () => {
 		await sheet.getByRole("link", { name: "Full documentation" }).click();
 		await page.waitForURL("**/docs");
 
+		await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 		await expect(sheet).toBeHidden();
 		// The docs must be clickable: an open panel would hold a scroll lock
 		// and block pointer events on the page behind it.
@@ -31,7 +32,10 @@ test.describe("Help panel", () => {
 			"data-scroll-locked",
 			ANY_VALUE_PATTERN
 		);
-		await page.locator("main a[href^='/docs']").first().click();
-		await expect(page).toHaveURL(DOCS_PAGE_PATTERN);
+		await page
+			.getByRole("main")
+			.getByRole("link", { name: "Platform Guide", exact: true })
+			.click();
+		await expect(page).toHaveURL(PLATFORM_GUIDE_PATTERN);
 	});
 });

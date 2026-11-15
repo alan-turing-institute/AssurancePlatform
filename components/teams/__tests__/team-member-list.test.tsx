@@ -50,5 +50,6 @@ describe("TeamMemberList avatars", () => {
 			expect(src).not.toContain(MEMBER_EMAIL);
 			expect(src).not.toContain("avatar.vercel.sh");
 		}
+		expect(document.body.querySelector('[src*="@"], [srcset*="@"]')).toBeNull();
 	});
 });

@@ -148,5 +148,7 @@ describe("avatars in the share panel", () => {
 			expect(src).not.toContain(COLLABORATOR_EMAIL);
 			expect(src).not.toContain("avatar.vercel.sh");
 		}
+		// The dialog renders in a portal, so search the whole document.
+		expect(document.body.querySelector('[src*="@"], [srcset*="@"]')).toBeNull();
 	});
 });
