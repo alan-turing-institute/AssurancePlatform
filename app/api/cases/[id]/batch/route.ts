@@ -33,7 +33,7 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
  * @response 422 - The batch would leave the case with a second ordinary goal
  * @response 413 - Payload too large
  * @add 409,422
- * @auth bearer
+ * @auth SessionAuth
  * @tag Elements
  */
 export async function POST(

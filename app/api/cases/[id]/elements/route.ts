@@ -26,7 +26,7 @@ import { createElement } from "@/lib/services/element-service";
  * @response 413 - Payload too large
  * @response 422 - The case already has its ordinary goal
  * @add 422
- * @auth bearer
+ * @auth SessionAuth
  * @tag Elements
  */
 export async function POST(

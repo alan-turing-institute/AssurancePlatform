@@ -10,6 +10,7 @@ import { getSandboxElements } from "@/lib/services/element-service";
 /**
  * GET /api/cases/[id]/sandbox
  * Gets all orphaned/sandbox elements for a case
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,

@@ -11,6 +11,7 @@ import { restoreElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/restore
  * Restores a soft-deleted element and its descendants
+ * @auth SessionAuth
  */
 export async function POST(
 	_request: Request,

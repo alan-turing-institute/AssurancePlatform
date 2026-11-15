@@ -19,6 +19,7 @@ import {
 /**
  * DELETE /api/comments/[id]
  * Deletes a comment by ID.
+ * @auth SessionAuth
  */
 export async function DELETE(
 	_request: Request,
@@ -40,6 +41,7 @@ export async function DELETE(
 /**
  * PUT /api/comments/[id]
  * Updates a comment by ID.
+ * @auth SessionAuth
  */
 export async function PUT(
 	request: Request,
@@ -63,6 +65,7 @@ export async function PUT(
 /**
  * PATCH /api/comments/[id]
  * Resolves or unresolves a comment thread.
+ * @auth SessionAuth
  */
 export async function PATCH(
 	request: Request,

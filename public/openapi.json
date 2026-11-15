@@ -28,6 +28,12 @@
         "scheme": "bearer",
         "bearerFormat": "API token",
         "description": "Machine API token (`Authorization: Bearer <token>`), issued via the integration registry"
+      },
+      "CronSecret": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Shared secret",
+        "description": "The scheduled-job secret (`Authorization: Bearer <secret>`), the value of the server's `CRON_SECRET` setting"
       }
     },
     "schemas": {
@@ -332,7 +338,17 @@
         "tags": [
           "Auth"
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "The reset token from the email",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The token is valid",
@@ -418,7 +434,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -456,7 +472,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -510,10 +526,33 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "The case to export",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeComments",
+            "in": "query",
+            "required": false,
+            "description": "`false` leaves the comments out; anything else includes them",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The case in the export format, sent as a file download",
@@ -550,7 +589,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -620,7 +659,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -669,7 +708,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -718,7 +757,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -751,14 +790,14 @@
     "/cases/import/github": {
       "get": {
         "operationId": "get-cases-import-github",
-        "summary": "GET /api/cases/import/github/status",
+        "summary": "GET /api/cases/import/github",
         "description": "",
         "tags": [
           "Cases"
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -796,7 +835,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -845,7 +884,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -888,7 +927,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [],
@@ -931,7 +970,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -980,7 +1019,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1027,7 +1066,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1074,7 +1113,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1084,6 +1123,19 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "archive",
+            "in": "query",
+            "required": false,
+            "description": "`true` keeps the case's published copy as an archived copy; anything else removes it",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           }
         ],
@@ -1120,6 +1172,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -1167,7 +1224,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1228,6 +1285,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -1235,6 +1297,19 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "includeDetails",
+            "in": "query",
+            "required": false,
+            "description": "`true` includes a summary of the changes",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           }
         ],
@@ -1271,6 +1346,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -1316,6 +1396,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -1363,7 +1448,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1612,6 +1697,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -1653,6 +1743,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -1700,7 +1795,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1747,7 +1842,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1796,7 +1891,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1857,7 +1952,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1906,7 +2001,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -1956,7 +2051,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -2004,6 +2099,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2045,6 +2145,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2100,6 +2205,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2115,6 +2225,19 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "`team` removes a team's permission; anything else removes a user's",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "team",
+                "user"
+              ]
             }
           }
         ],
@@ -2149,6 +2272,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2201,6 +2329,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2255,6 +2388,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2305,6 +2443,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2351,7 +2494,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -2400,7 +2543,7 @@
         ],
         "security": [
           {
-            "BearerAuth": []
+            "SessionAuth": []
           }
         ],
         "parameters": [
@@ -2446,6 +2589,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2494,6 +2642,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2535,6 +2688,11 @@
         "description": "",
         "tags": [
           "Cases"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2591,6 +2749,11 @@
         "tags": [
           "Cases"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2640,6 +2803,11 @@
         "tags": [
           "Comments"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2682,6 +2850,11 @@
         "tags": [
           "Comments"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -2723,6 +2896,11 @@
         "description": "",
         "tags": [
           "Comments"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2768,7 +2946,38 @@
         "tags": [
           "Cron"
         ],
-        "parameters": [],
+        "security": [
+          {
+            "CronSecret": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dryRun",
+            "in": "query",
+            "required": false,
+            "description": "`1` or `true` works out what would happen and changes nothing; `0`, `false` or no parameter does the work",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1",
+                "true",
+                "0",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "now",
+            "in": "query",
+            "required": false,
+            "description": "An ISO 8601 date-time the cut-off is measured from, held to no later than the server's own time",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "What the run removed, with success set to true",
@@ -2802,6 +3011,11 @@
         "description": "Computes the status of every claim that has accepted",
         "tags": [
           "Cron"
+        ],
+        "security": [
+          {
+            "CronSecret": []
+          }
         ],
         "parameters": [],
         "responses": {
@@ -2838,6 +3052,11 @@
         "tags": [
           "Cron"
         ],
+        "security": [
+          {
+            "CronSecret": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -2873,7 +3092,28 @@
         "tags": [
           "Cron"
         ],
-        "parameters": [],
+        "security": [
+          {
+            "CronSecret": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "dryRun",
+            "in": "query",
+            "required": false,
+            "description": "`1` or `true` works out what would happen and changes nothing; `0`, `false` or no parameter does the work",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1",
+                "true",
+                "0",
+                "false"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "What the run warned about and deleted, with success set to true",
@@ -2907,6 +3147,11 @@
         "description": "",
         "tags": [
           "Elements"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2949,6 +3194,11 @@
         "description": "",
         "tags": [
           "Elements"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -2995,6 +3245,11 @@
         "tags": [
           "Elements"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -3039,6 +3294,11 @@
         "tags": [
           "Elements"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -3082,6 +3342,11 @@
         "description": "",
         "tags": [
           "Elements"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -3128,6 +3393,11 @@
         "tags": [
           "Elements"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -3171,6 +3441,11 @@
         "description": "",
         "tags": [
           "Elements"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -3630,6 +3905,11 @@
         "tags": [
           "Elements"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -3673,6 +3953,11 @@
         "description": "",
         "tags": [
           "Elements"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -4828,6 +5113,40 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Page size, from 1 to 200",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Returns records older than this `chain_sequence`",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "live",
+            "in": "query",
+            "required": false,
+            "description": "`true` returns only records that are not revoked and whose validity has not run out",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -5145,6 +5464,11 @@
         "tags": [
           "Teams"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -5181,6 +5505,11 @@
         "tags": [
           "Teams"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "201": {
@@ -5215,6 +5544,11 @@
         "description": "",
         "tags": [
           "Teams"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -5258,6 +5592,11 @@
         "tags": [
           "Teams"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -5299,6 +5638,11 @@
         "description": "",
         "tags": [
           "Teams"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -5344,6 +5688,11 @@
         "tags": [
           "Teams"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -5387,6 +5736,11 @@
         "description": "",
         "tags": [
           "Teams"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -5432,6 +5786,11 @@
         "description": "",
         "tags": [
           "Teams"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [
           {
@@ -5487,6 +5846,11 @@
         "tags": [
           "Teams"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -5537,6 +5901,11 @@
         "tags": [
           "Teams"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -5584,10 +5953,15 @@
     "/templates": {
       "get": {
         "operationId": "get-templates",
-        "summary": "",
+        "summary": "GET /api/templates",
         "description": "",
         "tags": [
           "Templates"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [],
         "responses": {
@@ -6048,6 +6422,11 @@
         "tags": [
           "User"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -6088,6 +6467,11 @@
         "description": "",
         "tags": [
           "User"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [],
         "responses": {
@@ -6135,6 +6519,11 @@
         "tags": [
           "User"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "pluginId",
@@ -6179,6 +6568,11 @@
         "tags": [
           "User"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -6219,6 +6613,11 @@
         "description": "",
         "tags": [
           "User"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [],
         "responses": {
@@ -6263,6 +6662,11 @@
         "tags": [
           "Users"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -6296,6 +6700,11 @@
         "tags": [
           "Users"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -6328,6 +6737,11 @@
         "description": "",
         "tags": [
           "Users"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [],
         "responses": {
@@ -6364,6 +6778,11 @@
         "tags": [
           "Users"
         ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "parameters": [],
         "responses": {
           "200": {
@@ -6398,6 +6817,11 @@
         "description": "",
         "tags": [
           "Users"
+        ],
+        "security": [
+          {
+            "SessionAuth": []
+          }
         ],
         "parameters": [],
         "responses": {

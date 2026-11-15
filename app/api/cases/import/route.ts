@@ -24,7 +24,7 @@ import { importCase } from "@/lib/services/case-import-service";
  * @response 400 - Validation errors (including a goal defeater without a parent and a second ordinary goal)
  * @response 401 - Unauthorised
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: Request) {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
  * @response 400 - Validation errors
  * @response 401 - Unauthorised
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function PUT(request: Request) {

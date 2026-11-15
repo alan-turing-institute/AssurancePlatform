@@ -27,6 +27,7 @@ import {
  * the settings pane's only data source (ADR 0002 v2 §2.2: "a settings
  * section ... lists available plugins with toggle + per-plugin settings,
  * showing the effective state and which level pinned it").
+ * @auth SessionAuth
  */
 export async function GET() {
 	try {
@@ -87,6 +88,7 @@ export async function GET() {
  * - `pluginToggleSchema` caps `settings` size/shape and rejects any
  *   pluginId absent from the manifest before this ever reaches the
  *   service layer, which trusts schema-validated input.
+ * @auth SessionAuth
  */
 export async function PATCH(req: Request) {
 	try {

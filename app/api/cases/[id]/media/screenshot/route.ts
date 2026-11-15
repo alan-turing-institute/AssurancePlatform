@@ -21,7 +21,7 @@ interface RouteParams {
  * @response 200 - The screenshot's bytes
  * @response 401 - Unauthorised
  * @response 404 - No access, or no screenshot stored
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {

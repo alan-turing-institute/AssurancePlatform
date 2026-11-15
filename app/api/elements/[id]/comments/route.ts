@@ -15,6 +15,7 @@ import {
 /**
  * GET /api/elements/[id]/comments
  * Gets all comments for an element with threading support.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,
@@ -36,6 +37,7 @@ export async function GET(
 /**
  * POST /api/elements/[id]/comments
  * Creates a new comment on an element (supports threading via parentId).
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

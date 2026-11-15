@@ -98,6 +98,94 @@ export const SCHEMAS: Record<string, Schema> = {
 	ClaimHealthStatus: obj({ status: OBJECT }),
 };
 
+export interface QueryParameter {
+	description: string;
+	name: string;
+	required?: boolean;
+	schema: Schema;
+}
+
+function query(
+	name: string,
+	description: string,
+	schema: Schema = STRING,
+	required = false
+): QueryParameter {
+	return { name, description, schema, required };
+}
+
+const DRY_RUN = query(
+	"dryRun",
+	"`1` or `true` works out what would happen and changes nothing; `0`, `false` or no parameter does the work",
+	{ type: "string", enum: ["1", "true", "0", "false"] }
+);
+
+/**
+ * Query parameters of the operations that read any. The generator reads them
+ * only from a tag form the routes do not use, so they are stated here.
+ */
+export const QUERY_PARAMETERS: Record<string, QueryParameter[]> = {
+	"GET /auth/reset-password": [
+		query("token", "The reset token from the email", STRING, true),
+	],
+	"DELETE /cases/{id}": [
+		query(
+			"archive",
+			"`true` keeps the case's published copy as an archived copy; anything else removes it",
+			{ type: "string", enum: ["true", "false"] }
+		),
+	],
+	"GET /cases/{id}/changes": [
+		query("includeDetails", "`true` includes a summary of the changes", {
+			type: "string",
+			enum: ["true", "false"],
+		}),
+	],
+	"GET /cases/export": [
+		query("id", "The case to export", STRING, true),
+		query(
+			"includeComments",
+			"`false` leaves the comments out; anything else includes them",
+			{ type: "string", enum: ["true", "false"] }
+		),
+	],
+	"POST /cron/health-evidence-thinning": [
+		DRY_RUN,
+		query(
+			"now",
+			"An ISO 8601 date-time the cut-off is measured from, held to no later than the server's own time",
+			{ type: "string", format: "date-time" }
+		),
+	],
+	"POST /cron/retention-sweep": [DRY_RUN],
+	"DELETE /cases/{id}/permissions/{permissionId}": [
+		query(
+			"type",
+			"`team` removes a team's permission; anything else removes a user's",
+			{ type: "string", enum: ["team", "user"] }
+		),
+	],
+	"GET /machine/health/elements/{id}/evidence": [
+		query("limit", "Page size, from 1 to 200", {
+			type: "integer",
+			minimum: 1,
+			maximum: 200,
+		}),
+		query("before", "Returns records older than this `chain_sequence`", {
+			type: "integer",
+			minimum: 1,
+		}),
+		query(
+			"live",
+			"`true` returns only records that are not revoked and whose validity has not run out",
+			{
+				type: "string",
+				enum: ["true", "false"],
+			}
+		),
+	],
+};
+
 const CLAIM_STATUS = ref("ClaimHealthStatus");
 
 const INTEGRATION = fields("The integration", { integration: OBJECT });

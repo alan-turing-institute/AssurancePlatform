@@ -10,6 +10,7 @@ import { detachElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/detach
  * Detaches an element (moves to sandbox)
+ * @auth SessionAuth
  */
 export async function POST(
 	_request: Request,

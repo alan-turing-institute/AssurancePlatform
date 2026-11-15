@@ -12,6 +12,7 @@ import { attachElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/attach
  * Attaches an element to a parent (moves from sandbox)
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

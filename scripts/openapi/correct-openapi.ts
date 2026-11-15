@@ -18,6 +18,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	OPERATIONS,
+	QUERY_PARAMETERS,
+	type QueryParameter,
 	SCHEMAS,
 	type Schema,
 	type SuccessAnswer,
@@ -96,12 +98,33 @@ function pathParameter(name: string): Json {
 	return { name, in: "path", required: true, schema: { type: "string" } };
 }
 
-/** Keeps the operation's other parameters and lists exactly one per path name. */
-function withPathParameters(parameters: unknown, routePath: string): Json[] {
+function queryParameter(parameter: QueryParameter): Json {
+	return {
+		name: parameter.name,
+		in: "query",
+		required: parameter.required === true,
+		description: parameter.description,
+		schema: parameter.schema,
+	};
+}
+
+/**
+ * Lists exactly one parameter per path name, then the query parameters in
+ * the table, then any parameter of another kind the generator wrote.
+ */
+function withParameters(
+	parameters: unknown,
+	routePath: string,
+	queries: QueryParameter[]
+): Json[] {
 	const others = ((parameters ?? []) as Json[]).filter(
-		(parameter) => parameter.in !== "path"
+		(parameter) => parameter.in !== "path" && parameter.in !== "query"
 	);
-	return [...pathParameterNames(routePath).map(pathParameter), ...others];
+	return [
+		...pathParameterNames(routePath).map(pathParameter),
+		...queries.map(queryParameter),
+		...others,
+	];
 }
 
 function answerBody(answer: SuccessAnswer): Json {
@@ -132,12 +155,14 @@ function withSuccessAnswers(
 function correctOperation(
 	operation: Json,
 	routePath: string,
+	method: string,
 	answers: SuccessAnswer[]
 ): Json {
+	const queries = QUERY_PARAMETERS[operationKey(method, routePath)] ?? [];
 	return orderKeys(
 		{
 			...operation,
-			parameters: withPathParameters(operation.parameters, routePath),
+			parameters: withParameters(operation.parameters, routePath, queries),
 			responses: withSuccessAnswers(operation.responses, answers),
 		},
 		OPERATION_KEY_ORDER
@@ -160,6 +185,7 @@ function correctPathItem(routePath: string, item: Json, unknown: string[]) {
 			corrected[method] = correctOperation(
 				asRecord(item[method]),
 				routePath,
+				method,
 				answers
 			);
 		} else {

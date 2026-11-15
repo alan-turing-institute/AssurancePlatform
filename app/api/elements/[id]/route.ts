@@ -17,6 +17,7 @@ import {
 /**
  * GET /api/elements/[id]
  * Gets a single element by ID
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,
@@ -42,6 +43,7 @@ export async function GET(
  * PUT /api/elements/[id] (400 without a parent, 422 for a second goal)
  * Updates an existing element
  * @add 422
+ * @auth SessionAuth
  */
 export async function PUT(
 	request: Request,
@@ -85,6 +87,7 @@ export async function PUT(
 /**
  * DELETE /api/elements/[id]
  * Deletes an element
+ * @auth SessionAuth
  */
 export async function DELETE(
 	_request: Request,

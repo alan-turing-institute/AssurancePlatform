@@ -28,6 +28,12 @@
         "scheme": "bearer",
         "bearerFormat": "API token",
         "description": "Machine API token (`Authorization: Bearer <token>`), issued via the integration registry"
+      },
+      "CronSecret": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Shared secret",
+        "description": "The scheduled-job secret (`Authorization: Bearer <secret>`), the value of the server's `CRON_SECRET` setting"
       }
     }
   },

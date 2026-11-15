@@ -24,7 +24,7 @@ import {
  * @body { fileId: string }
  * @response ImportResult
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: Request) {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
  * Lists available backup files from Google Drive.
  *
  * @response { connected: boolean, files: DriveFileMetadata[] }
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET() {

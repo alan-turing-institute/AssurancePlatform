@@ -12,6 +12,7 @@ import { moveElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/move
  * Moves an element to a new parent within the same case.
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

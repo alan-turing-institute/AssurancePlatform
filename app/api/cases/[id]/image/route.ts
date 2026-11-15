@@ -16,6 +16,7 @@ import {
 /**
  * GET /api/cases/[id]/image
  * Fetches the screenshot image URL for a case.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: NextRequest,
@@ -38,6 +39,7 @@ export async function GET(
 /**
  * POST /api/cases/[id]/image
  * Uploads a new screenshot for a case with throttling.
+ * @auth SessionAuth
  */
 export async function POST(
 	request: NextRequest,

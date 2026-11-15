@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { cronDryRunQuerySchema } from "@/lib/schemas/cron-dry-run";
+import { evidenceListQuerySchema } from "@/lib/schemas/health-evidence";
 import {
 	correctOpenApi,
 	serialiseOpenApi,
@@ -40,7 +42,10 @@ const HELPER_CODES: Record<string, number> = {
 };
 
 interface Handler {
-	key: string;
+	/** "METHOD /path", as the description writes it. */
+	id: string;
+	/** Text of the handler and of every function in its file that it calls, directly or not. */
+	reach: string;
 	text: string;
 }
 
@@ -59,15 +64,48 @@ function routePath(file: string): string {
 		.replace(/\[([^\]]+)\]/g, "{$1}")}`;
 }
 
+const LOCAL_FUNCTION = /^(?:async )?function (\w+)|^const (\w+) = /;
+
+function localFunctions(blocks: string[]): Map<string, string> {
+	const local = new Map<string, string>();
+	for (const block of blocks) {
+		const match = LOCAL_FUNCTION.exec(block);
+		const name = match?.[1] ?? match?.[2];
+		if (name) {
+			local.set(name, block);
+		}
+	}
+	return local;
+}
+
+function reachableText(start: string, local: Map<string, string>): string {
+	const seen = new Set<string>();
+	const texts = [start];
+	for (const text of texts) {
+		for (const [name, body] of local) {
+			if (!seen.has(name) && text.includes(`${name}(`)) {
+				seen.add(name);
+				texts.push(body);
+			}
+		}
+	}
+	return texts.join("\n");
+}
+
 function handlersIn(file: string): Handler[] {
 	const blocks = readFileSync(file, "utf8").split(TOP_LEVEL_START);
+	const local = localFunctions(blocks);
 	const found: Handler[] = [];
 	blocks.forEach((block, i) => {
 		const method = HANDLER.exec(block)?.[1];
 		const before = blocks[i - 1] ?? "";
 		const ignored = before.startsWith("/**") && before.includes("@ignore");
 		if (method && !ignored) {
-			found.push({ key: `${method} ${routePath(file)}`, text: block });
+			found.push({
+				id: `${method} ${routePath(file)}`,
+				text: block,
+				reach: reachableText(block, local),
+			});
 		}
 	});
 	return found;
@@ -223,9 +261,67 @@ function resolves(ref: string): boolean {
 	return true;
 }
 
+const QUERY_GET = /searchParams\.get\("([^"]+)"\)/g;
+
+/** Query parameters read through a schema rather than by name. */
+const SCHEMA_QUERY_NAMES: Record<string, string[]> = {
+	"parseCronDryRunQuery(": Object.keys(cronDryRunQuerySchema.shape),
+	"parseHealthEvidenceThinningQuery(": [
+		...Object.keys(cronDryRunQuerySchema.shape),
+		"now",
+	],
+	"evidenceListQuerySchema.safeParse(": Object.keys(
+		evidenceListQuerySchema.shape
+	),
+};
+
+function queryNamesRead(handler: Handler): string[] {
+	const named = [...handler.reach.matchAll(QUERY_GET)].map((m) => m[1] ?? "");
+	const fromSchemas = Object.entries(SCHEMA_QUERY_NAMES)
+		.filter(([marker]) => handler.reach.includes(marker))
+		.flatMap(([, names]) => names);
+	return [...new Set([...named, ...fromSchemas])].sort();
+}
+
+function documentedQueryNames(operation: Json): string[] {
+	return ((operation.parameters ?? []) as Json[])
+		.filter((parameter) => parameter.in === "query")
+		.map((parameter) => parameter.name as string)
+		.sort();
+}
+
+/**
+ * What each call in a handler's reach asks of the caller. The scheduled-job
+ * routes pass the token to a service, so they are recognised by their folder.
+ */
+const SCHEME_MARKERS: [string, string][] = [
+	["requireApiToken(", "BearerAuth"],
+	["requireAuth(", "SessionAuth"],
+	["requireAuthSession(", "SessionAuth"],
+	["authoriseModelRoute(", "SessionAuth"],
+	["requireClaimRequest(", "SessionAuth"],
+	["handleHealthRecordAction(", "SessionAuth"],
+	["requireCronSecret(", "CronSecret"],
+];
+
+function requiredSchemes(handler: Handler): string[] {
+	const schemes = SCHEME_MARKERS.filter(([marker]) =>
+		handler.reach.includes(marker)
+	).map(([, scheme]) => scheme);
+	if (handler.id.split(" ")[1]?.startsWith("/cron/")) {
+		schemes.push("CronSecret");
+	}
+	return [...new Set(schemes)].sort();
+}
+
+function documentedSchemes(operation: Json): string[] {
+	const security = (operation.security ?? []) as Json[];
+	return [...new Set(security.flatMap((entry) => Object.keys(entry)))].sort();
+}
+
 describe("the published API description matches the routes", () => {
 	it("(a) documents exactly the exported handlers, each with a table entry", () => {
-		const handlers = allHandlers().map((handler) => handler.key);
+		const handlers = allHandlers().map((handler) => handler.id);
 		const documented = operations().map(([key]) => key);
 		expect(documented.sort()).toEqual([...handlers].sort());
 		expect(Object.keys(OPERATIONS).sort()).toEqual([...handlers].sort());
@@ -258,7 +354,7 @@ describe("the published API description matches the routes", () => {
 		const byKey = new Map(operations());
 		const wrong = allHandlers()
 			.filter((handler) => {
-				const operation = byKey.get(handler.key);
+				const operation = byKey.get(handler.id);
 				return (
 					operation &&
 					documentedSuccessCodes(operation).join() !==
@@ -267,7 +363,39 @@ describe("the published API description matches the routes", () => {
 			})
 			.map(
 				(handler) =>
-					`${handler.key}: documented ${documentedSuccessCodes(byKey.get(handler.key) as Json)} / returns ${handlerSuccessCodes(handler)}`
+					`${handler.id}: documented ${documentedSuccessCodes(byKey.get(handler.id) as Json)} / returns ${handlerSuccessCodes(handler)}`
+			);
+		expect(wrong, `${wrong.length} operations differ`).toEqual([]);
+	});
+
+	it("(e) query parameters equal those the handler reads", () => {
+		const byKey = new Map(operations());
+		const wrong = allHandlers()
+			.map((handler) => ({
+				id: handler.id,
+				read: queryNamesRead(handler).join(),
+				documented: documentedQueryNames(byKey.get(handler.id) as Json).join(),
+			}))
+			.filter(({ read, documented }) => read !== documented)
+			.map(
+				({ id, read, documented }) =>
+					`${id}: documented [${documented}] / reads [${read}]`
+			);
+		expect(wrong, `${wrong.length} operations differ`).toEqual([]);
+	});
+
+	it("(g) sign-in schemes equal those the handler requires", () => {
+		const byKey = new Map(operations());
+		const wrong = allHandlers()
+			.map((handler) => ({
+				id: handler.id,
+				required: requiredSchemes(handler).join(),
+				documented: documentedSchemes(byKey.get(handler.id) as Json).join(),
+			}))
+			.filter(({ required, documented }) => required !== documented)
+			.map(
+				({ id, required, documented }) =>
+					`${id}: documented [${documented}] / requires [${required}]`
 			);
 		expect(wrong, `${wrong.length} operations differ`).toEqual([]);
 	});
