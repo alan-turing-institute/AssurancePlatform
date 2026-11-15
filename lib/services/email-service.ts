@@ -224,7 +224,11 @@ async function sendEmail(
 		log.error("Email sending failed", { code });
 		return { error: sendFailureMessage(code) };
 	} catch (error) {
-		const code = safeProviderCode((error as { code?: unknown } | null)?.code);
+		const code = safeProviderCode(
+			typeof error === "object" && error !== null && "code" in error
+				? error.code
+				: undefined
+		);
 		log.error("Email sending error", {
 			name: error instanceof Error ? error.name : "UnknownError",
 			code,

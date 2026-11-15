@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LogEntry } from "../logger";
 
-const RECIPIENT = "leak.canary@recipient-domain.test";
+const RECIPIENT = "leak.canary@example.com";
 
 const { beginSend } = vi.hoisted(() => ({ beginSend: vi.fn() }));
 
@@ -60,6 +60,15 @@ describe("a send the email provider refuses", () => {
 		const result = await send(service);
 
 		expect(result).toEqual({ error: "Email sending failed (Throttled)" });
+		expect(JSON.stringify(captured)).not.toContain(RECIPIENT);
+	});
+
+	it("logs an unknown error name when the send throws a non-error value", async () => {
+		beginSend.mockRejectedValue(`refused for ${RECIPIENT}`);
+		const { service, captured } = await load();
+
+		expect(await send(service)).toEqual({ error: "Email sending failed" });
+		expect(JSON.stringify(captured)).toContain("UnknownError");
 		expect(JSON.stringify(captured)).not.toContain(RECIPIENT);
 	});
 
