@@ -55,6 +55,14 @@ beforeAll(async () => {
 				res.writeHead(200);
 				res.write("first");
 				break;
+			case "/undecodable-then-close":
+				res.writeHead(200, {
+					"content-encoding": "gzip, gzip, gzip, gzip, gzip, gzip",
+					"content-length": "1000",
+				});
+				res.write("x");
+				setTimeout(() => res.socket?.destroy(), 20);
+				break;
 			case "/status-999":
 				res.writeHead(999);
 				res.write("unfinished");
@@ -350,6 +358,20 @@ describe("failures the guard does not recognise", () => {
 		expect(String(error)).not.toContain("127.0.0.1");
 		expect(String(error)).not.toContain(String(closedPort));
 		expect((error as Error).cause).toBeUndefined();
+	});
+
+	it("returns a GuardedFetchError and keeps serving when a response cannot be decoded", async () => {
+		listLocalServer();
+		const outcome = await guardedFetch(
+			`http://127.0.0.1:${port}/undecodable-then-close`
+		).then(
+			(response) => response.text().catch((caught: unknown) => caught),
+			(caught: unknown) => caught
+		);
+		expect(outcome).toBeInstanceOf(GuardedFetchError);
+		// A follow-up request proves the worker is still serving.
+		const next = await guardedFetch(`http://127.0.0.1:${port}/ok`);
+		expect(next.status).toBe(200);
 	});
 
 	it("refuses a response whose status code a Response cannot hold", async () => {
