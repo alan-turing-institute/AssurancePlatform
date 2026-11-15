@@ -878,7 +878,12 @@ export async function rotateToken(
 				? oldToken.expiresAt
 				: overlapUntil;
 
-		const { secret, data } = issueTokenRecord(oldToken.integrationId);
+		// The replacement keeps the end date the old token was given, not the
+		// shortened overlap date written onto the old token below.
+		const { secret, data } = issueTokenRecord(
+			oldToken.integrationId,
+			oldToken.expiresAt ?? undefined
+		);
 
 		const [, apiToken] = await prisma.$transaction([
 			prisma.apiToken.update({

@@ -23,6 +23,11 @@ const DELETE_CONFIRM_REGEX = /delete integration/i;
 const DELETE_TOOLTIP_TEXT = "Revoke first — delete is permanent";
 const TYPE_NAME_LABEL_REGEX = /type.*to confirm/i;
 const ISSUE_TOKEN_BUTTON_REGEX = /issue new token/i;
+const ISSUE_TOKEN_SUBMIT_REGEX = /^issue token$/i;
+const ISSUE_WITHOUT_END_DATE_REGEX = /issue without an end date/i;
+const NO_END_DATE_WARNING_REGEX = /has no end date and keeps working/i;
+const GO_BACK_REGEX = /go back/i;
+const END_DATE_LABEL_REGEX = /end date/i;
 const ISSUING_LABEL_REGEX = /^issuing…$/i;
 const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
@@ -635,6 +640,99 @@ describe("IntegrationCard", () => {
 			expect(issueButton).toHaveAccessibleDescription("");
 		});
 
+		it("issues with the end of the chosen day when a date is set, with no warning", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue({
+				secret: "tea_live_freshsecret",
+				token: {
+					id: "token-2",
+					tokenPrefix: "tea_live_cd34",
+					createdAt: "2026-07-05T00:00:00.000Z",
+					expiresAt: null,
+				},
+			});
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.type(
+				screen.getByLabelText(END_DATE_LABEL_REGEX),
+				"2099-03-04"
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+
+			expect(await screen.findByTestId("token-secret-value")).toBeVisible();
+			expect(screen.queryByText(NO_END_DATE_WARNING_REGEX)).toBeNull();
+			expect(onIssueToken).toHaveBeenCalledWith("integration-1", {
+				expiresAt: new Date(2099, 2, 4, 23, 59, 59, 999).toISOString(),
+			});
+		});
+
+		it("warns before issuing a token with no end date and posts nothing until confirmed", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue(null);
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+
+			expect(await screen.findByText(NO_END_DATE_WARNING_REGEX)).toBeVisible();
+			expect(onIssueToken).not.toHaveBeenCalled();
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_WITHOUT_END_DATE_REGEX })
+			);
+
+			expect(onIssueToken).toHaveBeenCalledWith("integration-1", undefined);
+		});
+
+		it("issues nothing when the user cancels the form or the warning", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue(null);
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+			await user.click(
+				await screen.findByRole("button", { name: GO_BACK_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onIssueToken).not.toHaveBeenCalled();
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+
 		it("shows a token-shown-once modal after issuing succeeds", async () => {
 			const onIssueToken = vi.fn().mockResolvedValue({
 				secret: "tea_live_freshsecret",
@@ -656,6 +754,14 @@ describe("IntegrationCard", () => {
 
 			await user.click(
 				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+			await user.click(
+				await screen.findByRole("button", {
+					name: ISSUE_WITHOUT_END_DATE_REGEX,
+				})
 			);
 
 			expect(await screen.findByTestId("token-secret-value")).toHaveTextContent(
@@ -684,6 +790,14 @@ describe("IntegrationCard", () => {
 
 			await user.click(
 				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+			await user.click(
+				await screen.findByRole("button", {
+					name: ISSUE_WITHOUT_END_DATE_REGEX,
+				})
 			);
 			expect(await screen.findByTestId("token-secret-value")).toHaveTextContent(
 				"tea_live_freshsecret"

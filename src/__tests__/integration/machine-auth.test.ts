@@ -649,6 +649,31 @@ describe("integration-registry-service — token lifecycle", () => {
 		expect(untilMs).toBeLessThanOrEqual(TOKEN_ROTATION_OVERLAP_MS + 1000);
 	});
 
+	it("gives the replacement the end date the old token had, and none when it had none", async () => {
+		const { integration, owner } = await registerTestIntegration();
+		const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+		const dated = expectSuccess(
+			await issueToken(integration.id, owner.id, { expiresAt: endDate })
+		);
+		const undated = expectSuccess(await issueToken(integration.id, owner.id));
+
+		const rotatedDated = expectSuccess(
+			await rotateToken(dated.apiToken.id, owner.id)
+		);
+		const rotatedUndated = expectSuccess(
+			await rotateToken(undated.apiToken.id, owner.id)
+		);
+
+		const datedRow = await prisma.apiToken.findUniqueOrThrow({
+			where: { id: rotatedDated.newToken.apiToken.id },
+		});
+		const undatedRow = await prisma.apiToken.findUniqueOrThrow({
+			where: { id: rotatedUndated.newToken.apiToken.id },
+		});
+		expect(datedRow.expiresAt?.getTime()).toBe(endDate.getTime());
+		expect(undatedRow.expiresAt).toBeNull();
+	});
+
 	it("stops the old token working once the rotation overlap has elapsed", async () => {
 		const { integration, owner } = await registerTestIntegration();
 		const { secret: oldSecret, apiToken: oldApiToken } = expectSuccess(
