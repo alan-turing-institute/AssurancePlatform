@@ -64,6 +64,14 @@ describe("edit forms keep the stored comment's state", () => {
 		expect(after.authorId).toBe("u1");
 	});
 
+	it("names the comment edit box", () => {
+		render(<CommentsEditForm comment={stored} node={node} setEdit={vi.fn()} />);
+
+		expect(
+			screen.getByRole("textbox", { name: "Edit comment" })
+		).toBeInTheDocument();
+	});
+
 	it("keeps the author id after a case note is edited", async () => {
 		useStore.setState({ caseNotes: [stored] });
 		render(<NotesEditForm note={stored} setEdit={vi.fn()} />);

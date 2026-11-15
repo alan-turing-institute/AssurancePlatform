@@ -16,6 +16,7 @@ import {
 	FormControl,
 	FormField,
 	FormItem,
+	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
 import {
@@ -114,6 +115,7 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 					name="comment"
 					render={({ field }) => (
 						<FormItem>
+							<FormLabel className="sr-only">Edit comment</FormLabel>
 							<FormControl>
 								<Textarea
 									placeholder="Type your message here."

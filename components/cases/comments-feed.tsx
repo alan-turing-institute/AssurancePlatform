@@ -146,7 +146,7 @@ function CommentActions({
 	onDelete: () => void;
 }) {
 	return (
-		<div className="absolute right-2 bottom-2 hidden group-hover:block">
+		<div className="pointer-events-none absolute right-2 bottom-2 opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
 			<div className="flex items-center justify-start gap-1">
 				{isTopLevel && (
 					<Button
@@ -231,7 +231,7 @@ function CommentItem({
 
 	const cardClass = isResolved
 		? "bg-success/10 hover:bg-success/15"
-		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
+		: "focus-within:pb-8 hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (
 		<div className={cn("w-full", nestedClass)}>

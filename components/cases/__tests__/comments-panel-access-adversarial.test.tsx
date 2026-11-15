@@ -101,6 +101,16 @@ describe("comments panel — the new-comment form follows the access level", () 
 		).toBeVisible();
 	});
 
+	it("comment access: the reply box is named Reply", async () => {
+		const user = userEvent.setup();
+		const theirs = makeComment(1, SOMEONE_ELSE);
+		await renderPanel("comment", [theirs]);
+
+		await user.click(within(cardWithText(theirs.content)).getByTitle("Reply"));
+
+		expect(screen.getByRole("textbox", { name: "Reply" })).toBeVisible();
+	});
+
 	it("view access: the panel says it is for viewing", async () => {
 		await renderPanel("view");
 
