@@ -36,6 +36,10 @@ beforeEach(async () => {
 	await mockNoAuth();
 });
 
+const DATABASE_WORDS_PATTERN = /prisma|unique constraint/i;
+const CYCLE_MESSAGE_PATTERN =
+	/^Circular reference detected when moving element /;
+
 async function postBatch(caseId: string, body: unknown) {
 	const { POST } = await import("@/app/api/cases/[id]/batch/route");
 	const req = new NextRequest(
@@ -382,11 +386,11 @@ describe("POST /api/cases/[id]/batch — failures inside the transaction", () =>
 			error: "Failed to apply batch update",
 			code: "INTERNAL",
 		});
-		expect(JSON.stringify(body)).not.toMatch(/prisma|unique constraint/i);
+		expect(JSON.stringify(body)).not.toMatch(DATABASE_WORDS_PATTERN);
 		const failure = logs.entries.find(
 			(entry) => entry.msg === "Batch update failed"
 		);
-		expect(JSON.stringify(failure)).toMatch(/unique constraint|prisma/i);
+		expect(JSON.stringify(failure)).toMatch(DATABASE_WORDS_PATTERN);
 	});
 
 	it("keeps the cycle refusal's message", async () => {
@@ -414,9 +418,7 @@ describe("POST /api/cases/[id]/batch — failures inside the transaction", () =>
 		});
 
 		const body = await response.json();
-		expect(body.error).toMatch(
-			/^Circular reference detected when moving element /
-		);
+		expect(body.error).toMatch(CYCLE_MESSAGE_PATTERN);
 	});
 });
 
