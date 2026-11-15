@@ -63,6 +63,7 @@ export function IntegrationTokenIssueDialog({
 	const [endDate, setEndDate] = useState("");
 	const [confirming, setConfirming] = useState(false);
 	const inputId = useId();
+	const warningId = useId();
 	const submitRef = useRef<HTMLButtonElement>(null);
 	const goBackRef = useRef<HTMLButtonElement>(null);
 	const refocusSubmitRef = useRef(false);
@@ -77,8 +78,6 @@ export function IntegrationTokenIssueDialog({
 	}, [confirming, issuing]);
 
 	function close() {
-		setEndDate("");
-		setConfirming(false);
 		onOpenChange(false);
 	}
 
@@ -120,6 +119,10 @@ export function IntegrationTokenIssueDialog({
 				className="sm:max-w-md"
 				onCloseAutoFocus={(event) => {
 					event.preventDefault();
+					// Reset only once the closing animation has finished, so the
+					// form does not flash while the warning step fades out.
+					setEndDate("");
+					setConfirming(false);
 					returnFocusRef.current?.focus();
 				}}
 				onEscapeKeyDown={(event) => {
@@ -134,12 +137,15 @@ export function IntegrationTokenIssueDialog({
 						<DialogHeader>
 							<DialogTitle>Are you sure?</DialogTitle>
 							<DialogDescription>
-								This token has no end date and keeps working until you revoke
-								it.
+								<span id={warningId}>
+									This token has no end date and keeps working until you revoke
+									it.
+								</span>
 							</DialogDescription>
 						</DialogHeader>
 						<DialogFooter>
 							<Button
+								aria-describedby={warningId}
 								disabled={issuing}
 								onClick={goBack}
 								ref={goBackRef}

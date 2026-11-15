@@ -876,6 +876,7 @@ describe("Lifecycle conflict responses (409) — route level", () => {
 			tokenParams(integration.id, expired.id)
 		);
 		expect(refused.status).toBe(409);
+		expect((await refused.json()).error).toBe("Cannot rotate an expired token");
 		expect(
 			await prisma.apiToken.count({ where: { integrationId: integration.id } })
 		).toBe(1);

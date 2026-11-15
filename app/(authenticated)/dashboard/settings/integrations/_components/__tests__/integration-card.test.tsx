@@ -737,6 +737,11 @@ describe("IntegrationCard", () => {
 			);
 
 			expect(onIssueToken).toHaveBeenCalledWith("integration-1", undefined);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+				).toHaveFocus()
+			);
 		});
 
 		it("issues nothing when the user cancels the form or the warning", async () => {

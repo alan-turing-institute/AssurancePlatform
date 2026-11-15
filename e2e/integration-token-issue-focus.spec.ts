@@ -6,7 +6,7 @@ import { registerIntegration } from "@/lib/services/integration-registry-service
 // confirmation is a second step inside the same dialog, so focus must never
 // fall to the page body while the form is open.
 
-const unique = `e2e-token-focus-${Date.now()}`;
+const unique = `e2e-token-focus-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 let integrationId: string | undefined;
 
 test.beforeAll(async () => {
@@ -25,13 +25,19 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+	// Deleting the integration cascades its tokens.
+	if (integrationId) {
+		await prisma.integration.deleteMany({ where: { id: integrationId } });
+	}
 	await prisma.$disconnect();
 });
 
 async function openIssueDialog(page: Page) {
 	await page.goto("/dashboard/settings/integrations");
 	const card = page.getByTestId(`integration-card-${integrationId}`);
-	await card.getByRole("button", { name: "Issue new token" }).click();
+	await card
+		.getByRole("button", { name: "Issue new token", exact: true })
+		.click();
 	const dialog = page.getByRole("dialog", { name: "Issue a new token" });
 	await expect(dialog).toBeVisible();
 	return dialog;
@@ -44,7 +50,9 @@ async function reachWarning(page: Page) {
 		.click();
 	const warning = page.getByRole("dialog", { name: "Are you sure?" });
 	await expect(warning).toBeVisible();
-	await expect(warning.getByRole("button", { name: "Go back" })).toBeFocused();
+	await expect(
+		warning.getByRole("button", { name: "Go back", exact: true })
+	).toBeFocused();
 	return warning;
 }
 
@@ -52,7 +60,7 @@ test("Go back from the no-end-date warning returns focus to Issue token", async 
 	page,
 }) => {
 	const warning = await reachWarning(page);
-	await warning.getByRole("button", { name: "Go back" }).click();
+	await warning.getByRole("button", { name: "Go back", exact: true }).click();
 
 	const dialog = page.getByRole("dialog", { name: "Issue a new token" });
 	await expect(
@@ -73,14 +81,58 @@ test("Escape from the no-end-date warning returns focus to Issue token", async (
 	).toBeFocused();
 });
 
+test("Escape on the form step closes the dialog and focuses Issue new token", async ({
+	page,
+}) => {
+	await openIssueDialog(page);
+	await page.keyboard.press("Escape");
+
+	await expect(page.getByRole("dialog")).toHaveCount(0);
+	await expect(
+		page
+			.getByTestId(`integration-card-${integrationId}`)
+			.getByRole("button", { name: "Issue new token", exact: true })
+	).toBeFocused();
+});
+
+test("a failed request returns focus to Issue token", async ({ page }) => {
+	await page.route("**/api/integrations/*/tokens", (route) =>
+		route.request().method() === "POST"
+			? route.fulfill({
+					status: 500,
+					contentType: "application/json",
+					body: JSON.stringify({ error: "Failed to issue token" }),
+				})
+			: route.continue()
+	);
+	const warning = await reachWarning(page);
+	await warning
+		.getByRole("button", {
+			name: "Issue without an end date",
+			exact: true,
+		})
+		.click();
+
+	const dialog = page.getByRole("dialog", { name: "Issue a new token" });
+	await expect(
+		dialog.getByRole("button", { name: "Issue token", exact: true })
+	).toBeFocused();
+});
+
 test("a successful issue moves focus into the secret dialog", async ({
 	page,
 }) => {
 	const warning = await reachWarning(page);
 	await warning
-		.getByRole("button", { name: "Issue without an end date" })
+		.getByRole("button", {
+			name: "Issue without an end date",
+			exact: true,
+		})
 		.click();
 
+	await expect(
+		page.getByRole("dialog", { name: "Issue a new token" })
+	).toHaveCount(0);
 	const secret = page.getByRole("dialog", { name: "Token secret" });
 	await expect(secret).toBeVisible();
 	await expect
