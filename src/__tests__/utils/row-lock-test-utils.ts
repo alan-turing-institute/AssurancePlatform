@@ -107,9 +107,9 @@ export async function elementRowIsFree(elementId: string): Promise<boolean> {
 
 /** Whether a failed query reports Postgres SQLSTATE 55P03 (lock not available). */
 function isLockNotAvailable(error: unknown): boolean {
-	const meta = (error as { meta?: { code?: unknown } } | null)?.meta;
-	const message = error instanceof Error ? error.message : "";
-	return meta?.code === "55P03" || message.includes("55P03");
+	// The text form carries the message; the JSON form carries the error's own
+	// enumerable fields, including `code` and `meta.code`.
+	return `${String(error)} ${JSON.stringify(error)}`.includes("55P03");
 }
 
 /**
