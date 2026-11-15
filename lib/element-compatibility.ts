@@ -48,8 +48,7 @@ function normalise(type: string): string {
 		return "away_goal";
 	}
 
-	// Strip underscores for comparison (e.g. "property_claim" → already handled above)
-	return trimmed.replace(/_/g, "_"); // keep underscores as-is after normalisation above
+	return trimmed;
 }
 
 /**

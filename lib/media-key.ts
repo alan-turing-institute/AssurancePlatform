@@ -32,6 +32,16 @@ export function toMediaKey(stored: string): string {
 }
 
 /**
+ * True when `stored` is a legacy Azure blob URL: `https://`, a storage
+ * account host ending in `.blob.core.windows.net`, then the `media`
+ * container. The host is matched from the start of the value, so a blob host
+ * name in a later path segment or query string does not qualify.
+ */
+export function isLegacyBlobUrl(stored: string): boolean {
+	return BLOB_URL_PATTERN.test(stored);
+}
+
+/**
  * True when `stored` is a genuine external address (some scheme other than
  * this app's own blob storage) rather than one of the three internal shapes
  * `toMediaKey` recognises. Used to decide whether a value should be routed

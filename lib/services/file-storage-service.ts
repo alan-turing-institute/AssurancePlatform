@@ -11,6 +11,7 @@ import { extname, join } from "node:path";
 import { logger } from "@/lib/logger";
 import {
 	isExternalMediaUrl,
+	isLegacyBlobUrl,
 	isValidMediaKey,
 	toMediaKey,
 } from "@/lib/media-key";
@@ -390,7 +391,7 @@ export async function deleteFile(filePath: string): Promise<boolean> {
 		return false;
 	}
 
-	if (filePath.includes("blob.core.windows.net")) {
+	if (isLegacyBlobUrl(filePath)) {
 		const key = toMediaKey(filePath);
 		return await deleteBlob(key);
 	}
