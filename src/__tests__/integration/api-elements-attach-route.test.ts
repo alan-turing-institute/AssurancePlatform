@@ -67,6 +67,38 @@ describe("POST /api/elements/[id]/attach", () => {
 		expect(inDb?.parentId).toBe(goal.id);
 	});
 
+	it.each([
+		"CONTEXT",
+		"JUSTIFICATION",
+		"ASSUMPTION",
+		"CONTRACT",
+	] as const)("attaches a %s element from the side area under a claim", async (elementType) => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		const stored = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			inSandbox: true,
+		});
+		// Written straight to the table: the factory only builds current types.
+		const oldElement = await prisma.assuranceElement.update({
+			where: { id: stored.id },
+			data: { elementType },
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postAttach(oldElement.id, { parentId: claim.id });
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: oldElement.id },
+		});
+		expect(inDb?.parentId).toBe(claim.id);
+		expect(inDb?.inSandbox).toBe(false);
+	});
+
 	it("rejects a legacy snake_case body (goal_id) with 400 and does not attach", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);

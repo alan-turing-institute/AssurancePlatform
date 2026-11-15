@@ -2629,10 +2629,11 @@ export async function attachElement(
 			return { error: validationError };
 		}
 
-		const parentRefusal = parentTypeRefusal(
-			existing,
-			parentElement.elementType
-		);
+		// An element of a retired type has no place in the parent-type table, so
+		// attach keeps refusing it only what it always refused (a circular move).
+		const parentRefusal = RETIRED_ELEMENT_TYPES.has(existing.elementType)
+			? undefined
+			: parentTypeRefusal(existing, parentElement.elementType);
 		if (parentRefusal) {
 			return { error: parentRefusal };
 		}
