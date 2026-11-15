@@ -1136,11 +1136,12 @@ export async function regenerateNameForIsDefeaterChange(
 	caseId: string,
 	parentId: string | null,
 	isDefeater: boolean,
-	alsoTaken?: ReadonlySet<string>
+	alsoTaken?: ReadonlySet<string>,
+	db: TxClient = prisma
 ): Promise<string> {
 	const { parentInfo } =
 		elementType === "PROPERTY_CLAIM" && parentId
-			? await calculatePropertyClaimLevel(parentId)
+			? await calculatePropertyClaimLevel(parentId, db)
 			: { parentInfo: null };
 	return generateElementName(
 		elementType,
@@ -1148,7 +1149,7 @@ export async function regenerateNameForIsDefeaterChange(
 		parentId,
 		parentInfo,
 		isDefeater,
-		prisma,
+		db,
 		alsoTaken
 	);
 }
@@ -2090,7 +2091,8 @@ async function applyRegeneratedNameOnDefeaterFlip(
 		isDefeater: boolean;
 	},
 	effectiveParentId: string | null,
-	updateData: Record<string, unknown>
+	updateData: Record<string, unknown>,
+	db: TxClient
 ): Promise<void> {
 	if (
 		input.isDefeater === undefined ||
@@ -2103,7 +2105,9 @@ async function applyRegeneratedNameOnDefeaterFlip(
 		existing.elementType,
 		existing.caseId,
 		effectiveParentId,
-		input.isDefeater
+		input.isDefeater,
+		undefined,
+		db
 	);
 }
 
@@ -2145,9 +2149,22 @@ async function writeUpdateUnderCaseLock(
 	elementId: string,
 	existing: { caseId: string; elementType: PrismaElementType },
 	input: UpdateElementInput,
-	updateData: Prisma.AssuranceElementUpdateInput
+	updateData: Prisma.AssuranceElementUpdateInput,
+	flip: {
+		existing: { elementType: PrismaElementType; isDefeater: boolean };
+		effectiveParentId: string | null;
+	}
 ): Promise<{ data: ElementResponse } | { error: string }> {
 	await lockCaseForElementWrite(tx, existing.caseId);
+	// The new name of a defeater flip is picked once the lock is held, so two
+	// flips in one case see each other's names.
+	await applyRegeneratedNameOnDefeaterFlip(
+		input,
+		{ ...existing, ...flip.existing },
+		flip.effectiveParentId,
+		updateData,
+		tx
+	);
 	if (existing.elementType === "GOAL") {
 		const current = await tx.assuranceElement.findUnique({
 			where: { id: elementId },
@@ -2255,15 +2272,11 @@ export async function updateElement(
 		// so a simultaneous move + flip regenerates against the right class.
 		const effectiveParentId =
 			newParentId !== undefined ? newParentId : existing.parentId;
-		await applyRegeneratedNameOnDefeaterFlip(
-			input,
-			existing,
-			effectiveParentId,
-			updateData
-		);
-
 		return await prisma.$transaction((tx) =>
-			writeUpdateUnderCaseLock(tx, elementId, existing, input, updateData)
+			writeUpdateUnderCaseLock(tx, elementId, existing, input, updateData, {
+				existing,
+				effectiveParentId,
+			})
 		);
 	} catch (error) {
 		log.error("Failed to update element", { error });

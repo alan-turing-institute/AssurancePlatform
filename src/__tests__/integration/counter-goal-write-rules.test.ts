@@ -6,6 +6,7 @@ import { deleteElement } from "@/lib/services/element-service";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import { addCounterGoal, buildArgument } from "../utils/counter-goal-kit";
 import { createTestElement, createTestUser } from "../utils/prisma-factories";
+import { holdRowLock, waitForLockWait } from "../utils/row-lock-test-utils";
 
 /**
  * The goal rules hold on every way of writing a goal, not only on creation: a
@@ -532,5 +533,45 @@ describe("importing a file with goal rows", () => {
 		expect(stored.find((element) => element.name === "CG1")?.parentId).toBe(
 			evidence?.id
 		);
+	});
+});
+
+describe("two PUT requests that turn elements into defeaters at once", () => {
+	it("give the two elements different names", async () => {
+		const owner = await createTestUser();
+		const fx = await buildArgument(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const first = await createTestElement(fx.caseId, owner.id, {
+			elementType: "STRATEGY",
+			name: "S2",
+			description: "first strategy",
+			parentId: fx.goal.id,
+		});
+		const second = await createTestElement(fx.caseId, owner.id, {
+			elementType: "STRATEGY",
+			name: "S3",
+			description: "second strategy",
+			parentId: fx.goal.id,
+		});
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${fx.caseId} FOR UPDATE`;
+		});
+		const flips = Promise.all([
+			putElement(first.id, { isDefeater: true }),
+			putElement(second.id, { isDefeater: true }),
+		]);
+		await waitForLockWait(5000, 2);
+		await lock.release();
+
+		const responses = await flips;
+
+		expect(responses.map((response) => response.status)).toEqual([200, 200]);
+		const names = (
+			await prisma.assuranceElement.findMany({
+				where: { id: { in: [first.id, second.id] } },
+				select: { name: true },
+			})
+		).map((row) => row.name);
+		expect(new Set(names).size).toBe(2);
 	});
 });
