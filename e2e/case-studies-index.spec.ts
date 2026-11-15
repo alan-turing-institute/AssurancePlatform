@@ -14,6 +14,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -32,6 +33,14 @@ const RE_CASE_STUDIES_TITLE = /Case Studies/;
 const RE_DIABETIC_HEADING = /Diabetic Retinopathy/i;
 const RE_ATC_HEADING = /Air Traffic Control/i;
 const RE_CENSUS_HEADING = /Census/i;
+
+/**
+ * The link in the summary table. The docs sidebar lists the same titles, and
+ * its auto-scroll moves them between press and release, so clicks target the
+ * table copy only.
+ */
+const summaryTableLink = (page: Page, title: string) =>
+	page.getByRole("table").getByRole("link", { name: title, exact: true });
 
 /** Authoritative expected case studies from the issue acceptance criteria */
 const EXPECTED_CASE_STUDIES: Array<{
@@ -187,12 +196,10 @@ test.describe("Case Studies index page", () => {
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		await page
-			.getByRole("link", {
-				name: "Explainable Diabetic Retinopathy Screening System",
-			})
-			.first()
-			.click();
+		await summaryTableLink(
+			page,
+			"Explainable Diabetic Retinopathy Screening System"
+		).click();
 		await page.waitForURL("**/case-studies/diabetic-retinopathy-screening");
 		await expect(
 			page.getByRole("heading", { name: RE_DIABETIC_HEADING }).first()
@@ -203,12 +210,10 @@ test.describe("Case Studies index page", () => {
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		await page
-			.getByRole("link", {
-				name: "Explainable Reinforcement Learning Agent for Air Traffic Control",
-			})
-			.first()
-			.click();
+		await summaryTableLink(
+			page,
+			"Explainable Reinforcement Learning Agent for Air Traffic Control"
+		).click();
 		await page.waitForURL("**/case-studies/explainable-atc-rl-agent");
 		await expect(
 			page.getByRole("heading", { name: RE_ATC_HEADING }).first()
@@ -219,12 +224,10 @@ test.describe("Case Studies index page", () => {
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		await page
-			.getByRole("link", {
-				name: "Balancing Privacy and Utility in Census Disclosure Control",
-			})
-			.first()
-			.click();
+		await summaryTableLink(
+			page,
+			"Balancing Privacy and Utility in Census Disclosure Control"
+		).click();
 		await page.waitForURL("**/case-studies/census-disclosure-control");
 		await expect(
 			page.getByRole("heading", { name: RE_CENSUS_HEADING }).first()
