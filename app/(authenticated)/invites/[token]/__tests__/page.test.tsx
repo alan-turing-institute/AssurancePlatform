@@ -14,7 +14,8 @@ vi.mock("../_components/invite-accept-card", () => ({
 
 import AcceptInvitePage from "../page";
 
-const TOKEN = "0b0c58c3-6a6f-4f2b-9c63-0d2f3a1f6b11";
+const TOKEN =
+	"a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
 describe("AcceptInvitePage", () => {
 	beforeEach(() => {

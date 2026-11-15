@@ -11,8 +11,8 @@ export function generateMetadata(): Metadata {
 	};
 }
 
-const UUID_RE =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// An invitation token is 32 random bytes written as 64 hexadecimal characters.
+const INVITE_TOKEN_RE = /^[0-9a-f]{64}$/i;
 
 interface AcceptInvitePageProps {
 	params: Promise<{ token: string }>;
@@ -23,7 +23,7 @@ export default async function AcceptInvitePage({
 }: AcceptInvitePageProps) {
 	const { token } = await params;
 
-	if (!UUID_RE.test(token)) {
+	if (!INVITE_TOKEN_RE.test(token)) {
 		notFound();
 	}
 

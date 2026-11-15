@@ -3284,7 +3284,22 @@
           "Invites"
         ],
         "parameters": [],
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ],
         "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - `{ success, case_id, redirect_url }`"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },

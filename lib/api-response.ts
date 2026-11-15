@@ -350,6 +350,16 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^Invalid or expired reset token$/,
 		factory: () => validationError(""),
 	},
+	// `case-invite-service.ts`'s `acceptInvite`: a code that matches no invite
+	// or an invite past its end date is a validation failure (400); an invite
+	// sent to another address is a permission refusal (403). Anchored so a
+	// message that merely mentions these words is not caught.
+	{ pattern: /^Invalid invite$/, factory: () => validationError("") },
+	{ pattern: /^Invite has expired$/, factory: () => validationError("") },
+	{
+		pattern: /^Invite was sent to a different email address$/,
+		factory: () => forbidden(),
+	},
 ];
 
 /**
