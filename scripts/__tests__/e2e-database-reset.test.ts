@@ -99,9 +99,23 @@ describe("decideE2eDatabaseReset", () => {
 		"postgresql://u:p@localhost:5433",
 		"postgresql://u:p@localhost:5433/tea_dev/x_e2e",
 		"postgresql://user:12/secret@host/tea_dev",
+		"postgresql://tea_owner:/x_e2e?s3cret@localhost:5433/tea_dev",
+		"postgresql://localhost:5433/tea_dev%00_e2e",
+		"postgresql://localhost:5433/tea_e2e?host=elsewhere",
+		"postgresql://localhost:5433/tea_e2e?port=5432",
 	])("refuses an unusable URL %j", (value) => {
 		expect(decideE2eDatabaseReset({ DATABASE_URL: value }).action).toBe(
 			"refuse"
+		);
+	});
+
+	it.each([
+		"postgresql://u@localhost/tea_e2e",
+		"postgresql://:pw@localhost/tea_e2e",
+		"postgresql://localhost:5433/tea_e2e",
+	])("still resets %j", (value) => {
+		expect(decideE2eDatabaseReset({ DATABASE_URL: value }).action).toBe(
+			"reset"
 		);
 	});
 
@@ -122,11 +136,14 @@ describe("decideE2eDatabaseReset", () => {
 			"postgresql://tea_owner:s3cret-pw@",
 			"postgresql://tea_owner:s3cret-pw@localhost:5433/tea_dev/x_e2e",
 			"postgresql://tea_owner:12/s3cret-pw@host/tea_dev",
+			"postgresql://tea_owner:12/s3cret?pw@localhost:5433/tea_dev",
+			"postgresql://tea_owner:/s3cret#pw@localhost:5433/tea_dev",
+			"postgresql://tea_owner:/x_e2e?s3cret@localhost:5433/tea_dev",
 		]) {
 			const decision = decideE2eDatabaseReset({ DATABASE_URL: value });
 			expect(decision.action).toBe("refuse");
 			const text = JSON.stringify(decision);
-			expect(text).not.toContain("s3cret-pw");
+			expect(text).not.toContain("s3cret");
 			expect(text).not.toContain("tea_owner");
 		}
 	});

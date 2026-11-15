@@ -28,6 +28,7 @@ export type ExecFn = (
 const TRUTHY = new Set(["1", "true"]);
 const DISPOSABLE_SUFFIXES = ["_test", "_e2e"];
 const DEFAULT_POSTGRES_PORT = "5432";
+const DATABASE_NAME = /^[A-Za-z0-9_$-]+$/;
 
 const isSwitchOn = (value: string | undefined) =>
 	TRUTHY.has((value ?? "").trim().toLowerCase());
@@ -52,9 +53,20 @@ function parseDatabaseUrl(
 	if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
 		return null;
 	}
-	// A name holding "/" or "@" means the path or credentials were malformed
-	// (for example an unencoded "/" in a password); the real target is unclear.
-	if (!database || database.includes("/") || database.includes("@")) {
+	// A name outside the plain identifier characters (including "/" or "@")
+	// means the path or credentials were malformed, for example an unencoded
+	// "/" in a password; the real target is unclear.
+	if (!DATABASE_NAME.test(database)) {
+		return null;
+	}
+	// An "@" with no user name and no password means an unencoded "/", "?" or
+	// "#" in the credentials made the parser read part of them as the host and
+	// port, so nothing it reports can be echoed.
+	if (raw.includes("@") && !parsed.username && !parsed.password) {
+		return null;
+	}
+	// The drivers let these query parameters override the host part.
+	if (parsed.searchParams.has("host") || parsed.searchParams.has("port")) {
 		return null;
 	}
 	return {
