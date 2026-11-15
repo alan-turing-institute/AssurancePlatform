@@ -106,7 +106,7 @@ async function readCaseImageKeys(
 	if (caseIds.length === 0) {
 		return result;
 	}
-	const [cases, snapshots] = await Promise.all([
+	const [cases, snapshots, foreignSnapshots] = await Promise.all([
 		db.assuranceCase.findMany({
 			where: { id: { in: caseIds } },
 			select: {
@@ -118,6 +118,19 @@ async function readCaseImageKeys(
 		db.publishedAssuranceCase.findMany({
 			where: { assuranceCaseId: { in: caseIds } },
 			select: { assuranceCaseId: true, content: true },
+		}),
+		// A snapshot of any case can name one of these cases' live keys, and
+		// Discover serves whatever key a snapshot names.
+		db.publishedAssuranceCase.findMany({
+			where: {
+				OR: caseIds.map((id) => ({
+					content: {
+						path: ["caseInformation", "featureImageUrl"],
+						string_contains: `cases/${id}/`,
+					},
+				})),
+			},
+			select: { content: true },
 		}),
 	]);
 	for (const row of cases) {
@@ -134,6 +147,21 @@ async function readCaseImageKeys(
 			: null;
 		if (url && snapshot.assuranceCaseId) {
 			result.get(snapshot.assuranceCaseId)?.keep.add(toMediaKey(url));
+		}
+	}
+	for (const snapshot of foreignSnapshots) {
+		const parsed = publishedSnapshotMetaSchema.safeParse(snapshot.content);
+		const url = parsed.success
+			? parsed.data.caseInformation?.featureImageUrl
+			: null;
+		if (!url) {
+			continue;
+		}
+		const key = toMediaKey(url);
+		for (const id of caseIds) {
+			if (key.startsWith(`cases/${id}/`)) {
+				result.get(id)?.keep.add(key);
+			}
 		}
 	}
 	return result;
@@ -368,15 +396,30 @@ export async function purgeCase(userId: string, caseId: string): ServiceResult {
 
 	try {
 		// The image rows cascade with the case, so their keys are read in the
-		// same transaction that deletes it.
-		const keys = await prisma.$transaction(async (tx) => {
+		// same transaction that deletes it. The case row is locked first and
+		// must still be in Trash: a case restored since the check above is left
+		// untouched.
+		const outcome = await prisma.$transaction(async (tx) => {
+			const locked = await tx.$queryRaw<{ id: string }[]>`
+				SELECT id FROM assurance_cases
+				WHERE id = ${caseId} AND deleted_at IS NOT NULL
+				FOR UPDATE`;
+			if (locked.length === 0) {
+				return null;
+			}
 			const found = await readCaseImageKeys(tx, [caseId]);
 			await tx.assuranceCase.delete({
 				where: { id: caseId },
 			});
-			return found.get(caseId);
+			return { keys: found.get(caseId) };
 		});
 
+		if (!outcome) {
+			return {
+				error: "Case must be in trash before it can be permanently deleted",
+			};
+		}
+		const { keys } = outcome;
 		if (keys) {
 			await deleteCaseImageFiles(caseId, keys);
 		}

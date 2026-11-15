@@ -9,6 +9,7 @@ import {
 	purgeExpiredCases,
 	softDeleteCase,
 } from "@/lib/services/case-trash-service";
+import { getPublishedItemMedia } from "@/lib/services/discover-service";
 import { publishAssuranceCase } from "@/lib/services/publish-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import {
@@ -153,7 +154,14 @@ describe("purging a case deletes its image files", () => {
 		expect(onDisk(copyKey)).toBe(true);
 	});
 
-	it("keeps a live key that an older archived snapshot still names", async () => {
+	it.each([
+		["a bare key", (key: string) => key],
+		["an /uploads/ path", (key: string) => `/uploads/${key}`],
+		[
+			"an Azure blob URL",
+			(key: string) => `https://account.blob.core.windows.net/media/${key}`,
+		],
+	])("keeps a live key that an older archived snapshot names as %s", async (_label, toStored) => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
 		const feature = await writeUpload(
@@ -170,7 +178,7 @@ describe("purging a case deletes its image files", () => {
 		const content = row.content as {
 			caseInformation: { featureImageUrl: string };
 		};
-		content.caseInformation.featureImageUrl = `/uploads/${feature}`;
+		content.caseInformation.featureImageUrl = toStored(feature);
 		await prisma.publishedAssuranceCase.update({
 			where: { id: row.id },
 			data: { content },
@@ -178,6 +186,103 @@ describe("purging a case deletes its image files", () => {
 
 		expectSuccess(await purgeCase(owner.id, testCase.id));
 
+		expect(onDisk(feature)).toBe(true);
+	});
+
+	it("keeps a live key that another case's published copy names, and that copy still serves it", async () => {
+		const owner = await createTestUser();
+		const { testCase, feature } = await trashedCaseWithImages(owner.id);
+		const other = await createTestCaseWithGoal(owner.id);
+		const published = expectSuccess(
+			await publishAssuranceCase(owner.id, other.id)
+		);
+		const row = await prisma.publishedAssuranceCase.findUniqueOrThrow({
+			where: { id: published.publishedId },
+		});
+		const content = row.content as {
+			caseInformation?: { featureImageUrl?: string };
+		};
+		content.caseInformation = { featureImageUrl: feature };
+		await prisma.publishedAssuranceCase.update({
+			where: { id: row.id },
+			data: { content },
+		});
+
+		expectSuccess(await purgeCase(owner.id, testCase.id));
+
+		expect(onDisk(feature)).toBe(true);
+		const media = await getPublishedItemMedia(row.slug, row.id);
+		expect(media.status).toBe("ok");
+	});
+
+	it("leaves a case restored before the purge's transaction untouched", async () => {
+		const owner = await createTestUser();
+		const { testCase, screenshot, feature } = await trashedCaseWithImages(
+			owner.id
+		);
+		const realFindUnique = prisma.assuranceCase.findUnique.bind(
+			prisma.assuranceCase
+		);
+		const spy = vi
+			.spyOn(prisma.assuranceCase, "findUnique")
+			.mockImplementationOnce(((args: never) => {
+				const pending = realFindUnique(args);
+				return pending.then(async (found) => {
+					await prisma.assuranceCase.update({
+						where: { id: testCase.id },
+						data: { deletedAt: null, deletedById: null },
+					});
+					return found;
+				});
+			}) as never);
+		try {
+			const result = await purgeCase(owner.id, testCase.id);
+
+			expect("error" in result).toBe(true);
+		} finally {
+			spy.mockRestore();
+		}
+
+		expect(
+			await prisma.assuranceCase.findUnique({ where: { id: testCase.id } })
+		).not.toBeNull();
+		expect(onDisk(screenshot)).toBe(true);
+		expect(onDisk(feature)).toBe(true);
+	});
+
+	it("purgeExpiredCases leaves a case restored after the expired list was read", async () => {
+		vi.stubEnv("CRON_SECRET", CRON_SECRET);
+		const owner = await createTestUser();
+		const { testCase, screenshot, feature } = await trashedCaseWithImages(
+			owner.id,
+			31
+		);
+		const realFindMany = prisma.assuranceCase.findMany.bind(
+			prisma.assuranceCase
+		);
+		const spy = vi
+			.spyOn(prisma.assuranceCase, "findMany")
+			.mockImplementationOnce(((args: never) =>
+				realFindMany(args).then(async (rows) => {
+					await prisma.assuranceCase.update({
+						where: { id: testCase.id },
+						data: { deletedAt: null, deletedById: null },
+					});
+					return rows;
+				})) as never);
+		try {
+			const result = expectSuccess(await purgeExpiredCases(CRON_SECRET));
+
+			expect(result.purgedCount).toBe(0);
+		} finally {
+			spy.mockRestore();
+			vi.unstubAllEnvs();
+		}
+
+		expect(
+			await prisma.assuranceCase.findUnique({ where: { id: testCase.id } })
+		).not.toBeNull();
+		expect(onDisk(screenshot)).toBe(true);
 		expect(onDisk(feature)).toBe(true);
 	});
 
