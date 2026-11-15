@@ -14,53 +14,6 @@ export function escapeHtml(value: string): string {
 }
 
 /**
- * Safely sanitizes HTML content by removing dangerous elements and attributes.
- * Strips XSS vectors (script tags, event handlers, etc.) while preserving
- * safe HTML formatting.
- *
- * Uses sanitize-html which works natively in Node.js without requiring jsdom.
- */
-export function sanitizeDescription(html: string): string {
-	// Sanitize HTML to remove XSS vectors
-	const sanitized = sanitizeHtml(html, {
-		allowedTags: [
-			"p",
-			"br",
-			"strong",
-			"em",
-			"u",
-			"s",
-			"a",
-			"ul",
-			"ol",
-			"li",
-			"blockquote",
-			"code",
-			"pre",
-			"h1",
-			"h2",
-			"h3",
-			"h4",
-			"h5",
-			"h6",
-			"div",
-			"span",
-		],
-		allowedAttributes: {
-			a: ["href", "target", "rel"],
-		},
-		// Ensure javascript: URLs are stripped
-		allowedSchemes: ["http", "https", "mailto"],
-	});
-
-	// Remove empty paragraph breaks that are commonly inserted by WYSIWYG editors
-	return sanitized
-		.replace("<p><br></p>", "")
-		.replace("<p><br /></p>", "")
-		.trim();
-}
-
-/**
  * Tags that start or end a line of text. They are the only tags kept while
  * extracting plain text, so each one can be turned into a word break:
  * `<p>One</p><p>Two</p>` reads "One Two", not "OneTwo". Inline tags are
