@@ -32,6 +32,8 @@ export abstract class BaseTemplate {
 	protected readonly config: TemplateConfig;
 	protected readonly branding: BrandingConfig;
 	protected sectionOverrides: Record<string, boolean> = {};
+	/** The moment of the current render, shared with sections that state it. */
+	protected exportedAt = "";
 
 	constructor(config: TemplateConfig, branding?: Partial<BrandingConfig>) {
 		this.config = config;
@@ -92,6 +94,7 @@ export abstract class BaseTemplate {
 		this.sectionOverrides = sectionOverrides ?? {};
 
 		const metadata = this.buildMetadata(caseData, exportedBy);
+		this.exportedAt = metadata.exportedAt;
 		const resolvedBranding = this.buildResolvedBranding();
 		const sections = await this.renderSections(
 			caseData,
