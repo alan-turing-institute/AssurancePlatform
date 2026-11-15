@@ -172,7 +172,7 @@ describe("element citation integrity (ADR 0004 D5)", () => {
 			const homeCase = await createTestCase(owner.id);
 			const awayCase = await createTestCase(owner.id);
 			const parentGoal = await createTestElement(awayCase.id, owner.id, {
-				elementType: "GOAL",
+				elementType: "STRATEGY",
 			});
 			const citedChild = await createTestElement(awayCase.id, owner.id, {
 				elementType: "PROPERTY_CLAIM",

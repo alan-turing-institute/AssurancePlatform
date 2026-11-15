@@ -44,7 +44,8 @@ export async function GET(
  * answers 400: evidence is moved with the move route and detached with the
  * detach route. Moving an element beneath evidence, or turning a counter-goal
  * beneath evidence into an ordinary goal, also answers 400: only counter-goals
- * hang from evidence.
+ * hang from evidence. The top goal never takes a parent, so a `parentId` on it
+ * answers 400.
  * @add 422
  */
 export async function PUT(

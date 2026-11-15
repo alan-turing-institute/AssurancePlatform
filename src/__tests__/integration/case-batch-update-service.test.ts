@@ -900,7 +900,7 @@ describe("applyBatchUpdate", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 			const mover = await createTestElement(testCase.id, user.id, {
-				elementType: "GOAL",
+				elementType: "PROPERTY_CLAIM",
 			});
 			const newParent = await createTestElement(testCase.id, user.id, {
 				elementType: "GOAL",
@@ -999,10 +999,10 @@ describe("applyBatchUpdate", () => {
 			const roots: Awaited<ReturnType<typeof createTestElement>>[] = [];
 			for (let i = 0; i < 5; i++) {
 				const root = await createTestElement(testCase.id, user.id, {
-					elementType: "GOAL",
+					elementType: "STRATEGY",
 				});
 				await createTestElement(testCase.id, user.id, {
-					elementType: "STRATEGY",
+					elementType: "PROPERTY_CLAIM",
 					parentId: root.id,
 				});
 				roots.push(root);

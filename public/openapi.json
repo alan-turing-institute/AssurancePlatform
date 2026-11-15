@@ -2410,6 +2410,16 @@
         ],
         "parameters": [],
         "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/200 - Restored"
+                }
+              }
+            }
+          },
           "400": {
             "$ref": "#/components/responses/400"
           },

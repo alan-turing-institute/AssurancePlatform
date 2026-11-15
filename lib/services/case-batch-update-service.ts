@@ -35,9 +35,11 @@ import {
 	enforceAssertionStatusRules,
 	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
+	lockCaseForElementWrite,
 	nullifyDanglingDefeats,
 	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
+	TOP_GOAL_NEEDS_NO_PARENT,
 	validateCitedElementId,
 	validateModuleReferenceId,
 } from "@/lib/services/element-service";
@@ -76,6 +78,14 @@ class BatchMoveCycleError extends Error {
 		super(`Circular reference detected when moving element ${elementId}`);
 	}
 }
+
+/**
+ * Thrown inside the batch's transaction when the goal rules, checked again
+ * under the case lock, no longer hold: another change to the case got in
+ * between the first check and the lock. Its message names the rule and is safe
+ * to show. Nothing is written.
+ */
+class GoalRuleBrokenError extends Error {}
 
 /** What a caller is told when the batch's transaction fails for any reason not named above. */
 const BATCH_FAILED = "Failed to apply batch update";
@@ -467,7 +477,8 @@ async function leavesSecondOrdinaryGoal(
 	goalCreates: CreateChange[],
 	movedUpdates: UpdateChange[],
 	storedById: Map<string, StoredGoal>,
-	deletes: DeleteChange[]
+	deletes: DeleteChange[],
+	db: GoalReader
 ): Promise<boolean> {
 	const madeOrdinary = movedUpdates.filter(
 		(change) =>
@@ -486,7 +497,7 @@ async function leavesSecondOrdinaryGoal(
 			.filter((change) => change.data.isDefeater === true)
 			.map((change) => change.elementId),
 	]);
-	const ordinary = await prisma.assuranceElement.findMany({
+	const ordinary = await db.assuranceElement.findMany({
 		where: {
 			caseId,
 			elementType: "GOAL",
@@ -499,15 +510,41 @@ async function leavesSecondOrdinaryGoal(
 }
 
 /**
+ * The id of the first ordinary goal (the top goal) an update leaves with a
+ * parent. Goals the batch does not move or re-flag are not looked at.
+ */
+function findParentedTopGoal(
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>
+): string | undefined {
+	return movedUpdates.find((change) => {
+		const stored = storedById.get(change.elementId);
+		if (!stored) {
+			return false;
+		}
+		const parentId =
+			change.data.parentId === undefined
+				? stored.parentId
+				: change.data.parentId;
+		return !(change.data.isDefeater ?? stored.isDefeater) && Boolean(parentId);
+	})?.elementId;
+}
+
+/** The part of a database client the goal checks read through. */
+type GoalReader = Pick<TransactionClient, "assuranceElement">;
+
+/**
  * The goal rules, as the single-element create and update routes apply them:
- * a goal defeater (counter-goal) has a parent, and a case has one ordinary
- * goal. Judged on the goals as the batch leaves them.
+ * a goal defeater (counter-goal) has a parent, the top goal has none, and a
+ * case has one ordinary goal. Judged on the goals as the batch leaves them.
+ * `db` is the transaction when the check is repeated under the case lock.
  */
 async function validateGoalChanges(
 	caseId: string,
 	creates: CreateChange[],
 	updates: UpdateChange[],
-	deletes: DeleteChange[]
+	deletes: DeleteChange[],
+	db: GoalReader = prisma
 ): Promise<string | null> {
 	const goalCreates = creates.filter(
 		(change) => mapElementType(change.data.type) === "GOAL"
@@ -522,7 +559,7 @@ async function validateGoalChanges(
 
 	const storedGoals =
 		movedUpdates.length > 0
-			? await prisma.assuranceElement.findMany({
+			? await db.assuranceElement.findMany({
 					where: {
 						id: { in: movedUpdates.map((change) => change.elementId) },
 						elementType: "GOAL",
@@ -540,14 +577,21 @@ async function validateGoalChanges(
 	if (parentless) {
 		return `${GOAL_DEFEATER_NEEDS_PARENT} (element ${parentless})`;
 	}
-	return (await leavesSecondOrdinaryGoal(
-		caseId,
-		goalCreates,
-		movedUpdates,
-		storedById,
-		deletes
-	))
-		? ONE_GOAL_PER_CASE
+	if (
+		await leavesSecondOrdinaryGoal(
+			caseId,
+			goalCreates,
+			movedUpdates,
+			storedById,
+			deletes,
+			db
+		)
+	) {
+		return ONE_GOAL_PER_CASE;
+	}
+	const parentedTopGoal = findParentedTopGoal(movedUpdates, storedById);
+	return parentedTopGoal
+		? `${TOP_GOAL_NEEDS_NO_PARENT} (element ${parentedTopGoal})`
 		: null;
 }
 
@@ -1955,6 +1999,17 @@ export async function applyBatchUpdate(
 
 	try {
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, caseId);
+			const goalError = await validateGoalChanges(
+				caseId,
+				creates,
+				updates,
+				deletes,
+				tx
+			);
+			if (goalError) {
+				throw new GoalRuleBrokenError(goalError);
+			}
 			// Order: unlinks first, then deletes (after freeing any element the
 			// batch moves out of a parent it deletes), creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
@@ -1992,7 +2047,10 @@ export async function applyBatchUpdate(
 		log.error("Batch update failed", { error });
 		return {
 			error:
-				error instanceof BatchMoveCycleError ? error.message : BATCH_FAILED,
+				error instanceof BatchMoveCycleError ||
+				error instanceof GoalRuleBrokenError
+					? error.message
+					: BATCH_FAILED,
 		};
 	}
 }

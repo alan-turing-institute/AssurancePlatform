@@ -264,6 +264,12 @@ const ERROR_MAPPINGS: Array<{
 	// other than a property claim, and putting anything but a counter-goal
 	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// Detaching the top goal would leave the case without a root: a validation
+	// failure (400), as for a counter-goal detached from its parent.
+	{
+		pattern: /^The top goal cannot be detached$/,
+		factory: () => validationError(""),
+	},
 	// A second ordinary goal in a case is a rule refusal (422), not a 500. It is
 	// not a 409: that code on the batch endpoint means another person changed
 	// the case, and the JSON editor reads it that way.

@@ -50,6 +50,20 @@ async function touchCase(tx: TxClient, caseId: string): Promise<void> {
 }
 
 /**
+ * Takes a row lock on the case for the rest of the caller's transaction, so
+ * writes that change a case's goals (and, later, its names) run one after
+ * another and each re-checks its rules against what the last one left. Take it
+ * before any other lock in the transaction; a caller that also locks a claim
+ * takes the case first.
+ */
+export async function lockCaseForElementWrite(
+	tx: TxClient,
+	caseId: string
+): Promise<void> {
+	await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${caseId} FOR UPDATE`;
+}
+
+/**
  * Create element input — extends the Zod schema output with API-layer fields
  * that are not part of the validation schema (caseId, elementType, description aliases).
  */
@@ -1056,6 +1070,13 @@ export const GOAL_DEFEATER_NEEDS_PARENT =
 /** A case has one ordinary goal; counter-goals are not counted. */
 export const ONE_GOAL_PER_CASE = "A case can only have one goal claim";
 
+/** The top goal is the root of the case, so it never takes a parent. */
+export const TOP_GOAL_NEEDS_NO_PARENT =
+	"parentId cannot be set on the top goal; only a counter-goal has a parent";
+
+/** The top goal is the root of the case, so it cannot be moved to the side area. */
+export const TOP_GOAL_CANNOT_BE_DETACHED = "The top goal cannot be detached";
+
 /**
  * Checks if a case already has a live, non-defeater goal element, leaving out
  * the element given as `exceptElementId` (the goal being changed).
@@ -1412,6 +1433,7 @@ export async function createElementWithin(
 	userId: string,
 	input: CreateElementInput
 ): Promise<{ data: ElementResponse } | { error: string }> {
+	await lockCaseForElementWrite(tx, input.caseId);
 	const prepared = await prepareElementCreate(tx, userId, input);
 	if ("error" in prepared) {
 		return prepared;
@@ -1689,7 +1711,8 @@ async function applyParentChangeForUpdate(
 /**
  * The goal rules for an update, judged on what the goal will be once the update
  * is applied: a goal defeater (counter-goal) has a parent, and a case has one
- * ordinary goal. An update that leaves `isDefeater` and `parentId` alone is not
+ * ordinary goal, which never takes a parent. An update that leaves `isDefeater`
+ * and `parentId` alone is not
  * held to the first rule, so a counter-goal stored without a parent can still
  * be edited. A counter-goal made ordinary is the only change that can add an
  * ordinary goal, so that is the only one checked against the others.
@@ -1702,7 +1725,8 @@ async function enforceGoalRulesOnUpdate(
 		isDefeater: boolean;
 		parentId: string | null;
 	},
-	input: UpdateElementInput
+	input: UpdateElementInput,
+	db: TxClient = prisma
 ): Promise<{ error: string } | undefined> {
 	if (existing.elementType !== "GOAL") {
 		return;
@@ -1718,9 +1742,12 @@ async function enforceGoalRulesOnUpdate(
 	if (
 		existing.isDefeater &&
 		!isDefeater &&
-		(await caseHasGoal(existing.caseId, prisma, elementId))
+		(await caseHasGoal(existing.caseId, db, elementId))
 	) {
 		return { error: ONE_GOAL_PER_CASE };
+	}
+	if (changesPlace && !isDefeater && parentId) {
+		return { error: TOP_GOAL_NEEDS_NO_PARENT };
 	}
 }
 
@@ -1991,6 +2018,42 @@ export async function updateElementWithin(
 }
 
 /**
+ * Writes an update under the case lock. A goal's rules are judged again on the
+ * goal as it stands once the lock is held, because the checks before the
+ * transaction ran while another write to the case could still be in flight.
+ */
+async function writeUpdateUnderCaseLock(
+	tx: TxClient,
+	elementId: string,
+	existing: { caseId: string; elementType: PrismaElementType },
+	input: UpdateElementInput,
+	updateData: Prisma.AssuranceElementUpdateInput
+): Promise<{ data: ElementResponse } | { error: string }> {
+	await lockCaseForElementWrite(tx, existing.caseId);
+	if (existing.elementType === "GOAL") {
+		const current = await tx.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { isDefeater: true, parentId: true },
+		});
+		if (!current) {
+			return { error: "Element not found" };
+		}
+		const goalRuleError = await enforceGoalRulesOnUpdate(
+			elementId,
+			{ ...existing, ...current },
+			input,
+			tx
+		);
+		if (goalRuleError) {
+			return goalRuleError;
+		}
+	}
+	return {
+		data: await updateElementWithin(tx, elementId, existing.caseId, updateData),
+	};
+}
+
+/**
  * Updates an existing element
  */
 export async function updateElement(
@@ -2081,11 +2144,9 @@ export async function updateElement(
 			updateData
 		);
 
-		return {
-			data: await prisma.$transaction((tx) =>
-				updateElementWithin(tx, elementId, existing.caseId, updateData)
-			),
-		};
+		return await prisma.$transaction((tx) =>
+			writeUpdateUnderCaseLock(tx, elementId, existing, input, updateData)
+		);
 	} catch (error) {
 		log.error("Failed to update element", { error });
 		return { error: "Failed to update element" };
@@ -2241,7 +2302,12 @@ export async function detachElement(
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, elementType: true, deletedAt: true },
+			select: {
+				caseId: true,
+				elementType: true,
+				deletedAt: true,
+				isDefeater: true,
+			},
 		});
 
 		if (!existing) {
@@ -2256,6 +2322,16 @@ export async function detachElement(
 		const hasAccess = await validateCaseAccess(userId, existing.caseId, "EDIT");
 		if (!hasAccess) {
 			return { error: "Element not found" };
+		}
+
+		// A counter-goal needs the parent it challenges, and the top goal is the
+		// root of the case: neither leaves the argument tree.
+		if (existing.elementType === "GOAL") {
+			return {
+				error: existing.isDefeater
+					? GOAL_DEFEATER_NEEDS_PARENT
+					: TOP_GOAL_CANNOT_BE_DETACHED,
+			};
 		}
 
 		// Move to sandbox, clear parent, and nullify+flag any dangling
@@ -2614,7 +2690,13 @@ export async function restoreElement(
 		// Get the element (including deleted ones)
 		const element = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { parentId: true, caseId: true, deletedAt: true },
+			select: {
+				parentId: true,
+				caseId: true,
+				deletedAt: true,
+				elementType: true,
+				isDefeater: true,
+			},
 		});
 
 		if (!element) {
@@ -2643,7 +2725,17 @@ export async function restoreElement(
 		}
 
 		// Gather deleted descendants and restore atomically
-		await prisma.$transaction(async (tx) => {
+		// A deleted top goal comes back only while the case has no other one,
+		// judged under the case lock so a goal made in the meantime counts.
+		return await prisma.$transaction(async (tx): ServiceResult => {
+			await lockCaseForElementWrite(tx, element.caseId);
+			if (
+				element.elementType === "GOAL" &&
+				!element.isDefeater &&
+				(await caseHasGoal(element.caseId, tx, elementId))
+			) {
+				return { error: ONE_GOAL_PER_CASE };
+			}
 			const descendantIds = await getDeletedDescendantIds(elementId, tx);
 			const allIds = [elementId, ...descendantIds];
 			await tx.assuranceElement.updateMany({
@@ -2651,9 +2743,8 @@ export async function restoreElement(
 				data: { deletedAt: null, deletedById: null },
 			});
 			await touchCase(tx, element.caseId);
+			return { data: true };
 		});
-
-		return { data: true };
 	} catch (error) {
 		log.error("Failed to restore element", { error });
 		return { error: "Failed to restore element" };

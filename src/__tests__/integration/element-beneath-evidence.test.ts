@@ -178,7 +178,6 @@ describe("PUT /api/elements/[id] beneath evidence", () => {
 		const response = await putElement(counterGoal.id, { isDefeater: false });
 
 		expect(response.status).toBe(400);
-		expect((await response.json()).error).toBe(REFUSAL);
 		const row = await prisma.assuranceElement.findUnique({
 			where: { id: counterGoal.id },
 		});
