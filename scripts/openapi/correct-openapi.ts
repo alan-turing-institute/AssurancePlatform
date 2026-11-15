@@ -9,9 +9,17 @@
  *
  * It corrects only what the generator cannot express: each operation's
  * success answers (taken from operations.ts), a path parameter for every
- * `{name}` in a path, the schemas those answers refer to, and references that
- * point at nothing. Anything the generator reads correctly is fixed in the
- * route's comment instead.
+ * `{name}` in a path, the query parameters in operations.ts, and the named
+ * schemas those answers refer to. Schemas nothing refers to are removed.
+ * Anything the generator reads correctly is fixed in the route's comment
+ * instead.
+ *
+ * It stops with an error when an operation has no table entry, a table entry
+ * has no operation, a table entry names an unknown schema, or any reference
+ * in the finished document, kept component schemas included, points at a
+ * schema that does not exist. The one tolerated case is the two import
+ * request bodies, which the generator names by a sentence; they become an
+ * open object.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -258,40 +266,59 @@ function schemaName(refValue: string): string | null {
 }
 
 /**
- * The references the generator writes to schemas it never defines (the import
- * routes name their request bodies by a sentence). Only these are replaced;
- * a reference to any other missing schema stops the run.
+ * The two request bodies the generator names by a sentence instead of a
+ * schema: the import routes. Each is replaced by an open object; no other
+ * operation may refer to a schema that does not exist.
  */
-const KNOWN_DANGLING = new Set([
-	"JSON case data in any supported format",
-	"JSON case data to validate",
-]);
+const IMPORT_BODY_REFS: Record<string, string> = {
+	"POST /cases/import": "JSON case data in any supported format",
+	"PUT /cases/import": "JSON case data to validate",
+};
 
-/**
- * Replaces a reference to one of the known missing schemas with an open
- * object. Any other reference to a schema that does not exist throws.
- */
-function closeDanglingRefs(node: unknown, schemas: Json): unknown {
+function replaceRef(node: unknown, name: string): unknown {
 	if (Array.isArray(node)) {
-		return node.map((child) => closeDanglingRefs(child, schemas));
+		return node.map((child) => replaceRef(child, name));
 	}
 	if (node === null || typeof node !== "object") {
 		return node;
 	}
 	const record = node as Json;
-	const name = typeof record.$ref === "string" ? schemaName(record.$ref) : null;
-	if (name !== null && !(name in schemas)) {
-		if (KNOWN_DANGLING.has(name)) {
-			return { ...OPEN_OBJECT };
-		}
-		throw new Error(`Reference to a schema that does not exist: ${name}`);
+	if (record.$ref === `${SCHEMA_REF_PREFIX}${name}`) {
+		return { ...OPEN_OBJECT };
 	}
 	return Object.fromEntries(
-		Object.entries(record).map(([key, value]) => [
-			key,
-			closeDanglingRefs(value, schemas),
-		])
+		Object.entries(record).map(([key, value]) => [key, replaceRef(value, name)])
 	);
+}
+
+/** Replaces the named reference in the request body of one operation only. */
+function closeImportBody(paths: Json, key: string, name: string): void {
+	const [method, routePath] = key.split(" ");
+	const item = asRecord(paths[routePath ?? ""]);
+	const operation = asRecord(item[(method ?? "").toLowerCase()]);
+	if ("requestBody" in operation) {
+		operation.requestBody = replaceRef(operation.requestBody, name);
+	}
+}
+
+function closeImportBodies(paths: Json): void {
+	for (const [key, name] of Object.entries(IMPORT_BODY_REFS)) {
+		closeImportBody(paths, key, name);
+	}
+}
+
+/** Throws when any reference in the document points at a schema that does not exist. */
+function assertNoDanglingRefs(document: Json, schemas: Json): void {
+	const used = new Set<string>();
+	collectRefs(document, used);
+	const missing = [...used]
+		.map(schemaName)
+		.filter((name): name is string => name !== null && !(name in schemas));
+	if (missing.length > 0) {
+		throw new Error(
+			`Reference to a schema that does not exist: ${missing.join(", ")}`
+		);
+	}
 }
 
 /** Throws when a table entry refers to a schema that is neither in SCHEMAS nor generated. */
@@ -357,13 +384,15 @@ export function correctOpenApi(input: OpenApiDocument): OpenApiDocument {
 	const components = asRecord(document.components);
 	checkTableReferences(asRecord(components.schemas));
 	const known = { ...asRecord(components.schemas), ...SCHEMAS };
-	const closedPaths = closeDanglingRefs(paths, known) as Json;
-	const withPaths = { ...document, paths: closedPaths };
+	closeImportBodies(paths);
+	const withPaths = { ...document, paths };
 	const schemas = pruneSchemas(withPaths, known);
-	return orderKeys(
-		{ ...withPaths, components: correctComponents(components, schemas) },
-		TOP_LEVEL_ORDER
-	);
+	const corrected = {
+		...withPaths,
+		components: correctComponents(components, schemas),
+	};
+	assertNoDanglingRefs(corrected, schemas);
+	return orderKeys(corrected, TOP_LEVEL_ORDER);
 }
 
 /** The text written to public/openapi.json. */

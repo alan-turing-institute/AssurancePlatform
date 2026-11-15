@@ -99,15 +99,53 @@ function reachableText(start: string, local: Map<string, string>): string {
 	return texts.join("\n");
 }
 
+/** Where a comment that starts at `i` ends, or -1 when none starts there. */
+function commentEnd(text: string, i: number): number {
+	if (text.startsWith("//", i)) {
+		const lineEnd = text.indexOf("\n", i);
+		return lineEnd === -1 ? text.length : lineEnd;
+	}
+	if (text.startsWith("/*", i)) {
+		const close = text.indexOf("*/", i + 2);
+		return close === -1 ? text.length : close + 2;
+	}
+	return -1;
+}
+
+/** The code with every `//` and block comment removed; quoted text is kept whole. */
+function stripComments(text: string): string {
+	let out = "";
+	let quote = "";
+	let i = 0;
+	while (i < text.length) {
+		const char = text.charAt(i);
+		const end = quote ? -1 : commentEnd(text, i);
+		if (end !== -1) {
+			out += " ";
+			i = end;
+			continue;
+		}
+		if (quote) {
+			quote = char === quote && text[i - 1] !== "\\" ? "" : quote;
+		} else if ("\"'`".includes(char)) {
+			quote = char;
+		}
+		out += char;
+		i++;
+	}
+	return out;
+}
+
 function handlersIn(file: string): Handler[] {
 	return handlersInSource(readFileSync(file, "utf8"), routePath(file));
 }
 
 function handlersInSource(source: string, route: string): Handler[] {
 	const blocks = source.split(TOP_LEVEL_START);
-	const local = localFunctions(blocks);
+	const code = blocks.map(stripComments);
+	const local = localFunctions(code);
 	const found: Handler[] = [];
-	blocks.forEach((block, i) => {
+	code.forEach((block, i) => {
 		const method = HANDLER.exec(block)?.[1];
 		const before = blocks[i - 1] ?? "";
 		const ignored = before.startsWith("/**") && before.includes("@ignore");
@@ -211,9 +249,19 @@ function helperCodes(text: string): number[] {
 		.flatMap(([, codes]) => codes);
 }
 
+/** The status in a redirect's second argument: a number, or a `status` option; 307 otherwise. */
+function redirectStatus(argument: string | undefined): number[] {
+	const text = argument?.trim() ?? "";
+	const named = text.startsWith("{")
+		? (STATUS_OPTION.exec(text)?.[1] ?? "")
+		: text;
+	const codes = successNumbers(named);
+	return codes.length > 0 ? codes : [REDIRECT_DEFAULT];
+}
+
 function redirectCodes(text: string): number[] {
 	return calls(text, "NextResponse.redirect(").flatMap((args) =>
-		args.length > 1 ? successNumbers(args[1] ?? "") : [REDIRECT_DEFAULT]
+		redirectStatus(args[1])
 	);
 }
 
@@ -313,6 +361,16 @@ function unreadQueryStrings(handlers: Handler[]): string[] {
 		.map((handler) => handler.id);
 }
 
+/** Reads the checks cannot follow: a built `URLSearchParams`, or a method other than `.get("name")` and `.set(`. */
+const UNFOLLOWABLE_QUERY_READ =
+	/new URLSearchParams\(|searchParams\.(?!get\("[^"]+"\)|set\()\w+\(/;
+
+function unfollowableQueryReads(handlers: Handler[]): string[] {
+	return handlers
+		.filter((handler) => UNFOLLOWABLE_QUERY_READ.test(handler.reach))
+		.map((handler) => handler.id);
+}
+
 function documentedQueryNames(operation: Json): string[] {
 	return ((operation.parameters ?? []) as Json[])
 		.filter((parameter) => parameter.in === "query")
@@ -331,7 +389,7 @@ function cronGuardedServiceCalls(): string[] {
 		.filter((file) => file.endsWith(".ts"))
 		.flatMap((file) => {
 			const local = localFunctions(
-				readFileSync(file, "utf8").split(TOP_LEVEL_START),
+				stripComments(readFileSync(file, "utf8")).split(TOP_LEVEL_START),
 				true
 			);
 			return [...local.entries()]
@@ -359,16 +417,26 @@ const SCHEME_MARKERS: [string, string][] = [
 	]),
 ];
 
-/** A call that looks like a sign-in check. */
-const SIGN_IN_CALL =
-	/\b(?:validate|get|require|check|authori[sz]e)\w*(?:Session|Auth)\w*\(/g;
+/** The operations that ask for no sign-in on purpose. */
+const PUBLIC_OPERATIONS = [
+	"GET /auth/reset-password",
+	"GET /health",
+	"GET /public/discover/{slug}",
+	"GET /public/discover/{slug}/image/{versionId}",
+	"POST /auth/forgot-password",
+	"POST /auth/reset-password",
+	"POST /users/register",
+];
 
-/** Sign-in-looking calls in a handler's reach that no marker recognises. */
-function unrecognisedSignIns(handler: Handler): string[] {
-	const known = new Set(SCHEME_MARKERS.map(([marker]) => marker));
-	return [...new Set(handler.reach.match(SIGN_IN_CALL) ?? [])].filter(
-		(call) => !known.has(call)
-	);
+/** Handlers with no detected sign-in that are not on the public list. */
+function unlistedWithoutSignIn(handlers: Handler[]): string[] {
+	return handlers
+		.filter(
+			(handler) =>
+				requiredSchemes(handler).length === 0 &&
+				!PUBLIC_OPERATIONS.includes(handler.id)
+		)
+		.map((handler) => handler.id);
 }
 
 function requiredSchemes(handler: Handler): string[] {
@@ -482,22 +550,81 @@ describe("the published API description matches the routes", () => {
 		);
 	});
 
-	it("(g5) no handler signs in through a call the markers do not recognise", () => {
-		const unknown = allHandlers()
-			.filter(
-				(handler) =>
-					requiredSchemes(handler).length === 0 &&
-					unrecognisedSignIns(handler).length > 0
-			)
-			.map((handler) => `${handler.id}: ${unrecognisedSignIns(handler)}`);
-		expect(unknown).toEqual([]);
+	it("(g5) every handler with no detected sign-in is on the public list", () => {
+		expect(unlistedWithoutSignIn(allHandlers())).toEqual([]);
+	});
+
+	it("(g6) every operation on the public list exists and has no detected sign-in", () => {
+		const byId = new Map(allHandlers().map((handler) => [handler.id, handler]));
+		const stale = PUBLIC_OPERATIONS.filter((id) => {
+			const handler = byId.get(id);
+			return !handler || requiredSchemes(handler).length > 0;
+		});
+		expect(stale).toEqual([]);
+	});
+
+	it("(g7) a sign-in through an unknown call is not mistaken for a public route", () => {
 		const [handler] = handlersInSource(
 			"export async function GET() {\n\tawait checkUserSession();\n\treturn apiSuccess({});\n}\n",
 			"/x"
 		);
-		expect(handler ? unrecognisedSignIns(handler) : []).toEqual([
-			"checkUserSession(",
+		expect(unlistedWithoutSignIn(handler ? [handler] : [])).toEqual(["GET /x"]);
+	});
+
+	it("(g8) a comment that names a sign-in check does not count as the check", () => {
+		const [handler] = handlersInSource(
+			"export async function GET() {\n\t// requireAuth() runs first\n\t/* requireApiToken( */\n\treturn apiSuccess({});\n}\n",
+			"/x"
+		);
+		expect(handler ? requiredSchemes(handler) : ["missing"]).toEqual([]);
+	});
+
+	it("(g9) text that looks like a comment inside a string is kept", () => {
+		const [handler] = handlersInSource(
+			'export async function GET() {\n\tconst url = "https://x.test/";\n\tawait requireAuth();\n\treturn apiSuccess(url);\n}\n',
+			"/x"
+		);
+		expect(handler ? requiredSchemes(handler) : []).toEqual(["SessionAuth"]);
+	});
+
+	it("(e4) no handler reads the query string in a way the checks cannot follow", () => {
+		expect(unfollowableQueryReads(allHandlers())).toEqual([]);
+	});
+
+	it("(e5) the checks notice URLSearchParams and other searchParams methods", () => {
+		const reads = [
+			"const q = new URLSearchParams(request.url);",
+			'const all = new URL(request.url).searchParams.getAll("a");',
+			'const has = new URL(request.url).searchParams.has("a");',
+		];
+		const handlers = reads.flatMap((read, i) =>
+			handlersInSource(
+				`export async function GET(request: Request) {\n\t${read}\n\treturn apiSuccess({});\n}\n`,
+				`/r${i}`
+			)
+		);
+		expect(unfollowableQueryReads(handlers)).toEqual([
+			"GET /r0",
+			"GET /r1",
+			"GET /r2",
 		]);
+	});
+
+	it("(d2) a redirect's status is its number, its status option, or 307", () => {
+		const redirects = [
+			"NextResponse.redirect(url)",
+			"NextResponse.redirect(url, 302)",
+			"NextResponse.redirect(url, { status: 302 })",
+			'NextResponse.redirect(url, { headers: { "x-cache": "max-age=300" } })',
+		];
+		const codes = redirects.map((redirect, i) => {
+			const [handler] = handlersInSource(
+				`export async function GET(request: Request) {\n\treturn ${redirect};\n}\n`,
+				`/r${i}`
+			);
+			return handler ? handlerSuccessCodes(handler) : [];
+		});
+		expect(codes).toEqual([[307], [302], [302], [307]]);
 	});
 
 	it("(g) sign-in schemes equal those the handler requires", () => {

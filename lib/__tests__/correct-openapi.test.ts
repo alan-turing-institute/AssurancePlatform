@@ -66,6 +66,34 @@ describe("the correction step", () => {
 		expect(() => correctOpenApi(spec)).toThrow("Teem");
 	});
 
+	it("throws when an import reference appears on any other operation", () => {
+		const spec = freshSpec();
+		spec.paths["/health"].get.requestBody = {
+			content: {
+				"application/json": {
+					schema: { $ref: "#/components/schemas/JSON case data to validate" },
+				},
+			},
+		};
+		expect(() => correctOpenApi(spec)).toThrow("JSON case data to validate");
+	});
+
+	it("throws on a missing schema referred to from a kept schema", () => {
+		const spec = freshSpec();
+		spec.components.schemas.Holder = {
+			type: "object",
+			properties: { inner: { $ref: "#/components/schemas/Gone" } },
+		};
+		spec.paths["/health"].get.requestBody = {
+			content: {
+				"application/json": {
+					schema: { $ref: "#/components/schemas/Holder" },
+				},
+			},
+		};
+		expect(() => correctOpenApi(spec)).toThrow("Gone");
+	});
+
 	it("throws when a table entry names a schema that does not exist", () => {
 		const original = OPERATIONS["GET /health"];
 		OPERATIONS["GET /health"] = [
