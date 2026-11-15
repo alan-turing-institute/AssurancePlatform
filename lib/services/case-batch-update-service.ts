@@ -633,6 +633,8 @@ async function validateElementFields(
 ): Promise<string | null> {
 	return (
 		validateEachElementChangedOnce(updates, deletes) ??
+		(await validateBeneathEvidence(creates, updates)) ??
+		(await validateFieldsFitTypes(creates, updates)) ??
 		(await validateElementNames(userId, creates, updates)) ??
 		(await validateContextEntries(caseId, creates, updates, deletes)) ??
 		(await validateGoalChanges(caseId, creates, updates, deletes))
@@ -2065,16 +2067,6 @@ export async function applyBatchUpdate(
 		return { error: updateParentError };
 	}
 
-	const beneathEvidenceError = await validateBeneathEvidence(creates, updates);
-	if (beneathEvidenceError) {
-		return { error: beneathEvidenceError };
-	}
-
-	const fieldFitError = await validateFieldsFitTypes(creates, updates);
-	if (fieldFitError) {
-		return { error: fieldFitError };
-	}
-
 	// TEA-syntax element-name prefix validation — same rule, same choke
 	// point shape as the single-element route (element-service.ts's
 	// createElement/updateElement), applied here so a rename or create
@@ -2093,16 +2085,7 @@ export async function applyBatchUpdate(
 	try {
 		await prisma.$transaction(async (tx) => {
 			await lockCaseForElementWrite(tx, caseId);
-			const goalError = await validateGoalChanges(
-				caseId,
-				creates,
-				updates,
-				deletes,
-				tx
-			);
-			if (goalError) {
-				throw new GoalRuleBrokenError(goalError);
-			}
+			await assertGoalRulesHold(tx, caseId, creates, updates, deletes);
 			// Order: unlinks first, then deletes (after freeing any element the
 			// batch moves out of a parent it deletes), creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
@@ -2138,12 +2121,34 @@ export async function applyBatchUpdate(
 			return { error: CASE_MODIFIED, conflictDetected: true };
 		}
 		log.error("Batch update failed", { error });
-		return {
-			error:
-				error instanceof BatchMoveCycleError ||
-				error instanceof GoalRuleBrokenError
-					? error.message
-					: BATCH_FAILED,
-		};
+		return { error: shownMessage(error) };
+	}
+}
+
+/** The message a caller is told for a failed batch: a named refusal's own, otherwise a fixed one. */
+function shownMessage(error: unknown): string {
+	return error instanceof BatchMoveCycleError ||
+		error instanceof GoalRuleBrokenError
+		? error.message
+		: BATCH_FAILED;
+}
+
+/** Repeats the goal rules under the case lock; a rule that no longer holds ends the transaction. */
+async function assertGoalRulesHold(
+	tx: TransactionClient,
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<void> {
+	const goalError = await validateGoalChanges(
+		caseId,
+		creates,
+		updates,
+		deletes,
+		tx
+	);
+	if (goalError) {
+		throw new GoalRuleBrokenError(goalError);
 	}
 }

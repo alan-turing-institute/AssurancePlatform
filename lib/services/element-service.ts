@@ -1169,7 +1169,7 @@ export const TOP_GOAL_NEEDS_NO_PARENT =
 	"parentId cannot be set on the top goal; only a counter-goal has a parent";
 
 /** The top goal is the root of the case, so it cannot be moved to the side area. */
-export const TOP_GOAL_CANNOT_BE_DETACHED = "The top goal cannot be detached";
+const TOP_GOAL_CANNOT_BE_DETACHED = "The top goal cannot be detached";
 
 /**
  * Checks if a case already has a live, non-defeater goal element, leaving out
@@ -1893,6 +1893,34 @@ async function enforceBeneathEvidenceOnUpdate(
 }
 
 /**
+ * The rules an update must meet for the element's type: the text fields it
+ * fills in belong to the type, the goal rules, and only counter-goals hang from
+ * evidence. The first refusal is returned.
+ */
+async function enforceTypeRulesOnUpdate(
+	elementId: string,
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	},
+	input: UpdateElementInput
+): Promise<{ error: string } | undefined> {
+	const misplacedFieldError = rejectFieldsNotApplicable(
+		existing.elementType,
+		input
+	);
+	if (misplacedFieldError) {
+		return { error: misplacedFieldError };
+	}
+	return (
+		(await enforceGoalRulesOnUpdate(elementId, existing, input)) ??
+		(await enforceBeneathEvidenceOnUpdate(existing, input))
+	);
+}
+
+/**
  * Runs every field-level validation guard `updateElement` needs before it
  * touches the update itself, in the exact order it previously ran them
  * inline: assertionStatus, moduleReferenceId, citedElementId,
@@ -1915,14 +1943,6 @@ async function validateUpdateElementFields(
 	input: UpdateElementInput,
 	userId: string
 ): Promise<{ error: string } | undefined> {
-	const misplacedFieldError = rejectFieldsNotApplicable(
-		existing.elementType,
-		input
-	);
-	if (misplacedFieldError) {
-		return { error: misplacedFieldError };
-	}
-
 	// ADR 0004 D3 write rule: assertionStatus is author-declared only —
 	// see guardAssertionStatusWrite's docstring for why case-level EDIT
 	// access alone isn't a sufficient gate.
@@ -2014,21 +2034,13 @@ async function validateUpdateElementFields(
 		return { error: defeatsElementIdError };
 	}
 
-	const goalRuleError = await enforceGoalRulesOnUpdate(
+	const typeRuleError = await enforceTypeRulesOnUpdate(
 		elementId,
 		existing,
 		input
 	);
-	if (goalRuleError) {
-		return goalRuleError;
-	}
-
-	const beneathEvidenceError = await enforceBeneathEvidenceOnUpdate(
-		existing,
-		input
-	);
-	if (beneathEvidenceError) {
-		return beneathEvidenceError;
+	if (typeRuleError) {
+		return typeRuleError;
 	}
 
 	// Named context entries: unique names on this element, and ids unique in
@@ -2832,36 +2844,60 @@ async function renameRestoredOnClash(
 		if (!row?.name) {
 			continue;
 		}
-		let name = row.name;
-		for (const rename of renames) {
-			if (name.startsWith(`${rename.from}.`)) {
-				name = `${rename.to}${name.slice(rename.from.length)}`;
-				break;
-			}
-		}
-		const clash = await tx.assuranceElement.findFirst({
-			where: { caseId, deletedAt: null, name, id: { not: id } },
-			select: { id: true },
-		});
-		if (clash) {
-			const { parentInfo } =
-				row.elementType === "PROPERTY_CLAIM" && row.parentId
-					? await calculatePropertyClaimLevel(row.parentId, tx)
-					: { parentInfo: null };
-			name = await generateElementName(
-				row.elementType,
-				caseId,
-				row.parentId,
-				parentInfo,
-				row.isDefeater,
-				tx
-			);
-		}
+		const followed = followRenamedPrefix(row.name, renames);
+		const name = (await isNameHeldByAnother(tx, caseId, id, followed))
+			? await freshNameFor(tx, caseId, row)
+			: followed;
 		if (name !== row.name) {
 			renames.push({ from: row.name, to: name });
 			await tx.assuranceElement.update({ where: { id }, data: { name } });
 		}
 	}
+}
+
+/** A dotted name with the part a renamed ancestor gave up replaced by its new name. */
+function followRenamedPrefix(
+	name: string,
+	renames: { from: string; to: string }[]
+): string {
+	const rename = renames.find((r) => name.startsWith(`${r.from}.`));
+	return rename ? `${rename.to}${name.slice(rename.from.length)}` : name;
+}
+
+async function isNameHeldByAnother(
+	tx: TxClient,
+	caseId: string,
+	elementId: string,
+	name: string
+): Promise<boolean> {
+	const holder = await tx.assuranceElement.findFirst({
+		where: { caseId, deletedAt: null, name, id: { not: elementId } },
+		select: { id: true },
+	});
+	return holder !== null;
+}
+
+async function freshNameFor(
+	tx: TxClient,
+	caseId: string,
+	row: {
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	}
+): Promise<string> {
+	const { parentInfo } =
+		row.elementType === "PROPERTY_CLAIM" && row.parentId
+			? await calculatePropertyClaimLevel(row.parentId, tx)
+			: { parentInfo: null };
+	return await generateElementName(
+		row.elementType,
+		caseId,
+		row.parentId,
+		parentInfo,
+		row.isDefeater,
+		tx
+	);
 }
 
 /**
