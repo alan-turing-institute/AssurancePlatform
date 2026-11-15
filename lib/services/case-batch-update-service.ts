@@ -60,6 +60,20 @@ class ListedElementsMissingError extends Error {
 	}
 }
 
+/**
+ * Thrown inside the batch's transaction when a move would make an element its
+ * own ancestor. Its message names the element and is safe to show; every other
+ * failure inside the transaction is answered with a fixed message.
+ */
+class BatchMoveCycleError extends Error {
+	constructor(elementId: string) {
+		super(`Circular reference detected when moving element ${elementId}`);
+	}
+}
+
+/** What a caller is told when the batch's transaction fails for any reason not named above. */
+const BATCH_FAILED = "Failed to apply batch update";
+
 /** Whether the batch's transaction ended because another change to the case got in first. */
 function endedByAnotherChange(error: unknown): boolean {
 	return isWriteConflict(error) || error instanceof ListedElementsMissingError;
@@ -1200,9 +1214,7 @@ function resolveFinalLevelsForBatch(
 			return memoised;
 		}
 		if (visiting.has(elementId)) {
-			throw new Error(
-				`Circular reference detected when moving element ${elementId}`
-			);
+			throw new BatchMoveCycleError(elementId);
 		}
 		visiting.add(elementId);
 
@@ -1759,7 +1771,7 @@ export async function applyBatchUpdate(
 		log.error("Batch update failed", { error });
 		return {
 			error:
-				error instanceof Error ? error.message : "Failed to apply batch update",
+				error instanceof BatchMoveCycleError ? error.message : BATCH_FAILED,
 		};
 	}
 }

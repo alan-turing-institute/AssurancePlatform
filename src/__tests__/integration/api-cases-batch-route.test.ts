@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { captureLogs } from "../helpers/capture-logs";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -334,5 +335,87 @@ describe("POST /api/cases/[id]/batch — the editor must be able to view the cas
 		});
 		expect(row?.moduleReferenceId).toBe(unviewable.id);
 		expect(row?.description).toBe("Reworded again");
+	});
+});
+
+describe("POST /api/cases/[id]/batch — failures inside the transaction", () => {
+	it("answers a fixed 500 without database text and logs the detail", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+		});
+		const taken = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		// Passes every check made before the transaction, then fails inside it:
+		// the new element's id is one the case already uses.
+		const logs = captureLogs();
+		let response: Response;
+		try {
+			response = await postBatch(testCase.id, {
+				changes: [
+					{
+						type: "create",
+						elementId: taken.id,
+						parentId: goal.id,
+						data: {
+							id: taken.id,
+							type: "STRATEGY",
+							name: "S9",
+							description: "Reuses an id",
+							inSandbox: false,
+						},
+					},
+				],
+			});
+		} finally {
+			logs.restore();
+		}
+
+		expect(response.status).toBe(500);
+		const body = await response.json();
+		expect(body).toEqual({
+			error: "Failed to apply batch update",
+			code: "INTERNAL",
+		});
+		expect(JSON.stringify(body)).not.toMatch(/prisma|unique constraint/i);
+		const failure = logs.entries.find(
+			(entry) => entry.msg === "Batch update failed"
+		);
+		expect(JSON.stringify(failure)).toMatch(/unique constraint|prisma/i);
+	});
+
+	it("keeps the cycle refusal's message", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const root = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+		});
+		const child = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: root.id,
+		});
+		const other = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: root.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		// Each move looks safe alone; together they make a loop.
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{ type: "update", elementId: child.id, data: { parentId: other.id } },
+				{ type: "update", elementId: other.id, data: { parentId: child.id } },
+			],
+		});
+
+		const body = await response.json();
+		expect(body.error).toMatch(
+			/^Circular reference detected when moving element /
+		);
 	});
 });
