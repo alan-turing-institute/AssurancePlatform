@@ -81,6 +81,29 @@ describe("createLayoutScheduler", () => {
 		expect(t.frames).toHaveLength(0);
 	});
 
+	it("runs no layout and no fitView when the only requester has left", async () => {
+		const t = setup();
+		t.schedule({ ...t.request, isActive: () => false });
+		t.flushFrame();
+		await t.finishLayout();
+
+		expect(t.layoutNodes).not.toHaveBeenCalled();
+		expect(t.fitView).not.toHaveBeenCalled();
+	});
+
+	it("still lays out, and fits with the active requester, when a later requester has left", async () => {
+		const t = setup();
+		const fitA = vi.fn();
+		t.schedule({ ...t.request, fitView: fitA });
+		t.schedule({ ...t.request, isActive: () => false });
+		t.flushFrame();
+		await t.finishLayout();
+
+		expect(t.layoutNodes).toHaveBeenCalledTimes(1);
+		expect(fitA).toHaveBeenCalledTimes(1);
+		expect(t.fitView).not.toHaveBeenCalled();
+	});
+
 	it("runs nothing when no call is made", () => {
 		const t = setup();
 		t.flushFrame();

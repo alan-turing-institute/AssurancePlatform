@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
-import { useAutoScreenshot } from "../use-auto-screenshot";
+import { CAPTURE_WINDOW_MS, useAutoScreenshot } from "../use-auto-screenshot";
 
 vi.mock("html-to-image", () => ({
 	toPng: vi.fn(),
@@ -92,7 +92,6 @@ describe("useAutoScreenshot — capture failure handling", () => {
 });
 
 describe("useAutoScreenshot — one capture per window", () => {
-	const WINDOW_MS = 30 * 60 * 1000;
 	let target: HTMLDivElement;
 	let fetchSpy: ReturnType<typeof vi.spyOn>;
 
@@ -129,7 +128,7 @@ describe("useAutoScreenshot — one capture per window", () => {
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 
 		result.current.markChanged();
-		await vi.advanceTimersByTimeAsync(WINDOW_MS - 1000);
+		await vi.advanceTimersByTimeAsync(CAPTURE_WINDOW_MS - 1000);
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 
 		await vi.advanceTimersByTimeAsync(2000);

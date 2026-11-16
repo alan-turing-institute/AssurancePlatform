@@ -20,6 +20,16 @@ const nextTwoFrames: FrameScheduler = (callback) => {
 	});
 };
 
+function mostRecentActive(requests: LayoutRequest[]): LayoutRequest | null {
+	for (let i = requests.length - 1; i >= 0; i--) {
+		const candidate = requests[i];
+		if (candidate && candidate.isActive?.() !== false) {
+			return candidate;
+		}
+	}
+	return null;
+}
+
 /**
  * Coalesces layout requests. At most one request is pending and at most one
  * layout is in flight. The first call schedules a layout two animation frames
@@ -30,7 +40,9 @@ const nextTwoFrames: FrameScheduler = (callback) => {
 export function createLayoutScheduler(
 	schedule: FrameScheduler = nextTwoFrames
 ) {
-	let latest: LayoutRequest | null = null;
+	// Requests made since the last run; a run uses the most recent one whose
+	// requester is still on the page.
+	let requests: LayoutRequest[] = [];
 	let pending = false;
 	let running = false;
 	let again = false;
@@ -38,14 +50,13 @@ export function createLayoutScheduler(
 	const run = async () => {
 		pending = false;
 		running = true;
-		const request = latest;
-		latest = null;
-		if (request && request.isActive?.() !== false) {
+		const asked = requests;
+		requests = [];
+		const request = mostRecentActive(asked);
+		if (request) {
 			try {
 				await request.layoutNodes(request.getNodes(), request.getEdges());
-				if (request.isActive?.() !== false) {
-					request.fitView();
-				}
+				mostRecentActive(asked)?.fitView();
 			} catch (error) {
 				// The layout did not complete; the canvas keeps its current
 				// positions.
@@ -53,7 +64,7 @@ export function createLayoutScheduler(
 			}
 		}
 		running = false;
-		if (again && latest) {
+		if (again && mostRecentActive(requests)) {
 			again = false;
 			pending = true;
 			schedule(run);
@@ -62,7 +73,7 @@ export function createLayoutScheduler(
 	};
 
 	return (request: LayoutRequest) => {
-		latest = request;
+		requests.push(request);
 		if (running) {
 			again = true;
 			return;
