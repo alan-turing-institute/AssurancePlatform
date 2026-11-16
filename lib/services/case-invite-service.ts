@@ -117,7 +117,6 @@ export async function acceptInvite(
 				userId,
 				ipAddress,
 				userAgent,
-				metadata: { inviteToken: `${inviteToken.substring(0, 8)}...` },
 			});
 			return { error: "User not found" };
 		}
@@ -209,7 +208,6 @@ export async function acceptInvite(
 				ipAddress,
 				userAgent,
 				metadata: {
-					inviteToken: `${inviteToken.substring(0, 8)}...`,
 					...("inviteId" in result && { inviteId: result.inviteId }),
 					...("inviteEmail" in result && {
 						inviteIdentifier: identifierFingerprint(result.inviteEmail),
@@ -243,7 +241,6 @@ export async function acceptInvite(
 			userAgent,
 			metadata: {
 				error: error instanceof Error ? error.message : "Unknown error",
-				inviteToken: `${inviteToken.substring(0, 8)}...`,
 			},
 		});
 
