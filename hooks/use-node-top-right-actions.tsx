@@ -36,12 +36,12 @@ export function useNodeTopRightActions(
 	elementType: ElementType,
 	nodeId: string
 ): ReactNode | null {
-	const { assuranceCase } = useStore();
+	const caseId = useStore((state) => state.assuranceCase?.id);
 	const childrenHidden = useChildrenHidden(nodeId);
 	const unsupported = useUnsupportedMarker(nodeId);
 
 	const badgeSlot = useElementBadgeSlot({
-		caseId: assuranceCase?.id?.toString() ?? "",
+		caseId: caseId?.toString() ?? "",
 		childrenHidden,
 		elementId: String(data.id),
 		elementType,

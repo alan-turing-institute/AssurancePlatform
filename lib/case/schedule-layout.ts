@@ -1,8 +1,6 @@
 import type { Edge, Node } from "reactflow";
 
 export interface LayoutRequest {
-	/** Identifies the canvas; requests with the same key share one scheduler. */
-	canvas: object;
 	fitView: () => unknown;
 	getEdges: () => Edge[];
 	getNodes: () => Node[];
@@ -72,14 +70,14 @@ const schedulers = new WeakMap<
 >();
 
 /**
- * Asks for a layout of the canvas the request belongs to. Requests from the
- * same canvas share one scheduler.
+ * Asks for a layout of the canvas. Requests from the
+ * same layout function (one per canvas store) share one scheduler.
  */
 export function scheduleLayout(request: LayoutRequest) {
-	let scheduler = schedulers.get(request.canvas);
+	let scheduler = schedulers.get(request.layoutNodes);
 	if (!scheduler) {
 		scheduler = createLayoutScheduler();
-		schedulers.set(request.canvas, scheduler);
+		schedulers.set(request.layoutNodes, scheduler);
 	}
 	scheduler(request);
 }

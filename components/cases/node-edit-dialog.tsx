@@ -119,6 +119,8 @@ export function getInitialAssertionStatus(
 	return isAuthorAssertionStatusValue(value) ? value : "ASSERTED";
 }
 
+const NO_NODES: Node[] = [];
+
 /**
  * The name of the element a defeater challenges (ADR 0005 D2), for the
  * edit dialog's read-only "Challenges" line. `null` when the target isn't
@@ -531,7 +533,11 @@ export default function NodeEditDialog({
 	const [newContextValue, setNewContextValue] = useState("");
 	const componentId = useId();
 	const [idCounter, setIdCounter] = useState(0);
-	const { assuranceCase, nodes: allNodes } = useStore();
+	const permissions = useStore((state) => state.assuranceCase?.permissions);
+	const caseKind = useStore((state) => state.assuranceCase?.kind);
+	const caseId = useStore((state) => state.assuranceCase?.id);
+	// Only the open dialog needs the node list (to name a challenged element).
+	const allNodes = useStore((state) => (open ? state.nodes : NO_NODES));
 	const panelSlot = useElementPanelSlot();
 	const { activeTab, setActiveTab, shownTabs, wideTab } = useActiveTab(
 		open,
@@ -546,14 +552,14 @@ export default function NodeEditDialog({
 	);
 	// Editable only at edit access or above; anything else, including an
 	// unset value while the case is loading, renders read-only.
-	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "edit");
+	const readOnly = !caseAccessAtLeast(permissions, "edit");
 	const focusDescriptionOnOpen = focusesDescriptionOnOpen(
 		nodeType,
 		readOnly,
 		panelSlot.registrations.length > 0
 	);
 
-	const isPattern = assuranceCase?.kind === "PATTERN";
+	const isPattern = caseKind === "PATTERN";
 	const initialPlaceholder = getInitialPlaceholder(
 		node.data as Record<string, unknown>
 	);
@@ -750,11 +756,7 @@ export default function NodeEditDialog({
 		);
 
 		if (updated === true) {
-			const recorded = recordedStates(
-				assuranceCase?.kind,
-				beforeData,
-				updateItem
-			);
+			const recorded = recordedStates(caseKind, beforeData, updateItem);
 			recordUpdate(
 				node.data.id as number,
 				node.type || "unknown",
@@ -900,7 +902,7 @@ export default function NodeEditDialog({
 
 	const panelContext = {
 		canEdit: !readOnly,
-		caseId: assuranceCase?.id?.toString() ?? "",
+		caseId: caseId?.toString() ?? "",
 		elementId: String(node.data?.id ?? ""),
 		elementText: plainReferenceText(form.watch("description"), terms),
 		elementType: nodeType,

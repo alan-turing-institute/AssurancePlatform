@@ -19,7 +19,6 @@ function setup() {
 	);
 	const fitView = vi.fn();
 	const request: LayoutRequest = {
-		canvas: {},
 		fitView,
 		getEdges: () => [],
 		getNodes: () => [],

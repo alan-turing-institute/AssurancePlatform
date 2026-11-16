@@ -17,7 +17,7 @@ import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Handle, Position, useReactFlow, useStoreApi } from "reactflow";
+import { Handle, Position, useReactFlow } from "reactflow";
 import { Badge } from "@/components/ui/badge";
 import {
 	Tooltip,
@@ -203,7 +203,8 @@ export default function BaseNode({
 	expandTour,
 	terms: termsInReach,
 }: BaseNodeProps) {
-	const { layoutNodes, layoutDirection } = useStore();
+	const layoutNodes = useStore((state) => state.layoutNodes);
+	const layoutDirection = useStore((state) => state.layoutDirection);
 	const { descriptionText, isHint, terms } = cardText(
 		description,
 		termsInReach,
@@ -211,7 +212,6 @@ export default function BaseNode({
 	);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { fitView, getNodes, getEdges } = useReactFlow();
-	const canvas = useStoreApi();
 
 	const targetPosition =
 		layoutDirection === "LR" ? Position.Left : Position.Top;
@@ -253,7 +253,7 @@ export default function BaseNode({
 	// Ask for a layout once the animation completes; requests from many cards
 	// are coalesced into one layout that runs after the DOM has settled.
 	const handleAnimationComplete = () => {
-		scheduleLayout({ canvas, fitView, getEdges, getNodes, layoutNodes });
+		scheduleLayout({ fitView, getEdges, getNodes, layoutNodes });
 	};
 
 	const drawnContent = drawnContentAttribute(appearance);
