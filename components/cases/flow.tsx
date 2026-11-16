@@ -159,19 +159,18 @@ function Flow() {
 			return;
 		}
 
-		// Create a fingerprint of case content using the case's updated_at timestamp
+		// Fingerprint the case's content, so a capture is scheduled only when
+		// what the canvas shows has changed.
 		const caseFingerprint = JSON.stringify({
 			id: assuranceCase.id,
-			// Use the case's modification time if available
-			updatedAt: (assuranceCase as { updated_at?: string }).updated_at,
-			goalsCount: assuranceCase.goals?.length ?? 0,
+			goals: assuranceCase.goals,
 		});
 
 		if (initialLoadRef.current) {
-			// Mark as changed on initial load to capture initial state
+			// Opening a case records its state without capturing a thumbnail;
+			// only a later change schedules one.
 			previousCaseRef.current = caseFingerprint;
 			initialLoadRef.current = false;
-			markChanged();
 			return;
 		}
 
