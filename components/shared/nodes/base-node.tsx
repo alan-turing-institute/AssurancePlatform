@@ -16,7 +16,7 @@
 import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -212,6 +212,13 @@ export default function BaseNode({
 	);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { fitView, getNodes, getEdges } = useReactFlow();
+	const mountedRef = useRef(true);
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	const targetPosition =
 		layoutDirection === "LR" ? Position.Left : Position.Top;
@@ -253,7 +260,13 @@ export default function BaseNode({
 	// Ask for a layout once the animation completes; requests from many cards
 	// are coalesced into one layout that runs after the DOM has settled.
 	const handleAnimationComplete = () => {
-		scheduleLayout({ fitView, getEdges, getNodes, layoutNodes });
+		scheduleLayout({
+			fitView,
+			getEdges,
+			getNodes,
+			isActive: () => mountedRef.current,
+			layoutNodes,
+		});
 	};
 
 	const drawnContent = drawnContentAttribute(appearance);

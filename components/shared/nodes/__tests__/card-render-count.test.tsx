@@ -1,19 +1,11 @@
 import { act } from "@testing-library/react";
 import { Profiler } from "react";
 import type { NodeProps } from "reactflow";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import EvidenceNode from "@/components/cases/evidence-node";
 import type { AssuranceCaseResponse } from "@/lib/services/case-response-types";
 import { renderWithReactFlow } from "@/src/__tests__/utils/test-utils";
 import useStore from "@/store/store";
-
-// The repo-wide reactflow mock does not stub `useNodes`/`useEdges`, which the
-// editor menus call.
-vi.mock("reactflow", async (importOriginal) => ({
-	...(await importOriginal<typeof import("reactflow")>()),
-	useNodes: () => [],
-	useEdges: () => [],
-}));
 
 const SETTLE_MS = 500;
 
@@ -39,6 +31,9 @@ describe("card render count", () => {
 	});
 
 	it("does not re-render a card for a store write that changes nothing it shows", async () => {
+		// A view-only canvas: the editor menus, which subscribe to the canvas
+		// store in their own right, are not mounted, so the card's own
+		// subscriptions are what is measured.
 		useStore.setState({
 			assuranceCase: {
 				id: 1,

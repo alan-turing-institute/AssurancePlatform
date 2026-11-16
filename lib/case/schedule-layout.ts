@@ -1,9 +1,14 @@
 import type { Edge, Node } from "reactflow";
+import { logger } from "@/lib/logger";
+
+const log = logger.child({ component: "schedule-layout" });
 
 export interface LayoutRequest {
 	fitView: () => unknown;
 	getEdges: () => Edge[];
 	getNodes: () => Node[];
+	/** Returns false once the requester has left the page; the layout is then skipped. */
+	isActive?: () => boolean;
 	layoutNodes: (nodes: Node[], edges: Edge[]) => Promise<void>;
 }
 
@@ -34,20 +39,26 @@ export function createLayoutScheduler(
 		pending = false;
 		running = true;
 		const request = latest;
-		if (request) {
+		latest = null;
+		if (request && request.isActive?.() !== false) {
 			try {
 				await request.layoutNodes(request.getNodes(), request.getEdges());
-				request.fitView();
-			} catch {
-				// A failed layout keeps the current positions.
+				if (request.isActive?.() !== false) {
+					request.fitView();
+				}
+			} catch (error) {
+				// The layout did not complete; the canvas keeps its current
+				// positions.
+				log.warn("Layout failed", { error });
 			}
 		}
 		running = false;
-		if (again) {
+		if (again && latest) {
 			again = false;
 			pending = true;
 			schedule(run);
 		}
+		again = false;
 	};
 
 	return (request: LayoutRequest) => {
@@ -70,8 +81,8 @@ const schedulers = new WeakMap<
 >();
 
 /**
- * Asks for a layout of the canvas. Requests from the
- * same layout function (one per canvas store) share one scheduler.
+ * Asks for a layout of the canvas. Requests that share a layout function (one
+ * per canvas store) share one scheduler.
  */
 export function scheduleLayout(request: LayoutRequest) {
 	let scheduler = schedulers.get(request.layoutNodes);
