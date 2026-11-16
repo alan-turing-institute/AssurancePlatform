@@ -380,4 +380,22 @@ describe("ApiToken", () => {
 		});
 		expect(found).toBeNull();
 	});
+
+	it("deletes a rotated token and its replacement together with the integration", async () => {
+		const owner = await createTestUser();
+		const systemUser = await createTestUser();
+		const integration = await createTestIntegration(owner.id, systemUser.id);
+		const replacement = await createTestApiToken(integration.id);
+		const rotated = await createTestApiToken(integration.id, {
+			replacedByTokenId: replacement.id,
+		});
+
+		await prisma.integration.delete({ where: { id: integration.id } });
+
+		expect(
+			await prisma.apiToken.count({
+				where: { id: { in: [rotated.id, replacement.id] } },
+			})
+		).toBe(0);
+	});
 });

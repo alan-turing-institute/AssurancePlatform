@@ -23,6 +23,7 @@ function makeToken(
 		lastUsedAt: null,
 		expiresAt: null,
 		revokedAt: null,
+		replacedByTokenId: null,
 		...overrides,
 	};
 }
@@ -46,6 +47,45 @@ describe("IntegrationTokenRow", () => {
 		expect(
 			screen.getByRole("button", { name: REVOKE_REGEX })
 		).toBeInTheDocument();
+	});
+
+	it("shows a replaced live token as Replaced with Revoke and no Rotate", () => {
+		renderWithoutProviders(
+			<IntegrationTokenRow
+				canRotate
+				onRevoke={vi.fn()}
+				onRotate={vi.fn()}
+				pending={false}
+				token={makeToken({ replacedByTokenId: "token-2" })}
+			/>
+		);
+
+		expect(screen.getByText("Live")).toBeInTheDocument();
+		expect(screen.getByText("Replaced")).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: ROTATE_REGEX })
+		).not.toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: REVOKE_REGEX })
+		).toBeInTheDocument();
+	});
+
+	it("shows an expired replaced token as Expired only", () => {
+		renderWithoutProviders(
+			<IntegrationTokenRow
+				canRotate
+				onRevoke={vi.fn()}
+				onRotate={vi.fn()}
+				pending={false}
+				token={makeToken({
+					expiresAt: "2020-01-01T00:00:00.000Z",
+					replacedByTokenId: "token-2",
+				})}
+			/>
+		);
+
+		expect(screen.getByText("Expired")).toBeInTheDocument();
+		expect(screen.queryByText("Replaced")).not.toBeInTheDocument();
 	});
 
 	it("says No end date for a token without one and shows the date for a token with one", () => {

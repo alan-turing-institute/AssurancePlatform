@@ -55,6 +55,7 @@ A result may carry the combining step's rule, and may still give a share's pass 
 ## Rotate, revoke or pause access
 
 The integration card lists active tokens by identifying prefix. **Rotate** issues a new secret, which keeps the end date of the token it replaces, and gives the previous token a 24-hour overlap window so a client can switch without an immediate interruption. Store the new secret when it is shown. **Revoke** stops a token. You can also suspend an integration, reactivate it, revoke or delete the whole integration, or remove a case grant. These controls have different scope: token revocation affects one credential, while suspension and integration revocation affect the client as a whole. Removing a case grant blocks that case even when the token and its scope remain valid.
+A rotated token shows **Replaced** and cannot be rotated again; rotate its replacement instead, which keeps the same end date.
 
 Give each external service its own integration and only the scopes and case grants it needs. This also makes its tokens and last-seen activity easier to recognise. The UI is for managing machine credentials, not for assigning a human team role. A machine token is not a browser session cookie and does not sign a person into the editor.
 

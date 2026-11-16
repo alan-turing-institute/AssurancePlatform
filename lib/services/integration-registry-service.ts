@@ -103,6 +103,12 @@ export interface RotatedToken {
  */
 export const TOKEN_ROTATION_OVERLAP_MS = 24 * 60 * 60 * 1000;
 
+const TOKEN_ALREADY_REPLACED =
+	"Cannot rotate a token that has already been replaced";
+
+/** Thrown inside the rotation transaction to roll it back with a reason. */
+class RotationRefused extends Error {}
+
 // ============================================
 // Helpers
 // ============================================
@@ -591,6 +597,7 @@ export interface IntegrationTokenSummary {
 	expiresAt: Date | null;
 	id: string;
 	lastUsedAt: Date | null;
+	replacedByTokenId: string | null;
 	revokedAt: Date | null;
 	tokenPrefix: string;
 }
@@ -641,6 +648,7 @@ export async function listIntegrationsForOwner(
 						lastUsedAt: true,
 						expiresAt: true,
 						revokedAt: true,
+						replacedByTokenId: true,
 					},
 				},
 			},
@@ -852,6 +860,7 @@ export async function rotateToken(
 			integrationId: true,
 			expiresAt: true,
 			revokedAt: true,
+			replacedByTokenId: true,
 			integration: { select: { status: true } },
 		});
 		if ("error" in owned) {
@@ -871,6 +880,9 @@ export async function rotateToken(
 		if (oldToken.expiresAt && oldToken.expiresAt <= new Date()) {
 			return { error: "Cannot rotate an expired token" };
 		}
+		if (oldToken.replacedByTokenId) {
+			return { error: TOKEN_ALREADY_REPLACED };
+		}
 		if (oldToken.integration.status !== "ACTIVE") {
 			return { error: "Cannot rotate a token for a non-active integration" };
 		}
@@ -888,13 +900,29 @@ export async function rotateToken(
 			oldToken.expiresAt ?? undefined
 		);
 
-		const [, apiToken] = await prisma.$transaction([
-			prisma.apiToken.update({
-				where: { id: tokenId },
-				data: { expiresAt: newExpiresAt },
-			}),
-			prisma.apiToken.create({ data }),
-		]);
+		// The replacement is created first and the old token is then claimed with
+		// one conditional update. The update takes the old row's lock, so a second
+		// rotation (or a revoke) that committed first is seen here: nothing
+		// matches, and throwing rolls the replacement back.
+		const apiToken = await prisma.$transaction(async (tx) => {
+			const created = await tx.apiToken.create({ data });
+			const { count } = await tx.apiToken.updateMany({
+				where: { id: tokenId, revokedAt: null, replacedByTokenId: null },
+				data: { expiresAt: newExpiresAt, replacedByTokenId: created.id },
+			});
+			if (count !== 1) {
+				const current = await tx.apiToken.findUnique({
+					where: { id: tokenId },
+					select: { revokedAt: true },
+				});
+				throw new RotationRefused(
+					current?.revokedAt
+						? "Cannot rotate a revoked token"
+						: TOKEN_ALREADY_REPLACED
+				);
+			}
+			return created;
+		});
 
 		await writeAuditLog({
 			userId: actorUserId,
@@ -914,7 +942,10 @@ export async function rotateToken(
 				overlapUntil: newExpiresAt,
 			},
 		};
-	} catch {
+	} catch (error) {
+		if (error instanceof RotationRefused) {
+			return { error: error.message };
+		}
 		return { error: "Failed to rotate token" };
 	}
 }

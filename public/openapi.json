@@ -3233,7 +3233,7 @@
       "post": {
         "operationId": "post-integrations-{id}-tokens-{tokenId}-rotate",
         "summary": "POST /api/integrations/[id]/tokens/[tokenId]/rotate",
-        "description": "Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked or expired token, or a token of an integration that is not active, is refused with 409.",
+        "description": "Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked, expired or already replaced token, or a token of an integration that is not active, is refused with 409.",
         "tags": [
           "Integrations"
         ],

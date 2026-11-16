@@ -1139,17 +1139,20 @@ enum IntegrationStatus {
 /// Bearer tokens issued to an integration, never free-floating. Hashed at
 /// rest; plaintext shown once at issuance.
 model ApiToken {
-  id            String    @id @default(uuid())
-  integrationId String    @map("integration_id")
-  tokenHash     String    @unique @map("token_hash") /// SHA-256 of the secret
-  tokenPrefix   String    @map("token_prefix") /// Leading chars of the secret, for identification in UI/logs
-  expiresAt     DateTime? @map("expires_at")
-  lastUsedAt    DateTime? @map("last_used_at")
-  revokedAt     DateTime? @map("revoked_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id                String    @id @default(uuid())
+  integrationId     String    @map("integration_id")
+  tokenHash         String    @unique @map("token_hash") /// SHA-256 of the secret
+  tokenPrefix       String    @map("token_prefix") /// Leading chars of the secret, for identification in UI/logs
+  expiresAt         DateTime? @map("expires_at")
+  lastUsedAt        DateTime? @map("last_used_at")
+  revokedAt         DateTime? @map("revoked_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  replacedByTokenId String?   @unique @map("replaced_by_token_id") /// The token issued when this one was rotated
 
   // Relations
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  replacedBy  ApiToken?   @relation("ApiTokenReplacement", fields: [replacedByTokenId], references: [id], onDelete: SetNull)
+  replaces    ApiToken?   @relation("ApiTokenReplacement")
 
   @@map("api_tokens")
 }

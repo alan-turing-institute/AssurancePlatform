@@ -69,6 +69,7 @@ function makeIntegration(
 				lastUsedAt: null,
 				expiresAt: null,
 				revokedAt: null,
+				replacedByTokenId: null,
 			},
 		],
 		...overrides,
@@ -1141,6 +1142,7 @@ describe("IntegrationCard", () => {
 				lastUsedAt: null,
 				expiresAt: null,
 				revokedAt,
+				replacedByTokenId: null,
 			};
 		}
 
