@@ -7,6 +7,7 @@ import {
 	requestPasswordReset,
 	resetPassword,
 } from "@/lib/services/password-reset-service";
+import { captureLogs } from "../helpers/capture-logs";
 import { createTestUser } from "../utils/prisma-factories";
 
 /**
@@ -156,29 +157,56 @@ describe("registration", () => {
 		expect(rows[0]?.identifier).not.toContain("@");
 	});
 
-	it("still refuses the fourth attempt for one address", async () => {
-		for (let i = 0; i < 3; i++) {
-			await register(`reg_person_${i}`, "reg.person@example.com");
-		}
+	it("still refuses the fourth attempt for one address, recording only the fingerprint", async () => {
+		const logs = captureLogs();
+		try {
+			for (let i = 0; i < 3; i++) {
+				await register(`reg_person_${i}`, "reg.person@example.com");
+			}
 
-		const fourth = await register("reg_person_3", "reg.person@example.com");
+			const fourth = await register("reg_person_3", "reg.person@example.com");
 
-		expect(fourth.status).toBe(429);
-		for (const row of await emailRows()) {
-			expect(row.identifier).not.toContain("@");
+			expect(fourth.status).toBe(429);
+			for (const row of await emailRows()) {
+				expect(row.identifier).not.toContain("@");
+			}
+			const audit = await prisma.securityAuditLog.findMany({
+				where: { eventType: "register_rate_limited" },
+			});
+			expect(audit).toHaveLength(1);
+			expect(audit[0]?.metadata).toMatchObject({
+				identifiers: {
+					identifier: signInIdentifierKey("reg.person@example.com"),
+				},
+			});
+			expect(JSON.stringify(audit[0]?.metadata).toLowerCase()).not.toContain(
+				"reg.person"
+			);
+			expect(JSON.stringify(logs.entries).toLowerCase()).not.toContain(
+				"reg.person"
+			);
+		} finally {
+			logs.restore();
 		}
 	});
 
 	it("without the server secret, goes ahead and counts the network alone", async () => {
+		await prisma.rateLimitAttempt.createMany({
+			data: Array.from({ length: 3 }, () => ({
+				endpoint: "register",
+				identifierType: "email",
+				identifier: OTHER_KEY,
+			})),
+		});
 		vi.stubEnv("NEXTAUTH_SECRET", "");
 
 		const response = await register("reg_person", "reg.person@example.com");
 
 		expect(response.status).toBeLessThan(300);
-		expect(await emailRows()).toHaveLength(0);
+		expect(await emailRows()).toHaveLength(3);
 		const rows = await prisma.rateLimitAttempt.findMany({
-			where: { endpoint: "register" },
+			where: { endpoint: "register", identifierType: "ip" },
 		});
-		expect(rows.map((row) => row.identifierType)).toEqual(["ip"]);
+		expect(rows).toHaveLength(1);
 	});
 });
