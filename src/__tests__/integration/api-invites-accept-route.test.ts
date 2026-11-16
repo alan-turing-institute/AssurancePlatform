@@ -175,13 +175,15 @@ describe("POST /api/invites/[token]/accept for a case in the Trash", () => {
 	});
 
 	it("refuses another account the same way, not with 403", async () => {
+		const expected = await unknownCodeAnswer();
 		const s = await binnedScene();
 		await signInAs(await createTestUser());
 
 		const response = await accept(s.token);
 
-		expect(response.status).toBe(400);
-		expect(await response.json()).toMatchObject({ error: "Invalid invite" });
+		expect({ status: response.status, body: await response.json() }).toEqual(
+			expected
+		);
 	});
 
 	it("lets the invitee accept after the case is restored", async () => {

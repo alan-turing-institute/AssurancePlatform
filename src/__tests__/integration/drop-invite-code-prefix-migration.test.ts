@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
+import { Prisma } from "@/src/generated/prisma";
 
 /**
  * Pins the data migration
@@ -55,6 +56,33 @@ describe("migration: remove the invitation code prefix from the audit log", () =
 				where: { id: row.id },
 			});
 			expect(after.metadata).toEqual({ inviteId: "i1" });
+		}
+	});
+
+	it("leaves entries with no metadata or a JSON null untouched", async () => {
+		const noMetadata = await prisma.securityAuditLog.create({
+			data: { eventType: "invite_acceptance_user_not_found" },
+		});
+		const jsonNull = await prisma.securityAuditLog.create({
+			data: {
+				eventType: "invite_acceptance_user_not_found",
+				metadata: Prisma.JsonNull,
+			},
+		});
+		const dbNull = await prisma.securityAuditLog.create({
+			data: {
+				eventType: "invite_acceptance_user_not_found",
+				metadata: Prisma.DbNull,
+			},
+		});
+
+		await runMigration();
+
+		for (const row of [noMetadata, jsonNull, dbNull]) {
+			const after = await prisma.securityAuditLog.findUniqueOrThrow({
+				where: { id: row.id },
+			});
+			expect(after.metadata).toBeNull();
 		}
 	});
 
