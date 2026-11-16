@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { signInIdentifierKey } from "@/lib/auth/sign-in-identifier";
 import prisma from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import { requestPasswordReset } from "@/lib/services/password-reset-service";
@@ -43,7 +44,7 @@ async function hasResetToken(userId: string): Promise<boolean> {
 function seedAttempts(email: string, count: number, ipAddress?: string) {
 	return prisma.passwordResetAttempt.createMany({
 		data: Array.from({ length: count }, (_, index) => ({
-			email,
+			emailKey: signInIdentifierKey(email),
 			ipAddress: ipAddress ?? `10.0.0.${index + 1}`,
 			successful: false,
 		})),
@@ -185,7 +186,7 @@ describe("password reset: two emails that differ only in capitals", () => {
 });
 
 describe("password reset: limits stay keyed on the lowercased, trimmed email and the IP", () => {
-	it("records the attempt under the lowercased, trimmed typed email", async () => {
+	it("records the attempt under the key of the lowercased, trimmed typed email, never the address", async () => {
 		await createTestUser({ email: "Jane.Smith@Example.com" });
 
 		await requestPasswordReset(" Jane.Smith@Example.com ", IP);
@@ -193,9 +194,12 @@ describe("password reset: limits stay keyed on the lowercased, trimmed email and
 		const attempts = await prisma.passwordResetAttempt.findMany();
 		expect(attempts).toHaveLength(1);
 		expect(attempts[0]).toMatchObject({
-			email: "jane.smith@example.com",
+			emailKey: signInIdentifierKey("jane.smith@example.com"),
 			ipAddress: IP,
 		});
+		expect(JSON.stringify(attempts[0]).toLowerCase()).not.toContain(
+			"jane.smith"
+		);
 	});
 
 	it.each([

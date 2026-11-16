@@ -52,25 +52,29 @@ function hashResetToken(raw: string): string {
  * Check if the user has exceeded the rate limit for password reset requests.
  */
 async function checkRateLimit(
-	email: string,
+	emailKey: string | undefined,
 	ipAddress: string
 ): Promise<{ allowed: boolean; reason?: string }> {
 	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-	// Check email-based rate limit
-	const emailAttempts = await prisma.passwordResetAttempt.count({
-		where: {
-			email: email.toLowerCase(),
-			attemptedAt: { gte: oneHourAgo },
-		},
-	});
+	// Count by address only when there is a fingerprint. A missing one must not
+	// reach the filter: an undefined value there means "no filter" and would
+	// count every row.
+	if (typeof emailKey === "string") {
+		const emailAttempts = await prisma.passwordResetAttempt.count({
+			where: {
+				emailKey,
+				attemptedAt: { gte: oneHourAgo },
+			},
+		});
 
-	if (emailAttempts >= MAX_ATTEMPTS_PER_EMAIL_PER_HOUR) {
-		return {
-			allowed: false,
-			reason:
-				"Too many password reset requests for this email. Please try again later.",
-		};
+		if (emailAttempts >= MAX_ATTEMPTS_PER_EMAIL_PER_HOUR) {
+			return {
+				allowed: false,
+				reason:
+					"Too many password reset requests for this email. Please try again later.",
+			};
+		}
 	}
 
 	// Check IP-based rate limit
@@ -96,13 +100,13 @@ async function checkRateLimit(
  * Record a password reset attempt for rate limiting purposes.
  */
 async function recordAttempt(
-	email: string,
+	emailKey: string | undefined,
 	ipAddress: string,
 	successful: boolean
 ): Promise<void> {
 	await prisma.passwordResetAttempt.create({
 		data: {
-			email: email.toLowerCase(),
+			emailKey: emailKey ?? null,
 			ipAddress,
 			successful,
 		},
@@ -121,9 +125,12 @@ export async function requestPasswordReset(
 ): Promise<RequestResetResult> {
 	const typedEmail = email.trim();
 	const normalizedEmail = typedEmail.toLowerCase();
+	// Only this fingerprint is stored or logged for the address; it is missing
+	// when the server secret is, and the limits then count the network alone.
+	const emailKey = identifierFingerprint(normalizedEmail);
 
 	// Check rate limit first
-	const rateLimitCheck = await checkRateLimit(normalizedEmail, ipAddress);
+	const rateLimitCheck = await checkRateLimit(emailKey, ipAddress);
 	if (!rateLimitCheck.allowed) {
 		await recordSecurityEvent({
 			event: "password_reset_rate_limited",
@@ -131,7 +138,7 @@ export async function requestPasswordReset(
 			ipAddress,
 			userAgent,
 			metadata: {
-				identifier: identifierFingerprint(normalizedEmail),
+				identifier: emailKey,
 				reason: rateLimitCheck.reason,
 			},
 		});
@@ -142,11 +149,11 @@ export async function requestPasswordReset(
 	}
 
 	// Record the attempt
-	await recordAttempt(normalizedEmail, ipAddress, false);
+	await recordAttempt(emailKey, ipAddress, false);
 
 	// Look up the user: the email as typed first, then ignoring capitals (a
 	// stored email can carry capitals; the limits above stay keyed on the
-	// lowercased address).
+	// fingerprint of the lowercased address).
 	const userSelect = {
 		id: true,
 		username: true,
@@ -167,7 +174,7 @@ export async function requestPasswordReset(
 			ipAddress,
 			userAgent,
 			metadata: {
-				identifier: identifierFingerprint(normalizedEmail),
+				identifier: emailKey,
 				reason: user ? "oauth_user" : "user_not_found",
 			},
 		});
@@ -319,15 +326,20 @@ export async function resetPassword(
 	}
 
 	// Update the attempt record to mark as successful
-	await prisma.passwordResetAttempt.updateMany({
-		where: {
-			email: email.toLowerCase(),
-			successful: false,
-		},
-		data: {
-			successful: true,
-		},
-	});
+	// A missing fingerprint skips the update: an undefined filter value would
+	// mark every row.
+	const accountKey = identifierFingerprint(email.trim().toLowerCase());
+	if (typeof accountKey === "string") {
+		await prisma.passwordResetAttempt.updateMany({
+			where: {
+				emailKey: accountKey,
+				successful: false,
+			},
+			data: {
+				successful: true,
+			},
+		});
+	}
 
 	// A paused person's way back in: sign-in counts failures per email and per
 	// username, and both start again from zero (a name that two accounts

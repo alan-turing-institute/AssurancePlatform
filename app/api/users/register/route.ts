@@ -8,6 +8,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { extractClientIp } from "@/lib/auth/extract-client-ip";
+import { identifierFingerprint } from "@/lib/auth/sign-in-identifier";
 import { registerUserSchema } from "@/lib/schemas/user";
 import {
 	checkAndRecordRateLimit,
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
 		// Check rate limit before processing
 		const rateLimitResult = await checkAndRecordRateLimit(
 			RATE_LIMIT_CONFIGS.register,
-			{ ipAddress, email },
+			{ ipAddress, emailKey: identifierFingerprint(email) },
 			{ ipAddress, userAgent }
 		);
 
