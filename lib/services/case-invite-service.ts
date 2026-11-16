@@ -23,6 +23,7 @@ export interface AcceptInviteResult {
 
 type InviteTransactionError =
 	| { error: "invalid_token" }
+	| { error: "case_in_trash"; inviteId: string }
 	| { error: "expired"; inviteId: string }
 	| { error: "already_used"; inviteId: string }
 	| { error: "email_mismatch"; inviteId: string; inviteEmail: string };
@@ -94,6 +95,9 @@ export async function createCaseInvite(params: {
 
 /**
  * Accepts a case invite using the token.
+ *
+ * An invitation to a case in the Trash is refused as an unknown code. It is
+ * left unused, so it works again once the case is restored, until its end date.
  */
 export async function acceptInvite(
 	userId: string,
@@ -127,10 +131,18 @@ export async function acceptInvite(
 				// Find invite with implicit row lock
 				const invite = await tx.caseInvite.findUnique({
 					where: { inviteTokenHash },
+					include: { case: { select: { deletedAt: true } } },
 				});
 
 				if (!invite) {
 					return { error: "invalid_token" as const };
+				}
+
+				// A case in the Trash looks the same as one that does not exist.
+				// The invitation stays unused and works again after a restore,
+				// until its own end date.
+				if (invite.case.deletedAt !== null) {
+					return { error: "case_in_trash" as const, inviteId: invite.id };
 				}
 
 				if (invite.inviteExpiresAt < new Date()) {
@@ -189,6 +201,7 @@ export async function acceptInvite(
 
 			const errorMap = {
 				invalid_token: "Invalid invite",
+				case_in_trash: "Invalid invite",
 				expired: "Invite has expired",
 				already_used: "Invite has already been used",
 				email_mismatch: "Invite was sent to a different email address",
@@ -196,6 +209,7 @@ export async function acceptInvite(
 
 			const eventTypeMap = {
 				invalid_token: "invite_acceptance_invalid_token",
+				case_in_trash: "invite_acceptance_case_in_trash",
 				expired: "invite_acceptance_expired",
 				already_used: "invite_acceptance_already_used",
 				email_mismatch: "invite_acceptance_email_mismatch",
