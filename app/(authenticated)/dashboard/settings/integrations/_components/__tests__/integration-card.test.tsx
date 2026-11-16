@@ -978,6 +978,69 @@ describe("IntegrationCard", () => {
 		});
 	});
 
+	describe("focus after a refused rotation when the person has moved on", () => {
+		it("leaves focus where it is if it is outside the card", async () => {
+			const user = userEvent.setup();
+			const outside = document.createElement("button");
+			document.body.appendChild(outside);
+			const rotatedTokens = makeIntegration({
+				tokens: [
+					{
+						createdAt: "2026-06-01T00:00:00.000Z",
+						expiresAt: null,
+						id: "t1",
+						lastUsedAt: null,
+						replacedByTokenId: "t2",
+						revokedAt: null,
+						tokenPrefix: "tea_live_ab12",
+					},
+				],
+			});
+			let rerenderCard: (integration: IntegrationListItem) => void = () => {
+				/* replaced below */
+			};
+			const onRotateToken = vi.fn().mockImplementation(() => {
+				rerenderCard(rotatedTokens);
+				outside.focus();
+				return Promise.resolve(null);
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							{
+								createdAt: "2026-06-01T00:00:00.000Z",
+								expiresAt: null,
+								id: "t1",
+								lastUsedAt: null,
+								replacedByTokenId: null,
+								revokedAt: null,
+								tokenPrefix: "tea_live_ab12",
+							},
+						],
+					})}
+					onRotateToken={onRotateToken}
+				/>
+			);
+			rerenderCard = (integration) =>
+				rerender(
+					<IntegrationCard
+						{...baseProps}
+						integration={integration}
+						onRotateToken={onRotateToken}
+					/>
+				);
+
+			await user.click(screen.getByRole("button", { name: ROTATE_REGEX }));
+			await waitFor(() => expect(onRotateToken).toHaveBeenCalled());
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			expect(outside).toHaveFocus();
+			outside.remove();
+		});
+	});
+
 	describe("case access (wired to the real hook)", () => {
 		it("full grant round trip through the actual UI: card, real useIntegrationCaseGrants, and MSW — the row appears and the form closes (card↔hook wiring seam, nanaki G3 probe)", async () => {
 			let grants: Array<{

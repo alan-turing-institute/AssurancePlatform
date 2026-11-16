@@ -123,10 +123,13 @@ export function IntegrationCard({
 	const [issueDialogOpen, setIssueDialogOpen] = useState(false);
 	const issueButtonRef = useRef<HTMLButtonElement>(null);
 	const cardRef = useRef<HTMLDivElement>(null);
-	const tokenListRef = useRef<HTMLDivElement>(null);
+	const tokenListRef = useRef<HTMLFieldSetElement>(null);
 	// The token whose Rotate button should take focus once the secret dialog
 	// has closed after a successful rotation.
 	const focusAfterRevealRef = useRef<string | null>(null);
+	// The token whose rotation was refused; focus returns to its row once the
+	// reloaded list has rendered.
+	const [refusedTokenId, setRefusedTokenId] = useState<string | null>(null);
 	const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
@@ -171,16 +174,26 @@ export function IntegrationCard({
 	 * Moves focus to a token row's Rotate button, else its Revoke button, else
 	 * the token list, else Issue new token — whichever still exists after the
 	 * list reloaded, so a button that disappears never strands focus on the page.
+	 * Focus moves only if it was lost (on the page body, nowhere, or inside this
+	 * card); if the person has moved to something else meanwhile, it stays there.
 	 */
 	const focusTokenControl = useCallback((tokenId: string) => {
+		const active = document.activeElement;
+		const focusLost =
+			!active || active === document.body || cardRef.current?.contains(active);
+		if (!focusLost) {
+			return;
+		}
 		const row = cardRef.current?.querySelector<HTMLElement>(
-			`[data-testid="token-row-${tokenId}"]`
+			`[data-token-id="${CSS.escape(tokenId)}"]`
 		);
 		const target =
 			row?.querySelector<HTMLElement>(
 				'[data-token-action="rotate"]:not(:disabled)'
 			) ??
-			row?.querySelector<HTMLElement>('[data-token-action="revoke"]') ??
+			row?.querySelector<HTMLElement>(
+				'[data-token-action="revoke"]:not(:disabled)'
+			) ??
 			tokenListRef.current ??
 			issueButtonRef.current;
 		target?.focus();
@@ -199,11 +212,23 @@ export function IntegrationCard({
 		return () => clearTimeout(timer);
 	}, [tokenReveal, focusTokenControl]);
 
+	// A refused rotation reloads the list, which can remove the button that had
+	// focus. This runs after that redraw, once the request is no longer pending.
+	useEffect(() => {
+		if (
+			refusedTokenId === null ||
+			pendingTokenKey === `${integration.id}:${refusedTokenId}`
+		) {
+			return;
+		}
+		setRefusedTokenId(null);
+		focusTokenControl(refusedTokenId);
+	}, [refusedTokenId, pendingTokenKey, integration.id, focusTokenControl]);
+
 	async function handleRotateToken(tokenId: string) {
 		const result = await onRotateToken(integration.id, tokenId);
 		if (!result) {
-			// The list has reloaded; wait for it to render before moving focus.
-			requestAnimationFrame(() => focusTokenControl(tokenId));
+			setRefusedTokenId(tokenId);
 		}
 		if (result) {
 			focusAfterRevealRef.current = result.token.id;
@@ -345,7 +370,12 @@ export function IntegrationCard({
 							: "No tokens issued yet."}
 					</p>
 				) : (
-					<div className="space-y-2" ref={tokenListRef} tabIndex={-1}>
+					<fieldset
+						aria-label="Active tokens"
+						className="m-0 min-w-0 space-y-2 border-0 p-0"
+						ref={tokenListRef}
+						tabIndex={-1}
+					>
 						{activeTokens.map((token) => (
 							<IntegrationTokenRow
 								canRotate={integrationActive}
@@ -356,7 +386,7 @@ export function IntegrationCard({
 								token={token}
 							/>
 						))}
-					</div>
+					</fieldset>
 				)}
 
 				<IntegrationRevokedTokens tokens={revokedTokens} />

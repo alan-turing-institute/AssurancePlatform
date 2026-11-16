@@ -56,6 +56,7 @@ export function IntegrationTokenRow({
 				!isLive && "bg-muted/40"
 			)}
 			data-testid={`token-row-${token.id}`}
+			data-token-id={token.id}
 		>
 			<div className="space-y-0.5">
 				<div className="flex items-center gap-2">
