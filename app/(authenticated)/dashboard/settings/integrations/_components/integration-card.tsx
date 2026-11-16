@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, KeyRound, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,6 +122,11 @@ export function IntegrationCard({
 	const [tokenReveal, setTokenReveal] = useState<TokenReveal | null>(null);
 	const [issueDialogOpen, setIssueDialogOpen] = useState(false);
 	const issueButtonRef = useRef<HTMLButtonElement>(null);
+	const cardRef = useRef<HTMLDivElement>(null);
+	const tokenListRef = useRef<HTMLDivElement>(null);
+	// The token whose Rotate button should take focus once the secret dialog
+	// has closed after a successful rotation.
+	const focusAfterRevealRef = useRef<string | null>(null);
 	const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
@@ -162,9 +167,46 @@ export function IntegrationCard({
 		return false;
 	}
 
+	/**
+	 * Moves focus to a token row's Rotate button, else its Revoke button, else
+	 * the token list, else Issue new token — whichever still exists after the
+	 * list reloaded, so a button that disappears never strands focus on the page.
+	 */
+	const focusTokenControl = useCallback((tokenId: string) => {
+		const row = cardRef.current?.querySelector<HTMLElement>(
+			`[data-testid="token-row-${tokenId}"]`
+		);
+		const target =
+			row?.querySelector<HTMLElement>(
+				'[data-token-action="rotate"]:not(:disabled)'
+			) ??
+			row?.querySelector<HTMLElement>('[data-token-action="revoke"]') ??
+			tokenListRef.current ??
+			issueButtonRef.current;
+		target?.focus();
+	}, []);
+
+	// After the secret dialog has gone, move focus to the new token's Rotate
+	// button. The dialog's own focus restore runs in a zero-delay timer queued
+	// when it unmounts, so this one is queued after it and wins.
+	useEffect(() => {
+		const tokenId = focusAfterRevealRef.current;
+		if (tokenReveal !== null || !tokenId) {
+			return;
+		}
+		focusAfterRevealRef.current = null;
+		const timer = setTimeout(() => focusTokenControl(tokenId), 0);
+		return () => clearTimeout(timer);
+	}, [tokenReveal, focusTokenControl]);
+
 	async function handleRotateToken(tokenId: string) {
 		const result = await onRotateToken(integration.id, tokenId);
+		if (!result) {
+			// The list has reloaded; wait for it to render before moving focus.
+			requestAnimationFrame(() => focusTokenControl(tokenId));
+		}
 		if (result) {
+			focusAfterRevealRef.current = result.token.id;
 			setTokenReveal({
 				secret: result.secret,
 				notice: `The previous token stays valid until ${formatFullDate(
@@ -186,6 +228,7 @@ export function IntegrationCard({
 		<div
 			className="space-y-4 rounded-lg border border-border bg-card p-4"
 			data-testid={`integration-card-${integration.id}`}
+			ref={cardRef}
 		>
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="space-y-1">
@@ -302,7 +345,7 @@ export function IntegrationCard({
 							: "No tokens issued yet."}
 					</p>
 				) : (
-					<div className="space-y-2">
+					<div className="space-y-2" ref={tokenListRef} tabIndex={-1}>
 						{activeTokens.map((token) => (
 							<IntegrationTokenRow
 								canRotate={integrationActive}

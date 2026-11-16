@@ -33,6 +33,7 @@ const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
 const DONE_BUTTON_REGEX = /done.*stored it/i;
 const TOKEN_ROW_TEST_ID_REGEX = /^token-row-/;
+const ROTATE_REGEX = /^rotate$/i;
 const GRANT_TRIGGER_REGEX = /grant access to a case/i;
 const GRANT_SUBMIT_REGEX = /^grant access$/i;
 const CASE_COMBOBOX_REGEX = /^case$/i;
@@ -868,6 +869,112 @@ describe("IntegrationCard", () => {
 			expect(
 				screen.queryByTestId(TOKEN_ROW_TEST_ID_REGEX)
 			).not.toBeInTheDocument();
+		});
+	});
+
+	describe("focus after rotating a token", () => {
+		const baseToken = {
+			createdAt: "2026-06-01T00:00:00.000Z",
+			expiresAt: null,
+			lastUsedAt: null,
+			revokedAt: null,
+			tokenPrefix: "tea_live_ab12",
+		};
+		const before = makeIntegration({
+			tokens: [{ ...baseToken, id: "t1", replacedByTokenId: null }],
+		});
+		const after = makeIntegration({
+			tokens: [
+				{ ...baseToken, id: "t1", replacedByTokenId: "t2" },
+				{
+					...baseToken,
+					id: "t2",
+					createdAt: "2026-06-02T00:00:00.000Z",
+					replacedByTokenId: null,
+				},
+			],
+		});
+
+		it("returns focus to the new token's Rotate button when the secret dialog closes", async () => {
+			const user = userEvent.setup();
+			let rerenderCard: (integration: IntegrationListItem) => void = () => {
+				/* replaced below */
+			};
+			const onRotateToken = vi.fn().mockImplementation(() => {
+				rerenderCard(after);
+				return Promise.resolve({
+					oldTokenId: "t1",
+					overlapUntil: "2026-06-03T00:00:00.000Z",
+					secret: "tea_live_new",
+					token: { id: "t2", tokenPrefix: "tea_live_cd34" },
+				});
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={before}
+					onRotateToken={onRotateToken}
+				/>
+			);
+			rerenderCard = (integration) =>
+				rerender(
+					<IntegrationCard
+						{...baseProps}
+						integration={integration}
+						onRotateToken={onRotateToken}
+					/>
+				);
+
+			await user.click(screen.getByRole("button", { name: ROTATE_REGEX }));
+			await user.click(
+				await screen.findByRole("button", { name: DONE_BUTTON_REGEX })
+			);
+
+			await waitFor(() =>
+				expect(
+					screen
+						.getByTestId("token-row-t2")
+						.querySelector('[data-token-action="rotate"]')
+				).toHaveFocus()
+			);
+		});
+
+		it("moves focus to the row's Revoke button when a refused rotation removes Rotate", async () => {
+			const user = userEvent.setup();
+			let rerenderCard: (integration: IntegrationListItem) => void = () => {
+				/* replaced below */
+			};
+			const onRotateToken = vi.fn().mockImplementation(() => {
+				rerenderCard(after);
+				return Promise.resolve(null);
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={before}
+					onRotateToken={onRotateToken}
+				/>
+			);
+			rerenderCard = (integration) =>
+				rerender(
+					<IntegrationCard
+						{...baseProps}
+						integration={integration}
+						onRotateToken={onRotateToken}
+					/>
+				);
+
+			const rotate = screen.getByRole("button", { name: ROTATE_REGEX });
+			rotate.focus();
+			await user.keyboard("{Enter}");
+
+			await waitFor(() =>
+				expect(
+					screen
+						.getByTestId("token-row-t1")
+						.querySelector('[data-token-action="revoke"]')
+				).toHaveFocus()
+			);
 		});
 	});
 

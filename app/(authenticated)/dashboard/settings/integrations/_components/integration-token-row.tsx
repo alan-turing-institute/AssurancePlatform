@@ -47,7 +47,7 @@ export function IntegrationTokenRow({
 }: IntegrationTokenRowProps) {
 	const state = tokenState(token);
 	const isLive = state === "live";
-	const isReplaced = isLive && token.replacedByTokenId !== null;
+	const isReplaced = isLive && Boolean(token.replacedByTokenId);
 
 	return (
 		<div
@@ -83,6 +83,7 @@ export function IntegrationTokenRow({
 				<div className="flex shrink-0 items-center gap-2">
 					{!isReplaced && (
 						<Button
+							data-token-action="rotate"
 							disabled={pending || !canRotate}
 							onClick={() => onRotate(token.id)}
 							size="sm"
@@ -101,6 +102,7 @@ export function IntegrationTokenRow({
 					<Button
 						aria-label="Revoke this token"
 						className="text-destructive hover:text-destructive"
+						data-token-action="revoke"
 						disabled={pending}
 						onClick={() => onRevoke(token.id)}
 						size="sm"

@@ -342,7 +342,7 @@ describe("useIntegrations", () => {
 
 			expect(rotated).toBeNull();
 			expect(lists).toBe(before + 1);
-			expect(vi.mocked(toast)).toHaveBeenCalledWith(
+			expect(vi.mocked(toast)).toHaveBeenLastCalledWith(
 				expect.objectContaining({
 					title: "Couldn't rotate token",
 					description: "Cannot rotate a token that has already been replaced",

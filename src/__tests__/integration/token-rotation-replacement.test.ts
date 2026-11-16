@@ -168,6 +168,35 @@ describe("rotating the replacement", () => {
 });
 
 describe("rotation refusals", () => {
+	it("refuses a revoked replaced token as revoked", async () => {
+		const { owner, integration } = await setup();
+		const replacement = await createTestApiToken(integration.id);
+		const revoked = await createTestApiToken(integration.id, {
+			revokedAt: new Date(),
+			replacedByTokenId: replacement.id,
+		});
+
+		expect(await rotateToken(revoked.id, owner.id)).toEqual({
+			error: "Cannot rotate a revoked token",
+		});
+	});
+
+	it("refuses a replaced token as replaced when its integration is suspended", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ status: "SUSPENDED" }
+		);
+		const replacement = await createTestApiToken(integration.id);
+		const replaced = await createTestApiToken(integration.id, {
+			replacedByTokenId: replacement.id,
+		});
+
+		expect(await rotateToken(replaced.id, owner.id)).toEqual({
+			error: ALREADY_REPLACED,
+		});
+	});
+
 	it("refuses an expired token as expired, not as replaced", async () => {
 		const { owner, integration } = await setup();
 		const replacement = await createTestApiToken(integration.id);
