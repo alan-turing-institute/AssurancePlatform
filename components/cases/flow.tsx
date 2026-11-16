@@ -16,6 +16,7 @@ import SupportEdge from "@/components/cases/support-edge";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { caseAccessAtLeast } from "@/lib/case/case-access";
+import { caseFingerprint } from "@/lib/case/case-fingerprint";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
@@ -161,25 +162,22 @@ function Flow() {
 
 		// Fingerprint the case's content, so a capture is scheduled only when
 		// what the canvas shows has changed.
-		const caseFingerprint = JSON.stringify({
-			id: assuranceCase.id,
-			goals: assuranceCase.goals,
-		});
+		const fingerprint = caseFingerprint(assuranceCase, layoutDirection);
 
 		if (initialLoadRef.current) {
 			// Opening a case records its state without capturing a thumbnail;
 			// only a later change schedules one.
-			previousCaseRef.current = caseFingerprint;
+			previousCaseRef.current = fingerprint;
 			initialLoadRef.current = false;
 			return;
 		}
 
 		// Check if case content has actually changed
-		if (previousCaseRef.current !== caseFingerprint) {
-			previousCaseRef.current = caseFingerprint;
+		if (previousCaseRef.current !== fingerprint) {
+			previousCaseRef.current = fingerprint;
 			markChanged();
 		}
-	}, [assuranceCase, loading, markChanged]);
+	}, [assuranceCase, layoutDirection, loading, markChanged]);
 
 	const notifyError = (message: string) => {
 		toast({

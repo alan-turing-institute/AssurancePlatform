@@ -90,3 +90,51 @@ describe("useAutoScreenshot — capture failure handling", () => {
 		);
 	});
 });
+
+describe("useAutoScreenshot — one capture per window", () => {
+	const WINDOW_MS = 30 * 60 * 1000;
+	let target: HTMLDivElement;
+	let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		vi.useFakeTimers();
+		target = document.createElement("div");
+		target.id = "screenshot-target";
+		document.body.appendChild(target);
+		vi.mocked(toPng).mockResolvedValue("data:image/png;base64,AAAAAAAA");
+		fetchSpy = vi
+			.spyOn(global, "fetch")
+			.mockResolvedValue(new Response("{}", { status: 200 }));
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		target.remove();
+		vi.mocked(toPng).mockReset();
+		fetchSpy.mockRestore();
+	});
+
+	it("schedules no further capture for 30 minutes after one is attempted, then allows one", async () => {
+		const { result } = renderHook(() =>
+			useAutoScreenshot({
+				caseId: CASE_ID,
+				canEdit: true,
+				selector: TARGET_SELECTOR,
+				debounceMs: 100,
+			})
+		);
+
+		result.current.markChanged();
+		await vi.advanceTimersByTimeAsync(200);
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+		result.current.markChanged();
+		await vi.advanceTimersByTimeAsync(WINDOW_MS - 1000);
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+		await vi.advanceTimersByTimeAsync(2000);
+		result.current.markChanged();
+		await vi.advanceTimersByTimeAsync(200);
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+});
