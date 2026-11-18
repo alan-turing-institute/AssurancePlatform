@@ -12,6 +12,8 @@ import { attachElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/attach
  * Attaches an element to a parent (moves from sandbox)
+ *
+ * @description Attaches an element to a parent (moves from sandbox). Evidence is linked to the named property claim instead of taking a parentId; any other parent answers 400. A new parent that cannot hold the element's type answers 400, and beneath evidence only a counter-goal can hang. Attaching an element beneath itself or one of its descendants answers 400.
  * @auth SessionAuth
  */
 export async function POST(

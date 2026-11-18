@@ -279,7 +279,7 @@ describe("detachElement — descendant citation sweep, two levels deep", () => {
 		const homeCase = await createTestCase(owner.id);
 		const awayCase = await createTestCase(owner.id);
 		const root = await createTestElement(awayCase.id, owner.id, {
-			elementType: "GOAL",
+			elementType: "PROPERTY_CLAIM",
 		});
 		const child = await createTestElement(awayCase.id, owner.id, {
 			elementType: "STRATEGY",
@@ -331,7 +331,7 @@ describe("detach + re-attach does not silently re-heal (regression guard, mirror
 		const homeCase = await createTestCase(owner.id);
 		const awayCase = await createTestCase(owner.id);
 		const root = await createTestElement(awayCase.id, owner.id, {
-			elementType: "GOAL",
+			elementType: "PROPERTY_CLAIM",
 		});
 		const child = await createTestElement(awayCase.id, owner.id, {
 			elementType: "PROPERTY_CLAIM",

@@ -12,15 +12,12 @@ import { createElement } from "@/lib/services/element-service";
 /**
  * Create a new element in a case
  *
- * @description Creates a goal, strategy, property claim, evidence, or other
- * element type within the case hierarchy. Requires EDIT permission.
- * A goal defeater (counter-goal) needs a `parentId`, and a case has one
- * ordinary goal.
+ * @description Creates a goal, strategy, property claim, evidence, or other element type within the case hierarchy. Requires EDIT permission. A goal defeater (counter-goal) needs a `parentId`, and a case has one ordinary goal. The element's type must fit its parent: a counter-goal may hang from anything, beneath evidence only a counter-goal may hang, and otherwise the usual parent and child pairs apply. The four old types (context, justification, assumption, contract) can no longer be created. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. Generated names stay unique in the case, deleted elements' names included.
  *
  * @pathParam id - Case ID (UUID)
  * @body { type, name?, description?, parentId?, url?, assumption?, justification? }
  * @response 201 - Created element data
- * @response 400 - Validation error (including a goal defeater without a parent)
+ * @response 400 - Validation error (including a goal defeater without a parent, and a parent that is a piece of evidence when the element is not a counter-goal)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 413 - Payload too large

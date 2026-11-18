@@ -16,6 +16,11 @@ import type {
 	ElementChange,
 	UpdateElementData,
 } from "@/lib/case/tree-diff";
+import {
+	isBeneathEvidenceRefused,
+	ONLY_COUNTER_GOALS_BENEATH_EVIDENCE,
+	parentTypeRefusal,
+} from "@/lib/element-compatibility";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { isWriteConflict } from "@/lib/prisma-errors";
@@ -27,16 +32,25 @@ import { validateElementName } from "@/lib/schemas/element-validation";
 import { checkContextEntriesForCase } from "@/lib/services/context-entry-rules";
 import {
 	calculateLevelFromParentChain,
+	EVIDENCE_PARENT_CHANGE_ERROR,
 	enforceAssertionStatusRules,
 	GOAL_DEFEATER_NEEDS_PARENT,
 	isSystemUserPrincipal,
+	lockCaseForElementWrite,
+	nullifyDanglingDefeats,
 	ONE_GOAL_PER_CASE,
 	regenerateNameForIsDefeaterChange,
+	rejectFieldsNotApplicable,
+	retiredElementTypeRefusal,
+	TOP_GOAL_NEEDS_NO_PARENT,
 	validateCitedElementId,
 	validateModuleReferenceId,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
-import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
+import {
+	findParentLoopStart,
+	getDescendantIdsForRoots,
+} from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
@@ -59,6 +73,28 @@ class ListedElementsMissingError extends Error {
 		super("The case changed while the batch was applied");
 	}
 }
+
+/**
+ * Thrown inside the batch's transaction when a move would make an element its
+ * own ancestor. Its message names the element and is safe to show; every other
+ * failure inside the transaction is answered with a fixed message.
+ */
+class BatchMoveCycleError extends Error {
+	constructor(elementId: string) {
+		super(`Circular reference detected when moving element ${elementId}`);
+	}
+}
+
+/**
+ * Thrown inside the batch's transaction when the goal rules, checked again
+ * under the case lock, no longer hold: another change to the case got in
+ * between the first check and the lock. Its message names the rule and is safe
+ * to show. Nothing is written.
+ */
+class GoalRuleBrokenError extends Error {}
+
+/** What a caller is told when the batch's transaction fails for any reason not named above. */
+const BATCH_FAILED = "Failed to apply batch update";
 
 /** Whether the batch's transaction ended because another change to the case got in first. */
 function endedByAnotherChange(error: unknown): boolean {
@@ -447,7 +483,8 @@ async function leavesSecondOrdinaryGoal(
 	goalCreates: CreateChange[],
 	movedUpdates: UpdateChange[],
 	storedById: Map<string, StoredGoal>,
-	deletes: DeleteChange[]
+	deletes: DeleteChange[],
+	db: GoalReader
 ): Promise<boolean> {
 	const madeOrdinary = movedUpdates.filter(
 		(change) =>
@@ -466,7 +503,7 @@ async function leavesSecondOrdinaryGoal(
 			.filter((change) => change.data.isDefeater === true)
 			.map((change) => change.elementId),
 	]);
-	const ordinary = await prisma.assuranceElement.findMany({
+	const ordinary = await db.assuranceElement.findMany({
 		where: {
 			caseId,
 			elementType: "GOAL",
@@ -479,15 +516,41 @@ async function leavesSecondOrdinaryGoal(
 }
 
 /**
+ * The id of the first ordinary goal (the top goal) an update leaves with a
+ * parent. Goals the batch does not move or re-flag are not looked at.
+ */
+function findParentedTopGoal(
+	movedUpdates: UpdateChange[],
+	storedById: Map<string, StoredGoal>
+): string | undefined {
+	return movedUpdates.find((change) => {
+		const stored = storedById.get(change.elementId);
+		if (!stored) {
+			return false;
+		}
+		const parentId =
+			change.data.parentId === undefined
+				? stored.parentId
+				: change.data.parentId;
+		return !(change.data.isDefeater ?? stored.isDefeater) && Boolean(parentId);
+	})?.elementId;
+}
+
+/** The part of a database client the goal checks read through. */
+type GoalReader = Pick<TransactionClient, "assuranceElement">;
+
+/**
  * The goal rules, as the single-element create and update routes apply them:
- * a goal defeater (counter-goal) has a parent, and a case has one ordinary
- * goal. Judged on the goals as the batch leaves them.
+ * a goal defeater (counter-goal) has a parent, the top goal has none, and a
+ * case has one ordinary goal. Judged on the goals as the batch leaves them.
+ * `db` is the transaction when the check is repeated under the case lock.
  */
 async function validateGoalChanges(
 	caseId: string,
 	creates: CreateChange[],
 	updates: UpdateChange[],
-	deletes: DeleteChange[]
+	deletes: DeleteChange[],
+	db: GoalReader = prisma
 ): Promise<string | null> {
 	const goalCreates = creates.filter(
 		(change) => mapElementType(change.data.type) === "GOAL"
@@ -502,7 +565,7 @@ async function validateGoalChanges(
 
 	const storedGoals =
 		movedUpdates.length > 0
-			? await prisma.assuranceElement.findMany({
+			? await db.assuranceElement.findMany({
 					where: {
 						id: { in: movedUpdates.map((change) => change.elementId) },
 						elementType: "GOAL",
@@ -520,14 +583,21 @@ async function validateGoalChanges(
 	if (parentless) {
 		return `${GOAL_DEFEATER_NEEDS_PARENT} (element ${parentless})`;
 	}
-	return (await leavesSecondOrdinaryGoal(
-		caseId,
-		goalCreates,
-		movedUpdates,
-		storedById,
-		deletes
-	))
-		? ONE_GOAL_PER_CASE
+	if (
+		await leavesSecondOrdinaryGoal(
+			caseId,
+			goalCreates,
+			movedUpdates,
+			storedById,
+			deletes,
+			db
+		)
+	) {
+		return ONE_GOAL_PER_CASE;
+	}
+	const parentedTopGoal = findParentedTopGoal(movedUpdates, storedById);
+	return parentedTopGoal
+		? `${TOP_GOAL_NEEDS_NO_PARENT} (element ${parentedTopGoal})`
 		: null;
 }
 
@@ -566,10 +636,47 @@ async function validateElementFields(
 ): Promise<string | null> {
 	return (
 		validateEachElementChangedOnce(updates, deletes) ??
+		(await validateSideAreaFlag(creates, updates)) ??
+		(await validateBeneathEvidence(creates, updates)) ??
+		(await validateFieldsFitTypes(creates, updates)) ??
 		(await validateElementNames(userId, creates, updates)) ??
 		(await validateContextEntries(caseId, creates, updates, deletes)) ??
 		(await validateGoalChanges(caseId, creates, updates, deletes))
 	);
+}
+
+/**
+ * A batch never moves an element into or out of the side area: a new element
+ * has the flag off, and an update leaves it as stored. Detach and attach are
+ * the routes that change it.
+ */
+async function validateSideAreaFlag(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const refused = (elementId: string) =>
+		`inSandbox cannot be changed in a batch; use the detach or attach route (element ${elementId})`;
+	const flaggedCreate = creates.find((change) => change.data.inSandbox);
+	if (flaggedCreate) {
+		return refused(flaggedCreate.elementId);
+	}
+	const withFlag = updates.filter(
+		(change) => change.data.inSandbox !== undefined
+	);
+	if (withFlag.length === 0) {
+		return null;
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: withFlag.map((change) => change.elementId) } },
+		select: { id: true, inSandbox: true },
+	});
+	const storedById = new Map(rows.map((row) => [row.id, row.inSandbox]));
+	const changed = withFlag.find(
+		(change) =>
+			storedById.has(change.elementId) &&
+			storedById.get(change.elementId) !== change.data.inSandbox
+	);
+	return changed ? refused(changed.elementId) : null;
 }
 
 /**
@@ -778,6 +885,195 @@ async function validateCreateParents(
 }
 
 /**
+ * Only counter-goals hang from evidence, judged on where the batch leaves each
+ * element: a create under stored evidence or evidence created in the same
+ * batch, and an update that moves an element under evidence or changes the
+ * counter-goal flag of one already there. Updates that move nothing and leave
+ * the flag alone are not looked at, so elements already stored beneath
+ * evidence can still be edited.
+ */
+async function validateBeneathEvidence(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const placed = updates.filter(
+		(change) =>
+			change.data.parentId !== undefined || change.data.isDefeater !== undefined
+	);
+	const placements = collectPlacements(
+		creates,
+		placed,
+		await readStoredPlaced(placed)
+	);
+	const parentTypes = await readParentTypes(creates, placements);
+
+	for (const placement of placements) {
+		const parentType = parentTypes.get(placement.parentId);
+		if (parentType === undefined) {
+			continue;
+		}
+		// A new element must fit its parent's type; an element that moves, or
+		// whose counter-goal flag changes, is held only to the evidence rule.
+		const refusal = placement.isNew
+			? parentTypeRefusal(placement.child, parentType)
+			: isBeneathEvidenceRefused(placement.child, parentType) &&
+				ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+		if (refusal) {
+			return `${refusal} (element ${placement.elementId})`;
+		}
+	}
+	return null;
+}
+
+/**
+ * The single-element routes' rules for the type-specific text fields, applied
+ * to a batch: no new element of a retired type, and no filled-in assumption,
+ * justification, context or link on an element type that does not hold it.
+ * Empty values pass, so a round trip through the editor of an older case
+ * still applies.
+ */
+async function validateFieldsFitTypes(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	for (const change of creates) {
+		const type = mapElementType(change.data.type);
+		const error =
+			retiredElementTypeRefusal(type) ??
+			rejectFieldsNotApplicable(type, change.data);
+		if (error) {
+			return `${error} (element ${change.elementId})`;
+		}
+	}
+	const withText = updates.filter(
+		(change) =>
+			change.data.assumption !== undefined ||
+			change.data.justification !== undefined ||
+			change.data.context !== undefined ||
+			change.data.url !== undefined
+	);
+	if (withText.length === 0) {
+		return null;
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: withText.map((change) => change.elementId) } },
+		select: { id: true, elementType: true },
+	});
+	const typeById = new Map(rows.map((row) => [row.id, row.elementType]));
+	for (const change of withText) {
+		const type = typeById.get(change.elementId);
+		const error = type && rejectFieldsNotApplicable(type, change.data);
+		if (error) {
+			return `${error} (element ${change.elementId})`;
+		}
+	}
+	return null;
+}
+
+/** An element the batch puts under a parent: a new one, or one that moves or changes its counter-goal flag. */
+interface Placement {
+	child: { elementType: string; isDefeater: boolean | undefined };
+	elementId: string;
+	isNew: boolean;
+	parentId: string;
+}
+
+/** The stored type, flag and parent of the elements an update places. */
+type StoredPlaced = Map<
+	string,
+	{
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	}
+>;
+
+async function readStoredPlaced(placed: UpdateChange[]): Promise<StoredPlaced> {
+	if (placed.length === 0) {
+		return new Map();
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: placed.map((change) => change.elementId) } },
+		select: {
+			id: true,
+			elementType: true,
+			isDefeater: true,
+			parentId: true,
+		},
+	});
+	return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** The type of every parent the placements name: created in the batch, or stored. */
+async function readParentTypes(
+	creates: CreateChange[],
+	placements: Placement[]
+): Promise<Map<string, string>> {
+	const createdTypes = new Map(
+		creates.map((change) => [
+			change.elementId,
+			mapElementType(change.data.type),
+		])
+	);
+	const storedParentIds = [
+		...new Set(
+			placements
+				.map((placement) => placement.parentId)
+				.filter((id) => !createdTypes.has(id))
+		),
+	];
+	const parentRows =
+		storedParentIds.length > 0
+			? await prisma.assuranceElement.findMany({
+					where: { id: { in: storedParentIds } },
+					select: { id: true, elementType: true },
+				})
+			: [];
+	return new Map<string, string>([
+		...createdTypes,
+		...parentRows.map((row) => [row.id, row.elementType] as const),
+	]);
+}
+
+function collectPlacements(
+	creates: CreateChange[],
+	placed: UpdateChange[],
+	stored: StoredPlaced
+): Placement[] {
+	const placements: Placement[] = [];
+	for (const change of creates) {
+		if (change.parentId) {
+			placements.push({
+				child: {
+					elementType: mapElementType(change.data.type),
+					isDefeater: change.data.isDefeater,
+				},
+				elementId: change.elementId,
+				isNew: true,
+				parentId: change.parentId,
+			});
+		}
+	}
+	for (const change of placed) {
+		const row = stored.get(change.elementId);
+		const parentId =
+			change.data.parentId === undefined ? row?.parentId : change.data.parentId;
+		if (row && parentId) {
+			placements.push({
+				child: {
+					elementType: row.elementType,
+					isDefeater: change.data.isDefeater ?? row.isDefeater,
+				},
+				elementId: change.elementId,
+				isNew: false,
+				parentId,
+			});
+		}
+	}
+	return placements;
+}
+
+/**
  * Validates that all parent moves don't create circular references.
  *
  * Descendants for every relevant update are fetched with a single shared
@@ -788,6 +1084,34 @@ async function validateCreateParents(
 async function validateUpdateParents(
 	updates: UpdateChange[]
 ): Promise<string | null> {
+	const withParent = updates.filter((c) => c.data.parentId !== undefined);
+	if (withParent.length > 0) {
+		const evidence = await prisma.assuranceElement.findFirst({
+			where: {
+				id: { in: withParent.map((c) => c.elementId) },
+				elementType: "EVIDENCE",
+			},
+			select: { id: true },
+		});
+		if (evidence) {
+			return `${EVIDENCE_PARENT_CHANGE_ERROR} (element ${evidence.id})`;
+		}
+	}
+
+	const cleared = updates.filter((c) => c.data.parentId === null);
+	if (cleared.length > 0) {
+		const nonGoal = await prisma.assuranceElement.findFirst({
+			where: {
+				id: { in: cleared.map((c) => c.elementId) },
+				elementType: { not: "GOAL" },
+			},
+			select: { id: true },
+		});
+		if (nonGoal) {
+			return `parentId cannot be cleared in a batch; use the detach route (element ${nonGoal.id})`;
+		}
+	}
+
 	const relevant = updates.filter(
 		(c) => c.data.parentId !== undefined && c.data.parentId !== null
 	);
@@ -940,6 +1264,90 @@ async function applyDeletes(
 }
 
 /**
+ * Flags, ahead of the deletes, every challenge that survives this batch but
+ * names an element the deletes remove. The database would clear the target on
+ * its own; this also sets `defeatsDangling` so the break is recorded. Runs
+ * after `detachMovedElementsFromDeletes`, so the set of elements removed
+ * with the deletes is the one that is actually about to go. A challenge the
+ * batch re-points is left for its own update.
+ */
+async function flagDefeatsOfDeletes(
+	tx: TransactionClient,
+	caseId: string,
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<void> {
+	if (deletes.length === 0) {
+		return;
+	}
+	const deletedIds = deletes.map((change) => change.elementId);
+	const descendantsByRoot = await getDescendantIdsForRoots(deletedIds, tx, {
+		includeDeleted: true,
+	});
+	const removed = new Set(deletedIds);
+	for (const descendants of descendantsByRoot.values()) {
+		for (const id of descendants) {
+			removed.add(id);
+		}
+	}
+	const repointed = updates
+		.filter((change) => change.data.defeatsElementId !== undefined)
+		.map((change) => change.elementId);
+	await nullifyDanglingDefeats(tx, caseId, [...removed], repointed);
+}
+
+/**
+ * Detaches, ahead of the deletes, every element this batch moves that the
+ * deletes would otherwise take with them. Deleting an element also deletes
+ * everything beneath it, so an element moved out of a parent the same batch
+ * deletes would be gone before its own update ran. Setting its parent to null
+ * first lets it, and everything beneath it, survive; `applyUpdates` then sets
+ * the parent the batch names. Runs inside the transaction, so the temporary
+ * null is never visible to anyone else.
+ */
+async function detachMovedElementsFromDeletes(
+	tx: TransactionClient,
+	caseId: string,
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<void> {
+	if (deletes.length === 0) {
+		return;
+	}
+	const deletedIds = new Set(deletes.map((change) => change.elementId));
+	const movers = updates
+		.filter(
+			(change) =>
+				change.data.parentId !== undefined && !deletedIds.has(change.elementId)
+		)
+		.map((change) => change.elementId);
+	if (movers.length === 0) {
+		return;
+	}
+	const descendantsByRoot = await getDescendantIdsForRoots(
+		[...deletedIds],
+		tx,
+		{
+			includeDeleted: true,
+		}
+	);
+	const doomed = new Set(deletedIds);
+	for (const descendants of descendantsByRoot.values()) {
+		for (const id of descendants) {
+			doomed.add(id);
+		}
+	}
+	const rescued = movers.filter((id) => doomed.has(id));
+	if (rescued.length === 0) {
+		return;
+	}
+	await tx.assuranceElement.updateMany({
+		where: { id: { in: rescued }, caseId },
+		data: { parentId: null },
+	});
+}
+
+/**
  * Applies create operations in dependency order
  */
 async function applyCreates(
@@ -1048,7 +1456,6 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 	const fields: (keyof UpdateElementData)[] = [
 		"name",
 		"description",
-		"inSandbox",
 		"parentId",
 		"role",
 		"assertionStatus",
@@ -1077,23 +1484,19 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 
 /**
  * Regenerates names for updates that flip `isDefeater` without an explicit
- * rename (Chris's ruling, fix round 1, 2026-09-15 — "identifiers are
- * always set by the app"; mirrors element-service.ts's `updateElement`
- * path via the shared `regenerateNameForIsDefeaterChange`). Returns
- * elementId -> new name for only the updates where the flip is a REAL
+ * rename (identifiers are always set by the app; mirrors element-service.ts's
+ * `updateElement` path via the shared `regenerateNameForIsDefeaterChange`).
+ * Returns elementId -> new name for only the updates where the flip is a REAL
  * change (differs from the stored value) and no name was supplied — the
  * write loop below applies each onto that update's `updateData.name`.
  *
- * KNOWN LIMITATION (not fixed here — narrow, and pre-existing for every
- * other `generateElementName` caller): `regenerateNameForIsDefeaterChange`
- * counts existing elements via the GLOBAL `prisma` client, not the `tx`
- * this batch runs in, so a count here can miss another create/update this
- * SAME batch makes before this function runs. A flip-without-rename
- * change landing in the same batch as a create/rename that shifts the
- * relevant count is rare enough not to warrant threading `tx` through
- * generateElementName's whole call graph for this fix round.
+ * Names are counted through the batch's transaction, so the creates the
+ * batch has already made are seen (and names given earlier in this function's own loop),
+ * and the case lock the batch holds keeps other writers from adding names
+ * meanwhile.
  */
 async function regenerateNamesForDefeaterFlips(
+	tx: TransactionClient,
 	updates: UpdateChange[]
 ): Promise<Map<string, string>> {
 	const flips = updates.filter(
@@ -1103,7 +1506,7 @@ async function regenerateNamesForDefeaterFlips(
 		return new Map();
 	}
 
-	const existingRows = await prisma.assuranceElement.findMany({
+	const existingRows = await tx.assuranceElement.findMany({
 		where: { id: { in: flips.map((c) => c.elementId) } },
 		select: {
 			id: true,
@@ -1116,6 +1519,9 @@ async function regenerateNamesForDefeaterFlips(
 	const existingById = new Map(existingRows.map((r) => [r.id, r]));
 
 	const regenerated = new Map<string, string>();
+	// Names given earlier in this loop are not stored yet, so each later flip
+	// is told about them.
+	const given = new Set<string>();
 	for (const change of flips) {
 		const existing = existingById.get(change.elementId);
 		const nextIsDefeater = change.data.isDefeater;
@@ -1139,8 +1545,11 @@ async function regenerateNamesForDefeaterFlips(
 			existing.elementType,
 			existing.caseId,
 			effectiveParentId,
-			nextIsDefeater
+			nextIsDefeater,
+			given,
+			tx
 		);
+		given.add(name);
 		regenerated.set(change.elementId, name);
 	}
 	return regenerated;
@@ -1156,13 +1565,11 @@ async function regenerateNamesForDefeaterFlips(
  * before its parent-move (or the reverse) always lands on the parent's
  * POST-batch level rather than a stale pre-batch snapshot.
  *
- * Cycles created purely by this batch's own moves — e.g. two elements each
- * moved under the other, where neither is currently a descendant of the
- * other in the database, so `validateUpdateParents`'s pre-batch descendant
- * check can't see it — are caught here (via the `visiting` set) and
- * reported with the same "Circular reference detected" message the
- * pre-batch check uses, so callers see one consistent error shape either
- * way.
+ * Cycles that run through moved property claims are caught here (via the
+ * `visiting` set) and reported with the same "Circular reference detected"
+ * message the pre-batch check uses. Cycles through other element types, or
+ * through edges the batch did not change, are caught after the writes by
+ * `assertNoParentLoop`.
  */
 function resolveFinalLevelsForBatch(
 	moveMap: Map<string, string>,
@@ -1200,9 +1607,7 @@ function resolveFinalLevelsForBatch(
 			return memoised;
 		}
 		if (visiting.has(elementId)) {
-			throw new Error(
-				`Circular reference detected when moving element ${elementId}`
-			);
+			throw new BatchMoveCycleError(elementId);
 		}
 		visiting.add(elementId);
 
@@ -1544,10 +1949,8 @@ async function applyUpdates(
 		finalLevels
 	);
 
-	// isDefeater-flip name regeneration (Chris's ruling, fix round 1) — see
-	// regenerateNamesForDefeaterFlips's own docstring for the known
-	// same-batch-count limitation.
-	const regeneratedNames = await regenerateNamesForDefeaterFlips(updates);
+	// A flip of isDefeater without a rename gets a regenerated name.
+	const regeneratedNames = await regenerateNamesForDefeaterFlips(tx, updates);
 	const patternMarkers = await resolvePatternMarkers(tx, caseId, updates);
 
 	for (const change of updates) {
@@ -1725,11 +2128,17 @@ export async function applyBatchUpdate(
 
 	try {
 		await prisma.$transaction(async (tx) => {
-			// Order: unlinks first, then deletes, creates, updates, links last
+			await lockCaseForElementWrite(tx, caseId);
+			await assertGoalRulesHold(tx, caseId, creates, updates, deletes);
+			// Order: unlinks first, then deletes (after freeing any element the
+			// batch moves out of a parent it deletes), creates, updates, links last
 			await applyUnlinkEvidence(tx, unlinks);
+			await detachMovedElementsFromDeletes(tx, caseId, updates, deletes);
+			await flagDefeatsOfDeletes(tx, caseId, updates, deletes);
 			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, caseId, updates);
+			await assertNoParentLoop(tx, updates);
 			await applyLinkEvidence(tx, links);
 
 			// Update the case's updatedAt timestamp
@@ -1757,9 +2166,52 @@ export async function applyBatchUpdate(
 			return { error: CASE_MODIFIED, conflictDetected: true };
 		}
 		log.error("Batch update failed", { error });
-		return {
-			error:
-				error instanceof Error ? error.message : "Failed to apply batch update",
-		};
+		return { error: shownMessage(error) };
+	}
+}
+
+/**
+ * Refuses the batch when a moved element now sits beneath itself. Runs after
+ * the writes and under the case lock, so it judges parents exactly as the
+ * batch leaves them; the throw rolls the transaction back.
+ */
+async function assertNoParentLoop(
+	tx: TransactionClient,
+	updates: UpdateChange[]
+): Promise<void> {
+	const movedIds = updates
+		.filter((update) => typeof update.data.parentId === "string")
+		.map((update) => update.elementId);
+	const loopStart = await findParentLoopStart(movedIds, tx);
+	if (loopStart) {
+		throw new BatchMoveCycleError(loopStart);
+	}
+}
+
+/** The message a caller is told for a failed batch: a named refusal's own, otherwise a fixed one. */
+function shownMessage(error: unknown): string {
+	return error instanceof BatchMoveCycleError ||
+		error instanceof GoalRuleBrokenError
+		? error.message
+		: BATCH_FAILED;
+}
+
+/** Repeats the goal rules under the case lock; a rule that no longer holds ends the transaction. */
+async function assertGoalRulesHold(
+	tx: TransactionClient,
+	caseId: string,
+	creates: CreateChange[],
+	updates: UpdateChange[],
+	deletes: DeleteChange[]
+): Promise<void> {
+	const goalError = await validateGoalChanges(
+		caseId,
+		creates,
+		updates,
+		deletes,
+		tx
+	);
+	if (goalError) {
+		throw new GoalRuleBrokenError(goalError);
 	}
 }

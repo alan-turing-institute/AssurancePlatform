@@ -168,6 +168,32 @@ describe("PUT /api/cases/[id]", () => {
 		expect(body.name).toBe("New Name");
 	});
 
+	it("returns 400 and keeps the name when renaming a case to spaces", async () => {
+		const user = await createTestUser();
+		const testCase = await createTestCase(user.id, { name: "Old Name" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PUT } = await import("@/app/api/cases/[id]/route");
+		const req = new NextRequest(
+			`http://localhost:3000/api/cases/${testCase.id}`,
+			{
+				method: "PUT",
+				body: JSON.stringify({ name: "   " }),
+				headers: { "Content-Type": "application/json" },
+			}
+		);
+		const response = await PUT(req, {
+			params: Promise.resolve({ id: testCase.id }),
+		});
+
+		expect(response.status).toBe(400);
+		const { default: prisma } = await import("@/lib/prisma");
+		const row = await prisma.assuranceCase.findUnique({
+			where: { id: testCase.id },
+		});
+		expect(row?.name).toBe("Old Name");
+	});
+
 	it("returns 403 when a user with VIEW permission attempts to update", async () => {
 		const owner = await createTestUser();
 		const viewer = await createTestUser();

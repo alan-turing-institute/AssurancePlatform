@@ -23,11 +23,17 @@ import {
 	createTestUser,
 	enableTestPlugin,
 } from "../utils/prisma-factories";
+import {
+	elementRowIsFree,
+	holdRowLock,
+	waitForLockWait,
+} from "../utils/row-lock-test-utils";
 
 const GOAL_NAME_PATTERN = /^G\d+$/;
 const STRATEGY_NAME_PATTERN = /^S\d+$/;
 const EVIDENCE_NAME_PATTERN = /^E\d+$/;
 const GSN_PATTERN = /^GSN\d+$/;
+const NESTED_CLAIM_NAME_PATTERN = /^P1\.\d+$/;
 const PARENT_DELETED_PATTERN = /parent element is deleted/;
 
 describe("element-service", () => {
@@ -398,7 +404,7 @@ describe("element-service", () => {
 		});
 
 		describe("parent change", () => {
-			it("detaches the element when parentId is set to null", async () => {
+			it("refuses a null parentId on a strategy and keeps its parent", async () => {
 				const user = await createTestUser();
 				const testCase = await createTestCase(user.id);
 				const goal = expectSuccess(
@@ -415,14 +421,15 @@ describe("element-service", () => {
 					})
 				);
 
-				expectSuccess(
-					await updateElement(user.id, strategy.id, { parentId: null })
+				expectError(
+					await updateElement(user.id, strategy.id, { parentId: null }),
+					"parentId cannot be cleared on the general edit; use the detach route"
 				);
 
 				const inDb = await prisma.assuranceElement.findUnique({
 					where: { id: strategy.id },
 				});
-				expect(inDb?.parentId).toBeNull();
+				expect(inDb?.parentId).toBe(goal.id);
 			});
 
 			it("returns 'Element not found' when the new parent doesn't exist or is in a different case, leaving the parent unchanged", async () => {
@@ -573,6 +580,28 @@ describe("element-service", () => {
 				where: { id: created.id },
 			});
 			expect(inDb?.deletedAt).not.toBeNull();
+		});
+
+		it("waits for the case lock before it touches any element row", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const created = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const lock = await holdRowLock(async (tx) => {
+				await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${testCase.id} FOR UPDATE`;
+			});
+			const deleting = deleteElement(user.id, created.id);
+			await waitForLockWait();
+
+			const free = await elementRowIsFree(created.id);
+			await lock.release();
+			expectSuccess(await deleting);
+
+			expect(free).toBe(true);
 		});
 
 		it("cascades soft-deletion to children across three levels (goal → strategy → claim)", async () => {
@@ -890,6 +919,51 @@ describe("element-service", () => {
 				await restoreElement(user.id, created.id),
 				"Element is not deleted"
 			);
+		});
+
+		it("renames a restored claim whose name was taken, and follows the new name into its children", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const claim = async (parentId: string, name?: string) =>
+				expectSuccess(
+					await createElement(user.id, {
+						caseId: testCase.id,
+						elementType: "property_claim",
+						parentId,
+						...(name ? { name } : {}),
+					})
+				);
+			const goal = expectSuccess(
+				await createElement(user.id, {
+					caseId: testCase.id,
+					elementType: "goal",
+				})
+			);
+			const top = await claim(goal.id);
+			expect(top.name).toBe("P1");
+			await claim(top.id);
+			const old = await claim(top.id);
+			expect(old.name).toBe("P1.2");
+			const grandchild = await claim(old.id);
+			expect(grandchild.name).toBe("P1.2.1");
+			await deleteElement(user.id, old.id);
+			const taker = await claim(top.id, "P1.2");
+			expect(taker.name).toBe("P1.2");
+
+			const restored = expectSuccess(await restoreElement(user.id, old.id));
+
+			expect(restored.name).toMatch(NESTED_CLAIM_NAME_PATTERN);
+			expect(restored.name).not.toBe("P1.2");
+			const stored = await prisma.assuranceElement.findUniqueOrThrow({
+				where: { id: grandchild.id },
+			});
+			expect(stored.name).toBe(`${restored.name}.1`);
+			const live = await prisma.assuranceElement.findMany({
+				where: { caseId: testCase.id, deletedAt: null },
+				select: { name: true },
+			});
+			const names = live.map((row) => row.name);
+			expect(new Set(names).size).toBe(names.length);
 		});
 
 		it("bumps the case's updatedAt (JSON editor conflict detection sees canvas restores)", async () => {

@@ -3370,7 +3370,8 @@
                   "name": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 255
+                    "maxLength": 255,
+                    "description": "Required Case name field"
                   },
                   "description": {
                     "type": "string",
@@ -3600,7 +3601,7 @@
       "post": {
         "operationId": "post-cases-{id}-batch",
         "summary": "Apply batch updates to case elements",
-        "description": "Applies multiple element changes (create, update, delete) atomically.",
+        "description": "Applies multiple element changes (create, update, delete) atomically. Used by the JSON editor to sync changes back to the database. The goal rules hold for the goals as the batch leaves them: a goal defeater (counter-goal) has a parent, the top goal has none, and a case has one ordinary goal. The element rules of the single-element routes hold too: a new element's type fits its parent, only counter-goals hang from evidence, the old element types cannot be created, and a filled-in field belongs to the element's type. Moves that would put an element beneath itself, directly or through other moves in the same batch, answer 400 and change nothing. `inSandbox` cannot be changed in a batch: a new element must have it false and an update must leave it as stored; otherwise 400. Use the detach and attach routes. A null `parentId` on an update answers 400 for anything but a goal.",
         "tags": [
           "Elements"
         ],
@@ -4230,10 +4231,10 @@
                 "type": "object",
                 "properties": {
                   "content": {
-                    "description": "Required Content field",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 5000
+                    "maxLength": 5000,
+                    "description": "Required Content field"
                   },
                   "parentId": {
                     "nullable": true,
@@ -4283,7 +4284,7 @@
       "post": {
         "operationId": "post-cases-{id}-elements",
         "summary": "Create a new element in a case",
-        "description": "Creates a goal, strategy, property claim, evidence, or other",
+        "description": "Creates a goal, strategy, property claim, evidence, or other element type within the case hierarchy. Requires EDIT permission. A goal defeater (counter-goal) needs a `parentId`, and a case has one ordinary goal. The element's type must fit its parent: a counter-goal may hang from anything, beneath evidence only a counter-goal may hang, and otherwise the usual parent and child pairs apply. The four old types (context, justification, assumption, contract) can no longer be created. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. Generated names stay unique in the case, deleted elements' names included.",
         "tags": [
           "Elements"
         ],
@@ -6100,10 +6101,10 @@
                 "type": "object",
                 "properties": {
                   "content": {
-                    "description": "Required Content field",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 5000
+                    "maxLength": 5000,
+                    "description": "Required Content field"
                   }
                 },
                 "required": [
@@ -6557,7 +6558,7 @@
       "get": {
         "operationId": "get-elements-{id}",
         "summary": "GET /api/elements/[id]",
-        "description": "",
+        "description": "Gets a single element by ID. A challenge whose target was deleted or detached comes back with no `defeatsElementId` and `defeatsDangling` true.",
         "tags": [
           "Elements"
         ],
@@ -6604,7 +6605,7 @@
       "put": {
         "operationId": "put-elements-{id}",
         "summary": "PUT /api/elements/[id] (400 without a parent, 422 for a second goal)",
-        "description": "",
+        "description": "Updates an existing element. A `parentId` on evidence, including `null`, answers 400: evidence is moved with the move route and detached with the detach route. Moving an element beneath evidence also answers 400, because only counter-goals hang from evidence. Turning a counter-goal into an ordinary goal answers 422 (\"A case can only have one goal claim\") when the case already has an ordinary goal; otherwise, if it would keep a parent (the one sent, or its stored one when `parentId` is left out), 400 with \"parentId cannot be set on the top goal; only a counter-goal has a parent\". Send `parentId` null with `isDefeater` false to make it the top goal. The top goal never takes a parent, so a `parentId` on it answers 400. `inSandbox` cannot be changed here: the value the element already has is accepted and does nothing; any other value answers 400. Move an element to the side area with the detach route and bring it back with the attach route. A null `parentId` answers 400 on anything but a goal; detach an element with the detach route. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. An empty assumption or justification (an empty string, spaces or null) clears the stored text; leaving the field out keeps it. A `parentId` that is the element itself or one of its descendants answers 400.",
         "tags": [
           "Elements"
         ],
@@ -6676,13 +6677,13 @@
                     }
                   },
                   "assumption": {
-                    "description": "Optional string field",
+                    "description": "Optional string field; empty clears it",
                     "nullable": true,
                     "type": "string",
                     "maxLength": 5000
                   },
                   "justification": {
-                    "description": "Optional string field",
+                    "description": "Optional string field; empty clears it",
                     "nullable": true,
                     "type": "string",
                     "maxLength": 5000
@@ -6818,7 +6819,7 @@
       "delete": {
         "operationId": "delete-elements-{id}",
         "summary": "DELETE /api/elements/[id]",
-        "description": "",
+        "description": "Deletes an element. A challenge elsewhere in the case that named it is left unlinked and marked `defeatsDangling`.",
         "tags": [
           "Elements"
         ],
@@ -6867,7 +6868,7 @@
       "post": {
         "operationId": "post-elements-{id}-attach",
         "summary": "POST /api/elements/[id]/attach",
-        "description": "",
+        "description": "Attaches an element to a parent (moves from sandbox). Evidence is linked to the named property claim instead of taking a parentId; any other parent answers 400. A new parent that cannot hold the element's type answers 400, and beneath evidence only a counter-goal can hang. Attaching an element beneath itself or one of its descendants answers 400.",
         "tags": [
           "Elements"
         ],
@@ -7066,7 +7067,7 @@
       "post": {
         "operationId": "post-elements-{id}-detach",
         "summary": "POST /api/elements/[id]/detach",
-        "description": "",
+        "description": "Detaches an element (moves to sandbox). Detached evidence leaves every claim it supported, and a challenge elsewhere in the case that named the element is left unlinked and marked `defeatsDangling`. A goal cannot be detached: a counter-goal needs its parent and the top goal is the root, so both answer 400.",
         "tags": [
           "Elements"
         ],
@@ -7865,7 +7866,7 @@
       "post": {
         "operationId": "post-elements-{id}-move",
         "summary": "POST /api/elements/[id]/move",
-        "description": "",
+        "description": "Moves an element to a new parent within the same case. Moving an element beneath itself or one of its descendants answers 400.",
         "tags": [
           "Elements"
         ],
@@ -7937,7 +7938,7 @@
       "post": {
         "operationId": "post-elements-{id}-restore",
         "summary": "POST /api/elements/[id]/restore",
-        "description": "",
+        "description": "Restores a soft-deleted element and its descendants. Restoring a deleted top goal while the case has another answers 422. An element whose name another live element now carries is given a new name, and so are any descendants that still clash.",
         "tags": [
           "Elements"
         ],
@@ -7975,6 +7976,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"
@@ -8085,10 +8089,10 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "description": "Required Name field",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 100
+                    "maxLength": 100,
+                    "description": "Required Name field"
                   },
                   "description": {
                     "description": "Optional string field",
@@ -10057,10 +10061,10 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "description": "Required Team name field",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 100
+                    "maxLength": 100,
+                    "description": "Required Team name field"
                   },
                   "description": {
                     "description": "Optional string field",
@@ -10231,10 +10235,10 @@
                 "type": "object",
                 "properties": {
                   "name": {
-                    "description": "Required Team name field",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 100
+                    "maxLength": 100,
+                    "description": "Required Team name field"
                   },
                   "description": {
                     "description": "Optional string field",
@@ -12046,10 +12050,10 @@
                 "type": "object",
                 "properties": {
                   "username": {
-                    "description": "Required Username field",
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 150
+                    "maxLength": 150,
+                    "description": "Required Username field"
                   },
                   "firstName": {
                     "description": "Optional string field",
