@@ -4,6 +4,8 @@ import { PencilLine, Trash2, User2Icon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import { fetchCaseComments } from "@/actions/cases";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
+import { wroteComment } from "@/lib/case/comment-authorship";
 import { formatShortDate } from "@/lib/date";
 import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
@@ -116,8 +118,12 @@ export default function NotesFeed() {
 									</div>
 								</div>
 								{!edit &&
-									assuranceCase?.permissions !== "view" &&
-									session?.user?.name === note.author && (
+									caseAccessAtLeast(assuranceCase?.permissions, "comment") &&
+									wroteComment(
+										note,
+										session?.user?.id,
+										session?.user?.name || session?.user?.email
+									) && (
 										<div className="hidden items-center justify-center gap-2 group-hover:flex">
 											<Button
 												aria-label="Edit note"

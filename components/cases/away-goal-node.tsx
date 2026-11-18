@@ -81,7 +81,7 @@ function AwayGoalNode({ data, ...props }: NodeProps) {
 				bottomLeftActions={
 					<NodeActionGroup
 						commentCount={
-							Array.isArray(data.comments) ? data.comments.length : 0
+							typeof data.commentCount === "number" ? data.commentCount : 0
 						}
 						node={node}
 						nodeType="awayGoal"

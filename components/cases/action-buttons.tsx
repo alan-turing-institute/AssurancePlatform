@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useExportModal, useHelpModal } from "@/hooks/modal-hooks";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import { caseItemName } from "@/lib/case-item-name";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 import useStore from "@/store/store";
@@ -47,6 +48,11 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 	const [isLayouting, setIsLayouting] = useState(false);
 
 	const { assuranceCase, layoutDirection, setCaseDetailsOpen } = useStore();
+	const permissions = assuranceCase?.permissions;
+	const canEditCase = caseAccessAtLeast(permissions, "edit");
+	const canManageCase = caseAccessAtLeast(permissions, "manage");
+	// Export is offered from comment access up; the server allows view access.
+	const canExportCase = caseAccessAtLeast(permissions, "comment");
 	const router = useRouter();
 
 	const { onLayout } = actions;
@@ -121,9 +127,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 				data-tour="toolbar"
 			>
 				<div className="flex shrink-0 items-center justify-center gap-2 border-r-2 border-r-primary/20 pr-2">
-					{assuranceCase &&
-						assuranceCase.permissions !== "view" &&
-						assuranceCase.permissions !== "review" && <HistoryControls />}
+					{canEditCase && <HistoryControls />}
 					<ActionTooltip label="Focus">
 						<Button
 							className="rounded-full p-3 disabled:opacity-50"
@@ -143,22 +147,20 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							<span className="sr-only">Focus</span>
 						</Button>
 					</ActionTooltip>
-					{assuranceCase &&
-						assuranceCase.permissions !== "view" &&
-						assuranceCase.permissions !== "review" && (
-							<ActionTooltip label="Reset Identifiers">
-								<Button
-									className="rounded-full p-3"
-									data-testid="toolbar-reset-ids"
-									onClick={() => setAlertOpen(true)}
-									size="icon"
-									type="button"
-								>
-									<RotateCw className="h-5 w-5" />
-									<span className="sr-only">Reset Identifiers</span>
-								</Button>
-							</ActionTooltip>
-						)}
+					{canEditCase && (
+						<ActionTooltip label="Reset Identifiers">
+							<Button
+								className="rounded-full p-3"
+								data-testid="toolbar-reset-ids"
+								onClick={() => setAlertOpen(true)}
+								size="icon"
+								type="button"
+							>
+								<RotateCw className="h-5 w-5" />
+								<span className="sr-only">Reset Identifiers</span>
+							</Button>
+						</ActionTooltip>
+					)}
 					<ActionTooltip label="Case Information">
 						<Button
 							className="rounded-full p-3"
@@ -187,7 +189,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					</ActionTooltip>
 				</div>
 				<div className="flex shrink-0 items-center justify-center gap-2">
-					{assuranceCase && assuranceCase.permissions === "manage" && (
+					{canManageCase && (
 						<ActionTooltip label="Share">
 							<Button
 								className="rounded-full p-3"
@@ -204,7 +206,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 							</Button>
 						</ActionTooltip>
 					)}
-					{assuranceCase && assuranceCase.permissions !== "view" && (
+					{canExportCase && (
 						<ActionTooltip label="Export">
 							<Button
 								className="rounded-full p-3"
@@ -249,7 +251,7 @@ const ActionButtons = ({ actions, notifyError }: ActionButtonProps) => {
 					<span data-testid="toolbar-settings" data-tour="toolbar-settings">
 						<CaseSettingsPopover />
 					</span>
-					{assuranceCase && assuranceCase.permissions === "manage" && (
+					{canManageCase && (
 						<>
 							<CaseKindMenu />
 							<ActionTooltip label="Delete">

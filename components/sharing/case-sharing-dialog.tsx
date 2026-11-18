@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Copy, Loader } from "lucide-react";
+import { Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,13 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
+import { InviteLinkPanel } from "./_case-sharing/invite-link-panel";
 import {
 	AvailableTeamsList,
 	TeamPermissionRow,
 	UserPermissionRow,
 } from "./_case-sharing/permission-components";
+import { ShareMessages } from "./_case-sharing/share-messages";
 import { SharingDialogHeader } from "./_case-sharing/shared-item-name";
 import {
 	type ShareFormValues,
@@ -57,6 +59,7 @@ export function CaseSharingDialog() {
 		inviteUrl,
 		copied,
 		error,
+		notice,
 		getInitials,
 		copyInviteUrl,
 		clearInviteUrl,
@@ -112,40 +115,15 @@ export function CaseSharingDialog() {
 						</TabsList>
 
 						<TabsContent className="space-y-4" value="email">
-							{error && (
-								<div className="rounded-md bg-destructive/10 p-3 text-destructive text-sm">
-									{error}
-								</div>
-							)}
+							<ShareMessages error={error} notice={notice} />
 
 							{inviteUrl ? (
-								<div className="space-y-3">
-									<p className="text-muted-foreground text-sm">
-										User not found. Share this invite link with them:
-									</p>
-									<div className="flex gap-2">
-										<Input readOnly value={inviteUrl} />
-										<Button
-											onClick={copyInviteUrl}
-											size="icon"
-											title={copied ? "Copied" : "Copy invite link"}
-											variant="outline"
-										>
-											{copied ? (
-												<Check className="h-4 w-4" />
-											) : (
-												<Copy className="h-4 w-4" />
-											)}
-										</Button>
-									</div>
-									<Button
-										className="w-full"
-										onClick={clearInviteUrl}
-										variant="outline"
-									>
-										Share with someone else
-									</Button>
-								</div>
+								<InviteLinkPanel
+									copied={copied}
+									inviteUrl={inviteUrl}
+									onClear={clearInviteUrl}
+									onCopy={copyInviteUrl}
+								/>
 							) : (
 								<Form {...form}>
 									<form

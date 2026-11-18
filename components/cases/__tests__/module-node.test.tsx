@@ -160,4 +160,21 @@ describe("ModuleNode (ADR 0005 D3)", () => {
 			screen.queryByRole("link", { name: VIEW_REFERENCED_CASE_LINK_PATTERN })
 		).not.toBeInTheDocument();
 	});
+
+	it("shows the comment count the case carries on its comment button", () => {
+		renderWithReactFlow(
+			<ModuleNode
+				{...nodeProps({
+					id: "el-1",
+					name: "M1",
+					description: "A module",
+					commentCount: 2,
+				})}
+			/>
+		);
+
+		expect(
+			screen.getByRole("button", { name: "View comments (2)" })
+		).toBeInTheDocument();
+	});
 });

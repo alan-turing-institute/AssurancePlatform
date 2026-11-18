@@ -9,6 +9,7 @@ import type {
 	TeamPermission,
 	UserPermission,
 } from "./permission-components";
+import { useSharedItemName } from "./shared-item-name";
 
 const log = logger.child({ component: "use-case-permissions" });
 
@@ -27,6 +28,42 @@ export interface PermissionsData {
 	userPermissions: UserPermission[];
 }
 
+const ALREADY_HAS_ACCESS = "User already has access to this case";
+
+const LEVEL_LABELS: Record<string, string> = {
+	VIEW: "Can view",
+	COMMENT: "Can comment",
+	EDIT: "Can edit",
+	ADMIN: "Admin",
+};
+
+/**
+ * Words the answer to sharing with someone who already has access, from the
+ * permissions the dialog has loaded. Returns null when the email matches
+ * nobody on the list.
+ */
+function describeExistingAccess(
+	permissions: PermissionsData | null,
+	email: string,
+	itemName: string
+): string | null {
+	const typed = email.trim().toLowerCase();
+	if (!(permissions && typed)) {
+		return null;
+	}
+	if (permissions.owner.email.toLowerCase() === typed) {
+		return `${permissions.owner.username} owns this ${itemName}.`;
+	}
+	const held = permissions.userPermissions.find(
+		(up) => up.user.email.toLowerCase() === typed
+	);
+	if (!held) {
+		return null;
+	}
+	const label = LEVEL_LABELS[held.permission] ?? held.permission;
+	return `${held.user.username} already has access (${label}). To change it, use the menu beside their name below.`;
+}
+
 interface UseCasePermissionsParams {
 	caseId: string | null;
 	form: UseFormReturn<ShareFormValues>;
@@ -42,6 +79,7 @@ interface UseCasePermissionsResult {
 	getInitials: (name: string) => string;
 	inviteUrl: string | null;
 	loading: boolean;
+	notice: string | null;
 	onRevokePermission: (
 		permissionId: string,
 		type: "user" | "team"
@@ -70,6 +108,8 @@ export function useCasePermissions({
 	const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [notice, setNotice] = useState<string | null>(null);
+	const itemName = useSharedItemName();
 
 	const fetchPermissions = useCallback(async () => {
 		if (!caseId) {
@@ -117,6 +157,7 @@ export function useCasePermissions({
 			fetchUserTeams();
 			setInviteUrl(null);
 			setError(null);
+			setNotice(null);
 		}
 	}, [isOpen, caseId, fetchPermissions, fetchUserTeams]);
 
@@ -126,6 +167,7 @@ export function useCasePermissions({
 		}
 
 		setError(null);
+		setNotice(null);
 		setInviteUrl(null);
 
 		try {
@@ -148,8 +190,17 @@ export function useCasePermissions({
 
 			if (data.invite_url) {
 				setInviteUrl(data.invite_url);
-			} else if (data.message === "User already has access to this case") {
-				setError("User already has access to this case");
+			} else if (data.message === ALREADY_HAS_ACCESS) {
+				const existing = describeExistingAccess(
+					permissions,
+					values.email,
+					itemName
+				);
+				if (existing) {
+					setNotice(existing);
+				} else {
+					setError(ALREADY_HAS_ACCESS);
+				}
 			} else {
 				form.reset();
 				fetchPermissions();
@@ -275,6 +326,7 @@ export function useCasePermissions({
 		inviteUrl,
 		copied,
 		error,
+		notice,
 		getInitials,
 		copyInviteUrl,
 		clearInviteUrl,

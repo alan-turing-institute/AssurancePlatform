@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 import NotesSheet from "../ui/notes-sheet";
 import NotesFeed from "./notes-feed";
@@ -37,15 +38,17 @@ const CaseNotes = ({ isOpen, onClose }: CaseNotesProps) => {
 		);
 	}
 
+	const canNote = caseAccessAtLeast(assuranceCase.permissions, "comment");
+
 	return (
 		<NotesSheet
-			description={`Use this section to view ${assuranceCase.permissions !== "view" ? "and manage your" : ""} notes.`}
+			description={`Use this section to view ${canNote ? "and manage your" : ""} notes.`}
 			isOpen={isOpen}
 			onClose={onClose}
-			title={`${assuranceCase.permissions !== "view" ? "Manage" : ""} Case Notes`}
+			title={`${canNote ? "Manage" : ""} Case Notes`}
 		>
 			{/* <CreateForm onClose={onClose} /> */}
-			{assuranceCase.permissions !== "view" && <NotesForm />}
+			{canNote && <NotesForm />}
 			<NotesFeed />
 		</NotesSheet>
 	);

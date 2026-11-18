@@ -56,6 +56,9 @@ function captureAuthoredCase(target: HTMLElement): Promise<string> {
 	}).finally(restoreAppearance);
 }
 
+/** Matches the server's one-upload-per-window limit (30 minutes). */
+export const CAPTURE_WINDOW_MS = 30 * 60 * 1000;
+
 interface UseAutoScreenshotOptions {
 	/** Whether the user has edit permission */
 	canEdit: boolean;
@@ -86,6 +89,7 @@ export function useAutoScreenshot({
 	const hasChangedRef = useRef(false);
 	const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const isCapturingRef = useRef(false);
+	const lastAttemptAtRef = useRef<number | null>(null);
 
 	const captureScreenshot = useCallback(async () => {
 		if (isCapturingRef.current) {
@@ -98,6 +102,7 @@ export function useAutoScreenshot({
 		}
 
 		isCapturingRef.current = true;
+		lastAttemptAtRef.current = Date.now();
 
 		try {
 			const base64Image = await captureAuthoredCase(target as HTMLElement);
@@ -125,6 +130,16 @@ export function useAutoScreenshot({
 
 	const markChanged = useCallback(() => {
 		if (!canEdit) {
+			return;
+		}
+
+		// The server keeps one upload per window, so a change inside the
+		// window of an earlier attempt schedules nothing.
+		const lastAttemptAt = lastAttemptAtRef.current;
+		if (
+			lastAttemptAt !== null &&
+			Date.now() - lastAttemptAt < CAPTURE_WINDOW_MS
+		) {
 			return;
 		}
 

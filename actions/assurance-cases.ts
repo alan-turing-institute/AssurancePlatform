@@ -18,6 +18,7 @@ interface AssuranceCase {
 	kind?: CaseKind;
 	name: string;
 	owner?: number | string;
+	permissions?: string;
 	published?: boolean;
 	updatedDate?: string;
 }
