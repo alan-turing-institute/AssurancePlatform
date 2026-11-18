@@ -27,6 +27,15 @@
     "expires": "2027-01-31"
   },
   {
+    "ghsa": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "production path .>fumadocs-core>tinyglobby>picomatch (4.0.7) and release-tooling paths .>@semantic-release/commit-analyzer>micromatch>picomatch (2.3.2) and .>@semantic-release/github>tinyglobby>picomatch; no patched release exists (vulnerable <=4.0.7). fumadocs-core uses tinyglobby only in its opt-in remarkMdxFiles plugin, which this app does not enable and which would glob patterns written in the repository's own MDX at build time; the release tooling runs only in the release job on main over this repository's own commit messages and files. No request data reaches picomatch",
+    "owner": "maintainers",
+    "expires": "2027-02-28"
+  },
+  {
     "ghsa": "GHSA-xjj6-f33q-929c",
     "package": "undici",
     "severity": "high",
