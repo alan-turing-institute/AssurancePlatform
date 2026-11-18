@@ -6,7 +6,7 @@ import { registerIntegration } from "@/lib/services/integration-registry-service
 // confirmation is a second step inside the same dialog, so focus must never
 // fall to the page body while the form is open.
 
-const unique = `e2e-token-focus-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const unique = `e2e-token-focus-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 let integrationId: string | undefined;
 
 test.beforeAll(async () => {
