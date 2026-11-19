@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ReactFlow, {
 	Background,
 	Controls,
@@ -35,7 +42,12 @@ const edgeTypes = {
 	support: SupportEdge,
 };
 
-function Flow() {
+interface FlowProps {
+	/** Shown in the overlay stack under the header, below the other banners. */
+	liveUpdatesNotice?: ReactNode;
+}
+
+function Flow({ liveUpdatesNotice }: FlowProps) {
 	const { fitView } = useReactFlow();
 	const updateNodeInternals = useUpdateNodeInternals();
 	const {
@@ -251,6 +263,7 @@ function Flow() {
 									</div>
 								</div>
 							)}
+						{liveUpdatesNotice}
 					</div>
 				</div>
 			)}
