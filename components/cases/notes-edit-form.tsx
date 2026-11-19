@@ -63,7 +63,9 @@ const NotesEditForm = ({ note, setEdit }: NotesEditFormProps) => {
 
 			// Find the index of the updated comment in the existing comments array
 			const updatedComments = caseNotes.map((comment) =>
-				comment.id === updatedComment.id ? updatedComment : comment
+				comment.id === updatedComment.id
+					? { ...comment, ...updatedComment }
+					: comment
 			);
 
 			setCaseNotes(updatedComments);

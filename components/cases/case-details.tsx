@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 import CaseSheet from "../ui/case-sheet";
 import CaseEditForm from "./case-edit-form";
@@ -21,9 +22,7 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 	const [alertOpen, setAlertOpen] = useState(false);
 
 	const { assuranceCase } = useStore();
-	const canEditCase =
-		assuranceCase?.permissions === "manage" ||
-		assuranceCase?.permissions === "edit";
+	const canEditCase = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	useEffect(() => {
 		setIsMounted(true);
@@ -71,7 +70,7 @@ const CaseDetails = ({ isOpen, setOpen }: CaseDetailsProps) => {
 			isOpen={isOpen}
 			onChange={onChange}
 			onClose={handleClose}
-			title={`${assuranceCase?.permissions === "manage" ? "Update" : ""} Assurance Case`}
+			title={`${caseAccessAtLeast(assuranceCase?.permissions, "manage") ? "Update" : ""} Assurance Case`}
 		>
 			<div className="my-6 space-y-6">
 				<CaseEditForm

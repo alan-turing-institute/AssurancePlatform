@@ -15,6 +15,7 @@ import { nodeTypes } from "@/components/cases/node-type-resolver";
 import SupportEdge from "@/components/cases/support-edge";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
@@ -57,9 +58,7 @@ function Flow() {
 	useKeyboardShortcuts();
 
 	// Determine if user can edit (for auto-screenshot)
-	const canEdit =
-		assuranceCase?.permissions === "edit" ||
-		assuranceCase?.permissions === "manage";
+	const canEdit = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	// Auto-screenshot hook - captures screenshots when changes are made
 	const { markChanged } = useAutoScreenshot({

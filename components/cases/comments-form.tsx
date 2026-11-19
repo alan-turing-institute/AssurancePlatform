@@ -123,7 +123,9 @@ const CommentsForm: React.FC<CommentsFormProps> = ({
 					name="comment"
 					render={({ field }) => (
 						<FormItem>
-							<FormLabel className="hidden">New Comment</FormLabel>
+							<FormLabel className="sr-only">
+								{parentId ? "Reply" : "New Comment"}
+							</FormLabel>
 							<FormControl>
 								<Textarea
 									placeholder="Type your comment here."

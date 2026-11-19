@@ -57,6 +57,7 @@ import {
 	getNodeMutationErrorMessage,
 	updateAssuranceCaseNode,
 } from "@/lib/case";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import {
 	parseContextEntries,
 	plainReferenceText,
@@ -543,13 +544,9 @@ export default function NodeEditDialog({
 		node.data?.defeatsElementId as string | null | undefined,
 		allNodes
 	);
-	// Fail-closed, positive rule: editable only when the case permission is
-	// explicitly "edit" or "manage". Any other value — "view", "comment",
-	// or unset/unknown while the case is still loading — renders read-only.
-	const readOnly = !(
-		assuranceCase?.permissions === "edit" ||
-		assuranceCase?.permissions === "manage"
-	);
+	// Editable only at edit access or above; anything else, including an
+	// unset value while the case is loading, renders read-only.
+	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "edit");
 	const focusDescriptionOnOpen = focusesDescriptionOnOpen(
 		nodeType,
 		readOnly,

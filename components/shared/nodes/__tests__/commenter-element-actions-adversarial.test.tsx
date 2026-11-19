@@ -84,6 +84,16 @@ describe("element actions — a commenter sees what a viewer sees", () => {
 		expect(screen.queryByRole("button", { name: "View details" })).toBeNull();
 	});
 
+	it("with no case loaded: no Add, no options menu, Edit reads View details", () => {
+		seedCase(null);
+		renderActionGroup();
+
+		expect(screen.queryByRole("button", { name: "Add element" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "More options" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Edit element" })).toBeNull();
+		expect(screen.getByRole("button", { name: "View details" })).toBeVisible();
+	});
+
 	it.each([
 		"view",
 		"comment",

@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
+import { wroteComment } from "@/lib/case/comment-authorship";
 import { formatShortDate } from "@/lib/date";
 import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
@@ -43,24 +45,6 @@ interface CommentItemProps {
 	onResolve: (id: string, resolved: boolean) => Promise<void>;
 	replyingTo: string | null;
 	setReplyingTo: (id: string | null) => void;
-}
-
-/**
- * Whether the signed-in person wrote the comment. User ids decide when both
- * sides have one; otherwise the names are compared, because an edited comment
- * comes back without an author id until the next refresh. A Google or GitHub
- * sign-in carries the provider's display name rather than the stored username,
- * so the name alone never matches their own comments.
- */
-function wroteComment(
-	comment: CommentResponse,
-	currentUserId: string | undefined,
-	currentUsername: string | null | undefined
-): boolean {
-	if (currentUserId && comment.authorId) {
-		return comment.authorId === currentUserId;
-	}
-	return currentUsername === comment.author;
 }
 
 /**
@@ -163,7 +147,7 @@ function CommentActions({
 	onDelete: () => void;
 }) {
 	return (
-		<div className="absolute right-2 bottom-2 hidden group-hover:block">
+		<div className="pointer-events-none absolute right-2 bottom-2 opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
 			<div className="flex items-center justify-start gap-1">
 				{isTopLevel && (
 					<Button
@@ -248,7 +232,7 @@ function CommentItem({
 
 	const cardClass = isResolved
 		? "bg-success/10 hover:bg-success/15"
-		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
+		: "focus-within:pb-8 hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (
 		<div className={cn("w-full", nestedClass)}>
@@ -339,12 +323,10 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
 	const currentUserId = session?.user?.id;
 	const currentUsername = session?.user?.name || session?.user?.email;
-	const canEdit = assuranceCase?.permissions !== "view";
+	const canEdit = caseAccessAtLeast(assuranceCase?.permissions, "comment");
 	// A commenter may resolve only their own threads; edit and manage access
 	// may resolve any thread.
-	const canResolveAny =
-		assuranceCase?.permissions === "edit" ||
-		assuranceCase?.permissions === "manage";
+	const canResolveAny = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	const handleDelete = async (id: number | string) => {
 		try {
