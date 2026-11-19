@@ -1302,7 +1302,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   form with the same version labels. Save requests and published
   recommendations in the older form are still accepted and converted.
 
-## [0.2.0] - TBD
+## [0.2.0] - 2025-12-24
 
 ### Added
 - Semantic versioning implementation

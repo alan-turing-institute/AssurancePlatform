@@ -9,12 +9,15 @@ import {
 	buildFailReasons,
 	buildRouteRegex,
 	checkPage,
+	checkThrewResult,
 	compareToBaseline,
 	describeRedirect,
 	discoverAllPaths,
 	findPageFiles,
+	isSignedOutRoute,
 	matchPlaceholders,
 	matchRouteTemplate,
+	mergeBaseline,
 	type PageResult,
 	parseArgs,
 	parseOnly,
@@ -26,10 +29,16 @@ import {
 	signInFailureMessage,
 	summariseAxeViolations,
 	toRouteTemplate,
+	violationKind,
+	writeBaselineFile,
 } from "../check-pages";
 
 const BASELINE_FILENAME_RE = /\.a11y-baseline\.json$/;
 const NEW_A11Y_RULE_RE = /new accessibility rule/;
+const SCAN_DID_NOT_RUN_RE = /accessibility scan did not run: .*scan broke/;
+const REFUSING_RE = /refusing to write the baseline.*\/x/;
+const NOT_LOADED_RE =
+	/refusing to write the baseline.*did not load properly.*\/x/;
 const NAVIGATION_FAILED_RE = /navigation failed: boom/;
 
 // ============================================
@@ -200,6 +209,7 @@ describe("toRouteTemplate", () => {
 		expect(toRouteTemplate(file("docs", "[[...slug]]", "page.tsx"))).toEqual({
 			template: "/docs",
 			params: [],
+			optionalCatchAll: true,
 		});
 	});
 
@@ -230,6 +240,19 @@ describe("buildRouteRegex / matchRouteTemplate", () => {
 		);
 	});
 
+	it("matches a nested docs page to the docs entry", () => {
+		expect(
+			matchRouteTemplate("/docs/a/b", ["/docs", "/discover"], ["/docs"])
+		).toBe("/docs");
+		expect(matchRouteTemplate("/docs", ["/docs"], ["/docs"])).toBe("/docs");
+	});
+
+	it("does not match a path that only starts with the catch-all prefix", () => {
+		expect(matchRouteTemplate("/docsearch", ["/docs"], ["/docs"])).toBe(
+			"/docsearch"
+		);
+	});
+
 	it("falls back to the bare path when nothing matches", () => {
 		expect(matchRouteTemplate("/nowhere", ["/discover"])).toBe("/nowhere");
 	});
@@ -248,6 +271,10 @@ const NO_DATABASE_URL_RE = /DATABASE_URL/;
 const NO_SEED_CASE_RE = /no seed case/;
 const STORED_AS_HASHES_RE = /stored only as hashes/;
 const NO_SEED_LOOKUP_RE = /no seed lookup defined/;
+const CASE_ORDERED_BY_ELEMENTS_RE =
+	/ORDER BY\s*\(SELECT COUNT\(\*\) FROM assurance_elements[^)]*\)\s*DESC/;
+const ARCHIVED_EXCLUDED_RE = /archived_at IS NULL/;
+const NOT_DELETED_RE = /ae\.deleted_at IS NULL/;
 
 function fakeClient(rows: Record<string, unknown>[]): Client {
 	return { query: async () => ({ rows }) } as unknown as Client;
@@ -278,6 +305,31 @@ describe("resolveParam", () => {
 		await expect(
 			resolveParam(fakeClient([{ id: "team-1" }]), "id")
 		).resolves.toEqual({ value: "team-1" });
+	});
+
+	it("orders case candidates by element count", async () => {
+		const queries: string[] = [];
+		const client = {
+			query: (text: string) => {
+				queries.push(text);
+				return Promise.resolve({ rows: [{ id: "case-1" }] });
+			},
+		} as unknown as Client;
+		await resolveParam(client, "caseId");
+		expect(queries[0]).toMatch(CASE_ORDERED_BY_ELEMENTS_RE);
+		expect(queries[0]).toMatch(NOT_DELETED_RE);
+	});
+
+	it("skips archived copies for slug", async () => {
+		const queries: string[] = [];
+		const client = {
+			query: (text: string) => {
+				queries.push(text);
+				return Promise.resolve({ rows: [{ slug: "s1" }] });
+			},
+		} as unknown as Client;
+		await resolveParam(client, "slug");
+		expect(queries[0]).toMatch(ARCHIVED_EXCLUDED_RE);
 	});
 
 	it("skips the invite token parameter, because only hashes are stored", async () => {
@@ -440,6 +492,13 @@ describe("describeRedirect", () => {
 		expect(result.redirectedTo).toBe("/login?callbackUrl=%2Fdashboard");
 	});
 
+	it("a requested /login that stays on /login is not a sign-in redirect", () => {
+		expect(describeRedirect("/login", "http://localhost:3000/login")).toEqual({
+			redirectedTo: null,
+			failReason: null,
+		});
+	});
+
 	it("reports a non-sign-in redirect without failing", () => {
 		const result = describeRedirect(
 			"/old-path",
@@ -535,20 +594,72 @@ describe("resolveBaselinePath", () => {
 // ============================================
 
 describe("summariseAxeViolations", () => {
-	it("counts serious+critical nodes per rule, ignoring lesser impacts", () => {
+	it("counts serious+critical kinds per rule, ignoring lesser impacts", () => {
 		const summary = summariseAxeViolations([
-			{ id: "color-contrast", impact: "serious", nodes: [1, 2] },
-			{ id: "color-contrast", impact: "serious", nodes: [3] },
-			{ id: "region", impact: "moderate", nodes: [1] },
+			{
+				id: "button-name",
+				impact: "serious",
+				nodes: [{ html: "<button>" }, { html: '<a class="x">' }],
+			},
+			{ id: "button-name", impact: "serious", nodes: [{ html: "<div>" }] },
+			{ id: "region", impact: "moderate", nodes: [{ html: "<p>" }] },
 		]);
-		expect(summary.violations).toEqual({ "color-contrast": 3 });
+		expect(summary.violations).toEqual({ "button-name": 3 });
+		expect(summary.nodeCounts).toEqual({ "button-name": 3 });
 		expect(summary.byImpact).toEqual({ serious: 2, moderate: 1 });
+	});
+
+	it("counts repeated elements of one kind once", () => {
+		const node = { html: '<div class="b a" role="button" id="n1">' };
+		const summary = summariseAxeViolations([
+			{
+				id: "nested-interactive",
+				impact: "serious",
+				nodes: [
+					node,
+					{ html: '<div id="n2" role="button" class="a b">' },
+					{ html: '<div class="a  b" role="button">' },
+				],
+			},
+		]);
+		expect(summary.violations).toEqual({ "nested-interactive": 1 });
+		expect(summary.nodeCounts).toEqual({ "nested-interactive": 3 });
+	});
+
+	it("counts contrast failures by colour pair", () => {
+		const contrast = (fg: string, bg: string, expected = "4.5:1") => ({
+			html: "<span>",
+			any: [
+				{
+					data: { fgColor: fg, bgColor: bg, expectedContrastRatio: expected },
+				},
+			],
+		});
+		const one = summariseAxeViolations([
+			{
+				id: "color-contrast",
+				impact: "serious",
+				nodes: [
+					contrast("#aaa", "#fff"),
+					{ ...contrast("#aaa", "#fff"), html: "<p>" },
+				],
+			},
+		]);
+		expect(one.violations).toEqual({ "color-contrast": 1 });
+		const two = summariseAxeViolations([
+			{
+				id: "color-contrast",
+				impact: "serious",
+				nodes: [contrast("#aaa", "#fff"), contrast("#bbb", "#fff")],
+			},
+		]);
+		expect(two.violations).toEqual({ "color-contrast": 2 });
 	});
 
 	it("ranks topRules by total node count across all impacts", () => {
 		const summary = summariseAxeViolations([
-			{ id: "a", impact: "minor", nodes: [1] },
-			{ id: "b", impact: "critical", nodes: [1, 2, 3] },
+			{ id: "a", impact: "minor", nodes: [{}] },
+			{ id: "b", impact: "critical", nodes: [{}, {}, {}] },
 		]);
 		expect(summary.topRules[0]).toBe("b");
 	});
@@ -558,6 +669,7 @@ describe("summariseAxeViolations", () => {
 			byImpact: {},
 			topRules: [],
 			violations: {},
+			nodeCounts: {},
 		});
 	});
 });
@@ -843,6 +955,91 @@ describe("checkPage", () => {
 		expect(result.pass).toBe(true);
 	});
 
+	it("compares a page with the entry for its exact path before its template", async () => {
+		const violations = [
+			{ id: "nested-interactive", impact: "serious", nodes: [1] },
+		];
+		const baseline: Baseline = {
+			"/docs": { violations: {}, cls: 0 },
+			"/docs/a": { violations: { "nested-interactive": 1 }, cls: 0 },
+		};
+		const exact = await checkPage(
+			makeFakeContext({ axeViolations: violations }),
+			"/docs/a",
+			0.1,
+			baseline,
+			"/docs"
+		);
+		expect(exact.pass).toBe(true);
+		const other = await checkPage(
+			makeFakeContext({ axeViolations: violations }),
+			"/docs/b",
+			0.1,
+			baseline,
+			"/docs"
+		);
+		expect(other.pass).toBe(false);
+	});
+
+	it("keys a node on its full opening tag when axe's html is cut short", async () => {
+		const long = "inline-flex items-center justify-center gap-2 rounded-md";
+		const context = makeFakeContext({
+			bodyHtml: `<button id="a" class="${long} bg-red-500"></button><button id="b" class="${long} bg-blue-500"></button>`,
+			axeViolations: [
+				{
+					id: "button-name",
+					impact: "critical",
+					nodes: [
+						{
+							target: ["#a"],
+							html: '<button id="a" class="inline-flex items-c',
+						},
+						{
+							target: ["#b"],
+							html: '<button id="b" class="inline-flex items-c',
+						},
+					],
+				},
+			],
+		});
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.axe.violations).toEqual({ "button-name": 2 });
+	});
+
+	it("keeps axe's html for failing elements inside a shadow root, so they count as separate kinds", async () => {
+		const context = makeFakeContext({
+			bodyHtml: '<div id="host" class="viewer"></div>',
+			axeViolations: [
+				{
+					id: "button-name",
+					impact: "critical",
+					nodes: [
+						{
+							target: [["#host", "#inner-a"]],
+							html: '<button id="inner-a" class="icon-a">',
+						},
+						{
+							target: [["#host", "#inner-b"]],
+							html: '<button id="inner-b" class="icon-b">',
+						},
+					],
+				},
+			],
+		});
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.axe.violations).toEqual({ "button-name": 2 });
+	});
+
+	it("fails a page whose accessibility scan did not run", async () => {
+		const context = makeFakeContext();
+		(window as unknown as { axe: unknown }).axe = {
+			run: () => Promise.reject(new Error("scan broke")),
+		};
+		const result = await checkPage(context, "/x", 0.1, {}, "/x");
+		expect(result.pass).toBe(false);
+		expect(result.failReasons[0]).toMatch(SCAN_DID_NOT_RUN_RE);
+	});
+
 	it("with --only status,errors,placeholders, a new a11y violation is measured but does not fail the page", async () => {
 		const context = makeFakeContext({
 			axeViolations: [{ id: "button-name", impact: "critical", nodes: [1] }],
@@ -886,7 +1083,12 @@ describe("reportResults", () => {
 			pageErrors: [],
 			consoleErrors: [],
 			cls: 0.01,
-			axe: { byImpact: {}, topRules: [], violations: {} },
+			axe: {
+				byImpact: {},
+				topRules: [],
+				violations: {},
+				nodeCounts: {},
+			},
 			placeholderHits: [],
 			pass: true,
 			failReasons: [],
@@ -920,7 +1122,12 @@ describe("reportResults", () => {
 			[
 				fakeResult({
 					routeTemplate: "/x",
-					axe: { byImpact: {}, topRules: [], violations: { "image-alt": 1 } },
+					axe: {
+						byImpact: {},
+						topRules: [],
+						violations: { "image-alt": 1 },
+						nodeCounts: { "image-alt": 1 },
+					},
 					cls: 0.020_004_9,
 				}),
 			],
@@ -933,11 +1140,253 @@ describe("reportResults", () => {
 		});
 	});
 
+	it("exits non-zero and writes no baseline when a scan did not run", () => {
+		const outPath = path.join(dir, "baseline.json");
+		reportResults(
+			[
+				fakeResult({
+					axe: {
+						byImpact: { error: 1 },
+						topRules: ["boom"],
+						violations: {},
+						nodeCounts: {},
+					},
+				}),
+			],
+			[],
+			baseArgs({ writeBaseline: true, baselinePath: outPath })
+		);
+		expect(fs.existsSync(outPath)).toBe(false);
+		expect(process.exitCode).toBe(1);
+	});
+
 	it("writes the JSON results file when --json is set", () => {
 		const outPath = path.join(dir, "out.json");
 		reportResults([fakeResult()], [], baseArgs({ jsonOut: outPath }));
 		const written = JSON.parse(fs.readFileSync(outPath, "utf8"));
 		expect(written.results).toHaveLength(1);
 		expect(written.skipped).toEqual([]);
+	});
+});
+
+// ============================================
+// mergeBaseline
+// ============================================
+
+describe("mergeBaseline", () => {
+	const result = (
+		routeTemplate: string,
+		violations: Record<string, number>,
+		cls = 0,
+		path = routeTemplate
+	) => ({ path, routeTemplate, cls, axe: { violations } });
+
+	it("keeps entries for routes not checked", () => {
+		const existing: Baseline = {
+			"/a": { violations: { "image-alt": 2 }, cls: 0.05 },
+			"/b": { violations: {}, cls: 0 },
+		};
+		const merged = mergeBaseline(existing, [result("/b", { label: 1 }, 0.01)]);
+		expect(merged["/a"]).toEqual(existing["/a"]);
+		expect(merged["/b"]).toEqual({ violations: { label: 1 }, cls: 0.01 });
+	});
+
+	it("keeps the highest count per rule across paths of one template", () => {
+		const merged = mergeBaseline({}, [
+			result("/docs", { "color-contrast": 3, label: 2 }, 0.02),
+			result("/docs", { "color-contrast": 5 }, 0.01),
+		]);
+		expect(merged["/docs"]).toEqual({
+			violations: { "color-contrast": 5, label: 2 },
+			cls: 0.02,
+		});
+	});
+
+	it("refuses to merge a result whose accessibility scan did not run", () => {
+		const failed = {
+			path: "/x",
+			routeTemplate: "/x",
+			cls: 0,
+			axe: { byImpact: { error: 1 }, topRules: ["boom"], violations: {} },
+		};
+		expect(() => mergeBaseline({}, [failed])).toThrow(REFUSING_RE);
+	});
+
+	describe("refuses a page that did not load properly", () => {
+		const loaded = {
+			path: "/x",
+			routeTemplate: "/x",
+			cls: 0,
+			axe: { violations: {} },
+		};
+
+		it("on an error status", () => {
+			expect(() => mergeBaseline({}, [{ ...loaded, status: 500 }])).toThrow(
+				NOT_LOADED_RE
+			);
+		});
+
+		it("when navigation produced no status", () => {
+			expect(() => mergeBaseline({}, [{ ...loaded, status: null }])).toThrow(
+				NOT_LOADED_RE
+			);
+		});
+
+		it("on page errors", () => {
+			expect(() =>
+				mergeBaseline({}, [{ ...loaded, status: 200, pageErrors: ["boom"] }])
+			).toThrow(NOT_LOADED_RE);
+		});
+
+		it("on a redirect to sign-in", () => {
+			expect(() =>
+				mergeBaseline({}, [
+					{ ...loaded, status: 200, finalUrl: "http://localhost:3000/login" },
+				])
+			).toThrow(NOT_LOADED_RE);
+		});
+
+		it("on a redirect to another page", () => {
+			expect(() =>
+				mergeBaseline({}, [
+					{
+						...loaded,
+						status: 200,
+						finalUrl: "http://localhost:3000/dashboard",
+					},
+				])
+			).toThrow(NOT_LOADED_RE);
+		});
+
+		it("but writes a page that loaded", () => {
+			const merged = mergeBaseline({}, [
+				{
+					...loaded,
+					status: 200,
+					pageErrors: [],
+					finalUrl: "http://localhost:3000/x",
+				},
+			]);
+			expect(merged["/x"]).toEqual({ violations: {}, cls: 0 });
+		});
+	});
+
+	it("refuses the result of a check that threw", () => {
+		expect(() =>
+			mergeBaseline({}, [checkThrewResult("/x", "/x", 0.1, new Error("e"))])
+		).toThrow(REFUSING_RE);
+	});
+
+	it("writes a page to its own entry when its exact path already has one", () => {
+		const existing: Baseline = {
+			"/docs": { violations: { label: 1 }, cls: 0 },
+			"/docs/a": { violations: { "nested-interactive": 9 }, cls: 0 },
+		};
+		const merged = mergeBaseline(existing, [
+			result("/docs", { "nested-interactive": 1 }, 0, "/docs/a"),
+			result("/docs", { label: 2 }, 0, "/docs/b"),
+		]);
+		expect(merged["/docs/a"]).toEqual({
+			violations: { "nested-interactive": 1 },
+			cls: 0,
+		});
+		expect(merged["/docs"]).toEqual({ violations: { label: 2 }, cls: 0 });
+		expect(merged["/docs/b"]).toBeUndefined();
+	});
+});
+
+// ============================================
+// writeBaselineFile
+// ============================================
+
+describe("writeBaselineFile", () => {
+	it("writes nothing when a result's accessibility scan did not run", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "write-baseline-test-"));
+		const outPath = path.join(dir, "baseline.json");
+		const failed = {
+			path: "/x",
+			routeTemplate: "/x",
+			cls: 0,
+			axe: { byImpact: { error: 1 }, topRules: ["boom"], violations: {} },
+		} as unknown as PageResult;
+		expect(() => writeBaselineFile(outPath, [failed])).toThrow(REFUSING_RE);
+		const exists = fs.existsSync(outPath);
+		fs.rmSync(dir, { recursive: true, force: true });
+		expect(exists).toBe(false);
+	});
+
+	it("keeps entries already in the file for pages not checked", () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), "write-baseline-test-"));
+		const outPath = path.join(dir, "baseline.json");
+		fs.writeFileSync(
+			outPath,
+			JSON.stringify({ "/a": { violations: { label: 4 }, cls: 0.01 } })
+		);
+		writeBaselineFile(outPath, [
+			{
+				path: "/b",
+				routeTemplate: "/b",
+				cls: 0,
+				axe: { violations: { "image-alt": 1 } },
+			} as unknown as PageResult,
+		]);
+		const written = JSON.parse(fs.readFileSync(outPath, "utf8"));
+		fs.rmSync(dir, { recursive: true, force: true });
+		expect(written["/a"]).toEqual({ violations: { label: 4 }, cls: 0.01 });
+		expect(written["/b"]).toEqual({ violations: { "image-alt": 1 }, cls: 0 });
+	});
+});
+
+// ============================================
+// isSignedOutRoute
+// ============================================
+
+describe("isSignedOutRoute", () => {
+	it("treats a sign-in page with a query string as signed out", () => {
+		expect(isSignedOutRoute("/reset-password?token=x")).toBe(true);
+	});
+
+	it("treats other pages as signed in", () => {
+		expect(isSignedOutRoute("/dashboard")).toBe(false);
+	});
+});
+
+// ============================================
+// violationKind
+// ============================================
+
+describe("violationKind", () => {
+	it("keeps the class list of a tag whose class contains a >", () => {
+		const html = '<button class="[&>span]:flex z a" type="button">';
+		expect(violationKind("button-name", { html })).toBe(
+			"button||[&>span]:flex a z"
+		);
+	});
+
+	it("reads the role from the role attribute, not a data-role attribute", () => {
+		expect(
+			violationKind("button-name", {
+				html: '<div data-role="row" role="button">',
+			})
+		).toBe("div|button|");
+	});
+
+	it("reads the classes from the class attribute, not a data-slot-class attribute", () => {
+		expect(
+			violationKind("button-name", {
+				html: '<div data-slot-class="x" class="b a">',
+			})
+		).toBe("div||a b");
+	});
+
+	it("separates two buttons whose long class lists differ late", () => {
+		const common = "inline-flex items-center justify-center gap-2 rounded-md";
+		const a = violationKind("button-name", {
+			html: `<button class="${common} bg-red-500">`,
+		});
+		const b = violationKind("button-name", {
+			html: `<button class="${common} bg-blue-500">`,
+		});
+		expect(a).not.toBe(b);
 	});
 });
