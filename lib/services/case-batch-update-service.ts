@@ -47,7 +47,10 @@ import {
 	validateModuleReferenceId,
 } from "@/lib/services/element-service";
 import { getEnabledPluginIdsForUser } from "@/lib/services/plugin-enablement-service";
-import { getDescendantIdsForRoots } from "@/lib/utils/tree-traversal";
+import {
+	findParentLoopStart,
+	getDescendantIdsForRoots,
+} from "@/lib/utils/tree-traversal";
 import type {
 	ElementRole,
 	Prisma,
@@ -633,12 +636,47 @@ async function validateElementFields(
 ): Promise<string | null> {
 	return (
 		validateEachElementChangedOnce(updates, deletes) ??
+		(await validateSideAreaFlag(creates, updates)) ??
 		(await validateBeneathEvidence(creates, updates)) ??
 		(await validateFieldsFitTypes(creates, updates)) ??
 		(await validateElementNames(userId, creates, updates)) ??
 		(await validateContextEntries(caseId, creates, updates, deletes)) ??
 		(await validateGoalChanges(caseId, creates, updates, deletes))
 	);
+}
+
+/**
+ * A batch never moves an element into or out of the side area: a new element
+ * has the flag off, and an update leaves it as stored. Detach and attach are
+ * the routes that change it.
+ */
+async function validateSideAreaFlag(
+	creates: CreateChange[],
+	updates: UpdateChange[]
+): Promise<string | null> {
+	const refused = (elementId: string) =>
+		`inSandbox cannot be changed in a batch; use the detach or attach route (element ${elementId})`;
+	const flaggedCreate = creates.find((change) => change.data.inSandbox);
+	if (flaggedCreate) {
+		return refused(flaggedCreate.elementId);
+	}
+	const withFlag = updates.filter(
+		(change) => change.data.inSandbox !== undefined
+	);
+	if (withFlag.length === 0) {
+		return null;
+	}
+	const rows = await prisma.assuranceElement.findMany({
+		where: { id: { in: withFlag.map((change) => change.elementId) } },
+		select: { id: true, inSandbox: true },
+	});
+	const storedById = new Map(rows.map((row) => [row.id, row.inSandbox]));
+	const changed = withFlag.find(
+		(change) =>
+			storedById.has(change.elementId) &&
+			storedById.get(change.elementId) !== change.data.inSandbox
+	);
+	return changed ? refused(changed.elementId) : null;
 }
 
 /**
@@ -1060,6 +1098,20 @@ async function validateUpdateParents(
 		}
 	}
 
+	const cleared = updates.filter((c) => c.data.parentId === null);
+	if (cleared.length > 0) {
+		const nonGoal = await prisma.assuranceElement.findFirst({
+			where: {
+				id: { in: cleared.map((c) => c.elementId) },
+				elementType: { not: "GOAL" },
+			},
+			select: { id: true },
+		});
+		if (nonGoal) {
+			return `parentId cannot be cleared in a batch; use the detach route (element ${nonGoal.id})`;
+		}
+	}
+
 	const relevant = updates.filter(
 		(c) => c.data.parentId !== undefined && c.data.parentId !== null
 	);
@@ -1404,7 +1456,6 @@ function buildUpdateData(data: UpdateElementData): Record<string, unknown> {
 	const fields: (keyof UpdateElementData)[] = [
 		"name",
 		"description",
-		"inSandbox",
 		"parentId",
 		"role",
 		"assertionStatus",
@@ -1514,13 +1565,11 @@ async function regenerateNamesForDefeaterFlips(
  * before its parent-move (or the reverse) always lands on the parent's
  * POST-batch level rather than a stale pre-batch snapshot.
  *
- * Cycles created purely by this batch's own moves — e.g. two elements each
- * moved under the other, where neither is currently a descendant of the
- * other in the database, so `validateUpdateParents`'s pre-batch descendant
- * check can't see it — are caught here (via the `visiting` set) and
- * reported with the same "Circular reference detected" message the
- * pre-batch check uses, so callers see one consistent error shape either
- * way.
+ * Cycles that run through moved property claims are caught here (via the
+ * `visiting` set) and reported with the same "Circular reference detected"
+ * message the pre-batch check uses. Cycles through other element types, or
+ * through edges the batch did not change, are caught after the writes by
+ * `assertNoParentLoop`.
  */
 function resolveFinalLevelsForBatch(
 	moveMap: Map<string, string>,
@@ -2089,6 +2138,7 @@ export async function applyBatchUpdate(
 			await applyDeletes(tx, caseId, deletes);
 			await applyCreates(tx, creates, caseId, userId);
 			await applyUpdates(tx, caseId, updates);
+			await assertNoParentLoop(tx, updates);
 			await applyLinkEvidence(tx, links);
 
 			// Update the case's updatedAt timestamp
@@ -2117,6 +2167,24 @@ export async function applyBatchUpdate(
 		}
 		log.error("Batch update failed", { error });
 		return { error: shownMessage(error) };
+	}
+}
+
+/**
+ * Refuses the batch when a moved element now sits beneath itself. Runs after
+ * the writes and under the case lock, so it judges parents exactly as the
+ * batch leaves them; the throw rolls the transaction back.
+ */
+async function assertNoParentLoop(
+	tx: TransactionClient,
+	updates: UpdateChange[]
+): Promise<void> {
+	const movedIds = updates
+		.filter((update) => typeof update.data.parentId === "string")
+		.map((update) => update.elementId);
+	const loopStart = await findParentLoopStart(movedIds, tx);
+	if (loopStart) {
+		throw new BatchMoveCycleError(loopStart);
 	}
 }
 

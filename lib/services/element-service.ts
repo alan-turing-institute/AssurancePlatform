@@ -1665,9 +1665,6 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.context !== undefined) {
 		updateData.context = input.context;
 	}
-	if (input.inSandbox !== undefined) {
-		updateData.inSandbox = input.inSandbox;
-	}
 	if (input.assertionStatus !== undefined) {
 		updateData.assertionStatus = input.assertionStatus;
 	}
@@ -1776,6 +1773,10 @@ async function validateParentChange(
 export const EVIDENCE_PARENT_CHANGE_ERROR =
 	"parentId cannot be set on evidence; use move or detach";
 
+/** The refusal for clearing a `parentId` through the general edit. */
+const PARENT_CLEAR_ERROR =
+	"parentId cannot be cleared on the general edit; use the detach route";
+
 /**
  * Validates and applies a parentId change to `updateData` IN PLACE, for
  * `updateElement`'s move-operation branch: existence/soft-delete/same-case
@@ -1795,7 +1796,11 @@ async function applyParentChangeForUpdate(
 		if (existing.elementType === "EVIDENCE") {
 			return { error: EVIDENCE_PARENT_CHANGE_ERROR };
 		}
-		// Detaching — allowed unconditionally.
+		// Only a goal can have no parent; anything else leaves the tree through
+		// the detach route, which applies the detach rules.
+		if (existing.elementType !== "GOAL") {
+			return { error: PARENT_CLEAR_ERROR };
+		}
 		updateData.parentId = null;
 		return;
 	}
@@ -1929,6 +1934,7 @@ async function enforceTypeRulesOnUpdate(
 	existing: {
 		caseId: string;
 		elementType: PrismaElementType;
+		inSandbox: boolean;
 		isDefeater: boolean;
 		parentId: string | null;
 	},
@@ -1941,10 +1947,37 @@ async function enforceTypeRulesOnUpdate(
 	if (misplacedFieldError) {
 		return { error: misplacedFieldError };
 	}
+	const sideAreaError = rejectSideAreaChange(
+		existing.inSandbox,
+		input.inSandbox
+	);
+	if (sideAreaError) {
+		return { error: sideAreaError };
+	}
 	return (
 		(await enforceGoalRulesOnUpdate(elementId, existing, input)) ??
 		(await enforceBeneathEvidenceOnUpdate(existing, input))
 	);
+}
+
+const IN_SANDBOX_SET_ERROR =
+	"inSandbox cannot be set on the general edit; use the detach route";
+const IN_SANDBOX_CLEAR_ERROR =
+	"inSandbox cannot be cleared on the general edit; use the attach route";
+
+/**
+ * The general edit never moves an element into or out of the side area: a
+ * value equal to the stored one is accepted and ignored, any other is refused
+ * and names the route that does it.
+ */
+function rejectSideAreaChange(
+	stored: boolean,
+	sent: boolean | undefined
+): string | undefined {
+	if (sent === undefined || sent === stored) {
+		return;
+	}
+	return sent ? IN_SANDBOX_SET_ERROR : IN_SANDBOX_CLEAR_ERROR;
 }
 
 /**
@@ -1963,6 +1996,7 @@ async function validateUpdateElementFields(
 		caseId: string;
 		citedElementId: string | null;
 		elementType: PrismaElementType;
+		inSandbox: boolean;
 		isDefeater: boolean;
 		moduleReferenceId: string | null;
 		parentId: string | null;
@@ -2234,6 +2268,7 @@ export async function updateElement(
 				moduleReferenceId: true,
 				citedElementId: true,
 				isDefeater: true,
+				inSandbox: true,
 				parentId: true,
 				// What the pattern-marker rules compare an edit with
 				description: true,
@@ -2758,6 +2793,12 @@ export async function moveElement(
 			return { error: "Element not found" };
 		}
 
+		// Validate the move does not create a circular reference
+		const circularError = await validateParentChange(elementId, newParentId);
+		if (circularError) {
+			return { error: circularError };
+		}
+
 		// Check type compatibility
 		const { canBeChildOf } = await import("@/lib/element-compatibility");
 		const elementTypeLower = element.elementType.toLowerCase();
@@ -2767,12 +2808,6 @@ export async function moveElement(
 			return {
 				error: `${element.elementType.toLowerCase()} cannot be a child of ${newParent.elementType.toLowerCase()}`,
 			};
-		}
-
-		// Validate the move does not create a circular reference
-		const circularError = await validateParentChange(elementId, newParentId);
-		if (circularError) {
-			return { error: circularError };
 		}
 
 		// Perform the move atomically

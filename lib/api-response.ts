@@ -264,6 +264,12 @@ const ERROR_MAPPINGS: Array<{
 	// other than a property claim, and putting anything but a counter-goal
 	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// The general edit and the batch never move an element into or out of the
+	// side area; detach and attach do. A validation failure (400).
+	{
+		pattern: /^inSandbox cannot be (set|cleared|changed) /,
+		factory: () => validationError(""),
+	},
 	// `element-service.ts`'s `rejectFieldsNotApplicable`: a text field filled in
 	// on an element type that does not hold it (an assumption on evidence) is a
 	// validation failure (400), not a silent drop.
@@ -289,6 +295,19 @@ const ERROR_MAPPINGS: Array<{
 	// updates and deletes it, is a validation failure (400), not a 500.
 	{
 		pattern: /^A batch can change an element only once/,
+		factory: () => validationError(""),
+	},
+	// A move that would put an element beneath itself, directly or through
+	// other moves: the batch's "Circular reference detected" refusal, and the
+	// single-element edit, move and attach refusals. A validation failure
+	// (400), not a 500.
+	{
+		pattern: /^Circular reference detected when moving element /,
+		factory: () => validationError(""),
+	},
+	{
+		pattern:
+			/^Cannot (set element as its own parent|move element to one of its descendants)$/,
 		factory: () => validationError(""),
 	},
 	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
