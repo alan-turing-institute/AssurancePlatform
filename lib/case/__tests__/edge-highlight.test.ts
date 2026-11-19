@@ -2,6 +2,7 @@ import type { Edge, Node } from "reactflow";
 import { describe, expect, it } from "vitest";
 import {
 	CASE_EDGE_HIGHLIGHT_CLASS,
+	clearEdgeHighlight,
 	getHighlightedEdges,
 } from "../edge-highlight";
 
@@ -87,5 +88,46 @@ describe("getHighlightedEdges", () => {
 		const cleared = getHighlightedEdges(edges, deselectedNodes);
 		expect(cleared).toBe(edges);
 		expect(cleared.at(0)?.data?.highlighted).toBeUndefined();
+	});
+});
+
+describe("clearEdgeHighlight", () => {
+	it("removes the highlight class, flag and z-index from highlighted edges", () => {
+		const [highlighted] = getHighlightedEdges(
+			[edge("e1", "g1", "s1")],
+			[node("g1", true), node("s1")]
+		);
+		const [cleared] = clearEdgeHighlight([highlighted as Edge]);
+
+		expect(cleared?.className).toBeUndefined();
+		expect(cleared?.data?.highlighted).toBeUndefined();
+		expect(cleared?.zIndex).toBeUndefined();
+	});
+
+	it("keeps other classes and other data fields on a cleared edge", () => {
+		const [cleared] = clearEdgeHighlight([
+			{
+				...edge("e1", "a", "b"),
+				className: `other ${CASE_EDGE_HIGHLIGHT_CLASS}`,
+				data: {
+					centerY: 120,
+					sourceElementId: "a",
+					targetElementId: "b",
+					highlighted: true,
+				},
+			},
+		]);
+
+		expect(cleared?.className).toBe("other");
+		expect(cleared?.data).toEqual({
+			centerY: 120,
+			sourceElementId: "a",
+			targetElementId: "b",
+		});
+	});
+
+	it("keeps edges that are not highlighted by reference", () => {
+		const edges = [edge("e1", "g1", "s1")];
+		expect(clearEdgeHighlight(edges)[0]).toBe(edges[0]);
 	});
 });
