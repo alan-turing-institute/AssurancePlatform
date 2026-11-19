@@ -224,4 +224,33 @@ describe("recordedStates", () => {
 			placeholderHint: "Hint",
 		});
 	});
+
+	it("records a status that was never stored as null before an edit that writes one", () => {
+		const unset = { id: "e1", description: "Old" };
+		const recorded = recordedStates("CASE", unset, {
+			description: "New",
+			assertionStatus: "NEEDS_SUPPORT",
+		});
+
+		expect(recorded.before).toEqual({
+			id: "e1",
+			description: "Old",
+			assertionStatus: null,
+		});
+		expect(recorded.after).toMatchObject({
+			assertionStatus: "NEEDS_SUPPORT",
+		});
+	});
+
+	it("keeps a status that was stored, and the same before object when no status is written", () => {
+		const assumed = { id: "e1", assertionStatus: "ASSUMED" };
+		const unset = { id: "e2", description: "Old" };
+
+		expect(
+			recordedStates("CASE", assumed, { assertionStatus: "DEFEATED" }).before
+		).toEqual(assumed);
+		expect(recordedStates("CASE", unset, { description: "New" }).before).toBe(
+			unset
+		);
+	});
 });

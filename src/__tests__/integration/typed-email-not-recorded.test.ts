@@ -110,7 +110,7 @@ describe("a registration refused by the rate limit", () => {
 		for (let i = 0; i < attempts; i++) {
 			await checkAndRecordRateLimit(
 				RATE_LIMIT_CONFIGS.register,
-				{ ipAddress: IP, email: typed },
+				{ ipAddress: IP, emailKey: signInIdentifierKey(typed) },
 				{ ipAddress: IP }
 			);
 		}

@@ -1,0 +1,74 @@
+[
+  {
+    "ghsa": "GHSA-ggr8-5vv4-36mx",
+    "package": "deepmerge-ts",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "production path .>@prisma/client>prisma>@prisma/config>deepmerge-ts (7.1.5), bundled inside Prisma's own config package; the fix is deepmerge-ts 8.0.0, a major that cannot be applied without a Prisma release. Applicable only in the Prisma CLI, where it merges the project's own Prisma configuration; no request data reaches it",
+    "owner": "maintainers",
+    "expires": "2027-03-31"
+  },
+  {
+    "ghsa": "GHSA-8r5x-fm3f-whwj",
+    "package": "handlebars",
+    "severity": "critical",
+    "scope": "dev",
+    "reason": "development-only: .>@semantic-release/commit-analyzer>conventional-changelog-writer>handlebars (4.7.9), release tooling that renders the changelog from the repository's own commit messages; not reported by audit --prod and never part of the app or its image",
+    "owner": "maintainers",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-p8wg-vrv2-v86f",
+    "package": "handlebars",
+    "severity": "critical",
+    "scope": "dev",
+    "reason": "development-only: .>@semantic-release/commit-analyzer>conventional-changelog-writer>handlebars (4.7.9), release tooling that renders the changelog from the repository's own commit messages; not reported by audit --prod and never part of the app or its image",
+    "owner": "maintainers",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "severity": "high",
+    "scope": "prod",
+    "reason": "production path .>fumadocs-core>tinyglobby>picomatch (4.0.7) and release-tooling paths .>@semantic-release/commit-analyzer>micromatch>picomatch (2.3.2) and .>@semantic-release/github>tinyglobby>picomatch; no patched release exists (vulnerable <=4.0.7). fumadocs-core uses tinyglobby only in its opt-in remarkMdxFiles plugin, which this app does not enable and which would glob patterns written in the repository's own MDX at build time; the release tooling runs only in the release job on main over this repository's own commit messages and files. No request data reaches picomatch",
+    "owner": "maintainers",
+    "expires": "2027-02-28"
+  },
+  {
+    "ghsa": "GHSA-xjj6-f33q-929c",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only: .>@semantic-release/github>undici (7.29.1), release tooling that calls the GitHub API; not reported by audit --prod, and the application loads 6.29.1",
+    "owner": "maintainers",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-4w7w-5xrc-9h26",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only: .>@semantic-release/github>undici (7.29.1), release tooling that calls the GitHub API; not reported by audit --prod, and the application loads 6.29.1",
+    "owner": "maintainers",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-2m5v-pch6-74hx",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only: .>@semantic-release/github>undici (7.29.1), release tooling that calls the GitHub API; not reported by audit --prod, and the application loads 6.29.1",
+    "owner": "maintainers",
+    "expires": "2027-01-31"
+  },
+  {
+    "ghsa": "GHSA-qrxm-fqhp-jwvm",
+    "package": "undici",
+    "severity": "high",
+    "scope": "dev",
+    "reason": "development-only: .>@semantic-release/github>undici (7.29.1), release tooling that calls the GitHub API; not reported by audit --prod, and the application loads 6.29.1",
+    "owner": "maintainers",
+    "expires": "2027-01-31"
+  }
+]

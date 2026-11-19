@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Accordion,
 	AccordionContent,
@@ -94,6 +95,19 @@ export const HelpModal = () => {
 	const helpModal = useHelpModal();
 	const { assuranceCase } = useStore();
 	const [query, setQuery] = useState("");
+	const pathname = usePathname();
+	const previousPathname = useRef(pathname);
+	const { onClose } = helpModal;
+
+	// The panel is mounted on every route, so a navigation that does not go
+	// through one of its own links (browser Back, a link elsewhere) would
+	// otherwise leave it open over the next page.
+	useEffect(() => {
+		if (previousPathname.current !== pathname) {
+			previousPathname.current = pathname;
+			onClose();
+		}
+	}, [pathname, onClose]);
 
 	const normalisedQuery = query.trim().toLowerCase();
 
@@ -174,7 +188,9 @@ export const HelpModal = () => {
 						Restart the tour
 					</Button>
 					<Button asChild variant="ghost">
-						<Link href="/docs">Full documentation</Link>
+						<Link href="/docs" onClick={helpModal.onClose}>
+							Full documentation
+						</Link>
 					</Button>
 				</SheetFooter>
 			</SheetContent>

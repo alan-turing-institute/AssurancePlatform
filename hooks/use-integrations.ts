@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { requestJson } from "@/lib/request-json";
+import { RequestJsonError, requestJson } from "@/lib/request-json";
 import type {
 	IntegrationListItem,
 	IssuedTokenResult,
@@ -28,7 +28,10 @@ export interface UseIntegrationsResult {
 	error: string | null;
 	integrations: IntegrationListItem[];
 
-	issueToken: (integrationId: string) => Promise<IssuedTokenResult | null>;
+	issueToken: (
+		integrationId: string,
+		options?: { expiresAt?: string }
+	) => Promise<IssuedTokenResult | null>;
 	loading: boolean;
 	/** The integrationId currently mid lifecycle-action (suspend/reactivate/revoke), or `null`. */
 	pendingIntegrationId: string | null;
@@ -204,12 +207,20 @@ export function useIntegrations(): UseIntegrationsResult {
 	);
 
 	const issueToken = useCallback(
-		async (integrationId: string): Promise<IssuedTokenResult | null> => {
+		async (
+			integrationId: string,
+			options: { expiresAt?: string } = {}
+		): Promise<IssuedTokenResult | null> => {
 			setPendingTokenKey(integrationId);
 			try {
 				const result = await requestJson<IssuedTokenResult>(
 					`/api/integrations/${integrationId}/tokens`,
-					{ method: "POST", body: JSON.stringify({}) }
+					{
+						method: "POST",
+						body: JSON.stringify(
+							options.expiresAt ? { expiresAt: options.expiresAt } : {}
+						),
+					}
 				);
 				await load();
 				return result;
@@ -242,6 +253,9 @@ export function useIntegrations(): UseIntegrationsResult {
 				await load();
 				return result;
 			} catch (err) {
+				if (err instanceof RequestJsonError && err.status === 409) {
+					await load();
+				}
 				toast({
 					variant: "destructive",
 					title: "Couldn't rotate token",

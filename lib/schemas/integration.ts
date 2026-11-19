@@ -103,9 +103,8 @@ export const updateIntegrationSchema = z
  * asking for an already-dead token is always a mistake worth rejecting at
  * the boundary rather than silently honouring.
  */
-// No `z.infer` alias here — nothing currently consumes an issueTokenSchema
-// type outside the route's own `.safeParse` call. Add one back when an
-// expiry-picker UI lands and a caller needs the parsed shape by name.
+// No `z.infer` alias here — nothing consumes an issueTokenSchema type
+// outside the route's own `.safeParse` call.
 export const issueTokenSchema = z.strictObject({
 	expiresAt: z.coerce
 		.date()
@@ -179,12 +178,15 @@ export type IntegrationStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
  * the plaintext secret or hash, only what's needed to identify and manage it.
  * `revokedAt`/`expiresAt` are both nullable and independent: a token can be
  * expired but not revoked, or revoked before its expiry ever arrives.
+ * `replacedByTokenId` is the id of the token issued when this one was rotated,
+ * or null if it has not been rotated.
  */
 export interface IntegrationTokenSummary {
 	createdAt: string;
 	expiresAt: string | null;
 	id: string;
 	lastUsedAt: string | null;
+	replacedByTokenId: string | null;
 	revokedAt: string | null;
 	tokenPrefix: string;
 }

@@ -327,6 +327,28 @@ function reconnectStream(caseId: string, stream: CaseStream) {
 	connectStream(caseId, stream);
 }
 
+let onlineListenerInstalled = false;
+
+/**
+ * Installs, once for the whole page, the browser's `online` listener that
+ * restarts every stream which gave up reconnecting. Streams in any other
+ * status, including the final ones, and streams nobody listens to are left
+ * alone.
+ */
+function installOnlineListener() {
+	if (onlineListenerInstalled || typeof window === "undefined") {
+		return;
+	}
+	onlineListenerInstalled = true;
+	window.addEventListener("online", () => {
+		for (const [caseId, stream] of [...streams]) {
+			if (stream.status === "error" && stream.subscribers.size > 0) {
+				reconnectStream(caseId, stream);
+			}
+		}
+	});
+}
+
 /** True when nothing is connecting, waiting to reconnect or probing, and the server has not ended the stream for good. */
 function needsConnection(stream: CaseStream): boolean {
 	return !(
@@ -350,6 +372,7 @@ function subscribe(
 	maxReconnectAttempts: number,
 	reconnectDelay: number
 ): () => void {
+	installOnlineListener();
 	let stream = streams.get(caseId);
 	if (!stream) {
 		stream = {

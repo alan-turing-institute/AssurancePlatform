@@ -35,6 +35,8 @@ function tokenState(token: IntegrationTokenSummary): TokenState {
  * secret, which this row never receives (`IntegrationListItem`'s tokens are
  * `IntegrationTokenSummary`, prefix only). Rotate/revoke actions render only
  * for a live token; a revoked or expired token is read-only history here.
+ * A live token that has been rotated shows "Replaced" and keeps only Revoke:
+ * it can be rotated once, and its replacement is the one to rotate next.
  */
 export function IntegrationTokenRow({
 	canRotate,
@@ -45,6 +47,7 @@ export function IntegrationTokenRow({
 }: IntegrationTokenRowProps) {
 	const state = tokenState(token);
 	const isLive = state === "live";
+	const isReplaced = isLive && Boolean(token.replacedByTokenId);
 
 	return (
 		<div
@@ -53,6 +56,7 @@ export function IntegrationTokenRow({
 				!isLive && "bg-muted/40"
 			)}
 			data-testid={`token-row-${token.id}`}
+			data-token-id={token.id}
 		>
 			<div className="space-y-0.5">
 				<div className="flex items-center gap-2">
@@ -60,6 +64,7 @@ export function IntegrationTokenRow({
 					{state === "revoked" && <Badge variant="destructive">Revoked</Badge>}
 					{state === "expired" && <Badge variant="outline">Expired</Badge>}
 					{state === "live" && <Badge variant="secondary">Live</Badge>}
+					{isReplaced && <Badge variant="outline">Replaced</Badge>}
 				</div>
 				<p className="text-muted-foreground text-xs">
 					{`Issued ${formatShortDate(token.createdAt)}`}
@@ -68,7 +73,7 @@ export function IntegrationTokenRow({
 						: " · never used"}
 					{token.expiresAt
 						? ` · expires ${formatShortDate(token.expiresAt)}`
-						: ""}
+						: !token.revokedAt && " · No end date"}
 					{token.revokedAt
 						? ` · revoked ${formatShortDate(token.revokedAt)}`
 						: ""}
@@ -77,24 +82,28 @@ export function IntegrationTokenRow({
 
 			{isLive && (
 				<div className="flex shrink-0 items-center gap-2">
-					<Button
-						disabled={pending || !canRotate}
-						onClick={() => onRotate(token.id)}
-						size="sm"
-						title={
-							canRotate
-								? undefined
-								: "Only an ACTIVE integration's tokens can be rotated"
-						}
-						type="button"
-						variant="outline"
-					>
-						<RotateCw aria-hidden="true" className="h-3.5 w-3.5" />
-						{pending ? "Rotating…" : "Rotate"}
-					</Button>
+					{!isReplaced && (
+						<Button
+							data-token-action="rotate"
+							disabled={pending || !canRotate}
+							onClick={() => onRotate(token.id)}
+							size="sm"
+							title={
+								canRotate
+									? undefined
+									: "Only an ACTIVE integration's tokens can be rotated"
+							}
+							type="button"
+							variant="outline"
+						>
+							<RotateCw aria-hidden="true" className="h-3.5 w-3.5" />
+							{pending ? "Rotating…" : "Rotate"}
+						</Button>
+					)}
 					<Button
 						aria-label="Revoke this token"
 						className="text-destructive hover:text-destructive"
+						data-token-action="revoke"
 						disabled={pending}
 						onClick={() => onRevoke(token.id)}
 						size="sm"

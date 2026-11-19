@@ -51,6 +51,8 @@ jobs:
     needs: deploy-gate
     runs-on: ubuntu-latest
     if: ${{ needs.deploy-gate.outputs.reseed == 'true' }}
+    permissions:
+      contents: read
     # Staging deploys (build.yaml's deploy job) share this group, so a reset
     # never runs while another reset or a staging deploy job is in progress.
     # queue: max means no waiting run is cancelled: every reset and every

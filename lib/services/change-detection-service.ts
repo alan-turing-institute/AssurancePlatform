@@ -1,9 +1,12 @@
 import { parseContextEntries } from "@/lib/case/defined-terms";
+import { isExternalMediaUrl, toMediaKey } from "@/lib/media-key";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import { isNamedContextEntry } from "@/lib/schemas/context-entry";
+import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
 import { exportCase } from "@/lib/services/case-export-service";
+import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
 
 // ============================================
 // Types
@@ -109,10 +112,21 @@ export async function detectChanges(
 		publishedContent.tree
 	);
 
+	const liveCaseInformation = await captureCaseInformationForSnapshot(caseId);
+	const publishedMeta = publishedSnapshotMetaSchema.safeParse(
+		latestPublished.content
+	);
+	const publishedSnapshot = publishedMeta.success ? publishedMeta.data : {};
+
 	const hasChanges =
 		changeSummary.addedElements > 0 ||
 		changeSummary.removedElements > 0 ||
-		changeSummary.modifiedElements > 0;
+		changeSummary.modifiedElements > 0 ||
+		caseNameDiffers(exportResult.data.case.name, publishedSnapshot.case) ||
+		caseInformationDiffers(
+			liveCaseInformation,
+			publishedSnapshot.caseInformation
+		);
 
 	// Include change summary only when requested
 	if (includeDetails) {
@@ -157,6 +171,58 @@ export async function hasChangesSincePublish(
 // ============================================
 // Helper Functions
 // ============================================
+
+interface CaseInformationFields {
+	authors?: string | null;
+	description?: string | null;
+	featureImageUrl?: string | null;
+	sector?: string | null;
+}
+
+/**
+ * True when the case's name differs from the one frozen in the snapshot. A
+ * snapshot that carries no name is not treated as different.
+ */
+function caseNameDiffers(
+	liveName: string,
+	publishedCase: { name?: string } | undefined
+): boolean {
+	return publishedCase?.name !== undefined && publishedCase.name !== liveName;
+}
+
+/**
+ * What identifies a feature image across a publish. The published copy is
+ * stored under a new folder with the live file's last path segment, so the
+ * whole key differs after every publish while the last segment does not. An
+ * external address is never copied and is compared whole.
+ */
+function imageIdentity(value: string | null | undefined): string | null {
+	if (!value) {
+		return null;
+	}
+	if (isExternalMediaUrl(value)) {
+		return value;
+	}
+	return toMediaKey(value).split("/").pop() ?? null;
+}
+
+/**
+ * True when the live case information differs from the snapshot's. A missing
+ * value and null are alike; a snapshot with no case information counts as
+ * having none.
+ */
+function caseInformationDiffers(
+	live: CaseInformationFields | undefined,
+	published: CaseInformationFields | undefined
+): boolean {
+	return (
+		(live?.description ?? null) !== (published?.description ?? null) ||
+		(live?.authors ?? null) !== (published?.authors ?? null) ||
+		(live?.sector ?? null) !== (published?.sector ?? null) ||
+		imageIdentity(live?.featureImageUrl) !==
+			imageIdentity(published?.featureImageUrl)
+	);
+}
 
 /**
  * Normalises a tree input to an array of TreeNodes.

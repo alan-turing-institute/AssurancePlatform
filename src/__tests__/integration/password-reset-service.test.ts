@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { verifyPassword } from "@/lib/auth/password-service";
+import { signInIdentifierKey } from "@/lib/auth/sign-in-identifier";
 import prisma from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import {
@@ -168,19 +169,19 @@ describe("requestPasswordReset", () => {
 		await prisma.passwordResetAttempt.createMany({
 			data: [
 				{
-					email: user.email.toLowerCase(),
+					emailKey: signInIdentifierKey(user.email.toLowerCase()),
 					ipAddress: "10.0.0.1",
 					successful: false,
 					attemptedAt: new Date(),
 				},
 				{
-					email: user.email.toLowerCase(),
+					emailKey: signInIdentifierKey(user.email.toLowerCase()),
 					ipAddress: "10.0.0.2",
 					successful: false,
 					attemptedAt: new Date(),
 				},
 				{
-					email: user.email.toLowerCase(),
+					emailKey: signInIdentifierKey(user.email.toLowerCase()),
 					ipAddress: "10.0.0.3",
 					successful: false,
 					attemptedAt: new Date(),
@@ -452,7 +453,10 @@ describe("resetPassword", () => {
 
 		// The attempt record seeded by requestPasswordReset should now be marked successful
 		const attempt = await prisma.passwordResetAttempt.findFirst({
-			where: { email: email.toLowerCase(), successful: true },
+			where: {
+				emailKey: signInIdentifierKey(email.toLowerCase()),
+				successful: true,
+			},
 			orderBy: { attemptedAt: "desc" },
 		});
 		expect(attempt).not.toBeNull();

@@ -81,7 +81,11 @@ interface JsonEditorToolbarProps {
 /**
  * Formats the change summary for display
  */
-function formatChangeSummary(summary: TreeDiffResult["summary"]): string {
+function formatChangeSummary(diffResult: TreeDiffResult): string {
+	const { summary } = diffResult;
+	const linkChanges = diffResult.changes.filter(
+		(c) => c.type === "link_evidence" || c.type === "unlink_evidence"
+	).length;
 	const parts: string[] = [];
 
 	if (summary.created > 0) {
@@ -95,6 +99,12 @@ function formatChangeSummary(summary: TreeDiffResult["summary"]): string {
 	}
 	if (summary.moved > 0) {
 		parts.push(`${summary.moved} moved`);
+	}
+
+	if (linkChanges > 0) {
+		parts.push(
+			`${linkChanges} evidence ${linkChanges === 1 ? "link" : "links"} changed`
+		);
 	}
 
 	return parts.length > 0 ? parts.join(", ") : "No changes";
@@ -130,6 +140,7 @@ function getStatusContent(
 	errorCount: number,
 	isDirty: boolean,
 	hasChanges: boolean,
+	hasDiff: boolean,
 	changeSummary: string
 ): { icon: ReactNode; text: string; className: string } {
 	if (hasConflict) {
@@ -164,7 +175,7 @@ function getStatusContent(
 		};
 	}
 
-	if (isDirty) {
+	if (isDirty && !hasDiff) {
 		return {
 			icon: <Check className="h-4 w-4 text-muted-foreground" />,
 			text: "Validating...",
@@ -182,12 +193,19 @@ function getStatusContent(
 /**
  * Gets the tooltip text for the apply button
  */
-function getApplyTooltip(isDirty: boolean, isValid: boolean): string {
+function getApplyTooltip(
+	isDirty: boolean,
+	isValid: boolean,
+	hasChanges: boolean
+): string {
 	if (!isDirty) {
 		return "No changes to apply";
 	}
 	if (!isValid) {
 		return "Fix validation errors first";
+	}
+	if (!hasChanges) {
+		return "No changes to apply";
 	}
 	return "Apply changes to case";
 }
@@ -397,17 +415,10 @@ export function JsonEditorToolbar({
 	formatVersion,
 	layout,
 }: JsonEditorToolbarProps) {
-	const canApply = isDirty && isValid && !isApplying && !hasConflict;
-	const hasChanges = Boolean(
-		diffResult &&
-			(diffResult.summary.created > 0 ||
-				diffResult.summary.updated > 0 ||
-				diffResult.summary.deleted > 0 ||
-				diffResult.summary.moved > 0)
-	);
-	const changeSummary = diffResult
-		? formatChangeSummary(diffResult.summary)
-		: "";
+	const hasChanges = Boolean(diffResult && diffResult.changes.length > 0);
+	const canApply =
+		isDirty && isValid && hasChanges && !isApplying && !hasConflict;
+	const changeSummary = diffResult ? formatChangeSummary(diffResult) : "";
 
 	const status = getStatusContent(
 		hasConflict,
@@ -416,10 +427,11 @@ export function JsonEditorToolbar({
 		errorCount,
 		isDirty,
 		hasChanges,
+		diffResult !== null,
 		changeSummary
 	);
 
-	const applyTooltip = getApplyTooltip(isDirty, isValid);
+	const applyTooltip = getApplyTooltip(isDirty, isValid, hasChanges);
 
 	return (
 		<TooltipProvider>

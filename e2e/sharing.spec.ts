@@ -1,5 +1,7 @@
 import { expect, signIn, test } from "./helpers/auth";
 import { CASE_URL_PATTERN } from "./helpers/constants";
+import { openSelect } from "./helpers/select";
+import { DashboardPage } from "./pages/dashboard-page";
 
 // Sharing tests use different user sessions — no pre-saved state
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -17,7 +19,7 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "alice", seedPassword);
 
 		await page.goto("/dashboard/shared");
-		const sharedGrid = page.getByTestId("case-list-grid");
+		const sharedGrid = new DashboardPage(page).caseGrid;
 		await expect(
 			sharedGrid.getByRole("heading", { name: "Medium Case" })
 		).toBeVisible();
@@ -30,7 +32,11 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "charlie", seedPassword);
 
 		await page.goto("/dashboard");
-		const caseGrid = page.getByTestId("case-list-grid");
+		const dashboard = new DashboardPage(page);
+		const caseGrid = dashboard.caseGrid;
+		// The two "not visible" checks below also pass on a page that has not
+		// loaded yet, so first wait for something every loaded dashboard shows.
+		await expect(dashboard.createCaseButton).toBeVisible();
 		await expect(
 			caseGrid.getByRole("heading", { name: "Simple Case" })
 		).not.toBeVisible();
@@ -46,7 +52,7 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "charlie", seedPassword);
 
 		await page.goto("/dashboard/shared");
-		const sharedGrid = page.getByTestId("case-list-grid");
+		const sharedGrid = new DashboardPage(page).caseGrid;
 		await expect(
 			sharedGrid.getByRole("heading", { name: "Bob's Case" })
 		).toBeVisible();
@@ -59,7 +65,7 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "bob", seedPassword);
 
 		await page.goto("/dashboard/shared");
-		const sharedGrid = page.getByTestId("case-list-grid");
+		const sharedGrid = new DashboardPage(page).caseGrid;
 		await expect(
 			sharedGrid.getByRole("heading", { name: "Alice's Case" })
 		).toBeVisible();
@@ -70,7 +76,7 @@ test.describe("Sharing and permissions", () => {
 
 		// Navigate to Simple Case
 		await page.goto("/dashboard");
-		await page.getByText("Simple Case").click();
+		await new DashboardPage(page).caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		// Click share button
@@ -92,7 +98,7 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "chris", seedPassword);
 
 		await page.goto("/dashboard");
-		await page.getByText("Simple Case").click();
+		await new DashboardPage(page).caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		await page.getByTestId("toolbar-share").click();
@@ -108,8 +114,7 @@ test.describe("Sharing and permissions", () => {
 		const permissionTrigger = page.getByRole("combobox", {
 			name: PERMISSION_LEVEL_PATTERN,
 		});
-		await permissionTrigger.click();
-		await expect(page.getByRole("listbox")).toBeVisible();
+		await openSelect(permissionTrigger);
 
 		// Click the dialog description — well clear of the open dropdown's
 		// own popper — without choosing an option. `force: true` because,
@@ -139,7 +144,7 @@ test.describe("Sharing and permissions", () => {
 		await signIn(page, "chris", seedPassword);
 
 		await page.goto("/dashboard");
-		await page.getByText("Simple Case").click();
+		await new DashboardPage(page).caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		await page.getByTestId("toolbar-share").click();
@@ -168,7 +173,7 @@ test.describe("Sharing and permissions", () => {
 
 		// Navigate to Bob's shared case (charlie has VIEW permission)
 		await page.goto("/dashboard/shared");
-		const sharedGrid = page.getByTestId("case-list-grid");
+		const sharedGrid = new DashboardPage(page).caseGrid;
 		await sharedGrid.getByRole("heading", { name: "Bob's Case" }).click();
 		await page.waitForURL(CASE_URL_PATTERN);
 

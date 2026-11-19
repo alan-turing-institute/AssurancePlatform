@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -132,10 +132,6 @@ export function TeamMemberList({
 							>
 								<div className="flex items-center gap-3">
 									<Avatar>
-										<AvatarImage
-											alt={member.user.username}
-											src={`https://avatar.vercel.sh/${member.user.email}`}
-										/>
 										<AvatarFallback>
 											{getInitials(member.user.username)}
 										</AvatarFallback>

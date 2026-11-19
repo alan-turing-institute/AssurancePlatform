@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ReactFlow, {
 	Background,
 	Controls,
@@ -19,6 +26,7 @@ import { caseAccessAtLeast } from "@/lib/case/case-access";
 import { caseFingerprint } from "@/lib/case/case-fingerprint";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
+import { keepLiveSelection } from "@/lib/case/keep-live-selection";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
@@ -36,7 +44,12 @@ const edgeTypes = {
 	support: SupportEdge,
 };
 
-function Flow() {
+interface FlowProps {
+	/** Shown in the overlay stack under the header, below the other banners. */
+	liveUpdatesNotice?: ReactNode;
+}
+
+function Flow({ liveUpdatesNotice }: FlowProps) {
 	const { fitView } = useReactFlow();
 	const updateNodeInternals = useUpdateNodeInternals();
 	const {
@@ -79,7 +92,7 @@ function Flow() {
 		try {
 			const layouted = await getLayoutedElements(nodes, edges, { direction });
 
-			setNodes(layouted.nodes);
+			setNodes(keepLiveSelection(layouted.nodes, useStore.getState().nodes));
 			setEdges(layouted.edges);
 
 			window.requestAnimationFrame(() => {
@@ -248,6 +261,7 @@ function Flow() {
 									</div>
 								</div>
 							)}
+						{liveUpdatesNotice}
 					</div>
 				</div>
 			)}
