@@ -52,10 +52,10 @@ test.describe("settings tab strip resolves to real pages", () => {
 				response.status(),
 				`${tab.name} (${tab.href}) responded ${response.status()}`
 			).not.toBe(404);
+			await expect(page.getByRole("heading", { level: 1 })).toHaveText(tab.h1);
 			await expect(page.getByText("This page could not be found")).toHaveCount(
 				0
 			);
-			await expect(page.locator("h1")).toHaveText(tab.h1);
 		}
 
 		expect(pageErrors, "page errors while walking the settings tabs").toEqual(
