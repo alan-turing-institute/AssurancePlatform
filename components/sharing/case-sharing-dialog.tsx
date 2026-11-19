@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Copy, Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -225,10 +225,6 @@ export function CaseSharingDialog() {
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-3">
 									<Avatar className="h-8 w-8">
-										<AvatarImage
-											alt={permissions.owner.username}
-											src={`https://avatar.vercel.sh/${permissions.owner.email}`}
-										/>
 										<AvatarFallback>
 											{getInitials(permissions.owner.username)}
 										</AvatarFallback>
