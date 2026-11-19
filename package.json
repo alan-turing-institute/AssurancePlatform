@@ -120,7 +120,7 @@
     "streamdown": "^2.7.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "undici": "^6.28.1",
+    "undici": "^6.29.1",
     "use-stick-to-bottom": "^1.1.6",
     "zod": "^4.6.2",
     "zustand": "^5.0.15"
@@ -174,6 +174,7 @@
   "pnpm": {
     "overrides": {
       "glob": ">=10.5.0",
+      "dompurify": ">=3.4.17 <4",
       "jws": ">=3.2.3",
       "vite": ">=7.3.5 <8",
       "hono": ">=4.11.10",
