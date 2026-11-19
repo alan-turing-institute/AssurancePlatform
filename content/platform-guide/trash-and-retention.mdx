@@ -22,7 +22,8 @@ If the case's public copy was kept as archived, restoring it also brings that co
 Use **Permanently delete** only when the case and its elements should be removed. The confirmation dialog states that this action deletes the case and all its elements. For a successful permanent deletion, there is no restore path.
 
 Cases are eligible for permanent deletion 30 days after they are trashed. A scheduled purge job calls the protected `/api/cron/purge-trash` route. The workflow is in `.github/workflows/purge-trash.yml`. The remaining-days display reflects eligibility; check the job outcome to confirm removal.
-An archived public copy survives this permanent deletion; it stays on Discover until its owner removes it.
+Permanent deletion also removes the case's screenshot and feature-image files.
+An archived public copy survives this permanent deletion, along with its own image; it stays on Discover until its owner removes it.
 
 The Trash page has an "Archived on Discover" section, shown only when you have an archived copy.
 It lists each copy's title and archive date, with a **Remove from Discover** button that permanently removes it, including after its case has been permanently deleted.

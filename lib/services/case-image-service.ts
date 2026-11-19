@@ -6,7 +6,7 @@
  */
 
 import { logger } from "@/lib/logger";
-import { toMediaKey } from "@/lib/media-key";
+import { isExternalMediaUrl, toMediaKey } from "@/lib/media-key";
 import {
 	type MediaFetchResult,
 	mediaEtag,
@@ -178,6 +178,31 @@ export async function uploadCaseImage(
 		log.error("uploadCaseImage", { userId, caseId, error });
 		return { error: "Failed to upload case image" };
 	}
+}
+
+/**
+ * Deletes a case's screenshot file from storage, but only when the stored
+ * value is a key this app could have written for THIS case
+ * (`images/case-screenshot-<caseId>-<timestamp>.png`). A no-op for an empty
+ * or external value, and for a key outside that prefix, so a row pointed at
+ * another case's file can never delete it.
+ */
+export async function deleteCaseScreenshotKey(
+	caseId: string,
+	stored: string | null | undefined
+): Promise<void> {
+	if (!stored || isExternalMediaUrl(stored)) {
+		return;
+	}
+	const key = toMediaKey(stored);
+	if (!key.startsWith(`images/case-screenshot-${caseId}-`)) {
+		log.warn("Skipped deleting a screenshot key outside this case", {
+			caseId,
+		});
+		return;
+	}
+	const { deleteFile } = await import("@/lib/services/file-storage-service");
+	await deleteFile(key);
 }
 
 /**
