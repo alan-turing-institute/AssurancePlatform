@@ -6,7 +6,7 @@ import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 /**
  * Someone who opens an invitation link while signed out is sent to sign in
  * with the invitation itself as the place to return to, and only a token in
- * the UUID shape ever reaches that address.
+ * the shape of a real invitation token ever reaches that address.
  */
 
 const { redirectMock, notFoundMock } = vi.hoisted(() => ({
@@ -35,7 +35,9 @@ vi.mock(
 
 import AcceptInvitePage from "@/app/(authenticated)/invites/[token]/page";
 
-const TOKEN = "0b5f6b7c-3f0e-4d3a-9a3e-6a1f2c9d8e47";
+const TOKEN =
+	"a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+const UUID = "0b5f6b7c-3f0e-4d3a-9a3e-6a1f2c9d8e47";
 const ORIGIN = "https://app.example";
 const SIGNED_IN = { user: { id: "u1" } };
 
@@ -94,7 +96,7 @@ describe("invitation page for a visitor who is signed in", () => {
 	});
 });
 
-describe("invitation page with a token that is not a UUID", () => {
+describe("invitation page with a token that is not 64 hexadecimal characters", () => {
 	it.each([
 		"",
 		"abc",
@@ -114,8 +116,9 @@ describe("invitation page with a token that is not a UUID", () => {
 		`${TOKEN}\\evil`,
 		TOKEN.slice(0, -1),
 		`${TOKEN}a`,
-		TOKEN.replace("0b5f", "zb5f"),
-		TOKEN.replaceAll("-", ""),
+		`z${TOKEN.slice(1)}`,
+		UUID,
+		"abcdefghij",
 	])("answers not found for %j and never builds a sign-in address from it", async (token) => {
 		for (const session of [null, SIGNED_IN]) {
 			vi.mocked(getServerSession).mockResolvedValue(session as never);

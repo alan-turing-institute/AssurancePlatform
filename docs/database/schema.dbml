@@ -212,7 +212,7 @@ Table case_invites {
   caseId String [not null]
   email String [not null, note: 'Email address of the invitee']
   permission PermissionLevel [not null, note: 'Permission level granted when accepted']
-  inviteToken String [unique, not null, note: 'Unique token for the invite URL']
+  inviteTokenHash String [unique, not null, note: 'SHA-256 of the token in the invite URL; the token itself is never stored']
   inviteExpiresAt DateTime [not null, note: 'Invitation expiry timestamp']
   acceptedAt DateTime [note: 'When the invite was accepted (null if pending)']
   acceptedById String [note: 'User who accepted (may differ from email if account existed)']

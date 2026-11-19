@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { hashPassword } from "@/lib/auth/password-service";
+import { identifierFingerprint } from "@/lib/auth/sign-in-identifier";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
@@ -129,7 +130,10 @@ export async function requestPasswordReset(
 			severity: "medium",
 			ipAddress,
 			userAgent,
-			metadata: { email: normalizedEmail, reason: rateLimitCheck.reason },
+			metadata: {
+				identifier: identifierFingerprint(normalizedEmail),
+				reason: rateLimitCheck.reason,
+			},
 		});
 		return {
 			error: rateLimitCheck.reason ?? "Rate limit exceeded",
@@ -163,7 +167,7 @@ export async function requestPasswordReset(
 			ipAddress,
 			userAgent,
 			metadata: {
-				email: normalizedEmail,
+				identifier: identifierFingerprint(normalizedEmail),
 				reason: user ? "oauth_user" : "user_not_found",
 			},
 		});

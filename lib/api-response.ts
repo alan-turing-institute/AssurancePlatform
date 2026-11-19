@@ -350,6 +350,38 @@ const ERROR_MAPPINGS: Array<{
 		pattern: /^Invalid or expired reset token$/,
 		factory: () => validationError(""),
 	},
+	// `case-invite-service.ts`'s `acceptInvite`: a code that matches no invite
+	// or an invite past its end date is a validation failure (400); an invite
+	// sent to another address is a permission refusal (403). Anchored so a
+	// message that merely mentions these words is not caught.
+	{ pattern: /^Invalid invite$/, factory: () => validationError("") },
+	{ pattern: /^Invite has expired$/, factory: () => validationError("") },
+	{
+		pattern: /^Invite was sent to a different email address$/,
+		factory: () => forbidden(),
+	},
+	// `validatePassword` (`lib/validation/validators.ts`) returns the first
+	// failing message of `passwordSchema` (`lib/schemas/user.ts`); reset,
+	// change-password and registration pass it on, so a weak password is a
+	// validation failure (400), not a 500.
+	{
+		pattern:
+			/^Password must (be at least 8 characters|contain at least one (uppercase letter|number|special character))$/,
+		factory: () => validationError(""),
+	},
+	// `user-management-service.ts`'s `changePassword`: a wrong current password
+	// is a validation failure (400); an account with no local password to
+	// change (a sign-in provider account, or one with no password set) is
+	// refused outright (403).
+	{
+		pattern: /^Current password is incorrect$/,
+		factory: () => validationError(""),
+	},
+	{
+		pattern:
+			/^Password change is not available for OAuth accounts$|^No password set for this account$/,
+		factory: () => forbidden(),
+	},
 ];
 
 /**

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import prisma from "@/lib/prisma";
-import { acceptInvite } from "@/lib/services/case-invite-service";
+import {
+	acceptInvite,
+	hashInviteToken,
+} from "@/lib/services/case-invite-service";
 import {
 	listCasePermissions,
 	revokeTeamPermission,
@@ -153,6 +156,11 @@ describe("shareByEmail", () => {
 			where: { caseId: testCase.id, email: "notregistered@example.com" },
 		});
 		expect(invite).not.toBeNull();
+		// Only the hash is stored; the token in the link is not.
+		expect(invite?.inviteTokenHash).toBe(
+			hashInviteToken(data.invite_token ?? "")
+		);
+		expect(invite?.inviteTokenHash).not.toBe(data.invite_token);
 	});
 
 	it("returns already_shared when user already has permission", async () => {
@@ -554,19 +562,19 @@ describe("acceptInvite", () => {
 		// Create invite directly in DB
 		const expiresAt = new Date();
 		expiresAt.setDate(expiresAt.getDate() + 7);
-		const invite = await prisma.caseInvite.create({
+		await prisma.caseInvite.create({
 			data: {
 				caseId: testCase.id,
 				email: "invitee@example.com",
 				permission: "VIEW",
-				inviteToken: "valid-token-abc123",
+				inviteTokenHash: hashInviteToken("valid-token-abc123"),
 				inviteExpiresAt: expiresAt,
 				invitedById: owner.id,
 			},
 		});
 
 		const data = expectSuccess(
-			await acceptInvite(invitee.id, invite.inviteToken)
+			await acceptInvite(invitee.id, "valid-token-abc123")
 		);
 		expect(data.caseId).toBe(testCase.id);
 
@@ -589,7 +597,7 @@ describe("acceptInvite", () => {
 				caseId: testCase.id,
 				email: "expired@example.com",
 				permission: "VIEW",
-				inviteToken: "expired-token-xyz789",
+				inviteTokenHash: hashInviteToken("expired-token-xyz789"),
 				inviteExpiresAt: expiredAt,
 				invitedById: owner.id,
 			},
@@ -613,7 +621,7 @@ describe("acceptInvite", () => {
 				caseId: testCase.id,
 				email: "used@example.com",
 				permission: "VIEW",
-				inviteToken: "used-token-def456",
+				inviteTokenHash: hashInviteToken("used-token-def456"),
 				inviteExpiresAt: expiresAt,
 				invitedById: owner.id,
 				acceptedAt: new Date(),
@@ -624,6 +632,28 @@ describe("acceptInvite", () => {
 		expectError(
 			await acceptInvite(invitee.id, "used-token-def456"),
 			"Invite has already been used"
+		);
+	});
+
+	it("does not accept a row whose stored value is the raw token", async () => {
+		const owner = await createTestUser();
+		const invitee = await createTestUser({ email: "raw@example.com" });
+		const testCase = await createTestCase(owner.id);
+
+		await prisma.caseInvite.create({
+			data: {
+				caseId: testCase.id,
+				email: "raw@example.com",
+				permission: "VIEW",
+				inviteTokenHash: "raw-token-abc123",
+				inviteExpiresAt: new Date(Date.now() + 86_400_000),
+				invitedById: owner.id,
+			},
+		});
+
+		expectError(
+			await acceptInvite(invitee.id, "raw-token-abc123"),
+			"Invalid invite"
 		);
 	});
 
@@ -648,7 +678,7 @@ describe("acceptInvite", () => {
 				caseId: testCase.id,
 				email: "different@example.com",
 				permission: "VIEW",
-				inviteToken: "mismatch-token-abc123",
+				inviteTokenHash: hashInviteToken("mismatch-token-abc123"),
 				inviteExpiresAt: expiresAt,
 				invitedById: owner.id,
 			},

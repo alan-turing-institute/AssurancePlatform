@@ -291,7 +291,7 @@ export async function createRichCase(
 			caseId: testCase.id,
 			email: "invitee@example.com",
 			permission: "VIEW",
-			inviteToken: randomUUID(),
+			inviteTokenHash: randomUUID(),
 			inviteExpiresAt: new Date(Date.now() + 86_400_000),
 			invitedById: ownerUser.id,
 		},
