@@ -1,5 +1,6 @@
 import { expect, signIn, test } from "./helpers/auth";
 import { CASE_URL_PATTERN } from "./helpers/constants";
+import { openSelect } from "./helpers/select";
 import { DashboardPage } from "./pages/dashboard-page";
 
 // Sharing tests use different user sessions — no pre-saved state
@@ -113,8 +114,7 @@ test.describe("Sharing and permissions", () => {
 		const permissionTrigger = page.getByRole("combobox", {
 			name: PERMISSION_LEVEL_PATTERN,
 		});
-		await permissionTrigger.click();
-		await expect(page.getByRole("listbox")).toBeVisible();
+		await openSelect(permissionTrigger);
 
 		// Click the dialog description — well clear of the open dropdown's
 		// own popper — without choosing an option. `force: true` because,
