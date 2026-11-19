@@ -60,7 +60,7 @@ The `ElementType` enum contains `GOAL`, `STRATEGY`, `PROPERTY_CLAIM`, `EVIDENCE`
 
 An entry in an element's `context` list is either plain text or a named entry.
 A plain entry is a string, as it always was.
-A named entry is a record with four keys, and a fifth that marks a variable:
+A named entry is a record with the keys `id`, `name` and `text`, an optional `value`, and an optional `variable` marker:
 
 ```json
 {

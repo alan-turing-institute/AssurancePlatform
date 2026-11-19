@@ -11,11 +11,11 @@ Read `package.json` for the package version in your checkout. Releases are autom
 
 Feature work is integrated on `staging`. A promotion to `main` runs the production `Build` workflow. After that build succeeds, `.github/workflows/release.yaml` runs semantic-release on `main`. The release workflow then merges its release commit back into `staging`, so the next staging promotion includes the version and changelog update. The [pipeline overview](/docs/technical-guide/ci-cd-pipeline/pipeline-overview) describes the checks before deployment.
 
-`.releaserc.json` limits semantic-release to `main`. It analyses conventional commits, generates release notes, updates `CHANGELOG.md` and the package version, creates a GitHub release and records the release files in a commit. Its npm plugin has `npmPublish: false`, so this process does not publish a package to the npm registry.
+`.releaserc.json` limits semantic-release to `main`. It analyses conventional commits, generates release notes, updates `CHANGELOG.md` and the package version, creates a GitHub release and records the release files in a commit titled `chore(release): <version> [skip ci]`. Its npm plugin has `npmPublish: false`, so this process does not publish a package to the npm registry.
 
 ## Commit messages and version impact
 
-The release rules map `feat` to a minor version and `fix`, `perf`, `docs`, `style`, `refactor`, `test`, `build` and `revert` to a patch version. A breaking change maps to a major version. `ci` and `chore` do not trigger a release by themselves. The commitlint configuration describes conventional types, allowed scopes and subject format, but no hook or CI step runs commitlint. See the [pull request guide](/docs/technical-guide/contributing/pull-requests) for contributor steps.
+The release rules map `feat` to a minor version and `fix`, `perf`, `docs`, `style`, `refactor`, `test`, `build` and `revert` to a patch version. A breaking change, marked with `!` after the type or a `BREAKING CHANGE` footer, maps to a major version. semantic-release works from the commits since the last release and applies the highest impact among them; the scope does not change the impact. `ci` and `chore` do not trigger a release by themselves. The commitlint configuration describes conventional types, allowed scopes and subject format, but no hook or CI step runs commitlint. See the [pull request guide](/docs/technical-guide/contributing/pull-requests) for contributor steps.
 
 Write a message such as `feat(ui): add case filter` or `fix(auth): reject expired token`. The scope is optional, but if present it should follow `.commitlintrc.json`. Make the subject concise and describe a real change. The commit history is input to the release calculation, so do not rely on a manually chosen version number in a commit message.
 
@@ -27,4 +27,4 @@ The `staging` tag is not set by the build: the staging deployment job moves it t
 The workflow also has semantic-version tag rules, but they are inert because `Build` has no tag trigger.
 Do not assume that each staging build gets a prerelease version number: the release configuration only runs on `main`.
 
-The self-hosting `docker-compose.yml` currently points to `ghcr.io/alan-turing-institute/assuranceplatform:latest`, which differs from the image path pushed by `Build`. Check and correct that deployment configuration before copying the compose image name into operational instructions.
+The self-hosting `docker-compose.yml` names its image on the `tea_app.image` line. Set that line to the `tea-app` path above and the tag you intend to run.

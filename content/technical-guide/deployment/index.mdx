@@ -11,13 +11,13 @@ The application runs as a Next.js service backed by PostgreSQL. The repository s
 
 The production compose file defines `tea_app` and `postgres`. PostgreSQL uses a named volume and has a health check. The application waits for that database health check before starting. Its image entrypoint runs `prisma migrate deploy`, then starts the Next.js server. The compose file publishes the application on port 3000 by default and stores local uploads in a second named volume.
 
-<Callout type="warn">
-The compose file names `ghcr.io/alan-turing-institute/assuranceplatform:latest`, while the `Build` workflow pushes `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`; resolve that image-path mismatch before using the compose file to pull a release.
+<Callout type="info">
+The `Build` workflow pushes images to `ghcr.io/alan-turing-institute/assuranceplatform/tea-app`. Set the `tea_app.image` line in the compose file to that path and the tag you intend to run, or use the commented `build` block to build from source.
 </Callout>
 
 ## Configuration
 
-Supply secrets through the deployment environment. These variable names come from the compose file and application code, not from an environment example file.
+Supply secrets through the deployment environment. These variable names come from the compose file and the application code.
 
 | Variable | Used for |
 | --- | --- |
@@ -34,7 +34,7 @@ Supply secrets through the deployment environment. These variable names come fro
 | `CRON_SECRET` | Authenticates scheduled maintenance routes |
 | `LOG_LEVEL` | Sets the structured logger's threshold |
 | `DB_POOL_TIMEOUT_MS` | Database connection wait limit; defaults to 5000 ms |
-| `CLOUDFLARE_ORIGIN_SECRET` | Optional. When set, and Cloudflare is configured to send the same value in the `x-origin-verify` request header, rate limits and the security log use the visitor's address from `cf-connecting-ip` (an IPv6 visitor by their /64 network). When unset, that header is ignored |
+| `CLOUDFLARE_ORIGIN_SECRET` | Optional. When set, and Cloudflare is configured to send the same value in the `x-origin-verify` request header, rate limits and the security log use the visitor's address from `cf-connecting-ip` (an IPv6 visitor by their /64 network), provided the request reaches the application from one of Cloudflare's published address ranges. When unset, that header is ignored |
 
 The table covers common settings rather than every application variable. `SKIP_ELEMENT_VALIDATION` bypasses write-time element validation and must never be set in production. GitHub sign-in also reads `GITHUB_APP_CLIENT_ID_STAGING` and `GITHUB_APP_CLIENT_SECRET_STAGING` fallbacks. The compose file exposes only a subset of the application's optional integrations. Set Google, email and cron variables in the hosting environment if you use those features. A deployment should use its own secret values and a database password rather than the compose development defaults. The [scheduled jobs page](/docs/technical-guide/deployment/scheduled-jobs) explains the cron routes.
 

@@ -11,7 +11,7 @@ The repository's contribution flow is feature branch to `staging`, then `staging
 
 Read the [code style guide](/docs/technical-guide/contributing/code-style) and the relevant architecture page. Keep a pull request focused on one change. Add or update tests for behaviour that can be verified, and update documentation when the user or developer contract changes. For an interface change, include a screenshot or recording that shows the result and any relevant states.
 
-`pnpm install` activates the repository's `.githooks/pre-push` through the `prepare` script. That hook runs `pnpm lint` and `pnpm typecheck` when pushing to `staging` or `main`. The separate `.pre-commit-config.yaml` is available for on-demand checks and pre-commit.ci. As `CONTRIBUTING.md` explains, the configured Git hooks path prevents `pre-commit install` from installing the pre-commit hook in the usual way. Run them on demand with `uv tool run pre-commit run --all-files` instead of assuming they are installed for every local commit.
+`pnpm install` activates the repository's `.githooks/pre-push` through the `prepare` script. On every push, that hook regenerates the Prisma client, then runs `pnpm lint` and `pnpm typecheck`; a push that only deletes branches skips them. The separate `.pre-commit-config.yaml` is available for on-demand checks and pre-commit.ci. As `CONTRIBUTING.md` explains, the configured Git hooks path prevents `pre-commit install` from installing the pre-commit hook in the usual way. Run them on demand with `uv tool run pre-commit run --all-files` instead of assuming they are installed for every local commit.
 
 ## Run checks
 
@@ -32,7 +32,7 @@ It refuses to reset unless that database's name ends `_test` or `_e2e`, or `E2E_
 To run it, start the `postgres-test` service (port 5433), create a database whose name ends `_e2e` in it, stop any server on port 3000 (or set `E2E_BASE_URL`), and set `DATABASE_URL` to that database in the shell.
 </Callout>
 
-A pull request's `Build` workflow validates code, runs tests for code-relevant changes and performs the structural-quality audit. The image build runs on push or manual dispatch. The security audit step currently reports findings without failing validation. See the [pipeline overview](/docs/technical-guide/ci-cd-pipeline/pipeline-overview) for the workflow conditions.
+A pull request's `Build` workflow validates code, runs tests for code-relevant changes and performs the structural-quality audit. The image build runs on push or manual dispatch. On a pull request, the security audit step fails validation when `pnpm audit` reports a high or critical advisory that is not in `.advisory-baseline.json`. See the [pipeline overview](/docs/technical-guide/ci-cd-pipeline/pipeline-overview) for the workflow conditions.
 
 ## Write the commit and request review
 

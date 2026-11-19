@@ -61,7 +61,7 @@ Images of the canvas, report diagrams and the dashboard thumbnail drop the marke
 The picture library copies each element's computed style into its copy of the page, so a drawn card's text colour would otherwise show in the picture.
 For the length of a capture the canvas root carries a `data-capturing` attribute, and the rule for `data-drawn-content` does not apply while it is there, so the picture shows the text and the footer identifier as they are on a card no plugin drew.
 The attribute is removed once the picture is taken, whether or not it succeeded.
-An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display`, `data-drawn-content` and `data-capturing` taken out of it.
+An SVG image is markup, so its file has `data-appearance`, `data-faded`, `data-plugin-display`, `data-derived-display`, `data-drawn-content` and `data-capturing` taken out of it.
 The export is refused, with a message that offers a PNG instead, if the image comes back in a form that cannot be cleaned.
 
 ## Store plugin state

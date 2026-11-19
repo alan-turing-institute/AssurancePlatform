@@ -10,11 +10,11 @@ The repository checks changes locally and in GitHub Actions. The `Build` workflo
 
 `.pre-commit-config.yaml` defines syntax, merge-conflict, large-file and secret checks, followed by Ultracite checks on staged code, a TypeScript check for staged TypeScript changes, integration tests for relevant code changes, and file cleanup. Run these checks on demand with `uv tool run pre-commit run --all-files`, as described in the [pull request guide](/docs/technical-guide/contributing/pull-requests). Integration tests require the dedicated local PostgreSQL test container.
 
-The repository's `prepare` script points Git at `.githooks/`. Its pre-push hook runs `pnpm lint` and `pnpm typecheck` when a push targets `staging` or `main`. The hook is a local check; the GitHub workflows provide the remote result.
+The repository's `prepare` script points Git at `.githooks/`. Its pre-push hook regenerates the Prisma client, then runs `pnpm lint` and `pnpm typecheck`, on every push; a push that only deletes branches skips them. The hook is a local check; the GitHub workflows provide the remote result.
 
 ## Build workflow
 
-`.github/workflows/build.yaml` runs on pull requests, matching pushes to `main` or `staging`, and manual dispatch. The `validate` job runs Ultracite and TypeScript. It runs `pnpm docs:generate` and fails if `public/openapi.json` changes. It also runs `pnpm audit --audit-level=high`, currently with `continue-on-error`, so an audit finding does not by itself fail that job.
+`.github/workflows/build.yaml` runs on pull requests, matching pushes to `main` or `staging`, and manual dispatch. The `validate` job runs Ultracite and TypeScript. It runs `pnpm docs:generate` and fails if `public/openapi.json` changes. On pull requests it also runs `scripts/check-advisories.ts`, which fails the job when `pnpm audit` reports a high or critical advisory that is not in `.advisory-baseline.json`, or when the baseline entry for a reported advisory has expired. Push runs skip this step, so a newly published advisory does not block a deploy.
 
 The tests run as parallel jobs, each on its own runner.
 The unit tests are split into three shards, named `Unit tests (shard 1/3)` to `Unit tests (shard 3/3)`.
@@ -42,7 +42,7 @@ It then calls the Azure webhook and checks `/api/health`.
 If this commit is behind the current one, the job skips the deployment and leaves staging as it is.
 If the current commit cannot be read, or the two commits have diverged, the job deploys and logs a warning.
 The workflow's image name is `alan-turing-institute/assuranceplatform/tea-app`.
-Check the [Docker deployment guide](/docs/technical-guide/deployment/docker-production) for the separate compose-file image setting.
+The [Docker deployment guide](/docs/technical-guide/deployment/docker-production) explains the image setting in the supplied compose file.
 
 ## Release and staging data
 
@@ -64,4 +64,4 @@ The pipeline publishes its list of checks when it starts, so restart it after a 
 
 ## Scheduled workflows
 
-The workflow directory also contains `Purge expired trash`, `Sweep health staleness`, `Data retention sweep` and `Cleanup PR Docker Images`. Each has a schedule and a manual trigger. The first three call application cron routes using a cron secret; image cleanup acts on the container registry. The retired fallow file remains in the directory, making eight workflow files in total, but seven active workflows.
+The workflow directory also contains `Purge expired trash`, `Sweep health staleness`, `Data retention sweep`, `Thin health evidence log` and `Cleanup PR Docker Images`. Each has a schedule and a manual trigger. The first four call application cron routes using a cron secret; image cleanup acts on the container registry. The retired fallow file remains in the directory, making nine workflow files in total, but eight active workflows.

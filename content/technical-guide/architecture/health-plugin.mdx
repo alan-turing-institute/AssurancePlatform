@@ -282,7 +282,7 @@ The direction is `maximize` or `minimize`, and a marginal limit must lie on the 
 Any other check needs an aggregation.
 A check that returns text takes no reduction.
 - A reduction is one of `sum`, `mean`, `max`, `min`, `median`, `percentile` (with `params.percentile` from 0 to 100) or `last`.
-When the reading rule is `identity` or `membership` and the reduction averages, adds or takes a percentile, the reduction needs its own `threshold` or `band` rule, because the combined value is a number.
+When the reading rule is `identity` or `membership` and the reduction averages, adds, takes the median or takes a percentile, the reduction needs its own `threshold` or `band` rule, because the combined value is a number.
 - The aggregation is `proportion` with `use_verdict` set to true and a `rule` of its own: a `threshold` rule with direction `maximize` and a pass mark `pass_values` from 0 to 1.
 The rule is required, and a marginal mark on it is not available.
 `params.threshold` and `params.marginal_threshold` are not available either, because the pass mark is the rule's.
