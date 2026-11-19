@@ -12,6 +12,7 @@ import { changePassword } from "@/lib/services/user-management-service";
 /**
  * PUT /api/users/me/password
  * Changes the current user's password.
+ * @auth SessionAuth
  */
 export async function PUT(request: Request) {
 	try {

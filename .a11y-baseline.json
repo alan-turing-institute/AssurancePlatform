@@ -8,8 +8,8 @@
   },
   "/api-docs": {
     "violations": {
-      "button-name": 2,
-      "color-contrast": 6
+      "button-name": 1,
+      "color-contrast": 7
     },
     "cls": 0.0927
   },

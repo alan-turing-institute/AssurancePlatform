@@ -11,6 +11,11 @@ interface Template {
 	[key: string]: unknown;
 }
 
+/**
+ * GET /api/templates
+ *
+ * @auth SessionAuth
+ */
 export async function GET() {
 	try {
 		await requireAuth();

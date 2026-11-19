@@ -12,6 +12,7 @@ import { deleteTeam, getTeam, updateTeam } from "@/lib/services/team-service";
 /**
  * GET /api/teams/[id]
  * Gets a single team by ID. User must be a member.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,
@@ -36,6 +37,7 @@ export async function GET(
 /**
  * PATCH /api/teams/[id]
  * Updates a team. Requires ADMIN role.
+ * @auth SessionAuth
  */
 export async function PATCH(
 	request: Request,
@@ -62,6 +64,7 @@ export async function PATCH(
 /**
  * DELETE /api/teams/[id]
  * Deletes a team. Requires ADMIN role.
+ * @auth SessionAuth
  */
 export async function DELETE(
 	_request: Request,

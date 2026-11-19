@@ -12,9 +12,7 @@ import { importCase } from "@/lib/services/case-import-service";
 /**
  * Import an assurance case from JSON
  *
- * @description Imports a case from JSON data. Accepts v1 (legacy Django),
- * v2 (flat format), and nested (v1.0 and v1.1) formats. Creates a new case with
- * all elements and evidence links.
+ * @description Imports a case from JSON data in the nested (v1.0 and v1.1) or flat (v2.0) format, and creates a new case with all its elements and evidence links.
  * A goal defeater (counter-goal) needs a parent in the file and a case has one
  * ordinary goal; a file that breaks either is refused. Anything but a goal
  * defeater found beneath evidence is left out and named in `warnings`.
@@ -24,7 +22,7 @@ import { importCase } from "@/lib/services/case-import-service";
  * @response 400 - Validation errors (including a goal defeater without a parent and a second ordinary goal)
  * @response 401 - Unauthorised
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: Request) {
@@ -33,7 +31,7 @@ export async function POST(request: Request) {
 
 		// The body is a whole case document whose format is detected by the
 		// import service itself (`importCase` -> `validateImportData`), not
-		// by a zod schema here — the accepted shapes (v1, v2, nested v1.0 and v1.1)
+		// by a zod schema here — the accepted shapes (nested v1.0 and v1.1, and flat v2.0)
 		// vary too much for one schema to usefully bound, so this is the one
 		// sanctioned schema-less body read (Design §4). Still size-capped,
 		// at the larger `caseImport` limit rather than the 1 MiB default.
@@ -73,7 +71,7 @@ export async function POST(request: Request) {
  * @response 400 - Validation errors
  * @response 401 - Unauthorised
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function PUT(request: Request) {

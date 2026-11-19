@@ -14,6 +14,7 @@ import {
 /**
  * GET /api/users/me
  * Fetches the current user's profile.
+ * @auth SessionAuth
  */
 export async function GET() {
 	try {
@@ -35,6 +36,7 @@ export async function GET() {
 /**
  * PATCH /api/users/me
  * Updates the current user's profile.
+ * @auth SessionAuth
  */
 export async function PATCH(request: Request) {
 	try {
@@ -70,6 +72,7 @@ export async function PATCH(request: Request) {
 /**
  * DELETE /api/users/me
  * Deletes the current user's account.
+ * @auth SessionAuth
  */
 export async function DELETE(request: Request) {
 	try {

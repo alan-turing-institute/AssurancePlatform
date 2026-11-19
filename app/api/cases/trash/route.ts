@@ -16,7 +16,7 @@ import { listTrashedCases } from "@/lib/services/case-trash-service";
  *
  * @response 200 - Array of trashed cases with deletion info
  * @response 401 - Unauthorised
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET() {

@@ -21,7 +21,7 @@ import { exportCase } from "@/lib/services/case-export-service";
  * @response 400 - Missing case ID
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET(request: Request) {

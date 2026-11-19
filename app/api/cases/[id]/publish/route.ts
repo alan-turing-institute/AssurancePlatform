@@ -23,6 +23,7 @@ interface RouteParams {
 /**
  * GET /api/cases/[id]/publish
  * Returns the publish status of an assurance case.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: NextRequest,
@@ -59,6 +60,7 @@ export async function GET(
  * the record changed after the client checked it. A case with placeholders or
  * variables still to fill in is refused by `publishAssuranceCase` itself, on
  * the snapshot it is about to write.
+ * @auth SessionAuth
  */
 export async function POST(
 	request: NextRequest,
@@ -122,6 +124,7 @@ export async function POST(
 /**
  * DELETE /api/cases/[id]/publish
  * Unpublishes an assurance case.
+ * @auth SessionAuth
  */
 export async function DELETE(
 	_request: NextRequest,

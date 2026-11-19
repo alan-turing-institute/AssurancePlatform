@@ -22,7 +22,7 @@ import {
  * @response 200 - Full case data with nested elements
  * @response 401 - Unauthorised
  * @response 404 - Case not found or no access
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET(
@@ -55,7 +55,7 @@ export async function GET(
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function PUT(
@@ -101,7 +101,7 @@ export async function PUT(
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (ADMIN required)
  * @response 404 - Case not found or already deleted
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function DELETE(

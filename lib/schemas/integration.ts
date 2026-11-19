@@ -111,7 +111,10 @@ export const issueTokenSchema = z.strictObject({
 		.refine((date) => date.getTime() > Date.now(), {
 			message: "expiresAt must be in the future",
 		})
-		.optional(),
+		.optional()
+		.describe(
+			"When the token stops working: a date-time, or any other value a date can be built from; it must be in the future. Omit for a token that never expires"
+		),
 });
 
 // ============================================

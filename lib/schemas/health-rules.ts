@@ -112,13 +112,17 @@ const noPrototypeKeys = z.unknown().superRefine((value, ctx) => {
 });
 
 /** A free-form parameter object, kept verbatim and bounded to 4 KB. */
-export const paramsBagSchema = noPrototypeKeys.pipe(
-	z
-		.record(z.string().max(200), z.json())
-		.refine((obj) => serializedByteLength(obj) <= PARAMS_MAX_BYTES, {
-			message: `must serialize to at most ${PARAMS_MAX_BYTES} bytes`,
-		})
-);
+export const paramsBagSchema = noPrototypeKeys
+	.pipe(
+		z
+			.record(z.string().max(200), z.json())
+			.refine((obj) => serializedByteLength(obj) <= PARAMS_MAX_BYTES, {
+				message: `must serialize to at most ${PARAMS_MAX_BYTES} bytes`,
+			})
+	)
+	.describe(
+		`An object of named parameters, each any JSON value, at most ${PARAMS_MAX_BYTES} bytes when written as JSON`
+	);
 
 export type ParamsBag = z.infer<typeof paramsBagSchema>;
 

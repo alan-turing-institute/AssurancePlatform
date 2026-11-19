@@ -60,7 +60,7 @@ function withResolvedFeatureImage(
  * @response 200 - The case-information record, or `null` if none exists
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (also returned for a non-existent case)
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET(_request: NextRequest, { params }: RouteParams) {
@@ -95,7 +95,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {

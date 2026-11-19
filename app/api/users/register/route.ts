@@ -19,6 +19,7 @@ import { registerUser } from "@/lib/services/user-service";
 /**
  * POST /api/users/register
  * Registers a new user with Prisma auth.
+ * @add 429
  */
 export async function POST(request: Request) {
 	try {

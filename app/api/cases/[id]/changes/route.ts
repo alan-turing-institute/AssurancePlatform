@@ -26,6 +26,7 @@ import { detectChanges } from "@/lib/services/change-detection-service";
  *     modifiedElements: number;
  *   }
  * }
+ * @auth SessionAuth
  */
 export async function GET(
 	request: Request,

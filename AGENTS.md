@@ -102,6 +102,10 @@ Database setup, seed and test infrastructure necessarily access the database dir
 
 API routes are the external integration surface; server actions are internal UI plumbing.
 Regenerate the OpenAPI documentation with `pnpm docs:generate` when changing documented routes.
+A new or changed route needs its success answers in `scripts/openapi/operations.ts`, because the generator cannot state them.
+A route that reads query parameters also needs an entry in `QUERY_PARAMETERS` in that file.
+A route that reads a request body needs an entry in `REQUEST_BODIES` in `scripts/openapi/request-bodies.ts`, built from the Zod schema the route validates with.
+`lib/__tests__/openapi-matches-routes.test.ts` fails when the description and the routes disagree.
 Routes under `/api/public/` and anything in the published OpenAPI spec are semi-contractual: changes need care and removals need a `CHANGELOG.md` entry.
 
 ## Database changes

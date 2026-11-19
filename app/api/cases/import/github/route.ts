@@ -79,7 +79,8 @@ function resolveGitHubLocation(body: GitHubImportInput): GitHubLocation {
  * @body GitHubImportSchema
  * @response ImportResult
  * @response 413 - Payload too large
- * @auth bearer
+ * @add 429
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: Request) {
@@ -155,12 +156,12 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/cases/import/github/status
+ * GET /api/cases/import/github
  *
  * Checks if the current user has GitHub connected for imports.
  *
  * @response { connected: boolean }
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET() {

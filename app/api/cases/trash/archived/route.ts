@@ -16,7 +16,7 @@ import { listArchivedCopies } from "@/lib/services/case-trash-service";
  *
  * @response 200 - Array of archived copies
  * @response 401 - Unauthorised
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET() {

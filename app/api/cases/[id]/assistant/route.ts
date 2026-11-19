@@ -160,6 +160,7 @@ async function suggestionsOffered(
  * Streams the case assistant's reply. Order matters: session, plugin
  * enablement, case VIEW permission, and only then the body is read. A missing
  * case and a case the user cannot view are both 404.
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

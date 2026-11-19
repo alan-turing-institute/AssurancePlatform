@@ -20,7 +20,7 @@ import { purgeCase } from "@/lib/services/case-trash-service";
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (owner only)
  * @response 404 - Case not found
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function DELETE(

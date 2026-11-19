@@ -15,6 +15,7 @@ import {
 /**
  * PATCH /api/teams/[id]/members/[userId]
  * Updates a team member's role. Requires ADMIN role.
+ * @auth SessionAuth
  */
 export async function PATCH(
 	request: Request,
@@ -46,6 +47,7 @@ export async function PATCH(
 /**
  * DELETE /api/teams/[id]/members/[userId]
  * Removes a member from a team. Requires ADMIN role.
+ * @auth SessionAuth
  */
 export async function DELETE(
 	_request: Request,

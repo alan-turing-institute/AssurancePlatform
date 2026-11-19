@@ -14,6 +14,7 @@ import { requestPasswordReset } from "@/lib/services/password-reset-service";
 /**
  * POST /api/auth/forgot-password
  * Request a password reset email.
+ * @add 429
  */
 export async function POST(request: Request) {
 	try {
