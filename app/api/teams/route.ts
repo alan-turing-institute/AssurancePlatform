@@ -13,6 +13,7 @@ import { createTeam, listUserTeams } from "@/lib/services/team-service";
 /**
  * GET /api/teams
  * Lists all teams the authenticated user is a member of.
+ * @auth SessionAuth
  */
 export async function GET() {
 	try {
@@ -32,6 +33,7 @@ export async function GET() {
 /**
  * POST /api/teams
  * Creates a new team with the authenticated user as ADMIN.
+ * @auth SessionAuth
  */
 export async function POST(request: Request) {
 	try {

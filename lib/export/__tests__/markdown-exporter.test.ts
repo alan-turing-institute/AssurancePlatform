@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { PlainTreeNode } from "@/lib/case/defined-terms";
 import { MarkdownExporter } from "../exporters/markdown-exporter";
+import { FullReportTemplate } from "../templates";
 import type { RenderedDocument } from "../types";
 
 const UNESCAPED_PIPE = /(?<!\\)\|/g;
+const FRONT_MATTER_EXPORTED_AT = /exportedAt: "([^"]+)"/;
+const BODY_EXPORTED_AT = /\*\*Exported At:\*\* (.+)/;
 const MARKDOWN_FILENAME_PATTERN = /^test-case-\d{4}-\d{2}-\d{2}\.md$/;
 
 /**
@@ -107,6 +110,36 @@ describe("MarkdownExporter", () => {
 				);
 				expect(result.content).toContain('generator: "TEA Platform"');
 				expect(result.content).toContain('organisation: "Test Organisation"');
+			}
+		});
+	});
+
+	describe("exported time", () => {
+		it("should state the same time in the body and the front matter", async () => {
+			const document = await new FullReportTemplate().render({
+				caseData: {
+					version: "1.0",
+					exportedAt: "2020-01-01T00:00:00.000Z",
+					case: { name: "Test Case", description: "A test assurance case" },
+					tree: {
+						id: "goal-1",
+						type: "GOAL",
+						name: "G1",
+						description: "Top-level goal",
+						inSandbox: false,
+						children: [],
+					},
+				},
+			});
+			const result = await exporter.export(document, { caseName: "Test Case" });
+
+			expect(result.success).toBe(true);
+			if (result.success && "content" in result) {
+				const front = result.content.match(FRONT_MATTER_EXPORTED_AT)?.[1];
+				const body = result.content.match(BODY_EXPORTED_AT)?.[1];
+				expect(front).toBe(document.metadata.exportedAt);
+				expect(body?.replaceAll("\\", "")).toBe(document.metadata.exportedAt);
+				expect(result.content).not.toContain("2020-01-01");
 			}
 		});
 	});

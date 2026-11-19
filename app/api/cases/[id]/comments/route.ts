@@ -15,6 +15,7 @@ import {
 /**
  * GET /api/cases/[id]/comments
  * Returns all case-level comments (notes) for a case.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,
@@ -36,6 +37,7 @@ export async function GET(
 /**
  * POST /api/cases/[id]/comments
  * Creates a new case-level comment (note).
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

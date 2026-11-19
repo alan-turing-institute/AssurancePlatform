@@ -9,20 +9,20 @@ import {
 } from "../utils/prisma-factories";
 
 /**
- * Route-level coverage for the TEA-syntax element-name prefix validation
- * (design note "TEA — Element Name Prefix Validation") reaching all the way
- * out to the HTTP layer, proving the `lib/api-response.ts` error mapping end
- * to end rather than just at the service layer
- * (src/__tests__/integration/element-service.test.ts carries that). Two
- * related send-back items share this file because both are "a bad create
- * payload used to surface as an unmapped 500, not a clean 400":
+ * Route-level coverage for the element-name format validation reaching all
+ * the way out to the HTTP layer, proving the `lib/api-response.ts` error
+ * mapping end to end rather than just at the service layer
+ * (src/__tests__/integration/element-service.test.ts carries that). Bad
+ * payloads answer a clean 400, never an unmapped 500:
  *
- * - An unrecognised `type`: before the fix, a bad type with no name reached
- *   `generateElementName` -> `toPrefix`, which throws for a type the prefix
- *   registry doesn't know.
- * - A non-conforming `name`: proves `validateElementName`'s rejection is
- *   mapped to 400 by `serviceErrorToAppError`, not left to fall through to
- *   INTERNAL.
+ * - An unrecognised `type`: a bad type with no name is refused rather than
+ *   reaching the name generator, which throws for a type the prefix registry
+ *   does not know.
+ * - A non-conforming `name`, on create and on update: the validation's
+ *   rejection is mapped to 400, not left to fall through to INTERNAL.
+ * - A create that fills in a field its type does not hold (an assumption on
+ *   evidence) answers 400 and stores nothing; the same field sent empty
+ *   is accepted.
  */
 
 vi.mock("@/lib/auth/validate-session", () => ({
@@ -139,5 +139,54 @@ describe("PUT /api/elements/[id] — non-conforming element name", () => {
 			where: { id: element.id },
 		});
 		expect(unchanged?.name).toBe("G1");
+	});
+});
+
+describe("POST /api/cases/[id]/elements — a field the element type does not hold", () => {
+	async function create(body: Record<string, unknown>) {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+		const { POST } = await import("@/app/api/cases/[id]/elements/route");
+		const response = await POST(
+			new NextRequest(
+				`http://localhost:3000/api/cases/${testCase.id}/elements`,
+				{
+					method: "POST",
+					body: JSON.stringify(body),
+					headers: { "Content-Type": "application/json" },
+				}
+			),
+			{ params: Promise.resolve({ id: testCase.id }) }
+		);
+		const stored = await prisma.assuranceElement.findMany({
+			where: { caseId: testCase.id },
+		});
+		return { response, stored };
+	}
+
+	it("refuses an assumption on evidence with 400 and stores nothing", async () => {
+		const { response, stored } = await create({
+			type: "evidence",
+			description: "Test report",
+			assumption: "Tests were run on the final build",
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"assumption is not applicable to EVIDENCE elements"
+		);
+		expect(stored).toHaveLength(0);
+	});
+
+	it("still creates evidence when the field is sent empty", async () => {
+		const { response, stored } = await create({
+			type: "evidence",
+			description: "Test report",
+			assumption: "",
+		});
+
+		expect(response.status).toBe(201);
+		expect(stored).toHaveLength(1);
 	});
 });

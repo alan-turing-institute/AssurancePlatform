@@ -17,6 +17,11 @@ const nextConfig = {
 	// Stops `next dev` writing an agent-rules block into AGENTS.md when an AI
 	// agent runs it.
 	agentRules: false,
+	experimental: {
+		// Advisories reach the team through the dependency audit and Dependabot,
+		// so a build run by an AI agent does not exit non-zero on one.
+		agentUpgrade: false,
+	},
 	// Next 16 blocks cross-origin dev requests (HMR, /_next/static chunks) by
 	// default. Set NEXT_DEV_ALLOWED_ORIGINS (comma-separated hosts, no
 	// protocol) when running `next dev` for LAN review; leave it unset for a

@@ -586,7 +586,9 @@ describe("the address of a connection", () => {
 
 		await api.test(id);
 		expect(
-			harness.requests.every((url) => url.startsWith("https://openrouter.ai"))
+			harness.requests.every(
+				(url) => new URL(url).origin === "https://openrouter.ai"
+			)
 		).toBe(true);
 		expect(harness.requests.length).toBeGreaterThan(0);
 	});

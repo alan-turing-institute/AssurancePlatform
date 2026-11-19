@@ -6,6 +6,9 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch: # Allow manual trigger
 
+# The job calls the app with curl and the cron secret; it needs no token permissions.
+permissions: {}
+
 jobs:
   purge:
     runs-on: ubuntu-latest

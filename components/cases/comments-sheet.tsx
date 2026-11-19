@@ -9,6 +9,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 import NodeComment from "./node-comment";
 
@@ -33,10 +34,7 @@ export default function CommentsSheet() {
 	} = useStore();
 	const [loading, setLoading] = useState(false);
 
-	const readOnly = !!(
-		assuranceCase?.permissions === "view" ||
-		assuranceCase?.permissions === "comment"
-	);
+	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "comment");
 
 	const handleClose = () => {
 		setCommentsSheetOpen(false);

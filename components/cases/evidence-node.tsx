@@ -15,7 +15,7 @@ import NodeEditDialog from "./node-edit-dialog";
 
 function EvidenceNode({ data, ...props }: NodeProps) {
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
-	const { assuranceCase } = useStore();
+	const caseId = useStore((state) => state.assuranceCase?.id);
 
 	const url = data.URL || data.url;
 	const fallback = url ? [url] : [];
@@ -23,7 +23,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 	const node = { data, position: { x: 0, y: 0 }, ...props };
 
 	const badgeSlot = useElementBadgeSlot({
-		caseId: assuranceCase?.id?.toString() ?? "",
+		caseId: caseId?.toString() ?? "",
 		elementId: String(data.id),
 		elementType: "evidence",
 	});
@@ -39,7 +39,7 @@ function EvidenceNode({ data, ...props }: NodeProps) {
 				bottomLeftActions={
 					<NodeActionGroup
 						commentCount={
-							Array.isArray(data.comments) ? data.comments.length : 0
+							typeof data.commentCount === "number" ? data.commentCount : 0
 						}
 						node={node}
 						nodeType="evidence"

@@ -172,7 +172,7 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 						</p>
 						<div className="flex items-center justify-start gap-2">
 							{permissions.includes("view") && <Eye className="h-4 w-4" />}
-							{permissions.includes("review") && (
+							{permissions.includes("comment") && (
 								<MessageCircleMore className="h-4 w-4" />
 							)}
 							{permissions.includes("edit") && (

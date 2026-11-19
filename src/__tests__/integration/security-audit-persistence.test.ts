@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import {
 	acceptInvite,
 	createCaseInvite,
+	generateInviteToken,
+	hashInviteToken,
 } from "@/lib/services/case-invite-service";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import {
@@ -66,6 +68,93 @@ describe("security audit persistence — case-invite-service", () => {
 		});
 		expect(row).not.toBeNull();
 		expect(row?.ipAddress).toBe(TEST_IP);
+	});
+});
+
+describe("security audit persistence — refused invitations keep no part of the code", () => {
+	async function invitation(
+		change?: (hash: string) => Promise<unknown>
+	): Promise<{ token: string; invitee: { id: string } }> {
+		const owner = await createTestUser();
+		const invitee = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const { invite_token: token } = expectSuccess(
+			await createCaseInvite({
+				caseId: testCase.id,
+				email: invitee.email,
+				permission: "VIEW",
+				invitedById: owner.id,
+			})
+		);
+		await change?.(hashInviteToken(token));
+		return { token, invitee };
+	}
+
+	it.each([
+		[
+			"an unknown code",
+			"invite_acceptance_invalid_token",
+			async () => ({
+				token: generateInviteToken(),
+				userId: (await createTestUser()).id,
+			}),
+		],
+		[
+			"an expired invitation",
+			"invite_acceptance_expired",
+			async () => {
+				const { token, invitee } = await invitation((hash) =>
+					prisma.caseInvite.update({
+						where: { inviteTokenHash: hash },
+						data: { inviteExpiresAt: new Date(Date.now() - 60_000) },
+					})
+				);
+				return { token, userId: invitee.id };
+			},
+		],
+		[
+			"a used invitation",
+			"invite_acceptance_already_used",
+			async () => {
+				const { token, invitee } = await invitation((hash) =>
+					prisma.caseInvite.update({
+						where: { inviteTokenHash: hash },
+						data: { acceptedAt: new Date() },
+					})
+				);
+				return { token, userId: invitee.id };
+			},
+		],
+		[
+			"an invitation sent to another address",
+			"invite_acceptance_email_mismatch",
+			async () => {
+				const { token } = await invitation();
+				return { token, userId: (await createTestUser()).id };
+			},
+		],
+		[
+			"an unknown account",
+			"invite_acceptance_user_not_found",
+			async () => ({
+				token: generateInviteToken(),
+				userId: "00000000-0000-4000-8000-000000000000",
+			}),
+		],
+	] as const)("%s", async (_label, eventType, setup) => {
+		const { token, userId } = await setup();
+
+		await acceptInvite(userId, token, {
+			ipAddress: TEST_IP,
+			userAgent: "vitest",
+		});
+
+		const rows = await prisma.securityAuditLog.findMany({
+			where: { eventType },
+		});
+		expect(rows).toHaveLength(1);
+		expect(rows[0]?.metadata ?? {}).not.toHaveProperty("inviteToken");
+		expect(JSON.stringify(rows[0]?.metadata)).not.toContain(token.slice(0, 8));
 	});
 });
 

@@ -15,6 +15,7 @@ import {
 /**
  * GET /api/teams/[id]/members
  * Lists all members of a team. User must be a member.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,
@@ -39,6 +40,7 @@ export async function GET(
 /**
  * POST /api/teams/[id]/members
  * Adds a new member to a team by email. Requires ADMIN role.
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

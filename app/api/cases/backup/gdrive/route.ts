@@ -23,7 +23,7 @@ import {
  * @body { caseId: string, includeComments?: boolean }
  * @response { success: boolean, fileId: string, fileName: string, webViewLink?: string }
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: Request) {
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
  * Checks if the user has Google Drive connected.
  *
  * @response { connected: boolean }
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET() {

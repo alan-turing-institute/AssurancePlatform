@@ -30,7 +30,7 @@ const getProgressDotClass = (
 	isAccessible: boolean
 ): string => {
 	const baseClasses =
-		"relative flex items-center justify-center transition-all";
+		"relative flex items-center justify-center rounded-full transition-all";
 
 	if (stageId === currentStage) {
 		// Current stage - highlighted
@@ -207,8 +207,10 @@ const StageSelector = ({
 				{/* Stage dots — its own horizontal scroll region on narrow
 				    viewports, so the prev/next buttons stay outside it and
 				    always reachable even if a viewport is narrower than the
-				    shrunk dots still need. */}
-				<div className="flex min-w-0 flex-1 items-center justify-center overflow-x-auto">
+				    shrunk dots still need. The padding leaves room for the
+				    current dot's ring (ring-2 ring-offset-2) and the hover
+				    scale, which the scroll region would otherwise clip. */}
+				<div className="justify-center-safe flex min-w-0 flex-1 items-center overflow-x-auto px-1 py-2">
 					{stages.map((stage, index) => {
 						const isCompleted = completedStages.has(stage.id);
 						const isCurrent = stage.id === currentStage;

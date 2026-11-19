@@ -12,6 +12,9 @@ import { moveElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/move
  * Moves an element to a new parent within the same case.
+ *
+ * @description Moves an element to a new parent within the same case. Moving an element beneath itself or one of its descendants answers 400.
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

@@ -21,13 +21,19 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "next-auth.session-token",
-        "description": "NextAuth.js session cookie"
+        "description": "NextAuth.js session cookie. The cookie is named `__Secure-next-auth.session-token` over HTTPS and `next-auth.session-token` over plain HTTP"
       },
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "API token",
         "description": "Machine API token (`Authorization: Bearer <token>`), issued via the integration registry"
+      },
+      "CronSecret": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Shared secret",
+        "description": "The scheduled-job secret (`Authorization: Bearer <secret>`), the value of the server's `CRON_SECRET` setting"
       }
     }
   },

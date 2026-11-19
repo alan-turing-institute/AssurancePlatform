@@ -24,7 +24,7 @@ import { Input } from "../ui/input";
 
 type FormValues = ResetPasswordFormInput;
 
-type TokenState = "loading" | "valid" | "invalid" | "expired";
+type TokenState = "loading" | "valid" | "invalid";
 
 const ResetPasswordForm = () => {
 	const router = useRouter();
@@ -62,8 +62,6 @@ const ResetPasswordForm = () => {
 				if (result.valid) {
 					setTokenState("valid");
 					setEmail(result.email ?? null);
-				} else if (result.error?.includes("expired")) {
-					setTokenState("expired");
 				} else {
 					setTokenState("invalid");
 				}
@@ -125,40 +123,19 @@ const ResetPasswordForm = () => {
 		);
 	}
 
-	// Invalid token state
+	// Unusable link state (malformed, unknown, used or expired: one message for all)
 	if (tokenState === "invalid") {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-destructive bg-destructive/20 px-4 py-6">
-					<h3 className="font-semibold text-destructive dark:text-destructive">
-						Invalid reset link
-					</h3>
-					<p className="mt-2 text-destructive/80 text-sm">
-						This password reset link is invalid. Please request a new one.
-					</p>
-				</div>
-				<div className="mt-6 text-center">
-					<Link
-						className="font-semibold text-primary text-sm hover:text-primary/80"
-						href="/forgot-password"
-					>
-						Request new reset link
-					</Link>
-				</div>
-			</div>
-		);
-	}
-
-	// Expired token state
-	if (tokenState === "expired") {
-		return (
-			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-warning bg-warning/20 px-4 py-6">
+				<div
+					className="rounded-md border border-warning bg-warning/20 px-4 py-6"
+					role="alert"
+				>
 					<h3 className="font-semibold text-warning dark:text-warning">
-						Link expired
+						This link can&apos;t be used
 					</h3>
 					<p className="mt-2 text-sm text-warning/80">
-						This password reset link has expired. Please request a new one.
+						It may have expired or already been used.
 					</p>
 				</div>
 				<div className="mt-6 text-center">
@@ -218,31 +195,31 @@ const ResetPasswordForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>New password</FormLabel>
-									<FormControl>
-										<div className="relative">
+									<div className="relative">
+										<FormControl>
 											<Input
 												autoComplete="new-password"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
-											<Button
-												aria-label={
-													showPassword ? "Hide password" : "Show password"
-												}
-												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
-												onClick={() => setShowPassword(!showPassword)}
-												size="icon"
-												type="button"
-												variant="ghost"
-											>
-												{showPassword ? (
-													<EyeOff className="h-4 w-4" />
-												) : (
-													<Eye className="h-4 w-4" />
-												)}
-											</Button>
-										</div>
-									</FormControl>
+										</FormControl>
+										<Button
+											aria-label={
+												showPassword ? "Hide password" : "Show password"
+											}
+											className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
+											onClick={() => setShowPassword(!showPassword)}
+											size="icon"
+											type="button"
+											variant="ghost"
+										>
+											{showPassword ? (
+												<EyeOff className="h-4 w-4" />
+											) : (
+												<Eye className="h-4 w-4" />
+											)}
+										</Button>
+									</div>
 									<FormDescription>
 										Must be at least 8 characters with one uppercase letter, one
 										number, and one special character.
@@ -257,35 +234,33 @@ const ResetPasswordForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Confirm new password</FormLabel>
-									<FormControl>
-										<div className="relative">
+									<div className="relative">
+										<FormControl>
 											<Input
 												autoComplete="new-password"
 												type={showConfirmPassword ? "text" : "password"}
 												{...field}
 											/>
-											<Button
-												aria-label={
-													showConfirmPassword
-														? "Hide password"
-														: "Show password"
-												}
-												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
-												onClick={() =>
-													setShowConfirmPassword(!showConfirmPassword)
-												}
-												size="icon"
-												type="button"
-												variant="ghost"
-											>
-												{showConfirmPassword ? (
-													<EyeOff className="h-4 w-4" />
-												) : (
-													<Eye className="h-4 w-4" />
-												)}
-											</Button>
-										</div>
-									</FormControl>
+										</FormControl>
+										<Button
+											aria-label={
+												showConfirmPassword ? "Hide password" : "Show password"
+											}
+											className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
+											onClick={() =>
+												setShowConfirmPassword(!showConfirmPassword)
+											}
+											size="icon"
+											type="button"
+											variant="ghost"
+										>
+											{showConfirmPassword ? (
+												<EyeOff className="h-4 w-4" />
+											) : (
+												<Eye className="h-4 w-4" />
+											)}
+										</Button>
+									</div>
 									<FormMessage />
 								</FormItem>
 							)}

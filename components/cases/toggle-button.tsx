@@ -22,8 +22,11 @@ interface ToggleButtonProps {
 
 const ToggleButton = ({ node }: ToggleButtonProps) => {
 	const [hidden, setHidden] = useState<boolean>(false);
-	const { nodes, edges, layoutNodes, assuranceCase, setAssuranceCase } =
-		useStore();
+	const nodes = useStore((state) => state.nodes);
+	const edges = useStore((state) => state.edges);
+	const layoutNodes = useStore((state) => state.layoutNodes);
+	const assuranceCase = useStore((state) => state.assuranceCase);
+	const setAssuranceCase = useStore((state) => state.setAssuranceCase);
 	const { fitView, getNodes, getEdges } = useReactFlow();
 
 	useEffect(() => {

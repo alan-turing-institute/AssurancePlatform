@@ -149,10 +149,16 @@ async function getCommentWithPermission(
 		return { error: "Comment not associated with a case" };
 	}
 
+	// An author keeps their own comment only while they can still comment on
+	// the case; anyone else needs edit access. A trashed case counts as no
+	// access for everyone.
 	const isAuthor = comment.authorId === userId;
-	const hasEditAccess = await canAccessCase({ userId, caseId }, "EDIT");
+	const allowed = await canAccessCase(
+		{ userId, caseId },
+		isAuthor ? "COMMENT" : "EDIT"
+	);
 
-	if (!(isAuthor || hasEditAccess)) {
+	if (!allowed) {
 		return { error: "Permission denied" };
 	}
 
@@ -350,7 +356,8 @@ export async function createElementComment(
 
 /**
  * Deletes a comment by ID.
- * Returns "Permission denied" if the user is not the author and lacks EDIT access.
+ * Authors need COMMENT access to the case, everyone else needs EDIT.
+ * A case in Trash refuses everyone with "Permission denied".
  */
 export async function deleteComment(
 	commentId: string,
@@ -391,7 +398,8 @@ interface UpdatedCommentData {
 
 /**
  * Updates the content of a comment by ID.
- * Returns "Permission denied" if the user is not the author and lacks EDIT access.
+ * Authors need COMMENT access to the case, everyone else needs EDIT.
+ * A case in Trash refuses everyone with "Permission denied".
  */
 export async function updateComment(
 	commentId: string,
@@ -441,7 +449,8 @@ export async function updateComment(
 
 /**
  * Resolves or unresolves a comment thread.
- * Returns "Permission denied" if the user is not the author and lacks EDIT access.
+ * Authors need COMMENT access to the case, everyone else needs EDIT.
+ * A case in Trash refuses everyone with "Permission denied".
  */
 export async function resolveComment(
 	commentId: string,

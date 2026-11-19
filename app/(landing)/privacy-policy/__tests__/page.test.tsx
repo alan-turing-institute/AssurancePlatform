@@ -137,12 +137,13 @@ describe("PrivacyPolicyPage", () => {
 			expect(container.textContent).not.toMatch(CHRIS_PLACEHOLDER_REGEX);
 		});
 
-		it("should list all six categories of data collected", () => {
+		it("should list all seven categories of data collected", () => {
 			render(<PrivacyPolicyPage />);
 
 			const bulletLeaders = [
 				"Account details.",
 				"Sign-in identifiers.",
+				"GitHub access token.",
 				"Google Drive access tokens.",
 				"Your content.",
 				"Activity and security records.",

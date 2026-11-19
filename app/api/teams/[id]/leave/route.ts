@@ -11,6 +11,7 @@ import { leaveTeam } from "@/lib/services/team-member-service";
  * POST /api/teams/[id]/leave
  * Allows a user to leave a team.
  * Cannot leave if last admin.
+ * @auth SessionAuth
  */
 export async function POST(
 	_request: Request,

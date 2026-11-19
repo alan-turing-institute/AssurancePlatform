@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
+import { wroteComment } from "@/lib/case/comment-authorship";
 import { formatShortDate } from "@/lib/date";
 import type { CommentResponse } from "@/lib/services/comment-service";
 import { toast } from "@/lib/toast";
@@ -32,7 +34,9 @@ interface CommentsFeedProps {
 
 interface CommentItemProps {
 	canEdit: boolean;
+	canResolveAny: boolean;
 	comment: CommentResponse;
+	currentUserId: string | undefined;
 	currentUsername: string | null | undefined;
 	depth?: number;
 	node: CommentsFeedProps["node"];
@@ -125,6 +129,7 @@ function CommentMeta({
  */
 function CommentActions({
 	isTopLevel,
+	canResolve,
 	isResolved,
 	isOwnComment,
 	onReply,
@@ -133,6 +138,7 @@ function CommentActions({
 	onDelete,
 }: {
 	isTopLevel: boolean;
+	canResolve: boolean;
 	isResolved: boolean;
 	isOwnComment: boolean;
 	onReply: () => void;
@@ -141,7 +147,7 @@ function CommentActions({
 	onDelete: () => void;
 }) {
 	return (
-		<div className="absolute right-2 bottom-2 hidden group-hover:block">
+		<div className="pointer-events-none absolute right-2 bottom-2 opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
 			<div className="flex items-center justify-start gap-1">
 				{isTopLevel && (
 					<Button
@@ -155,7 +161,7 @@ function CommentActions({
 					</Button>
 				)}
 
-				{isTopLevel && (
+				{canResolve && (
 					<Button
 						className="hover:bg-primary/30"
 						onClick={onResolve}
@@ -201,8 +207,10 @@ function CommentActions({
 function CommentItem({
 	comment,
 	node,
+	currentUserId,
 	currentUsername,
 	canEdit,
+	canResolveAny,
 	depth = 0,
 	onDelete,
 	onResolve,
@@ -217,13 +225,14 @@ function CommentItem({
 	const isReplyingToThis = replyingTo === String(comment.id);
 	const isResolved = comment.resolved === true;
 	const isTopLevel = depth === 0;
-	const isOwnComment = currentUsername === comment.author;
+	const isOwnComment = wroteComment(comment, currentUserId, currentUsername);
+	const canResolve = isTopLevel && (isOwnComment || canResolveAny);
 
 	const nestedClass = depth > 0 ? "ml-6 border-border border-l-2 pl-4" : "";
 
 	const cardClass = isResolved
 		? "bg-success/10 hover:bg-success/15"
-		: "hover:bg-primary/80 hover:pb-8 hover:text-white";
+		: "focus-within:pb-8 hover:bg-primary/80 hover:pb-8 hover:text-white";
 
 	return (
 		<div className={cn("w-full", nestedClass)}>
@@ -261,6 +270,7 @@ function CommentItem({
 
 				{!edit && canEdit && (
 					<CommentActions
+						canResolve={canResolve}
 						isOwnComment={isOwnComment}
 						isResolved={isResolved}
 						isTopLevel={isTopLevel}
@@ -287,7 +297,9 @@ function CommentItem({
 					{comment.replies?.map((reply) => (
 						<CommentItem
 							canEdit={canEdit}
+							canResolveAny={canResolveAny}
 							comment={reply}
+							currentUserId={currentUserId}
 							currentUsername={currentUsername}
 							depth={depth + 1}
 							key={reply.id}
@@ -309,8 +321,12 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 	const { assuranceCase, nodeComments, setNodeComments } = useStore();
 	const { data: session } = useSession();
 	const [replyingTo, setReplyingTo] = useState<string | null>(null);
+	const currentUserId = session?.user?.id;
 	const currentUsername = session?.user?.name || session?.user?.email;
-	const canEdit = assuranceCase?.permissions !== "view";
+	const canEdit = caseAccessAtLeast(assuranceCase?.permissions, "comment");
+	// A commenter may resolve only their own threads; edit and manage access
+	// may resolve any thread.
+	const canResolveAny = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	const handleDelete = async (id: number | string) => {
 		try {
@@ -412,7 +428,9 @@ export default function CommentsFeed({ node }: CommentsFeedProps) {
 				{nodeComments.map((comment) => (
 					<CommentItem
 						canEdit={canEdit}
+						canResolveAny={canResolveAny}
 						comment={comment}
+						currentUserId={currentUserId}
 						currentUsername={currentUsername}
 						key={comment.id}
 						node={node}

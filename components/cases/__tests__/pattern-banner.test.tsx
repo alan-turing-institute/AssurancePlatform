@@ -3,14 +3,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import useStore from "@/store/store";
 import { PatternBanner } from "../pattern-banner";
 
-function setKind(kind?: "CASE" | "PATTERN") {
+function setKind(kind?: "CASE" | "PATTERN", permissions?: string) {
 	useStore.setState({
 		assuranceCase: {
 			id: "case-1",
 			name: "Test case",
 			type: "assurance-case",
 			...(kind ? { kind } : {}),
-			permissions: "view",
+			...(permissions ? { permissions } : {}),
 			createdDate: new Date().toISOString(),
 			comments: [],
 		} as never,
@@ -22,12 +22,29 @@ afterEach(() => {
 });
 
 describe("PatternBanner", () => {
-	it("says the case on screen is a pattern", () => {
-		setKind("PATTERN");
+	it.each([
+		["edit"],
+		["manage"],
+	])("says you are editing a pattern with %s permission", (permissions) => {
+		setKind("PATTERN", permissions);
 		render(<PatternBanner />);
 
 		expect(screen.getByTestId("pattern-banner")).toHaveTextContent(
-			"This is a pattern."
+			"You are editing a pattern."
+		);
+	});
+
+	it.each([
+		["view"],
+		["comment"],
+		["review"],
+		[undefined],
+	])("says you are viewing a pattern with %s permission", (permissions) => {
+		setKind("PATTERN", permissions);
+		render(<PatternBanner />);
+
+		expect(screen.getByTestId("pattern-banner")).toHaveTextContent(
+			"You are viewing a pattern."
 		);
 	});
 

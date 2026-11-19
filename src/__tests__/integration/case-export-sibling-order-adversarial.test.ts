@@ -5,10 +5,7 @@ import { createCaseTools } from "@/lib/plugins/assistant/tools";
 import prisma from "@/lib/prisma";
 import type { CaseExportNested, TreeNode } from "@/lib/schemas/case-export";
 import { exportCase } from "@/lib/services/case-export-service";
-import {
-	createCaseFromPattern,
-	readPatternVariables,
-} from "@/lib/services/case-from-pattern-service";
+import { createCaseFromPattern } from "@/lib/services/case-from-pattern-service";
 import { importCase } from "@/lib/services/case-import-service";
 import {
 	publishAssuranceCase,
@@ -35,7 +32,6 @@ import {
 	createTestElement,
 	createTestUser,
 } from "../utils/prisma-factories";
-import { setContext, variableEntry } from "../utils/variables-kit";
 
 /**
  * The order of an exported case's children, whatever order the database
@@ -579,28 +575,12 @@ describe("the readers built on the export", () => {
 		expect(childNames(firstOf(readings))).toEqual(G1_CHILDREN);
 	});
 
-	it("start a case from a pattern in the pattern's order, and list its variables in that order", async () => {
+	it("start a case from a pattern in the pattern's order", async () => {
 		const owner = await createTestUser();
 		const fx = await siblingCase(owner, "PATTERN");
-		const entries: [string, string, string][] = [
-			[fx.p10, "v10", "aaaaaaaa10"],
-			[fx.p2, "v2", "aaaaaaaaa2"],
-			[fx.p1, "v1", "aaaaaaaaa1"],
-		];
-		for (const [elementId, name, id] of entries) {
-			await setContext(elementId, [
-				variableEntry("x", name, id, `meaning ${name}`),
-			]);
-		}
 		const source = await exported(owner.id, fx.caseId);
 		const expected = descriptionsInOrder(source.tree);
 
-		const variables = await readUnderEveryRowOrder(async () => {
-			const result = await readPatternVariables(owner.id, {
-				patternCaseId: fx.caseId,
-			});
-			return expectSuccess(result).map((variable) => variable.name);
-		});
 		const copies = await readUnderEveryRowOrder(async () => {
 			const started = expectSuccess(
 				await createCaseFromPattern(
@@ -613,8 +593,6 @@ describe("the readers built on the export", () => {
 			return descriptionsInOrder((await exported(owner.id, started.id)).tree);
 		});
 
-		expect(differingOrders(variables)).toEqual([]);
-		expect(variables[0]?.value).toEqual(["v1", "v2", "v10"]);
 		expect(differingOrders(copies)).toEqual([]);
 		expect(copies[0]?.value).toEqual(expected);
 		expect(childNames(source.tree)).toEqual(G1_CHILDREN);

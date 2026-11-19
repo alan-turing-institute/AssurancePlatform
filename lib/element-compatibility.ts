@@ -12,6 +12,8 @@
  *   module        → (terminal — leaf in 1.0 core, ADR 0005 D3)
  */
 
+import { isGoalDefeater } from "@/lib/transforms/build-tree";
+
 /**
  * Canonical lowercase type representation used internally.
  * All public functions normalise input before lookup.
@@ -48,8 +50,7 @@ function normalise(type: string): string {
 		return "away_goal";
 	}
 
-	// Strip underscores for comparison (e.g. "property_claim" → already handled above)
-	return trimmed.replace(/_/g, "_"); // keep underscores as-is after normalisation above
+	return trimmed;
 }
 
 /**
@@ -150,4 +151,61 @@ export function canBeChildOf(childType: string, parentType: string): boolean {
 	}
 
 	return validChildren.includes(canonicalChild);
+}
+
+/**
+ * The refusal when something other than a counter-goal is put beneath a piece
+ * of evidence. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a
+ * 400.
+ */
+export const ONLY_COUNTER_GOALS_BENEATH_EVIDENCE =
+	"parentId cannot be a piece of evidence unless the element is a counter-goal";
+
+/**
+ * Whether placing a child beneath a parent of the given type breaks the rule
+ * that only counter-goals hang from evidence. A goal with `isDefeater` set is a
+ * counter-goal.
+ */
+export function isBeneathEvidenceRefused(
+	child: { elementType: string; isDefeater?: boolean | null },
+	parentType: string
+): boolean {
+	return (
+		normalise(parentType) === "evidence" &&
+		!isGoalDefeater(child.elementType.toUpperCase(), child.isDefeater ?? false)
+	);
+}
+
+const STARTS_WITH_VOWEL = /^[aeiou]/;
+
+function withArticle(word: string): string {
+	if (word === "evidence") {
+		return "a piece of evidence";
+	}
+	return STARTS_WITH_VOWEL.test(word) ? `an ${word}` : `a ${word}`;
+}
+
+/**
+ * The refusal when a new element's type cannot hang from the parent it names,
+ * or undefined when it can. The one parent-type rule: a counter-goal may hang
+ * from anything; beneath evidence only a counter-goal may hang; otherwise the
+ * child must be one `canBeChildOf` admits. Both messages start with
+ * `parentId ` so `ERROR_MAPPINGS` answers them with a 400.
+ */
+export function parentTypeRefusal(
+	child: { elementType: string; isDefeater?: boolean | null },
+	parentType: string
+): string | undefined {
+	if (
+		isGoalDefeater(child.elementType.toUpperCase(), child.isDefeater ?? false)
+	) {
+		return;
+	}
+	if (isBeneathEvidenceRefused(child, parentType)) {
+		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+	}
+	if (!canBeChildOf(child.elementType, parentType)) {
+		return `parentId cannot be ${withArticle(normalise(parentType))} for ${withArticle(normalise(child.elementType))}`;
+	}
+	return;
 }

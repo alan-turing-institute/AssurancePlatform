@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN, STATUS_BUTTON_PATTERN } from "./helpers/constants";
+import { openSelect } from "./helpers/select";
 import { DashboardPage } from "./pages/dashboard-page";
 
 const ASSERTION_STATUS_COMBOBOX_PATTERN = /assertion status/i;
@@ -159,8 +160,7 @@ test.describe("Case management", () => {
 		const assertionStatusTrigger = page.getByRole("combobox", {
 			name: ASSERTION_STATUS_COMBOBOX_PATTERN,
 		});
-		await assertionStatusTrigger.click();
-		await expect(page.getByRole("listbox")).toBeVisible();
+		await openSelect(assertionStatusTrigger);
 
 		// Click on the dialog body — the dialog's own title, well clear of
 		// the open dropdown's own popper — without choosing an option from

@@ -28,6 +28,7 @@ import { thinHealthEvidence } from "@/lib/services/health-evidence-service";
  * @response 400 - Invalid query (an unknown or repeated parameter, or a malformed dryRun or now)
  * @response 401 - Unauthorised (invalid or missing token)
  * @response 500 - Server error
+ * @auth CronSecret
  * @tag Cron
  */
 export async function POST(request: Request) {

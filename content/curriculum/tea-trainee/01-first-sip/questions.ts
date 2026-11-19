@@ -53,7 +53,7 @@ export const firstSipQuestions: Question[] = [
 		id: "q3",
 		type: "multiple-choice",
 		question:
-			"The Fair Recruitment AI case defines fairness according to the UK Equality Act 2010. What would happen if this context were removed from the assurance case?",
+			"In the Fair Recruitment AI case, the goal's context says the system is used by the HR recruitment team, who review its recommendations and make every hiring decision. What would happen if this context were removed from the assurance case?",
 		options: [
 			{
 				id: "a",
@@ -62,19 +62,19 @@ export const firstSipQuestions: Question[] = [
 			{ id: "b", text: "The evidence would no longer be valid." },
 			{
 				id: "c",
-				text: "Reviewers wouldn't know which definition of fairness or non-discrimination is being claimed.",
+				text: "Reviewers wouldn't know who relies on the system's recommendations or how far they shape hiring decisions.",
 			},
 			{ id: "d", text: "The strategies would need to be rewritten." },
 		],
 		correctAnswer: "c",
 		explanation:
-			"Context defines the specific meaning and scope of claims. Without knowing which definition of fairness and non-discrimination applies, reviewers cannot evaluate whether the evidence adequately supports the goal.",
+			"Context defines the specific meaning and scope of claims. Without knowing who uses the recommendations and who makes the final decision, reviewers cannot evaluate whether the evidence adequately supports the goal.",
 	},
 	{
 		id: "q4",
 		type: "multiple-choice",
 		question:
-			"In the Fair Recruitment AI case, what connects the claim 'Training data has been audited and balanced' (P1) to the goal 'The system makes fair hiring recommendations'?",
+			"In the Fair Recruitment AI case, what connects the claim 'The training dataset represents every demographic group in balanced proportions' (P1) to the goal 'The system makes fair hiring recommendations'?",
 		options: [
 			{ id: "a", text: "P1 directly proves the goal is true." },
 			{ id: "b", text: "P1 is evidence that proves the goal." },

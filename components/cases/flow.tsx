@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import ReactFlow, {
 	Background,
 	Controls,
@@ -15,8 +22,11 @@ import { nodeTypes } from "@/components/cases/node-type-resolver";
 import SupportEdge from "@/components/cases/support-edge";
 import { useAutoScreenshot } from "@/hooks/use-auto-screenshot";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
+import { caseFingerprint } from "@/lib/case/case-fingerprint";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
+import { keepLiveSelection } from "@/lib/case/keep-live-selection";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
 import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
@@ -34,7 +44,12 @@ const edgeTypes = {
 	support: SupportEdge,
 };
 
-function Flow() {
+interface FlowProps {
+	/** Shown in the overlay stack under the header, below the other banners. */
+	liveUpdatesNotice?: ReactNode;
+}
+
+function Flow({ liveUpdatesNotice }: FlowProps) {
 	const { fitView } = useReactFlow();
 	const updateNodeInternals = useUpdateNodeInternals();
 	const {
@@ -57,9 +72,7 @@ function Flow() {
 	useKeyboardShortcuts();
 
 	// Determine if user can edit (for auto-screenshot)
-	const canEdit =
-		assuranceCase?.permissions === "edit" ||
-		assuranceCase?.permissions === "manage";
+	const canEdit = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	// Auto-screenshot hook - captures screenshots when changes are made
 	const { markChanged } = useAutoScreenshot({
@@ -79,7 +92,7 @@ function Flow() {
 		try {
 			const layouted = await getLayoutedElements(nodes, edges, { direction });
 
-			setNodes(layouted.nodes);
+			setNodes(keepLiveSelection(layouted.nodes, useStore.getState().nodes));
 			setEdges(layouted.edges);
 
 			window.requestAnimationFrame(() => {
@@ -160,28 +173,24 @@ function Flow() {
 			return;
 		}
 
-		// Create a fingerprint of case content using the case's updated_at timestamp
-		const caseFingerprint = JSON.stringify({
-			id: assuranceCase.id,
-			// Use the case's modification time if available
-			updatedAt: (assuranceCase as { updated_at?: string }).updated_at,
-			goalsCount: assuranceCase.goals?.length ?? 0,
-		});
+		// Fingerprint the case's content, so a capture is scheduled only when
+		// what the canvas shows has changed.
+		const fingerprint = caseFingerprint(assuranceCase, layoutDirection);
 
 		if (initialLoadRef.current) {
-			// Mark as changed on initial load to capture initial state
-			previousCaseRef.current = caseFingerprint;
+			// Opening a case records its state without capturing a thumbnail;
+			// only a later change schedules one.
+			previousCaseRef.current = fingerprint;
 			initialLoadRef.current = false;
-			markChanged();
 			return;
 		}
 
 		// Check if case content has actually changed
-		if (previousCaseRef.current !== caseFingerprint) {
-			previousCaseRef.current = caseFingerprint;
+		if (previousCaseRef.current !== fingerprint) {
+			previousCaseRef.current = fingerprint;
 			markChanged();
 		}
-	}, [assuranceCase, loading, markChanged]);
+	}, [assuranceCase, layoutDirection, loading, markChanged]);
 
 	const notifyError = (message: string) => {
 		toast({
@@ -252,6 +261,7 @@ function Flow() {
 									</div>
 								</div>
 							)}
+						{liveUpdatesNotice}
 					</div>
 				</div>
 			)}

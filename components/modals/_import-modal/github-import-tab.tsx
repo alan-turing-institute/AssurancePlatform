@@ -44,11 +44,12 @@ function GitHubConnectPrompt() {
 	return (
 		<div className="space-y-4 text-center">
 			<p className="text-muted-foreground text-sm">
-				Connect your GitHub account to import cases from repositories.
+				Connect your GitHub account to import cases from public GitHub
+				repositories.
 			</p>
 			<Button
 				onClick={() => {
-					window.location.href = "/api/auth/signin?callbackUrl=/dashboard";
+					window.location.href = "/api/auth/link/github";
 				}}
 				variant="outline"
 			>
@@ -102,8 +103,8 @@ export function GitHubImportTab({
 										/>
 									</FormControl>
 									<FormDescription>
-										Paste a GitHub URL to a JSON file, or use the shorthand
-										format: owner/repo/path/to/file.json
+										Paste a GitHub URL to a JSON file in a public repository, or
+										use the shorthand format: owner/repo/path/to/file.json
 									</FormDescription>
 									<FormMessage />
 								</FormItem>

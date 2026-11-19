@@ -259,8 +259,31 @@ const ERROR_MAPPINGS: Array<{
 	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
 	// `element-service.ts`'s goal rules, on create, update and the batch editor:
 	// a goal defeater without a `parentId` would be a second root goal — a
-	// validation failure (400), not a 500.
+	// validation failure (400), not a 500. The same pattern answers a parentId
+	// on evidence through the general edit, and attaching evidence to anything
+	// other than a property claim, and putting anything but a counter-goal
+	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// The general edit and the batch never move an element into or out of the
+	// side area; detach and attach do. A validation failure (400).
+	{
+		pattern: /^inSandbox cannot be (set|cleared|changed) /,
+		factory: () => validationError(""),
+	},
+	// `element-service.ts`'s `rejectFieldsNotApplicable`: a text field filled in
+	// on an element type that does not hold it (an assumption on evidence) is a
+	// validation failure (400), not a silent drop.
+	{
+		pattern:
+			/^(assumption|justification|context|url|URL|urls) is not applicable to /,
+		factory: () => validationError(""),
+	},
+	// Detaching the top goal would leave the case without a root: a validation
+	// failure (400), as for a counter-goal detached from its parent.
+	{
+		pattern: /^The top goal cannot be detached$/,
+		factory: () => validationError(""),
+	},
 	// A second ordinary goal in a case is a rule refusal (422), not a 500. It is
 	// not a 409: that code on the batch endpoint means another person changed
 	// the case, and the JSON editor reads it that way.
@@ -272,6 +295,19 @@ const ERROR_MAPPINGS: Array<{
 	// updates and deletes it, is a validation failure (400), not a 500.
 	{
 		pattern: /^A batch can change an element only once/,
+		factory: () => validationError(""),
+	},
+	// A move that would put an element beneath itself, directly or through
+	// other moves: the batch's "Circular reference detected" refusal, and the
+	// single-element edit, move and attach refusals. A validation failure
+	// (400), not a 500.
+	{
+		pattern: /^Circular reference detected when moving element /,
+		factory: () => validationError(""),
+	},
+	{
+		pattern:
+			/^Cannot (set element as its own parent|move element to one of its descendants)$/,
 		factory: () => validationError(""),
 	},
 	// `lib/schemas/element-validation.ts`'s `validateElementName` (TEA-syntax
@@ -312,7 +348,7 @@ const ERROR_MAPPINGS: Array<{
 	// instead of 409. All three collapse to the same 409 CONFLICT here.
 	{
 		pattern:
-			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked|non-active) integration$|^Cannot rotate a revoked token$/,
+			/^Cannot (suspend|reactivate) a revoked integration$|^Cannot (issue|rotate) a token for a non-active integration$|^Cannot grant case access for a (suspended|revoked|non-active) integration$|^Cannot rotate a revoked token$|^Cannot rotate an expired token$/,
 		factory: conflict,
 	},
 	// `user-management-service.ts`'s `deleteAccount` — owned integrations
@@ -342,6 +378,45 @@ const ERROR_MAPPINGS: Array<{
 		pattern:
 			/^\d+ elements? still to fill in(; \d+ variables? with no value)?$|^\d+ variables? with no value$/,
 		factory: () => validationError(""),
+	},
+	// `password-reset-service.ts`'s `resetPassword` and `validateResetToken`: a
+	// reset link that is used, expired or unknown gets this one message, so
+	// nobody can tell which links exist — a validation failure (400), not a 500.
+	{
+		pattern: /^Invalid or expired reset token$/,
+		factory: () => validationError(""),
+	},
+	// `case-invite-service.ts`'s `acceptInvite`: a code that matches no invite
+	// or an invite past its end date is a validation failure (400); an invite
+	// sent to another address is a permission refusal (403). Anchored so a
+	// message that merely mentions these words is not caught.
+	{ pattern: /^Invalid invite$/, factory: () => validationError("") },
+	{ pattern: /^Invite has expired$/, factory: () => validationError("") },
+	{
+		pattern: /^Invite was sent to a different email address$/,
+		factory: () => forbidden(),
+	},
+	// `validatePassword` (`lib/validation/validators.ts`) returns the first
+	// failing message of `passwordSchema` (`lib/schemas/user.ts`); reset,
+	// change-password and registration pass it on, so a weak password is a
+	// validation failure (400), not a 500.
+	{
+		pattern:
+			/^Password must (be at least 8 characters|contain at least one (uppercase letter|number|special character))$/,
+		factory: () => validationError(""),
+	},
+	// `user-management-service.ts`'s `changePassword`: a wrong current password
+	// is a validation failure (400); an account with no local password to
+	// change (a sign-in provider account, or one with no password set) is
+	// refused outright (403).
+	{
+		pattern: /^Current password is incorrect$/,
+		factory: () => validationError(""),
+	},
+	{
+		pattern:
+			/^Password change is not available for OAuth accounts$|^No password set for this account$/,
+		factory: () => forbidden(),
 	},
 ];
 

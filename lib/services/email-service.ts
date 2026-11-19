@@ -26,6 +26,21 @@ function renderEmailHeader(): string {
 `;
 }
 
+// A provider's own error text can quote the recipient, so a failed send is
+// reported as a fixed message plus the provider's short error code, and only
+// when that code looks like a code.
+const PROVIDER_CODE_PATTERN = /^[A-Za-z0-9_.-]{1,64}$/;
+
+function safeProviderCode(code: unknown): string | undefined {
+	return typeof code === "string" && PROVIDER_CODE_PATTERN.test(code)
+		? code
+		: undefined;
+}
+
+function sendFailureMessage(code: string | undefined): string {
+	return code ? `Email sending failed (${code})` : "Email sending failed";
+}
+
 // Types
 type EmailResult = { data: { messageId: string } } | { error: string };
 
@@ -155,7 +170,8 @@ function getEmailClient(): EmailClient | null {
  *
  * When no client is configured (`ACS_CONNECTION_STRING` unset):
  * - In production, this is a misconfiguration, not a dev preview — fail
- *   closed with an error result and log only `to`/`subject`, never the body.
+ *   closed with an error result and log only the `subject`, never the
+ *   recipient or the body.
  * - Otherwise (the dev preview), log `to`/`subject` and a redacted form of
  *   the plain-text body: any token-like value inside a URL is replaced by
  *   its last 4 characters, so a reset/verification link is still readable
@@ -171,7 +187,7 @@ async function sendEmail(
 
 	if (!client) {
 		if (process.env.NODE_ENV === "production") {
-			log.error("Email provider not configured", { to, subject });
+			log.error("Email provider not configured", { subject });
 			return { error: "Email provider not configured" };
 		}
 
@@ -204,14 +220,20 @@ async function sendEmail(
 			return { data: { messageId: result.id } };
 		}
 
-		return {
-			error: result.error?.message || "Email sending failed",
-		};
+		const code = safeProviderCode(result.error?.code);
+		log.error("Email sending failed", { code });
+		return { error: sendFailureMessage(code) };
 	} catch (error) {
-		log.error("Email sending error", { error });
-		return {
-			error: error instanceof Error ? error.message : "Unknown email error",
-		};
+		const code = safeProviderCode(
+			typeof error === "object" && error !== null && "code" in error
+				? error.code
+				: undefined
+		);
+		log.error("Email sending error", {
+			name: error instanceof Error ? error.name : "UnknownError",
+			code,
+		});
+		return { error: sendFailureMessage(code) };
 	}
 }
 

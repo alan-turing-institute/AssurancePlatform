@@ -38,6 +38,18 @@ describe("TourProvider", () => {
 		});
 	});
 
+	it("leaves the page scroll alone when it mounts and no tour is running", async () => {
+		const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {
+			// jsdom does not implement scrolling
+		});
+
+		render(<TourProvider>{null}</TourProvider>);
+		await act(() => Promise.resolve());
+
+		expect(scrollTo).not.toHaveBeenCalled();
+		scrollTo.mockRestore();
+	});
+
 	it("restores the no-op when it unmounts", () => {
 		const { unmount } = render(<TourProvider>{null}</TourProvider>);
 

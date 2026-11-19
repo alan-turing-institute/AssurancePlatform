@@ -34,10 +34,12 @@ export interface HeldRowLock {
 	release: () => Promise<void>;
 	/**
 	 * Signals the holder to roll back instead, so none of its writes land, and
-	 * resolves once it has. Writers queued behind the lock take the row strictly
-	 * in the order they queued, because the row they were waiting for is
-	 * unchanged. Use this when the holder only needs to hold the lock, and the
-	 * test depends on which queued writer goes first.
+	 * resolves once it has. The first queued writer takes the row first, and so
+	 * does the second when there are only two, because the row they were waiting
+	 * for is unchanged. Once the first has changed the row, later writers move on
+	 * to its new version and may be served in any order. Use this when the
+	 * holder only needs to hold the lock, and the test depends on which writer
+	 * goes first.
 	 */
 	rollback: () => Promise<void>;
 }
@@ -83,6 +85,32 @@ export async function waitForLockWait(
 			setTimeout(resolve, LOCK_WAIT_POLL_INTERVAL_MS)
 		);
 	}
+}
+
+/**
+ * Whether no transaction holds a lock on the element's row: asks for the lock
+ * with NOWAIT, which fails at once when another transaction has the row.
+ */
+export async function elementRowIsFree(elementId: string): Promise<boolean> {
+	try {
+		await prisma.$transaction(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${elementId} FOR UPDATE NOWAIT`;
+		});
+		return true;
+	} catch (error) {
+		if (isLockNotAvailable(error)) {
+			return false;
+		}
+		throw error;
+	}
+}
+
+/** Whether a failed query reports Postgres SQLSTATE 55P03 (lock not available). */
+function isLockNotAvailable(error: unknown): boolean {
+	// The text form carries the message; the JSON form carries the error's own
+	// enumerable fields, including the database code at
+	// `meta.driverAdapterError.cause.originalCode`.
+	return `${String(error)} ${JSON.stringify(error)}`.includes("55P03");
 }
 
 /**

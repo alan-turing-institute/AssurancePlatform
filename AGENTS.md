@@ -91,7 +91,9 @@ Database setup, seed and test infrastructure necessarily access the database dir
   Derive user identity from authentication, never from client-supplied user IDs.
 - Read a client IP only through `extractClientIp` in `lib/auth/extract-client-ip.ts`.
   Never read `x-forwarded-for` or `x-real-ip` directly; both are attacker-controllable in this deployment.
-  If a CDN or Front Door is ever placed in front of App Service, the helper's trusted-hop policy must be revisited.
+  The helper returns `cf-connecting-ip` only when the connecting address is inside Cloudflare's published ranges (`lib/auth/cloudflare-ips.ts`) and the request's `x-origin-verify` header equals the `CLOUDFLARE_ORIGIN_SECRET` setting; with the setting unset or blank, `cf-connecting-ip` is never read.
+  It counts an IPv6 visitor read from `cf-connecting-ip` by their /64 network; an IPv6 `x-client-ip` or `x-forwarded-for` address is used whole.
+  Any other CDN or Front Door in front of App Service needs its trusted-hop policy revisited.
 - Machine endpoints under `/api/machine/` use `requireApiToken` from `lib/auth/require-api-token.ts` with the scopes appropriate to the operation.
   Keep intentionally public routes and authentication-entry routes distinct from session-protected mutations.
 - Check case access in services using `canAccessCase` and the helpers in `lib/permissions.ts`.
@@ -100,6 +102,10 @@ Database setup, seed and test infrastructure necessarily access the database dir
 
 API routes are the external integration surface; server actions are internal UI plumbing.
 Regenerate the OpenAPI documentation with `pnpm docs:generate` when changing documented routes.
+A new or changed route needs its success answers in `scripts/openapi/operations.ts`, because the generator cannot state them.
+A route that reads query parameters also needs an entry in `QUERY_PARAMETERS` in that file.
+A route that reads a request body needs an entry in `REQUEST_BODIES` in `scripts/openapi/request-bodies.ts`, built from the Zod schema the route validates with.
+`lib/__tests__/openapi-matches-routes.test.ts` fails when the description and the routes disagree.
 Routes under `/api/public/` and anything in the published OpenAPI spec are semi-contractual: changes need care and removals need a `CHANGELOG.md` entry.
 
 ## Database changes
@@ -167,7 +173,9 @@ Test secured operations across owner, direct and team permissions, no permission
 Keep Playwright to the critical journeys: auth, case management, sharing, publishing.
 Presentational component tests are optional; snapshot tests are not the convention.
 Install the browser with `pnpm exec playwright install chromium`.
-Outside CI, `e2e/global-setup.ts` runs `prisma migrate reset --force` and reseeds, so point it only at a disposable database.
+Outside CI, `e2e/global-setup.ts` runs `prisma migrate reset --force` and reseeds the database that `DATABASE_URL` names in the shell running Playwright; it never reads `.env` for this.
+It refuses to reset unless that database's name ends `_test` or `_e2e`, or `E2E_ALLOW_RESET=1` is set for a disposable database with another name.
+For a disposable setup, start `postgres-test` (port 5433), create a database whose name ends `_e2e` in it, stop any server on port 3000 (or set `E2E_BASE_URL`), then run with `DATABASE_URL` set in the shell.
 Playwright starts `pnpm dev` locally or reuses a server on port 3000, so that server must use the intended test database too.
 Set `E2E_BASE_URL` to point the suite at a server that is already running; with it set, Playwright neither starts nor stops a server itself.
 Set `E2E_SKIP_DB_RESET=1` to skip global setup's reset and reseed.
@@ -191,4 +199,5 @@ The pre-push hook regenerates the Prisma client, then runs lint and typecheck, o
 Work is tracked in GitHub Issues.
 The plugin system is real but partial: the manifest, slots and two official plugins (claim and evidence health, and the Case Assistant) exist; a marketplace does not.
 Staging deploys and the staging reseed workflow share one concurrency queue (`staging-database`), so a deploy and a reseed never run at the same time.
+Re-running an older Build run no longer rolls staging back, because its deploy is skipped as behind the running image; re-running the newest run still redeploys.
 Recover a broken staging database with one manual run of the reseed workflow (`gh workflow run seed-staging.yml --ref staging`), then restart the staging app if its health check does not return 200 within a few minutes.

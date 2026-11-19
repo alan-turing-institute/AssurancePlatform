@@ -21,8 +21,9 @@ const PatternVariables = ({ content }: PatternVariablesProps) => {
 		<div className="pt-6">
 			<h3 className="font-semibold text-foreground text-lg">Variables</h3>
 			<p className="mt-2 text-sm">
-				Using this pattern asks you for a value for each of these. A variable
-				you leave empty shows as its name in square brackets until you set it.
+				A case started from this pattern takes these values. A variable with no
+				value shows as its name in square brackets until you set it on the
+				element that defines it.
 			</p>
 			<dl className="mt-3 space-y-3 text-sm">
 				{variables.map((variable) => (

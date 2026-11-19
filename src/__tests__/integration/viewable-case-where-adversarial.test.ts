@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canAccessCase, viewableCaseWhere } from "@/lib/permissions";
+import {
+	administrableCaseWhere,
+	canAccessCase,
+	viewableCaseWhere,
+} from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 import {
 	addTeamMember,
@@ -16,6 +20,9 @@ import {
  * and with the plain statement of who may view a case: its creator, anyone it
  * is shared with at any level directly or through a team they belong to, and
  * nobody once it is in the trash.
+ *
+ * `administrableCaseWhere` is the same for "can this user administer this
+ * case", and is held to `canAccessCase` at ADMIN over the same grid.
  */
 
 type User = Awaited<ReturnType<typeof createTestUser>>;
@@ -308,5 +315,104 @@ describe("viewableCaseWhere", () => {
 		});
 
 		expect(rows).toEqual([]);
+	});
+});
+
+/**
+ * The users who administer a live case, from the plain statement of the rule:
+ * its creator, and anyone it is shared with at ADMIN directly or through a
+ * team they belong to, whatever their role in the team or their other shares.
+ */
+const ADMINISTRATORS = new Set([
+	"creator",
+	"direct ADMIN",
+	"team OWNER at ADMIN",
+	"team ADMIN at ADMIN",
+	"team MEMBER at ADMIN",
+	"direct EDIT and team ADMIN",
+	"direct ADMIN and team VIEW",
+]);
+
+function shouldAdminister(userName: string, trashed: boolean) {
+	return !trashed && ADMINISTRATORS.has(userName);
+}
+
+/**
+ * Two users the grid lacks, each holding a lower share one way and ADMIN the
+ * other, on every case: the higher share has to win whichever way it comes.
+ */
+async function addMixedUsers(
+	grantedById: string,
+	cases: Record<string, { id: string }>
+) {
+	const lead = await createTestUser();
+	const mixed: Record<string, User> = {};
+	for (const [name, direct, viaTeam] of [
+		["direct EDIT and team ADMIN", "EDIT", "ADMIN"],
+		["direct ADMIN and team VIEW", "ADMIN", "VIEW"],
+	] as const) {
+		const user = await createTestUser();
+		const team = await createTestTeam(lead.id);
+		await addTeamMember(team.id, user.id, "MEMBER");
+		mixed[name] = user;
+		for (const theCase of Object.values(cases)) {
+			await createTestPermission(theCase.id, user.id, grantedById, direct);
+			await createTestTeamPermission(theCase.id, team.id, grantedById, viaTeam);
+		}
+	}
+	return mixed;
+}
+
+describe("administrableCaseWhere", () => {
+	it("matches canAccessCase at ADMIN for every user and every case, and the plain rule", async () => {
+		const { users, cases } = await grid();
+		const creator = users.creator;
+		if (!creator) {
+			throw new Error("missing user");
+		}
+		const everyone = { ...users, ...(await addMixedUsers(creator.id, cases)) };
+
+		for (const [userName, user] of Object.entries(everyone)) {
+			const administrable = new Set(
+				(
+					await prisma.assuranceCase.findMany({
+						where: administrableCaseWhere(user.id),
+						select: { id: true },
+					})
+				).map((row) => row.id)
+			);
+			for (const [caseName, theCase] of Object.entries(cases)) {
+				const byFunction = await canAccessCase(
+					{ userId: user.id, caseId: theCase.id },
+					"ADMIN"
+				);
+				const byQuery = administrable.has(theCase.id);
+				expect(byQuery, `${userName} / ${caseName} against canAccessCase`).toBe(
+					byFunction
+				);
+				expect(byQuery, `${userName} / ${caseName} against the rule`).toBe(
+					shouldAdminister(userName, theCase.trashed)
+				);
+			}
+		}
+	});
+
+	it("lists a case once, though the user administers it directly and through a team", async () => {
+		const creator = await createTestUser();
+		const user = await createTestUser();
+		const team = await createTestTeam(creator.id);
+		await addTeamMember(team.id, user.id, "MEMBER");
+		const made = await prisma.assuranceCase.create({
+			data: { name: "shared twice", description: "d", createdById: creator.id },
+		});
+		await createTestPermission(made.id, user.id, creator.id, "ADMIN");
+		await createTestTeamPermission(made.id, team.id, creator.id, "ADMIN");
+
+		const rows = await prisma.assuranceCase.findMany({
+			where: { kind: "CASE", AND: [administrableCaseWhere(user.id)] },
+			select: { id: true },
+		});
+
+		expect(rows.map((row) => row.id)).toEqual([made.id]);
 	});
 });

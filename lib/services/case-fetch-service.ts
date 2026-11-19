@@ -7,8 +7,10 @@ import {
 import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { logger } from "@/lib/logger";
 import {
+	administrableCaseWhere,
 	canAccessCase,
 	getCasePermission,
+	maxPermission,
 	viewableCaseWhere,
 } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -23,7 +25,7 @@ import type {
 	PropertyClaimResponse,
 	StrategyResponse,
 } from "@/lib/services/case-response-types";
-import type { Prisma } from "@/src/generated/prisma";
+import type { PermissionLevel, Prisma } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
 
 const log = logger.child({ component: "case-fetch-service" });
@@ -37,10 +39,12 @@ const CASE_INCLUDE = {
 		where: { deletedAt: null },
 		include: {
 			children: { where: { deletedAt: null } },
-			comments: true,
+			_count: { select: { comments: true } },
 			evidenceLinksTo: {
 				where: { evidence: { deletedAt: null } },
-				include: { evidence: { include: { comments: true } } },
+				include: {
+					evidence: { include: { _count: { select: { comments: true } } } },
+				},
 			},
 		},
 	},
@@ -248,6 +252,7 @@ function buildAwayGoalStructure(
 		citedCaseName: cited.caseName,
 		citedElementName: cited.elementName,
 		citedCaseAccessible: cited.accessible,
+		commentCount: element._count.comments,
 		comments: [],
 		inSandbox: element.inSandbox,
 		...placeholderFields(element),
@@ -274,6 +279,7 @@ function buildModuleStructure(
 		moduleReferenceDangling: element.moduleReferenceDangling,
 		moduleCaseName: cited.caseName,
 		moduleCaseAccessible: cited.accessible,
+		commentCount: element._count.comments,
 		comments: [],
 		inSandbox: element.inSandbox,
 		...placeholderFields(element),
@@ -442,6 +448,7 @@ function buildGoalStructure(
 		propertyClaims,
 		awayGoals,
 		modules,
+		commentCount: goal._count.comments,
 		comments: [],
 		assumption: goal.assumption ?? "",
 		justification: goal.justification ?? "",
@@ -493,6 +500,7 @@ function buildStrategyStructure(
 		propertyClaims,
 		awayGoals,
 		modules,
+		commentCount: strategy._count.comments,
 		comments: [],
 		assumption: strategy.assumption ?? "",
 		justification: strategy.justification ?? "",
@@ -529,6 +537,7 @@ function buildPropertyClaimStructure(
 			URL: ev.url ?? "",
 			urls: ev.urls || [],
 			propertyClaimId: [claim.id],
+			commentCount: ev._count.comments,
 			comments: [],
 			inSandbox: ev.inSandbox,
 			// Dialogical reasoning (defeaters, ADR 0005 D2).
@@ -577,6 +586,7 @@ function buildPropertyClaimStructure(
 		awayGoals,
 		modules,
 		evidence,
+		commentCount: claim._count.comments,
 		comments: [],
 		assumption: claim.assumption ?? "",
 		justification: claim.justification ?? "",
@@ -756,6 +766,36 @@ export interface AssuranceCaseSummary {
 // ---------------------------------------------------------------------------
 
 /**
+ * Selects only the caller's own grants on a case: their direct permission and
+ * the permissions of the teams they belong to. Without the two filters the
+ * query would return every collaborator's grant.
+ */
+function callerGrantsSelect(userId: string) {
+	return {
+		userPermissions: {
+			where: { userId },
+			select: { permission: true },
+		},
+		teamPermissions: {
+			where: { team: { members: { some: { userId } } } },
+			select: { permission: true },
+		},
+	} satisfies Prisma.AssuranceCaseSelect;
+}
+
+/** The front-end level for the highest of the caller's own grants. */
+function levelFromGrants(c: {
+	userPermissions: { permission: PermissionLevel }[];
+	teamPermissions: { permission: PermissionLevel }[];
+}): string {
+	let highest: PermissionLevel | null = null;
+	for (const grant of [...c.userPermissions, ...c.teamPermissions]) {
+		highest = maxPermission(highest, grant.permission);
+	}
+	return mapPermissionToFrontend(highest, false);
+}
+
+/**
  * Reads the non-deleted cases of one kind that the user created or has been
  * given a direct permission on, newest first. Throws on a database failure;
  * the two public lists catch it and report in their own words.
@@ -787,6 +827,7 @@ export async function listOwnAndDirectlySharedCases(
 			isDemo: true,
 			kind: true,
 			published: true,
+			...callerGrantsSelect(userId),
 		},
 		orderBy: { createdAt: "desc" },
 	});
@@ -800,7 +841,7 @@ export async function listOwnAndDirectlySharedCases(
 		owner: c.createdById ?? undefined,
 		isDemo: c.isDemo,
 		kind: c.kind,
-		permissions: c.createdById === userId ? "owner" : "view",
+		permissions: c.createdById === userId ? "owner" : levelFromGrants(c),
 		published: c.published,
 	}));
 }
@@ -817,6 +858,34 @@ export async function listUserCases(
 		return { data: await listOwnAndDirectlySharedCases(userId, "CASE") };
 	} catch (error) {
 		log.error("listUserCases", { userId, error });
+		return { error: "Failed to fetch cases" };
+	}
+}
+
+/** A case a user can administer, as the integrations grant form lists it. */
+export interface AdministrableCaseSummary {
+	id: string;
+	name: string;
+}
+
+/**
+ * Fetches the ordinary cases the user can administer, newest first: ones they
+ * created and ones shared with them at ADMIN, directly or through a team.
+ * Excludes soft-deleted cases and patterns. These are the cases the user can
+ * grant an integration access to; the grant itself still checks ADMIN.
+ */
+export async function listAdministrableCases(
+	userId: string
+): ServiceResult<AdministrableCaseSummary[]> {
+	try {
+		const cases = await prisma.assuranceCase.findMany({
+			where: { kind: "CASE", AND: [administrableCaseWhere(userId)] },
+			select: { id: true, name: true },
+			orderBy: { createdAt: "desc" },
+		});
+		return { data: cases };
+	} catch (error) {
+		log.error("listAdministrableCases", { userId, error });
 		return { error: "Failed to fetch cases" };
 	}
 }
@@ -868,6 +937,7 @@ export async function listSharedCases(
 				createdById: true,
 				kind: true,
 				published: true,
+				...callerGrantsSelect(userId),
 			},
 			orderBy: { createdAt: "desc" },
 		});
@@ -881,6 +951,7 @@ export async function listSharedCases(
 				updatedDate: c.updatedAt.toISOString(),
 				owner: c.createdById ?? undefined,
 				kind: c.kind,
+				permissions: levelFromGrants(c),
 				published: c.published,
 			})),
 		};

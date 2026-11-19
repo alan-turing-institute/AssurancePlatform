@@ -1,12 +1,10 @@
 "use server";
 
 import { validateSession } from "@/lib/auth/validate-session";
-import type { PatternVariable } from "@/lib/case/pattern-variables";
 import type { ActionResult } from "@/lib/errors";
 import {
 	type CreateCaseFromPatternInput,
 	createCaseFromPatternSchema,
-	patternSourceSchema,
 	protoKeyProblem,
 } from "@/lib/schemas/case-from-pattern";
 import type { ViewablePattern } from "@/lib/services/case-from-pattern-service";
@@ -28,34 +26,6 @@ export const fetchViewablePatterns = async (): Promise<
 		"@/lib/services/case-from-pattern-service"
 	);
 	const result = await listViewablePatterns(validated.userId);
-	if ("error" in result) {
-		return null;
-	}
-	return result.data;
-};
-
-/**
- * Lists the variables of a pattern the signed-in user can start a case from,
- * for the new-case dialog's fields. Null when there is no session, the user
- * cannot read the pattern, or the lookup fails.
- */
-export const fetchPatternVariables = async (
-	source: CreateCaseFromPatternInput["source"]
-): Promise<PatternVariable[] | null> => {
-	const validated = await validateSession();
-	if (!validated) {
-		return null;
-	}
-
-	const validation = validateInput(source, patternSourceSchema);
-	if (!validation.success) {
-		return null;
-	}
-
-	const { readPatternVariables } = await import(
-		"@/lib/services/case-from-pattern-service"
-	);
-	const result = await readPatternVariables(validated.userId, validation.data);
 	if ("error" in result) {
 		return null;
 	}

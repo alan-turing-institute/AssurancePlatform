@@ -1,7 +1,16 @@
 diff --git a/dist/NextStepReact.js b/dist/NextStepReact.js
-index 8c1ba13a8c8bbdedc95075148a84096614dc99e9..58c5d19a41f26fd6fc5d3f435084cbb3bdaa9176 100644
+index 8c1ba13a8c8bbdedc95075148a84096614dc99e9..33a6919d4a5197fe74698624052f9f91950d42b7 100644
 --- a/dist/NextStepReact.js
 +++ b/dist/NextStepReact.js
+@@ -357,7 +357,7 @@ const NextStepReact = (props) => {
+             }
+         }
+         else {
+-            if (scrollToTop || !elementToScroll) {
++            if (scrollToTop) {
+                 // Scroll to the top of the body
+                 window.scrollTo({ top: 0, behavior: 'smooth' });
+             }
 @@ -497,6 +497,24 @@ const NextStepReact = (props) => {
                      setCurrentStep(nextStepIndex);
                      scrollToElement(nextStepIndex);

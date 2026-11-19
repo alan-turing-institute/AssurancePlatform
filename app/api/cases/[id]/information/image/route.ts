@@ -83,7 +83,7 @@ async function requireExistingCaseInformation(params: RouteParams["params"]) {
  * @response 403 - Permission denied (also returned for a non-existent case)
  * @response 413 - Request body too large, or the file itself exceeds the
  * maximum size even though the request body did not
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * @response 200 - `{ success: true }`
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (also returned for a non-existent case)
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {

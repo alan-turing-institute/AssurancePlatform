@@ -15,6 +15,7 @@ import {
 /**
  * GET /api/user/tours
  * Returns the list of completed tour IDs for the current user.
+ * @auth SessionAuth
  */
 export async function GET() {
 	try {
@@ -33,6 +34,7 @@ export async function GET() {
  * PATCH /api/user/tours
  * Marks a tour as completed for the current user.
  * Idempotent — completing an already-completed tour returns success.
+ * @auth SessionAuth
  */
 export async function PATCH(req: Request) {
 	try {

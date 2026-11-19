@@ -36,6 +36,7 @@ import {
 	refreshCaseIfShown,
 	removeAssuranceCaseNode,
 } from "@/lib/case";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import {
 	getCompatibleChildTypes,
 	normaliseOrphanType,
@@ -326,10 +327,7 @@ export default function NodeOptionsMenu({
 	const [attachDialogOpen, setAttachDialogOpen] = useState(false);
 	const [moveDialogOpen, setMoveDialogOpen] = useState(false);
 
-	const readOnly = !!(
-		assuranceCase?.permissions === "view" ||
-		assuranceCase?.permissions === "comment"
-	);
+	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	const isGoal = nodeType === "goal";
 	const compatibleChildTypes = getCompatibleChildTypes(nodeType);

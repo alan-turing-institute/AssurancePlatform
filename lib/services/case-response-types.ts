@@ -53,6 +53,7 @@ export interface AwayGoalResponse extends PlaceholderFields {
 	citedCaseName?: string | null;
 	citedElementId?: string | null;
 	citedElementName?: string | null;
+	commentCount?: number;
 	comments?: CommentResponse[];
 	createdDate?: string;
 	description: string;
@@ -80,6 +81,7 @@ export interface AwayGoalResponse extends PlaceholderFields {
  * `moduleCaseName` is null unless `moduleCaseAccessible` is true.
  */
 export interface ModuleResponse extends PlaceholderFields {
+	commentCount?: number;
 	comments?: CommentResponse[];
 	createdDate?: string;
 	description: string;
@@ -107,6 +109,7 @@ export interface GoalResponse extends PlaceholderFields {
 	assumption?: string;
 	assuranceCaseId: string;
 	awayGoals?: AwayGoalResponse[];
+	commentCount?: number;
 	comments?: CommentResponse[];
 	context?: ContextEntry[];
 	createdDate?: string;
@@ -135,6 +138,7 @@ export interface StrategyResponse extends PlaceholderFields {
 	assertionStatus?: AssertionStatusResponseType;
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
+	commentCount?: number;
 	comments?: CommentResponse[];
 	context?: ContextEntry[];
 	createdDate?: string;
@@ -160,6 +164,7 @@ export interface PropertyClaimResponse extends PlaceholderFields {
 	assumption?: string;
 	awayGoals?: AwayGoalResponse[];
 	claimType: string;
+	commentCount?: number;
 	comments?: CommentResponse[];
 	context?: ContextEntry[];
 	createdDate?: string;
@@ -189,6 +194,7 @@ export interface PropertyClaimResponse extends PlaceholderFields {
 }
 
 export interface EvidenceResponse extends PlaceholderFields {
+	commentCount?: number;
 	comments?: CommentResponse[];
 	createdDate?: string;
 	/** Dialogical reasoning (defeaters, ADR 0005 D2) — applies to any element type */

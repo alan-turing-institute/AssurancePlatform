@@ -1,12 +1,19 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { checkGitHubAccess } from "@/actions/integrations";
 import {
 	mockPush,
 	resetNavigationMocks,
 } from "@/src/__tests__/mocks/next-navigation-mocks";
 import { server } from "@/src/__tests__/mocks/server";
 import { extractErrorMessage, useCaseImport } from "../use-case-import";
+
+// The connection checks are server actions; the hook only reads their result.
+vi.mock("@/actions/integrations", () => ({
+	checkGitHubAccess: vi.fn(),
+	checkGoogleDriveAccess: vi.fn(),
+}));
 
 /**
  * The import dialog's error surfacing (walkthrough finding 16): a
@@ -165,5 +172,66 @@ describe("useCaseImport — warnings hold navigation open (QA finding, 2026-09-1
 		await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/case/case-2"));
 		expect(onClose).toHaveBeenCalled();
 		expect(result.current.pendingCaseId).toBeNull();
+	});
+});
+
+/**
+ * A GitHub import is refused with a 403 when the person has no usable GitHub
+ * token, which includes a token the server discarded while the dialog was
+ * open. The GitHub tab must then show the connect button, not the URL form.
+ */
+describe("useCaseImport — GitHub import refused with 403", () => {
+	const REFUSAL = {
+		error: "No GitHub token found. Connect your GitHub account.",
+		code: "FORBIDDEN",
+	};
+
+	function refuseGitHubImport() {
+		server.use(
+			http.post("/api/cases/import/github", () =>
+				HttpResponse.json(REFUSAL, { status: 403 })
+			)
+		);
+	}
+
+	beforeEach(() => {
+		vi.mocked(checkGitHubAccess).mockReset();
+	});
+
+	it("shows the connect prompt when the stored token is gone", async () => {
+		vi.mocked(checkGitHubAccess)
+			.mockResolvedValueOnce({ connected: true })
+			.mockResolvedValueOnce({ connected: false });
+		refuseGitHubImport();
+
+		const { result } = renderHook(() =>
+			useCaseImport({ isOpen: true, onClose: () => undefined })
+		);
+		await waitFor(() => expect(result.current.githubConnected).toBe(true));
+
+		await act(async () => {
+			await result.current.importFromGitHub("owner/repo/case.json");
+		});
+
+		await waitFor(() => expect(result.current.githubConnected).toBe(false));
+		expect(result.current.error).toBe(REFUSAL.error);
+	});
+
+	it("keeps the URL form when GitHub still has the token", async () => {
+		vi.mocked(checkGitHubAccess).mockResolvedValue({ connected: true });
+		refuseGitHubImport();
+
+		const { result } = renderHook(() =>
+			useCaseImport({ isOpen: true, onClose: () => undefined })
+		);
+		await waitFor(() => expect(result.current.githubConnected).toBe(true));
+
+		await act(async () => {
+			await result.current.importFromGitHub("owner/repo/case.json");
+		});
+
+		await waitFor(() => expect(result.current.error).toBe(REFUSAL.error));
+		expect(checkGitHubAccess).toHaveBeenCalledTimes(2);
+		expect(result.current.githubConnected).toBe(true);
 	});
 });

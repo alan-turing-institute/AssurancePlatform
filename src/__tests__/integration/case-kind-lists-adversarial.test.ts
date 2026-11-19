@@ -37,9 +37,10 @@ vi.mock("@/lib/auth/validate-session", () => ({
 /**
  * The lists meant for ordinary cases (My Assurance Cases, the integrations
  * grant form and the away-goal and module picker) never return a pattern,
- * however the reader came to see it; the lists for ordinary cases keep every
- * ordinary case. The link from a started case to its pattern clears when the
- * pattern is deleted.
+ * however the reader came to see it. My Assurance Cases and the picker keep
+ * every ordinary case the reader can reach; the grant form keeps only the ones
+ * they can administer. The link from a started case to its pattern clears when
+ * the pattern is deleted.
  */
 
 beforeEach(async () => {
@@ -168,7 +169,7 @@ describe("My Assurance Cases (listUserCases)", () => {
 	});
 });
 
-describe("the integrations grant form and the dashboard (fetchAssuranceCases)", () => {
+describe("the dashboard (fetchAssuranceCases)", () => {
 	it("returns the same ordinary cases and no pattern", async () => {
 		const world = await buildWorld();
 		await mockAuth(world.reader.id, world.reader.username, world.reader.email);
@@ -192,6 +193,208 @@ describe("the integrations grant form and the dashboard (fetchAssuranceCases)", 
 		const { fetchAssuranceCases } = await import("@/actions/assurance-cases");
 
 		expect(await fetchAssuranceCases()).toEqual([]);
+	});
+});
+
+type Level = "VIEW" | "COMMENT" | "EDIT" | "ADMIN";
+
+const LEVELS: Level[] = ["VIEW", "COMMENT", "EDIT", "ADMIN"];
+
+/** A reader with ordinary cases, patterns and trashed cases at every level of sharing. */
+async function buildAdministerWorld() {
+	const reader = await createTestUser();
+	const other = await createTestUser();
+	const team = await createTestTeam(other.id);
+	await addTeamMember(team.id, reader.id, "MEMBER", other.id);
+
+	const trash = (id: string) =>
+		prisma.assuranceCase.update({
+			where: { id },
+			data: { deletedAt: new Date(), deletedById: other.id },
+		});
+
+	const own = await createStoredCase(reader.id, "own case");
+	const ownPattern = await createStoredPattern(reader.id, "own pattern");
+	const ownTrashed = await createStoredCase(reader.id, "own trashed case");
+	await trash(ownTrashed.id);
+	await createStoredCase(other.id, "unshared case");
+
+	const shares: { id: string; level: Level; route: "direct" | "team" }[] = [];
+	for (const level of LEVELS) {
+		const direct = await createStoredCase(other.id, `direct ${level} case`);
+		await createTestPermission(direct.id, reader.id, other.id, level);
+		shares.push({ id: direct.id, level, route: "direct" });
+		const viaTeam = await createStoredCase(other.id, `team ${level} case`);
+		await createTestTeamPermission(viaTeam.id, team.id, other.id, level);
+		shares.push({ id: viaTeam.id, level, route: "team" });
+	}
+
+	const directAdminPattern = await createStoredPattern(
+		other.id,
+		"direct ADMIN pattern"
+	);
+	const teamAdminPattern = await createStoredPattern(
+		other.id,
+		"team ADMIN pattern"
+	);
+	await createTestPermission(
+		directAdminPattern.id,
+		reader.id,
+		other.id,
+		"ADMIN"
+	);
+	await createTestTeamPermission(
+		teamAdminPattern.id,
+		team.id,
+		other.id,
+		"ADMIN"
+	);
+
+	const directAdminTrashed = await createStoredCase(
+		other.id,
+		"direct ADMIN trashed case"
+	);
+	const teamAdminTrashed = await createStoredCase(
+		other.id,
+		"team ADMIN trashed case"
+	);
+	await createTestPermission(
+		directAdminTrashed.id,
+		reader.id,
+		other.id,
+		"ADMIN"
+	);
+	await createTestTeamPermission(
+		teamAdminTrashed.id,
+		team.id,
+		other.id,
+		"ADMIN"
+	);
+	await trash(directAdminTrashed.id);
+	await trash(teamAdminTrashed.id);
+
+	return {
+		reader,
+		own,
+		shares,
+		hidden: [
+			ownPattern,
+			ownTrashed,
+			directAdminPattern,
+			teamAdminPattern,
+			directAdminTrashed,
+			teamAdminTrashed,
+		],
+	};
+}
+
+describe("the integrations grant form (fetchAdministrableCases)", () => {
+	it("lists the cases the reader owns and those shared at ADMIN, directly or through a team, and no other", async () => {
+		const world = await buildAdministerWorld();
+		await mockAuth(world.reader.id, world.reader.username, world.reader.email);
+
+		const { fetchAdministrableCases } = await import(
+			"@/actions/assurance-cases"
+		);
+		const listed = await fetchAdministrableCases();
+
+		const administered = world.shares
+			.filter((share) => share.level === "ADMIN")
+			.map((share) => share.id);
+		expect(administered).toHaveLength(2);
+		expect((listed ?? []).map((row) => row.id).sort()).toEqual(
+			[world.own.id, ...administered].sort()
+		);
+	});
+
+	it("leaves out every share below ADMIN, directly or through a team", async () => {
+		const world = await buildAdministerWorld();
+		await mockAuth(world.reader.id, world.reader.username, world.reader.email);
+
+		const { fetchAdministrableCases } = await import(
+			"@/actions/assurance-cases"
+		);
+		const ids = ((await fetchAdministrableCases()) ?? []).map((row) => row.id);
+
+		const below = world.shares.filter((share) => share.level !== "ADMIN");
+		expect(below).toHaveLength(6);
+		for (const share of below) {
+			expect(ids, `${share.route} ${share.level}`).not.toContain(share.id);
+		}
+	});
+
+	it("leaves out patterns and trashed cases, even where the reader holds ADMIN", async () => {
+		const world = await buildAdministerWorld();
+		await mockAuth(world.reader.id, world.reader.username, world.reader.email);
+
+		const { fetchAdministrableCases } = await import(
+			"@/actions/assurance-cases"
+		);
+		const ids = ((await fetchAdministrableCases()) ?? []).map((row) => row.id);
+
+		expect(world.hidden).toHaveLength(6);
+		for (const hidden of world.hidden) {
+			expect(ids, hidden.name).not.toContain(hidden.id);
+		}
+	});
+
+	it("lists newest first, each case as its id and name", async () => {
+		const user = await createTestUser();
+		const oldest = await prisma.assuranceCase.create({
+			data: {
+				name: "oldest",
+				description: "d",
+				createdById: user.id,
+				createdAt: new Date("2026-01-01T00:00:00Z"),
+			},
+		});
+		const newest = await prisma.assuranceCase.create({
+			data: {
+				name: "newest",
+				description: "d",
+				createdById: user.id,
+				createdAt: new Date("2026-03-01T00:00:00Z"),
+			},
+		});
+		const middle = await prisma.assuranceCase.create({
+			data: {
+				name: "middle",
+				description: "d",
+				createdById: user.id,
+				createdAt: new Date("2026-02-01T00:00:00Z"),
+			},
+		});
+		await mockAuth(user.id, user.username, user.email);
+
+		const { fetchAdministrableCases } = await import(
+			"@/actions/assurance-cases"
+		);
+
+		expect(await fetchAdministrableCases()).toEqual([
+			{ id: newest.id, name: "newest" },
+			{ id: middle.id, name: "middle" },
+			{ id: oldest.id, name: "oldest" },
+		]);
+	});
+
+	it("returns an empty list for someone who administers no ordinary case", async () => {
+		const user = await createTestUser();
+		await createStoredPattern(user.id);
+		await mockAuth(user.id, user.username, user.email);
+
+		const { fetchAdministrableCases } = await import(
+			"@/actions/assurance-cases"
+		);
+
+		expect(await fetchAdministrableCases()).toEqual([]);
+	});
+
+	it("returns null when nobody is signed in", async () => {
+		const { fetchAdministrableCases } = await import(
+			"@/actions/assurance-cases"
+		);
+
+		expect(await fetchAdministrableCases()).toBeNull();
 	});
 });
 

@@ -33,9 +33,9 @@ export const requiredString = (
 ) =>
 	z
 		.string()
+		.trim()
 		.min(minLength, `${fieldName} is required`)
 		.max(maxLength, `${fieldName} must be less than ${maxLength} characters`)
-		.transform((v) => v.trim())
 		.describe(`Required ${fieldName} field`);
 
 /**
@@ -49,6 +49,21 @@ export const optionalString = (maxLength = 2000) =>
 		.transform((v) => (v?.trim() ? v.trim() : undefined))
 		.optional()
 		.describe("Optional string field");
+
+/**
+ * Optional trimmed string that can be emptied: absent means "leave as it is",
+ * while null, an empty string or only spaces clear the stored text (the result
+ * is null). For text such as an assumption or justification, where saving an
+ * empty field has to remove what was there.
+ */
+export const clearableString = (maxLength = 2000) =>
+	z
+		.string()
+		.max(maxLength, `Must be less than ${maxLength} characters`)
+		.nullable()
+		.transform((v) => v?.trim() || null)
+		.optional()
+		.describe("Optional string field; empty clears it");
 
 /**
  * Optional trimmed string where an exact empty string is a value, not "leave

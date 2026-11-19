@@ -1,10 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
-import { readPatternVariables } from "@/lib/services/case-from-pattern-service";
-import { expectError, expectSameError } from "../utils/assertion-helpers";
-import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
-import { createStoredCase, NODE } from "../utils/case-kind-kit";
+import { mockNoAuth } from "../utils/auth-helpers";
+import { NODE } from "../utils/case-kind-kit";
 import {
 	createPublishedRow,
 	fullStateOf,
@@ -18,13 +16,7 @@ import {
 	STARTERS,
 	type Starter,
 } from "../utils/pattern-starters";
-import {
-	addTeamMember,
-	createTestPermission,
-	createTestTeam,
-	createTestTeamPermission,
-	createTestUser,
-} from "../utils/prisma-factories";
+import { createTestUser } from "../utils/prisma-factories";
 import {
 	MORE,
 	OTHER,
@@ -55,8 +47,6 @@ type User = Awaited<ReturnType<typeof createTestUser>>;
 
 const NOT_A_VARIABLE = "That pattern has no variable to give that value to";
 const TOO_LONG = "Variable values must be at most 500 characters";
-const NOT_FOUND = "Pattern not found";
-const NOT_A_PATTERN = "That case is not a pattern";
 
 async function elementIdByName(caseId: string, name: string) {
 	const row = await prisma.assuranceElement.findFirstOrThrow({
@@ -306,142 +296,5 @@ describe.each(
 		expect((await entriesOf(outcome.id, "P1")).context[0]).toMatchObject({
 			value: "Dana",
 		});
-	});
-});
-
-describe("reading a pattern's variables", () => {
-	it("lists them in tree order with name, meaning and any value, leaving out other entries", async () => {
-		const owner = await createTestUser();
-		const patternId = await variablePattern(owner);
-
-		const result = await readPatternVariables(owner.id, {
-			patternCaseId: patternId,
-		});
-
-		expect("data" in result && result.data).toEqual([
-			{ id: SYS, name: "system", meaning: "the system under test" },
-			{ id: MORE, name: "owner", meaning: "Who is responsible", value: "Dana" },
-		]);
-	});
-
-	it.each([
-		["a pattern shared with them directly", "direct"],
-		["a pattern shared with their team", "team"],
-	])("lets a user read %s", async (_label, route) => {
-		const owner = await createTestUser();
-		const user = await createTestUser();
-		const patternId = await variablePattern(owner);
-		if (route === "direct") {
-			await createTestPermission(patternId, user.id, owner.id, "VIEW");
-		} else {
-			const team = await createTestTeam(owner.id);
-			await addTeamMember(team.id, user.id);
-			await createTestTeamPermission(patternId, team.id, owner.id, "VIEW");
-		}
-
-		const result = await readPatternVariables(user.id, {
-			patternCaseId: patternId,
-		});
-
-		expect("data" in result && result.data.map((v) => v.name)).toEqual([
-			"system",
-			"owner",
-		]);
-	});
-
-	it("answers a user with no access as it answers a missing pattern", async () => {
-		const owner = await createTestUser();
-		const stranger = await createTestUser();
-		const patternId = await variablePattern(owner);
-
-		const noAccess = await readPatternVariables(stranger.id, {
-			patternCaseId: patternId,
-		});
-		const missing = await readPatternVariables(stranger.id, {
-			patternCaseId: randomUUID(),
-		});
-
-		expectError(noAccess, NOT_FOUND);
-		expectSameError(noAccess, missing);
-	});
-
-	it("refuses a case that is not a pattern, a published case and a source that names nothing", async () => {
-		const owner = await createTestUser();
-		const ordinary = await createStoredCase(owner.id);
-		await createPublishedRow({
-			slug: "a-published-case",
-			type: "ASSURANCE_CASE",
-			assuranceCaseId: ordinary.id,
-		});
-
-		expectError(
-			await readPatternVariables(owner.id, { patternCaseId: ordinary.id }),
-			NOT_A_PATTERN
-		);
-		expectError(
-			await readPatternVariables(owner.id, {
-				publishedSlug: "a-published-case",
-			}),
-			NOT_FOUND
-		);
-		expectError(
-			await readPatternVariables(
-				owner.id,
-				{} as Parameters<typeof readPatternVariables>[1]
-			)
-		);
-	});
-
-	it("reads a published pattern without any case access", async () => {
-		const owner = await createTestUser();
-		const stranger = await createTestUser();
-		const patternId = await variablePattern(owner);
-		const source = await publishedSource(owner, patternId);
-
-		const result = await readPatternVariables(
-			stranger.id,
-			source as Parameters<typeof readPatternVariables>[1]
-		);
-
-		expect("data" in result && result.data).toHaveLength(2);
-	});
-});
-
-describe("the fetchPatternVariables action", () => {
-	it("returns the variables to the signed-in user who may read the pattern", async () => {
-		const owner = await createTestUser();
-		const patternId = await variablePattern(owner);
-		await mockAuth(owner.id, owner.username, owner.email);
-		const { fetchPatternVariables } = await import(
-			"@/actions/case-from-pattern"
-		);
-
-		const variables = await fetchPatternVariables({ patternCaseId: patternId });
-
-		expect(variables?.map((variable) => variable.name)).toEqual([
-			"system",
-			"owner",
-		]);
-	});
-
-	it("returns nothing with no session, for a user with no access, and for a bad source", async () => {
-		const owner = await createTestUser();
-		const stranger = await createTestUser();
-		const patternId = await variablePattern(owner);
-		const { fetchPatternVariables } = await import(
-			"@/actions/case-from-pattern"
-		);
-
-		expect(
-			await fetchPatternVariables({ patternCaseId: patternId })
-		).toBeNull();
-		await mockAuth(stranger.id, stranger.username, stranger.email);
-		expect(
-			await fetchPatternVariables({ patternCaseId: patternId })
-		).toBeNull();
-		await mockAuth(owner.id, owner.username, owner.email);
-		expect(
-			await fetchPatternVariables({ patternCaseId: "not-a-uuid" })
-		).toBeNull();
 	});
 });

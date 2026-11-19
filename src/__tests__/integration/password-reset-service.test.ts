@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { verifyPassword } from "@/lib/auth/password-service";
+import { signInIdentifierKey } from "@/lib/auth/sign-in-identifier";
 import prisma from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import {
@@ -93,6 +94,58 @@ describe("requestPasswordReset", () => {
 		expect(storedHash).not.toBe(token);
 	});
 
+	it("finds a user whose stored email has capitals, whatever capitals are typed, and mails the stored address", async () => {
+		const user = await createTestUser({
+			authProvider: "LOCAL",
+			email: "Jane.Smith@Example.com",
+		});
+
+		expectSuccess(
+			await requestPasswordReset(" jane.smith@example.com ", TEST_IP)
+		);
+
+		const token = getCapturedResetToken();
+		expect(await getTestPasswordResetTokenHash(user.id)).toBe(sha256Hex(token));
+		expect(vi.mocked(sendPasswordResetEmail).mock.calls.at(-1)?.[0].to).toBe(
+			"Jane.Smith@Example.com"
+		);
+	});
+
+	it("does nothing when two accounts differ only in capitals and a third capitalisation is typed", async () => {
+		const capitalised = await createTestUser({
+			authProvider: "LOCAL",
+			email: "Pat@Example.com",
+		});
+		const lowercase = await createTestUser({
+			authProvider: "LOCAL",
+			email: "pat@example.com",
+		});
+		vi.mocked(sendPasswordResetEmail).mockClear();
+
+		expect(await requestPasswordReset("PAT@EXAMPLE.COM", TEST_IP)).toEqual({
+			data: null,
+		});
+
+		expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+		expect(await getTestPasswordResetTokenHash(capitalised.id)).toBeNull();
+		expect(await getTestPasswordResetTokenHash(lowercase.id)).toBeNull();
+	});
+
+	it("does not match İnfo@example.com to a stored info@example.com", async () => {
+		const user = await createTestUser({
+			authProvider: "LOCAL",
+			email: "info@example.com",
+		});
+		vi.mocked(sendPasswordResetEmail).mockClear();
+
+		expect(await requestPasswordReset("İnfo@example.com", TEST_IP)).toEqual({
+			data: null,
+		});
+
+		expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+		expect(await getTestPasswordResetTokenHash(user.id)).toBeNull();
+	});
+
 	it("returns success for a non-existent email (anti-enumeration)", async () => {
 		// Must succeed silently — must not reveal whether the address exists
 		expectSuccess(await requestPasswordReset("nobody@example.com", TEST_IP));
@@ -116,19 +169,19 @@ describe("requestPasswordReset", () => {
 		await prisma.passwordResetAttempt.createMany({
 			data: [
 				{
-					email: user.email.toLowerCase(),
+					emailKey: signInIdentifierKey(user.email.toLowerCase()),
 					ipAddress: "10.0.0.1",
 					successful: false,
 					attemptedAt: new Date(),
 				},
 				{
-					email: user.email.toLowerCase(),
+					emailKey: signInIdentifierKey(user.email.toLowerCase()),
 					ipAddress: "10.0.0.2",
 					successful: false,
 					attemptedAt: new Date(),
 				},
 				{
-					email: user.email.toLowerCase(),
+					emailKey: signInIdentifierKey(user.email.toLowerCase()),
 					ipAddress: "10.0.0.3",
 					successful: false,
 					attemptedAt: new Date(),
@@ -400,7 +453,10 @@ describe("resetPassword", () => {
 
 		// The attempt record seeded by requestPasswordReset should now be marked successful
 		const attempt = await prisma.passwordResetAttempt.findFirst({
-			where: { email: email.toLowerCase(), successful: true },
+			where: {
+				emailKey: signInIdentifierKey(email.toLowerCase()),
+				successful: true,
+			},
 			orderBy: { attemptedAt: "desc" },
 		});
 		expect(attempt).not.toBeNull();

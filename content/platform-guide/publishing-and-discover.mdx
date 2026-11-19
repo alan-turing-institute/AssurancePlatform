@@ -3,13 +3,13 @@ title: "Publishing and Discover"
 description: "Publish a frozen snapshot of an assurance case or a pattern, update it and remove its public listing."
 ---
 
-Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public Discover page at `/discover` lists published cases and published patterns. A visitor can open a published case or pattern by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
+Publishing lets you share a point-in-time version of an assurance case with people who do not have access to its working copy. The public [Discover page](/discover) lists published cases and published patterns. A visitor can open a published case or pattern by its slug and download the frozen JSON snapshot. The working case stays in the editor, where your team can continue to develop it.
 
 The same frozen snapshot is also available without sign-in as JSON at `/api/public/discover/<slug>`. Review all case and plugin data included in the export before publishing.
 
 ## Prepare the case
 
-Open the case at `/case/<caseId>` and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
+Open the case and select its status control in the header. The dialog shows `Draft` or `Published`. To publish a draft, its Case Information must contain a non-empty description, authors and sector. If one is missing, the dialog names the missing fields and takes you to the Case Information area. Complete them before returning to the status dialog. You need edit access or higher for the publishing operation.
 
 A case with elements still to fill in cannot be published either.
 An element marked **To fill in** on the diagram is a placeholder that nobody has written yet, for example one that came from a [pattern](/docs/platform-guide/templates).
@@ -55,7 +55,7 @@ Publishing does not grant visitors edit rights, copy private comments into the s
 ## Cases and patterns on Discover
 
 A pattern is published in the same way as a case.
-Open it in the editor at `/case/<caseId>`, select its status control and choose **Publish**.
+Open it in the editor, select its status control and choose **Publish**.
 The same checks apply, including the description, authors and sector in Case Information.
 A pattern may still hold elements to fill in and variables with no value, which a case may not.
 The slug, **Update published version**, **Unpublish**, Trash and archived copies work as they do for a case.
@@ -78,10 +78,10 @@ An archived pattern, marked "Archived" on its page, can be used in the same way.
 
 If the pattern has variables, its page lists them under **Variables**, each with what it means and, where the pattern gives one, its default value.
 The list comes from the published snapshot, so visitors who are not signed in see it too.
-The dialog asks for a value for each variable; see [Give values when you start a case](/docs/platform-guide/templates#give-values-when-you-start-a-case).
+The dialog does not ask for values; the new case takes the pattern's own, and you change one afterwards on the element that defines it; see [Values in a case started from a pattern](/docs/platform-guide/templates#values-in-a-case-started-from-a-pattern).
 
 When you are signed in, **Use this pattern** opens **Create New Assurance Case** with **A pattern** chosen under **Start from** and this pattern selected.
-Enter a **Name** and **Description**, and a value for each variable you want to set, then choose **Submit**.
+Enter a **Name** and **Description**, then choose **Submit**.
 The platform makes a new case that belongs to you and opens it in the editor.
 The case is a copy of the pattern's published snapshot, without its comments.
 If you can also view the pattern itself, for example because you own it or it is shared with you, the copy is of the pattern as it is now, which can differ from the published snapshot.

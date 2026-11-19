@@ -23,11 +23,17 @@ const DELETE_CONFIRM_REGEX = /delete integration/i;
 const DELETE_TOOLTIP_TEXT = "Revoke first — delete is permanent";
 const TYPE_NAME_LABEL_REGEX = /type.*to confirm/i;
 const ISSUE_TOKEN_BUTTON_REGEX = /issue new token/i;
+const ISSUE_TOKEN_SUBMIT_REGEX = /^issue token$/i;
+const ISSUE_WITHOUT_END_DATE_REGEX = /issue without an end date/i;
+const NO_END_DATE_WARNING_REGEX = /has no end date and keeps working/i;
+const GO_BACK_REGEX = /go back/i;
+const END_DATE_LABEL_REGEX = /end date/i;
 const ISSUING_LABEL_REGEX = /^issuing…$/i;
 const PERMANENT_TEXT_REGEX = /permanent/i;
 const CANNOT_BE_UNDONE_TEXT_REGEX = /cannot be undone/i;
 const DONE_BUTTON_REGEX = /done.*stored it/i;
 const TOKEN_ROW_TEST_ID_REGEX = /^token-row-/;
+const ROTATE_REGEX = /^rotate$/i;
 const GRANT_TRIGGER_REGEX = /grant access to a case/i;
 const GRANT_SUBMIT_REGEX = /^grant access$/i;
 const CASE_COMBOBOX_REGEX = /^case$/i;
@@ -39,7 +45,7 @@ const ROTATE_BUTTON_REGEX = /^rotate$/i;
 const REVOKE_TOKEN_BUTTON_REGEX = /revoke this token/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
-	fetchAssuranceCases: vi
+	fetchAdministrableCases: vi
 		.fn()
 		.mockResolvedValue([{ id: "case-9", name: "Assurance" }]),
 }));
@@ -64,6 +70,7 @@ function makeIntegration(
 				lastUsedAt: null,
 				expiresAt: null,
 				revokedAt: null,
+				replacedByTokenId: null,
 			},
 		],
 		...overrides,
@@ -635,6 +642,138 @@ describe("IntegrationCard", () => {
 			expect(issueButton).toHaveAccessibleDescription("");
 		});
 
+		it("sends the end of the chosen day in the user's time zone", async () => {
+			vi.stubEnv("TZ", "Pacific/Auckland");
+			try {
+				const onIssueToken = vi.fn().mockResolvedValue(null);
+				const user = userEvent.setup();
+				renderWithoutProviders(
+					<IntegrationCard
+						{...baseProps}
+						integration={makeIntegration()}
+						onIssueToken={onIssueToken}
+					/>
+				);
+
+				await user.click(
+					screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+				);
+				await user.type(
+					screen.getByLabelText(END_DATE_LABEL_REGEX),
+					"2099-03-04"
+				);
+				await user.click(
+					screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+				);
+
+				await waitFor(() =>
+					expect(onIssueToken).toHaveBeenCalledWith("integration-1", {
+						expiresAt: "2099-03-04T10:59:59.999Z",
+					})
+				);
+			} finally {
+				vi.unstubAllEnvs();
+			}
+		});
+
+		it("issues with the end of the chosen day when a date is set, with no warning", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue({
+				secret: "tea_live_freshsecret",
+				token: {
+					id: "token-2",
+					tokenPrefix: "tea_live_cd34",
+					createdAt: "2026-07-05T00:00:00.000Z",
+					expiresAt: null,
+				},
+			});
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.type(
+				screen.getByLabelText(END_DATE_LABEL_REGEX),
+				"2099-03-04"
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+
+			expect(await screen.findByTestId("token-secret-value")).toBeVisible();
+			expect(screen.queryByText(NO_END_DATE_WARNING_REGEX)).toBeNull();
+			expect(onIssueToken).toHaveBeenCalledWith("integration-1", {
+				expiresAt: new Date(2099, 2, 4, 23, 59, 59, 999).toISOString(),
+			});
+		});
+
+		it("warns before issuing a token with no end date and posts nothing until confirmed", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue(null);
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+
+			expect(await screen.findByText(NO_END_DATE_WARNING_REGEX)).toBeVisible();
+			expect(onIssueToken).not.toHaveBeenCalled();
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_WITHOUT_END_DATE_REGEX })
+			);
+
+			expect(onIssueToken).toHaveBeenCalledWith("integration-1", undefined);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+				).toHaveFocus()
+			);
+		});
+
+		it("issues nothing when the user cancels the form or the warning", async () => {
+			const onIssueToken = vi.fn().mockResolvedValue(null);
+			const user = userEvent.setup();
+			renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration()}
+					onIssueToken={onIssueToken}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+			await user.click(
+				await screen.findByRole("button", { name: GO_BACK_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: CANCEL_BUTTON_REGEX })
+			);
+
+			expect(onIssueToken).not.toHaveBeenCalled();
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+
 		it("shows a token-shown-once modal after issuing succeeds", async () => {
 			const onIssueToken = vi.fn().mockResolvedValue({
 				secret: "tea_live_freshsecret",
@@ -656,6 +795,14 @@ describe("IntegrationCard", () => {
 
 			await user.click(
 				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+			await user.click(
+				await screen.findByRole("button", {
+					name: ISSUE_WITHOUT_END_DATE_REGEX,
+				})
 			);
 
 			expect(await screen.findByTestId("token-secret-value")).toHaveTextContent(
@@ -684,6 +831,14 @@ describe("IntegrationCard", () => {
 
 			await user.click(
 				screen.getByRole("button", { name: ISSUE_TOKEN_BUTTON_REGEX })
+			);
+			await user.click(
+				screen.getByRole("button", { name: ISSUE_TOKEN_SUBMIT_REGEX })
+			);
+			await user.click(
+				await screen.findByRole("button", {
+					name: ISSUE_WITHOUT_END_DATE_REGEX,
+				})
 			);
 			expect(await screen.findByTestId("token-secret-value")).toHaveTextContent(
 				"tea_live_freshsecret"
@@ -714,6 +869,175 @@ describe("IntegrationCard", () => {
 			expect(
 				screen.queryByTestId(TOKEN_ROW_TEST_ID_REGEX)
 			).not.toBeInTheDocument();
+		});
+	});
+
+	describe("focus after rotating a token", () => {
+		const baseToken = {
+			createdAt: "2026-06-01T00:00:00.000Z",
+			expiresAt: null,
+			lastUsedAt: null,
+			revokedAt: null,
+			tokenPrefix: "tea_live_ab12",
+		};
+		const before = makeIntegration({
+			tokens: [{ ...baseToken, id: "t1", replacedByTokenId: null }],
+		});
+		const after = makeIntegration({
+			tokens: [
+				{ ...baseToken, id: "t1", replacedByTokenId: "t2" },
+				{
+					...baseToken,
+					id: "t2",
+					createdAt: "2026-06-02T00:00:00.000Z",
+					replacedByTokenId: null,
+				},
+			],
+		});
+
+		it("returns focus to the new token's Rotate button when the secret dialog closes", async () => {
+			const user = userEvent.setup();
+			let rerenderCard: (integration: IntegrationListItem) => void = () => {
+				/* replaced below */
+			};
+			const onRotateToken = vi.fn().mockImplementation(() => {
+				rerenderCard(after);
+				return Promise.resolve({
+					oldTokenId: "t1",
+					overlapUntil: "2026-06-03T00:00:00.000Z",
+					secret: "tea_live_new",
+					token: { id: "t2", tokenPrefix: "tea_live_cd34" },
+				});
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={before}
+					onRotateToken={onRotateToken}
+				/>
+			);
+			rerenderCard = (integration) =>
+				rerender(
+					<IntegrationCard
+						{...baseProps}
+						integration={integration}
+						onRotateToken={onRotateToken}
+					/>
+				);
+
+			await user.click(screen.getByRole("button", { name: ROTATE_REGEX }));
+			await user.click(
+				await screen.findByRole("button", { name: DONE_BUTTON_REGEX })
+			);
+
+			await waitFor(() =>
+				expect(
+					screen
+						.getByTestId("token-row-t2")
+						.querySelector('[data-token-action="rotate"]')
+				).toHaveFocus()
+			);
+		});
+
+		it("moves focus to the row's Revoke button when a refused rotation removes Rotate", async () => {
+			const user = userEvent.setup();
+			let rerenderCard: (integration: IntegrationListItem) => void = () => {
+				/* replaced below */
+			};
+			const onRotateToken = vi.fn().mockImplementation(() => {
+				rerenderCard(after);
+				return Promise.resolve(null);
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={before}
+					onRotateToken={onRotateToken}
+				/>
+			);
+			rerenderCard = (integration) =>
+				rerender(
+					<IntegrationCard
+						{...baseProps}
+						integration={integration}
+						onRotateToken={onRotateToken}
+					/>
+				);
+
+			const rotate = screen.getByRole("button", { name: ROTATE_REGEX });
+			rotate.focus();
+			await user.keyboard("{Enter}");
+
+			await waitFor(() =>
+				expect(
+					screen
+						.getByTestId("token-row-t1")
+						.querySelector('[data-token-action="revoke"]')
+				).toHaveFocus()
+			);
+		});
+	});
+
+	describe("focus after a refused rotation when the person has moved on", () => {
+		it("leaves focus where it is if it is outside the card", async () => {
+			const user = userEvent.setup();
+			const outside = document.createElement("button");
+			document.body.appendChild(outside);
+			const rotatedTokens = makeIntegration({
+				tokens: [
+					{
+						createdAt: "2026-06-01T00:00:00.000Z",
+						expiresAt: null,
+						id: "t1",
+						lastUsedAt: null,
+						replacedByTokenId: "t2",
+						revokedAt: null,
+						tokenPrefix: "tea_live_ab12",
+					},
+				],
+			});
+			let rerenderCard: (integration: IntegrationListItem) => void = () => {
+				/* replaced below */
+			};
+			const onRotateToken = vi.fn().mockImplementation(() => {
+				rerenderCard(rotatedTokens);
+				outside.focus();
+				return Promise.resolve(null);
+			});
+			const { rerender } = renderWithoutProviders(
+				<IntegrationCard
+					{...baseProps}
+					integration={makeIntegration({
+						tokens: [
+							{
+								createdAt: "2026-06-01T00:00:00.000Z",
+								expiresAt: null,
+								id: "t1",
+								lastUsedAt: null,
+								replacedByTokenId: null,
+								revokedAt: null,
+								tokenPrefix: "tea_live_ab12",
+							},
+						],
+					})}
+					onRotateToken={onRotateToken}
+				/>
+			);
+			rerenderCard = (integration) =>
+				rerender(
+					<IntegrationCard
+						{...baseProps}
+						integration={integration}
+						onRotateToken={onRotateToken}
+					/>
+				);
+
+			await user.click(screen.getByRole("button", { name: ROTATE_REGEX }));
+			await waitFor(() => expect(onRotateToken).toHaveBeenCalled());
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			expect(outside).toHaveFocus();
+			outside.remove();
 		});
 	});
 
@@ -988,6 +1312,7 @@ describe("IntegrationCard", () => {
 				lastUsedAt: null,
 				expiresAt: null,
 				revokedAt,
+				replacedByTokenId: null,
 			};
 		}
 

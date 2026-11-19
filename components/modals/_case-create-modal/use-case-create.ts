@@ -14,7 +14,6 @@ import type {
 	PatternError,
 	StartFrom,
 } from "./start-from-section";
-import { usePatternVariables } from "./use-pattern-variables";
 
 const GENERIC_ERROR = "An error occurred, please try again later";
 const CHOOSE_A_PATTERN = "Choose a pattern to start from";
@@ -33,8 +32,6 @@ type Outcome =
 interface NewCase {
 	description: string;
 	name: string;
-	/** Values for the chosen pattern's variables, by entry id; only a copy of a pattern uses them. */
-	variableValues: Record<string, string>;
 }
 
 /**
@@ -45,16 +42,11 @@ interface NewCase {
 async function requestCase(
 	start: StartFrom,
 	chosen: ViewablePattern | undefined,
-	{ description, name, variableValues }: NewCase
+	{ description, name }: NewCase
 ): Promise<ActionResult<{ id: string; warnings: string[] }>> {
 	if (start === "pattern") {
 		return chosen
-			? await createCaseFromPattern(
-					chosen.source,
-					name,
-					description,
-					variableValues
-				)
+			? await createCaseFromPattern(chosen.source, name, description)
 			: { success: false, error: CHOOSE_A_PATTERN };
 	}
 	const created = await createAssuranceCase({
@@ -231,9 +223,6 @@ export function useCaseCreate({
 	);
 
 	const chosen = chosenPattern(choices, patternKey, presetChoice);
-	const variables = usePatternVariables(
-		start === "pattern" ? chosen : undefined
-	);
 
 	// Counts the loads started, so that only the latest one is used: a load
 	// that finishes after the dialog closed, or after a later load began, is
@@ -313,12 +302,11 @@ export function useCaseCreate({
 		const outcome = await submitNewCase(start, chosen, {
 			name,
 			description,
-			variableValues: variables.valuesToSend(),
 		});
 		setLoading(false);
 
 		if (outcome.status === "error") {
-			setErrors(variables.explainRefusal(outcome.message));
+			setErrors([outcome.message]);
 		} else if (outcome.warnings.length > 0) {
 			setPending({ id: outcome.id, warnings: outcome.warnings });
 		} else {
@@ -339,6 +327,5 @@ export function useCaseCreate({
 		pending,
 		selectPattern,
 		start,
-		variables,
 	};
 }

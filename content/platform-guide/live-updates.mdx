@@ -7,7 +7,7 @@ When two people have the same case open, the editor listens for changes to that 
 
 ## What you see
 
-Open a case you can view at `/case/<caseId>`. The browser connects to the case's event stream. If another person changes case details, adds or edits an element, moves it, changes a comment, or changes a permission, the case container requests fresh case data. Attachment and detachment events also refresh orphaned elements. For supported case, element and comment events, the editor can show a short notice naming the person and action, such as a new element or a comment. The notice uses event data when available and falls back to a generic name when it is not.
+Open a case you can view. The browser connects to the case's event stream. If another person changes case details, adds or edits an element, moves it, changes a comment, or changes a permission, the case container requests fresh case data. Attachment and detachment events also refresh orphaned elements. For supported case, element and comment events, the editor can show a short notice naming the person and action, such as a new element or a comment. The notice uses event data when available and falls back to a generic name when it is not.
 
 You do not need to select a refresh control to receive those events while the connection is active. Your own actions are not announced back to you as another person's toast. If you are comparing a long description or preparing a review, pause and read the refreshed state before editing the same element. Live updates keep the view current, but they do not reconcile two competing edits at the sentence level.
 

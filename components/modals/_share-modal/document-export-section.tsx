@@ -157,6 +157,27 @@ function TemplateDescription({ template }: TemplateDescriptionProps) {
 	);
 }
 
+interface MarkdownZipNoteProps {
+	diagram: boolean;
+	format: ExportFormat;
+}
+
+/**
+ * Explains that a Markdown report with the diagram downloads as a zip
+ */
+function MarkdownZipNote({ format, diagram }: MarkdownZipNoteProps) {
+	if (format !== "markdown" || !diagram) {
+		return null;
+	}
+	return (
+		<p className="text-muted-foreground text-xs">
+			A Markdown file cannot hold pictures, so this report downloads as a .zip
+			file containing the Markdown file and the diagram images. Untick Diagram
+			to download the Markdown file on its own.
+		</p>
+	);
+}
+
 export interface DocumentExportSectionProps {
 	assuranceCase: AssuranceCaseResponse | null;
 	className?: string;
@@ -352,6 +373,7 @@ export function DocumentExportSection({
 					onToggle={handleSectionToggle}
 					sections={docSections}
 				/>
+				<MarkdownZipNote diagram={docSections.diagram} format={docFormat} />
 				{docSections.diagram && (
 					<div className="space-y-3 rounded-md border border-muted p-3">
 						<p className="font-medium text-muted-foreground text-xs">

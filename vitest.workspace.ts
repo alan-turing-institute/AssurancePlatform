@@ -101,6 +101,11 @@ export default defineConfig({
 						TOKEN_ENCRYPTION_KEY:
 							process.env.TOKEN_ENCRYPTION_KEY ??
 							Buffer.alloc(32, 1).toString("base64"),
+						// Fixed, non-secret signing key: password sign-in counts
+						// attempts under a keyed hash of the name, and refuses to
+						// sign anyone in when no NEXTAUTH_SECRET is configured.
+						NEXTAUTH_SECRET:
+							process.env.NEXTAUTH_SECRET ?? "integration-test-nextauth-secret",
 					},
 				},
 			},

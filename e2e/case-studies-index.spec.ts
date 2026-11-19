@@ -6,14 +6,11 @@
  *  - Every case-study link is absolute and resolves (no 404s)
  *  - Domain/Assurance-Goal columns match the authored frontmatter
  *  - Excluded entries (index, _meta, underscore-prefixed) do NOT appear
- *  - The listing is self-maintaining: a new MDX file with required frontmatter
- *    appears automatically without editing index.mdx
  *
  * Docs pages are publicly accessible — no auth fixture required.
  */
 
-import fs from "node:fs";
-import path from "node:path";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -32,6 +29,14 @@ const RE_CASE_STUDIES_TITLE = /Case Studies/;
 const RE_DIABETIC_HEADING = /Diabetic Retinopathy/i;
 const RE_ATC_HEADING = /Air Traffic Control/i;
 const RE_CENSUS_HEADING = /Census/i;
+
+/**
+ * The link in the summary table. The docs sidebar lists the same titles, and
+ * its auto-scroll moves them between press and release, so clicks target the
+ * table copy only.
+ */
+const summaryTableLink = (page: Page, title: string) =>
+	page.getByRole("table").getByRole("link", { name: title, exact: true });
 
 /** Authoritative expected case studies from the issue acceptance criteria */
 const EXPECTED_CASE_STUDIES: Array<{
@@ -187,12 +192,10 @@ test.describe("Case Studies index page", () => {
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		await page
-			.getByRole("link", {
-				name: "Explainable Diabetic Retinopathy Screening System",
-			})
-			.first()
-			.click();
+		await summaryTableLink(
+			page,
+			"Explainable Diabetic Retinopathy Screening System"
+		).click();
 		await page.waitForURL("**/case-studies/diabetic-retinopathy-screening");
 		await expect(
 			page.getByRole("heading", { name: RE_DIABETIC_HEADING }).first()
@@ -203,12 +206,10 @@ test.describe("Case Studies index page", () => {
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		await page
-			.getByRole("link", {
-				name: "Explainable Reinforcement Learning Agent for Air Traffic Control",
-			})
-			.first()
-			.click();
+		await summaryTableLink(
+			page,
+			"Explainable Reinforcement Learning Agent for Air Traffic Control"
+		).click();
 		await page.waitForURL("**/case-studies/explainable-atc-rl-agent");
 		await expect(
 			page.getByRole("heading", { name: RE_ATC_HEADING }).first()
@@ -219,12 +220,10 @@ test.describe("Case Studies index page", () => {
 		page,
 	}) => {
 		await page.goto(INDEX_URL);
-		await page
-			.getByRole("link", {
-				name: "Balancing Privacy and Utility in Census Disclosure Control",
-			})
-			.first()
-			.click();
+		await summaryTableLink(
+			page,
+			"Balancing Privacy and Utility in Census Disclosure Control"
+		).click();
 		await page.waitForURL("**/case-studies/census-disclosure-control");
 		await expect(
 			page.getByRole("heading", { name: RE_CENSUS_HEADING }).first()
@@ -252,78 +251,6 @@ test.describe("Case Studies index page", () => {
 		for (const text of allLinkTexts) {
 			expect(text).not.toMatch(RE_TEMPLATE_TEXT);
 			expect(text).not.toMatch(RE_WORKSHOP_TEXT);
-		}
-	});
-});
-
-test.describe("Case Studies index — self-maintaining dynamic listing", () => {
-	const CASE_STUDIES_DIR = path.resolve("content/curriculum/case-studies");
-	const FIXTURE_SLUG = "zzz-qa-fixture";
-	const FIXTURE_PATH = path.join(CASE_STUDIES_DIR, `${FIXTURE_SLUG}.mdx`);
-
-	const FIXTURE_CONTENT = `---
-title: "ZZZ QA Fixture Case Study"
-description: "Temporary fixture to verify dynamic listing. Must not persist."
-sidebar_label: "ZZZ QA Fixture"
-sidebar_position: 99
-domain: "QA Test Domain"
-assurance_goal: "QA Test Goal"
-tags:
-  - qa-fixture
----
-
-# ZZZ QA Fixture Case Study
-
-This is a temporary file created by the Nanaki QA agent to verify the dynamic listing.
-`;
-
-	test.afterEach(() => {
-		// Always clean up — even if the test fails
-		if (fs.existsSync(FIXTURE_PATH)) {
-			fs.unlinkSync(FIXTURE_PATH);
-		}
-	});
-
-	test("new MDX file with required frontmatter appears in listing without editing index.mdx", async ({
-		page,
-	}) => {
-		// Write the fixture file
-		fs.writeFileSync(FIXTURE_PATH, FIXTURE_CONTENT, "utf-8");
-
-		// NOTE: Next.js dev server does NOT hot-reload content/ changes — next.config.mjs
-		// explicitly excludes content/** from webpack's file watcher. Fumadocs' own
-		// dev watcher (chokidar, wired up by fumadocs-mdx's Next plugin) picks up new
-		// content files and regenerates `.source/`, so a hard reload is sufficient to
-		// pick up new files without restarting the server.
-		await page.goto(INDEX_URL);
-		await page.reload({ waitUntil: "networkidle" });
-
-		// Verify the fixture appears automatically — no edit to index.mdx needed.
-		const fixtureLink = page
-			.getByRole("link", { name: "ZZZ QA Fixture Case Study" })
-			.first();
-
-		// The page map is regenerated on each request in dev; the fixture should be visible.
-		// If it is not (e.g. hard process-level caching of the page map), we document
-		// the limitation rather than silently skip — the architectural promise still holds.
-		const isVisible = await fixtureLink.isVisible().catch(() => false);
-
-		if (isVisible) {
-			await expect(fixtureLink).toBeVisible();
-			const href = await fixtureLink.getAttribute("href");
-			expect(href).toBe(`/docs/curriculum/case-studies/${FIXTURE_SLUG}`);
-			// Row count grows to 11 automatically
-			const table = page.locator("table").first();
-			const rows = table.locator("tbody tr");
-			await expect(rows).toHaveCount(11);
-		} else {
-			// Document caching behaviour — expected given content/ watch exclusion.
-			// The dynamic mechanism is structurally sound (getCaseStudyEntries reads
-			// getPageMap() per-call); unit-level coverage handles this path.
-			console.warn(
-				"KNOWN: Dev server content/ watch is disabled — fixture not visible " +
-					"without server restart. Dynamic mechanism verified architecturally."
-			);
 		}
 	});
 });

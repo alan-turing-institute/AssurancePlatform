@@ -1,5 +1,6 @@
 import { passwordSchema } from "../lib/schemas/user";
 import { expect, test } from "./helpers/auth";
+import { DashboardPage } from "./pages/dashboard-page";
 import { LoginPage } from "./pages/login-page";
 
 // Auth tests use empty storageState — no saved session
@@ -33,7 +34,7 @@ test.describe("Authentication lifecycle", () => {
 		await loginPage.signIn("chris", seedPassword);
 
 		await page.waitForURL("**/dashboard");
-		await expect(page.getByTestId("case-list-grid")).toBeVisible();
+		await expect(new DashboardPage(page).caseGrid).toBeVisible();
 	});
 
 	test("sign out redirects to login", async ({ page, seedPassword }) => {

@@ -1,5 +1,11 @@
+import {
+	countedName,
+	isEmailName,
+	signInIdentifierKey,
+} from "@/lib/auth/sign-in-identifier";
 import { prisma } from "@/lib/prisma";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
+import { countUsersByEmailOrUsernameIgnoringCase } from "@/lib/services/user-email-lookup-service";
 
 // ============================================
 // TYPES
@@ -15,7 +21,11 @@ export interface RateLimitConfig {
 }
 
 export interface RateLimitIdentifiers {
-	email?: string;
+	/**
+	 * A keyed fingerprint of an email address, from `signInIdentifierKey` or
+	 * `identifierFingerprint`. Never typed text: it is stored as given.
+	 */
+	emailKey?: string;
 	ipAddress?: string;
 	userId?: string;
 }
@@ -31,6 +41,7 @@ export interface RateLimitCheckResult {
 // ============================================
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 
 export const RATE_LIMIT_CONFIGS = {
 	register: {
@@ -81,6 +92,27 @@ export const RATE_LIMIT_CONFIGS = {
 		],
 	},
 	/**
+	 * Password sign-ins. A slot is taken before the password is checked and handed
+	 * back when it is right, so only failed attempts stay counted
+	 * (`clearSignInFailures`). The "email" limit counts per typed email or
+	 * username, under `signInIdentifierKey` rather than the text itself.
+	 */
+	signIn: {
+		endpoint: "sign_in",
+		limits: [
+			{
+				identifierType: "email" as const,
+				maxAttempts: 10,
+				windowMs: FIFTEEN_MINUTES_MS,
+			},
+			{
+				identifierType: "ip" as const,
+				maxAttempts: 20,
+				windowMs: FIFTEEN_MINUTES_MS,
+			},
+		],
+	},
+	/**
 	 * Calls the server makes to a model provider on a user's behalf: a
 	 * connection test, a search check and quick setup share one budget per user.
 	 */
@@ -111,7 +143,7 @@ function getIdentifierValue(
 		case "ip":
 			return identifiers.ipAddress;
 		case "email":
-			return identifiers.email?.toLowerCase();
+			return identifiers.emailKey;
 		case "user_id":
 			return identifiers.userId;
 		default:
@@ -292,6 +324,89 @@ export async function takeRateLimitSlot(
 }
 
 /**
+ * Takes back the newest sign-in attempt counted against a name's key or an
+ * address. One row is chosen and locked in a single statement, so two sign-ins
+ * finishing together each hand back a different one.
+ */
+async function handBackSlot(
+	identifierType: "email" | "ip",
+	identifier: string
+): Promise<void> {
+	await prisma.$executeRaw`
+		DELETE FROM rate_limit_attempts WHERE id = (
+			SELECT id FROM rate_limit_attempts
+			WHERE endpoint = ${RATE_LIMIT_CONFIGS.signIn.endpoint}
+				AND identifier_type = ${identifierType}
+				AND identifier = ${identifier}
+			ORDER BY attempted_at DESC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+	`;
+}
+
+/**
+ * Whether the failures counted under this name belong to one account: always
+ * for a name without "@", which is a username and unique as typed. A name with
+ * "@" is counted with its ASCII capitals folded, so it is one account's only
+ * when exactly one account has it, as its email or as its username, once
+ * capitals are ignored (a username can hold an "@" too). Accounts that share
+ * the folded name share one count, and none of them may clear the others'. The
+ * accounts are counted for the same trimmed, length-capped text the count is
+ * keyed from.
+ */
+async function failuresBelongToOneAccount(
+	identifier: string
+): Promise<boolean> {
+	return (
+		!isEmailName(identifier) ||
+		(await countUsersByEmailOrUsernameIgnoringCase(countedName(identifier))) ===
+			1
+	);
+}
+
+/**
+ * Forgets the failed sign-ins counted against each of these emails or
+ * usernames, so a person who has signed in or reset their password starts
+ * again from zero. A name that two accounts share (they differ only in
+ * capitals) is left alone, because its failures are not one person's.
+ *
+ * Pass `signIn` when a sign-in has just succeeded: the attempt's own slots are
+ * handed back as well, since only failures count. That is the newest attempt
+ * counted against the address when one is given, and, for a shared name, the
+ * newest counted against the name. The other attempts stay.
+ */
+export async function clearSignInFailures(
+	identifiers: readonly string[],
+	signIn?: { ipAddress?: string }
+): Promise<void> {
+	const names = await Promise.all(
+		identifiers.map(async (identifier) => ({
+			key: signInIdentifierKey(identifier),
+			oneAccount: await failuresBelongToOneAccount(identifier),
+		}))
+	);
+	await prisma.rateLimitAttempt.deleteMany({
+		where: {
+			endpoint: RATE_LIMIT_CONFIGS.signIn.endpoint,
+			identifierType: "email",
+			identifier: {
+				in: names.filter((name) => name.oneAccount).map((name) => name.key),
+			},
+		},
+	});
+	if (!signIn) {
+		return;
+	}
+	for (const { key } of names.filter((name) => !name.oneAccount)) {
+		await handBackSlot("email", key);
+	}
+	if (signIn.ipAddress) {
+		await handBackSlot("ip", signIn.ipAddress);
+	}
+}
+
+/**
  * Check rate limit and record the attempt in one operation.
  * Returns the rate limit result and logs security events if blocked.
  */
@@ -321,7 +436,7 @@ export async function checkAndRecordRateLimit(
 				reason: result.reason,
 				identifiers: {
 					ip: identifiers.ipAddress,
-					email: identifiers.email,
+					identifier: identifiers.emailKey,
 					userId: identifiers.userId,
 				},
 				securityContext,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isExternalMediaUrl, toMediaKey } from "../media-key";
+import { isExternalMediaUrl, isLegacyBlobUrl, toMediaKey } from "../media-key";
 
 describe("toMediaKey", () => {
 	it("returns a bare key unchanged", () => {
@@ -48,5 +48,51 @@ describe("isExternalMediaUrl", () => {
 
 	it("is true for a genuine external address", () => {
 		expect(isExternalMediaUrl("https://example.com/image.png")).toBe(true);
+	});
+});
+
+describe("isLegacyBlobUrl", () => {
+	it("accepts a real legacy blob URL", () => {
+		expect(
+			isLegacyBlobUrl(
+				"https://teastorageaccount.blob.core.windows.net/media/images/a.png"
+			)
+		).toBe(true);
+	});
+
+	it("refuses a blob host that appears in a path", () => {
+		expect(
+			isLegacyBlobUrl(
+				"https://example.com/x/blob.core.windows.net/media/images/a.png"
+			)
+		).toBe(false);
+	});
+
+	it("refuses a blob host that appears in a query string", () => {
+		expect(
+			isLegacyBlobUrl(
+				"https://example.com/a.png?next=teastorageaccount.blob.core.windows.net/media/a.png"
+			)
+		).toBe(false);
+	});
+
+	it("refuses a value whose host is cut short by a query or fragment marker", () => {
+		expect(
+			isLegacyBlobUrl(
+				"https://example.com?.blob.core.windows.net/media/cases/2/a.png"
+			)
+		).toBe(false);
+		expect(
+			isLegacyBlobUrl(
+				"https://example.com#.blob.core.windows.net/media/cases/2/a.png"
+			)
+		).toBe(false);
+	});
+
+	it("refuses a bare key and a plain http address", () => {
+		expect(isLegacyBlobUrl("cases/1/a.png")).toBe(false);
+		expect(
+			isLegacyBlobUrl("http://acct.blob.core.windows.net/media/a.png")
+		).toBe(false);
 	});
 });

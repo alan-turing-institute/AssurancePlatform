@@ -623,6 +623,22 @@ describe("claimHealthPrompt", () => {
 		expect(prompt).toContain("Never say whether the case is adequate.");
 	});
 
+	it("tells the model to lead with out of date and to call an out-of-date result the last result", () => {
+		const prompt = claimHealthPrompt("available");
+
+		expect(prompt).toContain("give that before the result");
+		expect(prompt).toContain("give the result as the claim's last result");
+		expect(prompt).toContain(
+			"Never present an out-of-date result as the claim's current result"
+		);
+		expect(prompt).toContain(
+			"When outOfDateSince is null, say that the time is not known."
+		);
+		expect(prompt).toContain(
+			"Say plainly when a result was judged with settings different from the accepted ones"
+		);
+	});
+
 	it("says the case has no results when no claim has a status", () => {
 		expect(claimHealthPrompt("no-results")).toBe(
 			"\n\nThis case has no claims with automated check results. If asked whether claims pass their checks, say so; do not infer results from the case text."

@@ -12,6 +12,9 @@ on:
         type: boolean
         default: true
 
+# The job calls the app with curl and the cron secret; it needs no token permissions.
+permissions: {}
+
 jobs:
   sweep:
     runs-on: ubuntu-latest

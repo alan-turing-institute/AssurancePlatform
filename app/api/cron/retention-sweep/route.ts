@@ -21,6 +21,7 @@ import { runRetentionSweep } from "@/lib/services/retention-service";
  * @response 400 - Invalid query (an unknown or repeated parameter, or a dryRun that is not 1, true, 0 or false); checked only after the token, so a caller without a valid token gets 401
  * @response 401 - Unauthorised (invalid or missing token)
  * @response 500 - Server error
+ * @auth CronSecret
  * @tag Cron
  */
 export async function POST(request: Request) {

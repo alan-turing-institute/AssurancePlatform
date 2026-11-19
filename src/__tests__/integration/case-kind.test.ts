@@ -270,7 +270,7 @@ describe("lists that are meant for ordinary cases", () => {
 		expect(data[0]?.kind).toBe("CASE");
 	});
 
-	it("fetchAssuranceCases, which feeds the dashboard and the integrations grant form, leaves out a pattern", async () => {
+	it("fetchAssuranceCases, which feeds the dashboard, leaves out a pattern", async () => {
 		const user = await createTestUser();
 		const ordinary = await createTestCase(user.id);
 		const pattern = await createTestCase(user.id, { kind: "PATTERN" });

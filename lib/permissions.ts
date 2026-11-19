@@ -31,7 +31,7 @@ export function hasPermissionLevel(
 /**
  * Returns the higher of two permission levels.
  */
-function maxPermission(
+export function maxPermission(
 	a: PermissionLevel | null,
 	b: PermissionLevel | null
 ): PermissionLevel | null {
@@ -201,6 +201,34 @@ export function viewableCaseWhere(
 			{
 				teamPermissions: {
 					some: { team: { members: { some: { userId } } } },
+				},
+			},
+		],
+	};
+}
+
+/**
+ * The cases a user can administer, as a filter for a Prisma query: ones they
+ * created, ones shared with them directly at ADMIN and ones shared at ADMIN
+ * with a team they belong to. A share below ADMIN, directly or through a team,
+ * does not count. Trashed cases are left out, as `canAccessCase` treats them
+ * as not found. Use it to list many cases in one query; `canAccessCase` at
+ * ADMIN answers the same question for one case.
+ */
+export function administrableCaseWhere(
+	userId: string
+): Prisma.AssuranceCaseWhereInput {
+	return {
+		deletedAt: null,
+		OR: [
+			{ createdById: userId },
+			{ userPermissions: { some: { userId, permission: "ADMIN" } } },
+			{
+				teamPermissions: {
+					some: {
+						permission: "ADMIN",
+						team: { members: { some: { userId } } },
+					},
 				},
 			},
 		],

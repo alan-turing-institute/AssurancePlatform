@@ -49,6 +49,13 @@ const PrivacyPolicyPage = () => {
 							gives us so we can recognise you next time.
 						</li>
 						<li>
+							<em>GitHub access token.</em> If you sign in with or connect
+							GitHub, we store, in encrypted form, the access token GitHub
+							issues so the Platform can read a case file from a public
+							repository when you import one. The permission we request covers
+							your GitHub profile and email address only.
+						</li>
+						<li>
 							<em>Google Drive access tokens.</em> If you connect Google Drive,
 							we store the access and refresh tokens Google issues so the
 							Platform can act on your Drive on your behalf (see &quot;Google
@@ -220,7 +227,7 @@ const PrivacyPolicyPage = () => {
 				</div>
 
 				<div className="mt-16 max-w-3xl">
-					<p className="mt-6 italic">Last updated: September 2026</p>
+					<p className="mt-6 italic">Last updated: November 2026</p>
 				</div>
 			</div>
 		</div>

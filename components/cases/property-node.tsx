@@ -26,7 +26,7 @@ function PropertyNode({ data, ...props }: NodeProps) {
 					<NodeActionGroup
 						addPopover={<AddChildTrigger node={node} nodeType="property" />}
 						commentCount={
-							Array.isArray(data.comments) ? data.comments.length : 0
+							typeof data.commentCount === "number" ? data.commentCount : 0
 						}
 						node={node}
 						nodeType="property"

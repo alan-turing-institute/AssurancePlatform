@@ -1,3 +1,4 @@
+import { Activity } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	casePanelSlot,
@@ -64,6 +65,7 @@ describe("registerHealthPlugin — case panel", () => {
 				pluginId: PLUGIN_ID,
 				panelId: PLUGIN_ID,
 				label: "Evidence health",
+				icon: Activity,
 				Component: EvidenceHealthPanel,
 			},
 		]);

@@ -14,6 +14,7 @@ import { getPluginDisableConsequences } from "@/lib/services/plugin-consequences
  * surface D3): how much of the session user's own data the plugin holds,
  * and which active integrations are still writing to it. Read-only — never
  * changes enablement state.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,

@@ -1,6 +1,7 @@
 import { waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { fetchAdministrableCases } from "@/actions/assurance-cases";
 import type { IntegrationCaseGrant } from "@/lib/schemas/integration";
 import {
 	renderWithoutProviders,
@@ -23,9 +24,14 @@ const INTEGRATION_MUST_BE_ACTIVE_REGEX = /integration must be active/i;
 const TRY_AGAIN_BUTTON_REGEX = /^try again$/i;
 const ADMIN_OPTION_REGEX = /admin/i;
 const GRANTING_BUTTON_REGEX = /^granting…$/i;
+const NO_ADMINISTERED_CASES_REGEX = /you don't administer any cases yet/i;
+const ALL_CASES_GRANTED_REGEX =
+	/every case you administer already has this integration granted/i;
+const LOAD_FAILED_REGEX =
+	/couldn't load your cases\. close the form and try again/i;
 
 vi.mock("@/actions/assurance-cases", () => ({
-	fetchAssuranceCases: vi.fn().mockResolvedValue([
+	fetchAdministrableCases: vi.fn().mockResolvedValue([
 		{ id: "case-9", name: "Assurance" },
 		{ id: "case-10", name: "DARTER Demo — Automated Inspection" },
 	]),
@@ -381,6 +387,118 @@ describe("CaseAccessSection", () => {
 
 			await user.click(submitButton);
 			expect(onGrant).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("case list", () => {
+		async function openGrantForm() {
+			const user = userEvent.setup();
+			await user.click(
+				screen.getByRole("button", { name: GRANT_TRIGGER_REGEX })
+			);
+			return user;
+		}
+
+		it("offers the cases the action returns and leaves out one the integration already has", async () => {
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[makeGrant({ caseId: "case-9", caseName: "Assurance" })]}
+				/>
+			);
+
+			const user = await openGrantForm();
+			await user.click(
+				await screen.findByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			);
+
+			expect(
+				screen.getAllByRole("option").map((option) => option.textContent)
+			).toEqual(["DARTER Demo — Automated Inspection"]);
+			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(screen.queryByText(ALL_CASES_GRANTED_REGEX)).toBeNull();
+		});
+
+		it("says so, with no picker, when the user administers no cases", async () => {
+			vi.mocked(fetchAdministrableCases).mockResolvedValueOnce([]);
+			renderWithoutProviders(<CaseAccessSection {...baseProps} grants={[]} />);
+
+			await openGrantForm();
+
+			expect(
+				await screen.findByText(NO_ADMINISTERED_CASES_REGEX)
+			).toBeInTheDocument();
+			expect(screen.queryByText(ALL_CASES_GRANTED_REGEX)).toBeNull();
+			expect(
+				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			).toBeNull();
+			expect(
+				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
+			).toBeDisabled();
+		});
+
+		it("says every case is already granted, with no picker, when all of them are", async () => {
+			renderWithoutProviders(
+				<CaseAccessSection
+					{...baseProps}
+					grants={[
+						makeGrant({ caseId: "case-9", caseName: "Assurance" }),
+						makeGrant({
+							caseId: "case-10",
+							caseName: "DARTER Demo — Automated Inspection",
+						}),
+					]}
+				/>
+			);
+
+			await openGrantForm();
+
+			expect(
+				await screen.findByText(ALL_CASES_GRANTED_REGEX)
+			).toBeInTheDocument();
+			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(
+				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			).toBeNull();
+		});
+
+		it("says the list could not be loaded, not that there are no cases, when the action returns null", async () => {
+			vi.mocked(fetchAdministrableCases).mockResolvedValueOnce(null);
+			renderWithoutProviders(<CaseAccessSection {...baseProps} grants={[]} />);
+
+			await openGrantForm();
+
+			expect(await screen.findByText(LOAD_FAILED_REGEX)).toBeInTheDocument();
+			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(screen.queryByText(ALL_CASES_GRANTED_REGEX)).toBeNull();
+			expect(
+				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			).toBeNull();
+		});
+
+		it("says the list could not be loaded, without an unhandled error, when the request rejects", async () => {
+			vi.mocked(fetchAdministrableCases).mockRejectedValueOnce(
+				new Error("offline")
+			);
+			const unhandled = vi.fn();
+			process.on("unhandledRejection", unhandled);
+			renderWithoutProviders(<CaseAccessSection {...baseProps} grants={[]} />);
+
+			try {
+				await openGrantForm();
+				expect(await screen.findByText(LOAD_FAILED_REGEX)).toBeInTheDocument();
+				// Let a rejection nobody handled reach the process before asserting.
+				await new Promise((resolve) => setTimeout(resolve, 0));
+			} finally {
+				process.off("unhandledRejection", unhandled);
+			}
+
+			expect(unhandled).not.toHaveBeenCalled();
+			expect(screen.queryByText(NO_ADMINISTERED_CASES_REGEX)).toBeNull();
+			expect(screen.queryByText(ALL_CASES_GRANTED_REGEX)).toBeNull();
+			expect(
+				screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+			).toBeNull();
 		});
 	});
 

@@ -109,8 +109,7 @@ This is the sequence for a system that supplies health evidence.
    `GET /api/machine/whoami` returns the integration's name, scopes and token prefix, which is a quick way to check the token.
 3. **Grant case access.**
    As the integration's owner with Admin access to the case, grant it Edit access to post evidence, or View access to read only.
-   The grant form on the integration card lists the cases you created and the cases shared with you directly.
-   For any other case you administer, such as one that reaches you only through a team, send `POST /api/integrations/[id]/case-grants` with the case ID and the permission level.
+   The grant form on the integration card lists every case you administer, including ones that reach you through a team.
    A scope does not grant access to a case.
 4. **Publish checks if people will choose settings for them.**
    Sending results does not need a published check list.

@@ -16,7 +16,7 @@
 import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,8 +30,8 @@ import {
 	appearanceAttribute,
 	drawnContentAttribute,
 } from "@/lib/case/plugin-display-capture";
+import { scheduleLayout } from "@/lib/case/schedule-layout";
 import type { ElementAppearance } from "@/lib/plugins/slots";
-import type { CaseKind } from "@/lib/schemas/case-export";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
 import useStore from "@/store/store";
 import { contentCollapseVariants, withReducedMotion } from "./animations";
@@ -87,7 +87,7 @@ export interface BaseNodeProps {
 	name: string;
 	/** The type of node (goal, strategy, property, evidence) */
 	nodeType: DiagramNodeType;
-	/** The author's guidance for a placeholder; a case's placeholder with no text shows it in place of the text. */
+	/** The author's guidance for a placeholder; a placeholder with no text shows it in place of the text, in a case or a pattern. */
 	placeholderHint?: string;
 	/** Whether the node is currently selected */
 	selected?: boolean;
@@ -164,24 +164,11 @@ function ExpandedContent({
 const NO_TERMS: readonly DefinedTerm[] = [];
 
 /**
- * The hint a card draws where its text will go. Only a placeholder in a case
- * has one: in a pattern the hint is the author's note to whoever uses the
- * pattern, and the edit dialog shows it.
- */
-function hintInPlaceOfText(
-	isPlaceholder: boolean,
-	kind: CaseKind | undefined,
-	hint: string | undefined
-): string | undefined {
-	return isPlaceholder && kind !== "PATTERN" ? hint : undefined;
-}
-
-/**
  * The text a card draws and the terms it resolves references with. A card
  * given terms leaves its references for the text component to resolve; one
  * given none writes each as `{name}`, so no word is highlighted. A card with
- * no text draws `hint` in its place when it has one (`isHint` says so),
- * otherwise a note that there is none.
+ * no text draws `hint` in its place when it has one, and sets `isHint`;
+ * otherwise it draws a note that there is none.
  */
 function cardText(
 	description: string | undefined,
@@ -216,14 +203,22 @@ export default function BaseNode({
 	expandTour,
 	terms: termsInReach,
 }: BaseNodeProps) {
-	const { layoutNodes, layoutDirection, assuranceCase } = useStore();
+	const layoutNodes = useStore((state) => state.layoutNodes);
+	const layoutDirection = useStore((state) => state.layoutDirection);
 	const { descriptionText, isHint, terms } = cardText(
 		description,
 		termsInReach,
-		hintInPlaceOfText(isPlaceholder, assuranceCase?.kind, placeholderHint)
+		isPlaceholder ? placeholderHint : undefined
 	);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { fitView, getNodes, getEdges } = useReactFlow();
+	const mountedRef = useRef(true);
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	const targetPosition =
 		layoutDirection === "LR" ? Position.Left : Position.Top;
@@ -262,17 +257,15 @@ export default function BaseNode({
 		setIsExpanded(!isExpanded);
 	};
 
-	// Trigger layout after animation completes
+	// Ask for a layout once the animation completes; requests from many cards
+	// are coalesced into one layout that runs after the DOM has settled.
 	const handleAnimationComplete = () => {
-		// Use requestAnimationFrame to ensure DOM has updated after animation
-		window.requestAnimationFrame(() => {
-			window.requestAnimationFrame(() => {
-				const currentNodes = getNodes();
-				const currentEdges = getEdges();
-				layoutNodes(currentNodes, currentEdges).then(() => {
-					fitView();
-				});
-			});
+		scheduleLayout({
+			fitView,
+			getEdges,
+			getNodes,
+			isActive: () => mountedRef.current,
+			layoutNodes,
 		});
 	};
 

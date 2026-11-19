@@ -1,13 +1,36 @@
+import { isIP } from "node:net";
+import { isCloudflareAddress } from "./cloudflare-ips";
+import { timingSafeCompare } from "./timing-safe";
+import { visitorNetwork } from "./visitor-network";
+
 /**
  * Trustworthy client-IP extraction — the ONE sanctioned way to read a
  * client IP anywhere in this codebase. Do not read `x-forwarded-for`'s
  * first hop or `x-real-ip` directly; both are attacker-controllable in
  * our deployment.
  *
- * Trust chain (Azure App Service, no CDN/Front Door in front of it):
- * 1. `x-client-ip` — set by Azure App Service's front end with the true
- *    client IP, and OVERWRITTEN if a client tries to supply it. Not
- *    spoofable in this deployment.
+ * Trust chain (Azure App Service, with or without Cloudflare in front):
+ * 1. `x-client-ip` — set by Azure App Service's front end with the address
+ *    that connected to it, and OVERWRITTEN if a client tries to supply it.
+ *    Not spoofable in this deployment.
+ *    `cf-connecting-ip`, the visitor's own address as Cloudflare saw it, is
+ *    returned in place of the connecting address only when BOTH hold:
+ *    - the connecting address is inside Cloudflare's published ranges
+ *      (`cloudflare-ips.ts`), and
+ *    - the request header `x-origin-verify` equals the app setting
+ *      `CLOUDFLARE_ORIGIN_SECRET`, compared in constant time. The secret is
+ *      added by a request-header rule in Turing's Cloudflare zone for this
+ *      site's host only.
+ *    Being inside Cloudflare's ranges does not prove the request passed
+ *    through that zone: a Cloudflare Worker calling this app's App Service
+ *    address connects from a Cloudflare address and sets `cf-connecting-ip`
+ *    itself, but cannot know the secret. When the setting is unset or empty,
+ *    `cf-connecting-ip` is never read. The setting is read on every call.
+ *    A trusted IPv6 visitor is returned as their /64 network
+ *    (`visitor-network.ts`), since an IPv6 connection holds a whole /64; an
+ *    IPv4-mapped IPv6 visitor is returned as the IPv4 address it wraps. A
+ *    missing or malformed `cf-connecting-ip` falls back to the connecting
+ *    address itself.
  * 2. `x-forwarded-for` — Azure appends the true client IP as the LAST
  *    (rightmost) entry; every entry to its left can be attacker-supplied.
  *    Entries are formatted `IP:port` (or `[IPv6]:port`); the port is
@@ -19,14 +42,15 @@
  *    deployment's Azure assumptions don't hold.
  * 3. `"unknown"` if neither header is present (or both are empty/blank).
  *
- * If a CDN or Front Door is ever placed in front of App Service, this
- * trust chain must be revisited — a CDN can change which hop is safe to
- * trust, or introduce its own trusted-IP header.
+ * Cloudflare is the only CDN this trust chain knows about. If another CDN or
+ * Front Door is ever placed in front of App Service, this trust chain must be
+ * revisited — it can change which hop is safe to trust, or introduce its own
+ * trusted-IP header.
  */
 export function extractClientIp(headers: Headers): string {
 	const clientIp = headers.get("x-client-ip")?.trim();
 	if (clientIp) {
-		return clientIp;
+		return visitorBehindCloudflare(clientIp, headers) ?? clientIp;
 	}
 
 	const forwardedFor = headers.get("x-forwarded-for");
@@ -39,6 +63,37 @@ export function extractClientIp(headers: Headers): string {
 	}
 
 	return "unknown";
+}
+
+/**
+ * The identity of the visitor named by `cf-connecting-ip` (see
+ * `visitorNetwork`), or null when the request cannot be trusted to have come
+ * through Turing's Cloudflare zone (the connecting address is outside
+ * Cloudflare's published ranges, or the origin secret is not configured or
+ * not presented) or the header is absent or not a valid address.
+ */
+function visitorBehindCloudflare(
+	connectingAddress: string,
+	headers: Headers
+): string | null {
+	if (
+		!(isCloudflareAddress(connectingAddress) && presentsOriginSecret(headers))
+	) {
+		return null;
+	}
+	const visitor = headers.get("cf-connecting-ip")?.trim();
+	return visitor && isIP(visitor) !== 0 ? visitorNetwork(visitor) : null;
+}
+
+/**
+ * True when `CLOUDFLARE_ORIGIN_SECRET` is set to a non-empty value and the
+ * request's `x-origin-verify` header equals it. The setting is read on each
+ * call, because it is an App Service setting applied while the app runs.
+ */
+function presentsOriginSecret(headers: Headers): boolean {
+	const secret = process.env.CLOUDFLARE_ORIGIN_SECRET?.trim();
+	const presented = headers.get("x-origin-verify");
+	return Boolean(secret && presented && timingSafeCompare(presented, secret));
 }
 
 /**

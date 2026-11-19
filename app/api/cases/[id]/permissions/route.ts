@@ -22,6 +22,7 @@ import {
 /**
  * GET /api/cases/[id]/permissions
  * Lists all permissions for a case. Requires ADMIN permission.
+ * @auth SessionAuth
  */
 export async function GET(
 	_request: Request,
@@ -49,6 +50,7 @@ export async function GET(
  *
  * Body: { type: "user", email: string, permission: string }
  *    or { type: "team", teamId: string, permission: string }
+ * @auth SessionAuth
  */
 export async function POST(
 	request: Request,

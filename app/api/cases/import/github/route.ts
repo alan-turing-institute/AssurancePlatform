@@ -73,13 +73,14 @@ function resolveGitHubLocation(body: GitHubImportInput): GitHubLocation {
 /**
  * POST /api/cases/import/github
  *
- * Imports an assurance case from a GitHub repository.
+ * Imports an assurance case from a file in a public GitHub repository.
  * Requires the user to have connected their GitHub account via OAuth.
  *
  * @body GitHubImportSchema
  * @response ImportResult
  * @response 413 - Payload too large
- * @auth bearer
+ * @add 429
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function POST(request: Request) {
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
 		if (!hasToken) {
 			return apiError(
 				forbidden(
-					"GitHub not connected. Please sign in with GitHub to connect your account before importing from GitHub."
+					"GitHub not connected. Connect your GitHub account before importing from a public GitHub repository."
 				)
 			);
 		}
@@ -155,12 +156,12 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/cases/import/github/status
+ * GET /api/cases/import/github
  *
  * Checks if the current user has GitHub connected for imports.
  *
  * @response { connected: boolean }
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET() {

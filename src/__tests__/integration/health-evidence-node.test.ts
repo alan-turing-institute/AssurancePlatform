@@ -1201,6 +1201,33 @@ describe("collisions with another writer", () => {
 		expect((await criteriaOf(context.claim.id)).state).toBe("ACCEPTED");
 	});
 
+	it("takes the case lock before the claim lock when a retirement removes the node", async () => {
+		const context = await setup();
+		await acceptWithNode(context);
+		const caseId = context.testCase.id;
+		const claimId = context.claim.id;
+		const lock = await holdRowLock(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${caseId} FOR UPDATE`;
+		});
+		const retiring = retire(context, "remove");
+		await waitForLockWait();
+
+		let claimWasFree = false;
+		try {
+			await prisma.$transaction(async (tx) => {
+				await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${claimId} FOR UPDATE NOWAIT`;
+				claimWasFree = true;
+			});
+		} catch {
+			claimWasFree = false;
+		}
+		await lock.release();
+		const result = await retiring;
+
+		expect(claimWasFree).toBe(true);
+		expect(result.status).toBe(200);
+	});
+
 	it("gives the retry message to adding a node when the existing one is deleted while it waits", async () => {
 		const context = await setup();
 		const first = await acceptWithNode(context);

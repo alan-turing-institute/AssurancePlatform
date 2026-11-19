@@ -34,6 +34,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={vi.fn()}
 				onOpenChange={vi.fn()}
 				open
@@ -77,6 +78,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={vi.fn()}
 				onOpenChange={vi.fn()}
 				open
@@ -107,6 +109,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={onConfirm}
 				onOpenChange={vi.fn()}
 				open
@@ -139,6 +142,7 @@ describe("PluginOffConfirmDialog", () => {
 
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={onConfirm}
 				onOpenChange={onOpenChange}
 				open
@@ -158,6 +162,7 @@ describe("PluginOffConfirmDialog", () => {
 	it("renders nothing when closed", () => {
 		renderWithoutProviders(
 			<PluginOffConfirmDialog
+				onCloseAutoFocus={vi.fn()}
 				onConfirm={vi.fn()}
 				onOpenChange={vi.fn()}
 				open={false}

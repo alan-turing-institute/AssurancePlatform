@@ -120,6 +120,28 @@ function savedFields(changes: EditSuggestion["changes"]) {
 	};
 }
 
+/**
+ * The element read back leaves `context`, `assumption` and `justification`
+ * out when they are empty, and Undo sends back only what the saved entry
+ * holds, so an empty value is spelled out when the suggestion fills it.
+ */
+function withEmptyFieldsSpelledOut<
+	T extends {
+		assumption?: string | null;
+		context?: unknown[];
+		justification?: string | null;
+	},
+>(element: T, changes: EditSuggestion["changes"]) {
+	return {
+		...element,
+		...(changes.context && { context: element.context ?? [] }),
+		...(changes.assumption && { assumption: element.assumption ?? "" }),
+		...(changes.justification && {
+			justification: element.justification ?? "",
+		}),
+	};
+}
+
 /** Reads the case again so the diagram shows what was saved, without waiting for the live-update stream. */
 function refreshShownCase(caseId: string): void {
 	refreshCaseIfShown(
@@ -159,12 +181,7 @@ async function applyEdit(
 			)
 		);
 	}
-	// The element read back leaves `context` out when it is empty, and Undo
-	// sends back only what the saved entry holds, so an empty list is spelled
-	// out when the suggestion fills it.
-	const before = suggestion.changes.context
-		? { ...element, context: element.context ?? [] }
-		: element;
+	const before = withEmptyFieldsSpelledOut(element, suggestion.changes);
 	// Writing the description of a placeholder in a case takes its marker off,
 	// so the entry records the element without it; see recordedStates.
 	const recorded = recordedStates(
