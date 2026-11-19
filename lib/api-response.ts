@@ -259,8 +259,25 @@ const ERROR_MAPPINGS: Array<{
 	{ pattern: /^defeatsElementId /, factory: () => validationError("") },
 	// `element-service.ts`'s goal rules, on create, update and the batch editor:
 	// a goal defeater without a `parentId` would be a second root goal — a
-	// validation failure (400), not a 500.
+	// validation failure (400), not a 500. The same pattern answers a parentId
+	// on evidence through the general edit, and attaching evidence to anything
+	// other than a property claim, and putting anything but a counter-goal
+	// beneath a piece of evidence.
 	{ pattern: /^parentId /, factory: () => validationError("") },
+	// `element-service.ts`'s `rejectFieldsNotApplicable`: a text field filled in
+	// on an element type that does not hold it (an assumption on evidence) is a
+	// validation failure (400), not a silent drop.
+	{
+		pattern:
+			/^(assumption|justification|context|url|URL|urls) is not applicable to /,
+		factory: () => validationError(""),
+	},
+	// Detaching the top goal would leave the case without a root: a validation
+	// failure (400), as for a counter-goal detached from its parent.
+	{
+		pattern: /^The top goal cannot be detached$/,
+		factory: () => validationError(""),
+	},
 	// A second ordinary goal in a case is a rule refusal (422), not a 500. It is
 	// not a 409: that code on the batch endpoint means another person changed
 	// the case, and the JSON editor reads it that way.

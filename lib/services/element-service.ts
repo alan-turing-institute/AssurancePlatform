@@ -3,6 +3,11 @@ import {
 	patternMarkersForEdit,
 	storedElementText,
 } from "@/lib/case/placeholders";
+import {
+	isBeneathEvidenceRefused,
+	ONLY_COUNTER_GOALS_BENEATH_EVIDENCE,
+	parentTypeRefusal,
+} from "@/lib/element-compatibility";
 import { getCorePrefix } from "@/lib/element-names/prefix-registry";
 import { toPrefix, toPrismaType } from "@/lib/element-types";
 import { logger } from "@/lib/logger";
@@ -46,6 +51,20 @@ async function touchCase(tx: TxClient, caseId: string): Promise<void> {
 }
 
 /**
+ * Takes a row lock on the case for the rest of the caller's transaction, so
+ * writes that change a case's goals (and, later, its names) run one after
+ * another and each re-checks its rules against what the last one left. Take it
+ * before any other lock in the transaction; a caller that also locks a claim
+ * takes the case first.
+ */
+export async function lockCaseForElementWrite(
+	tx: TxClient,
+	caseId: string
+): Promise<void> {
+	await tx.$queryRaw`SELECT id FROM assurance_cases WHERE id = ${caseId} FOR UPDATE`;
+}
+
+/**
  * Create element input — extends the Zod schema output with API-layer fields
  * that are not part of the validation schema (caseId, elementType, description aliases).
  */
@@ -74,10 +93,11 @@ export interface ElementResponse {
 	comments?: unknown[];
 	context?: ContextEntry[];
 	createdDate: string;
-	// Dangling-defeat indicator: true when defeatsElementId was blanked
-	// because the imported target wasn't part of the same import (see
-	// resolveImportedDefeatsElementId, case-import-service.ts). Omitted (not
-	// false) when there is nothing to flag — mirrors citationDangling above.
+	// Dangling-defeat indicator: true when defeatsElementId was blanked because
+	// the target is gone: not part of the same import (see
+	// resolveImportedDefeatsElementId, case-import-service.ts), or deleted or
+	// detached later (see nullifyDanglingDefeats). Omitted (not false) when
+	// there is nothing to flag — mirrors citationDangling above.
 	defeatsDangling?: boolean;
 	// Dialogical reasoning (defeaters) — applies to every element type.
 	defeatsElementId?: string | null;
@@ -413,16 +433,105 @@ async function enforceDefeatsElementIdRules(
 async function validateParentIdInCase(
 	caseId: string,
 	parentId: string,
+	child: { elementType: string; isDefeater?: boolean | null },
 	db: TxClient = prisma
 ): Promise<string | undefined> {
 	const parent = await db.assuranceElement.findFirst({
 		where: { id: parentId, deletedAt: null, caseId },
-		select: { id: true },
+		select: { elementType: true },
 	});
 	if (!parent) {
 		return "Parent element not found";
 	}
+	return parentTypeRefusal(child, parent.elementType);
+}
+
+/**
+ * The element types kept from the previous platform. Existing ones stay; no new
+ * one can be created.
+ */
+const RETIRED_ELEMENT_TYPES: ReadonlySet<string> = new Set([
+	"CONTEXT",
+	"JUSTIFICATION",
+	"ASSUMPTION",
+	"CONTRACT",
+]);
+
+/** The refusal for creating an element of a retired type, or undefined for any other type. */
+export function retiredElementTypeRefusal(
+	elementType: string
+): string | undefined {
+	return RETIRED_ELEMENT_TYPES.has(elementType)
+		? `Unknown element type '${elementType}': it can no longer be created`
+		: undefined;
+}
+
+/**
+ * The refusal when attach puts an element beneath a parent of the given type.
+ * An element of a retired type has no place in the parent-type table, so it
+ * keeps only the rules that hold for every element: nothing but a counter-goal
+ * hangs from evidence, and away goals and modules are leaves.
+ */
+function attachParentRefusal(
+	child: { elementType: string; isDefeater?: boolean | null },
+	parentType: string
+): string | undefined {
+	if (!RETIRED_ELEMENT_TYPES.has(child.elementType)) {
+		return parentTypeRefusal(child, parentType);
+	}
+	if (isBeneathEvidenceRefused(child, parentType)) {
+		return ONLY_COUNTER_GOALS_BENEATH_EVIDENCE;
+	}
+	if (parentType === "AWAY_GOAL" || parentType === "MODULE") {
+		return "parentId cannot be an away goal or a module";
+	}
 	return;
+}
+
+/** Whether a field value written by an update says something (an empty one does not). */
+function carriesValue(value: unknown): boolean {
+	if (typeof value === "string") {
+		return value.trim() !== "";
+	}
+	if (Array.isArray(value)) {
+		return value.length > 0;
+	}
+	return value !== null && value !== undefined;
+}
+
+/**
+ * The first type-specific text field an update or a create fills in that does not belong
+ * to the element's type (an assumption on a piece of evidence, a link on a
+ * claim), or undefined. Empty values pass: an undo, a form that sends every
+ * field, or an older row may carry them, and an empty value changes nothing
+ * the type could not hold.
+ */
+export function rejectFieldsNotApplicable(
+	elementType: string,
+	input: {
+		assumption?: string | null;
+		context?: unknown[];
+		justification?: string | null;
+		url?: string | null;
+		URL?: string | null;
+		urls?: string[];
+	}
+): string | undefined {
+	const written: [string, string, unknown][] = [
+		["assumption", "assumption", input.assumption],
+		["justification", "justification", input.justification],
+		["context", "context", input.context],
+		["url", "url", input.url],
+		["url", "URL", input.URL],
+		["urls", "urls", input.urls],
+	];
+	const misplaced = written.find(
+		([rule, , value]) =>
+			carriesValue(value) && !fieldAppliesTo(rule, elementType)
+	);
+	return misplaced
+		? `${misplaced[1]} is not applicable to ${elementType} elements`
+		: undefined;
 }
 
 /**
@@ -631,29 +740,32 @@ type ParentInfoForNaming = {
 } | null;
 
 /**
- * Returns the flat identifier `<prefix><n>` for the lowest `n` at or above
- * `startAt` that no live element in the case already carries.
+ * Returns the identifier `<prefix><n>` for the lowest `n` at or above `startAt`
+ * that no element in the case carries, deleted ones included (so a restore
+ * never meets a repeat), and that is not in `alsoTaken` (names given earlier in
+ * the same write).
  *
- * The flat tallies in the property-claim namers count only the claims that
- * do not dot-continue a parent's name. A claim placed under a parent whose
- * own name is not a well-formed identifier is named flat as well, yet falls
- * outside those tallies, so the tally alone can name several claims alike.
- * Skipping the names in use keeps every flat identifier unique, and leaves
- * the tally's own choice untouched whenever it is already free.
+ * The tallies in the namers count live siblings of one kind, and the kinds
+ * differ by branch: direct children, children through a strategy, claims under
+ * a parent whose own name is not a well-formed identifier. The tally alone can
+ * therefore name two elements alike, and a deleted element's number would come
+ * round again. Skipping the names in use keeps every generated identifier
+ * unique, and leaves the tally's own choice untouched whenever it is free.
  */
-async function nextFreeFlatName(
+async function nextFreeName(
 	caseId: string,
 	prefix: string,
 	startAt: number,
-	db: TxClient
+	db: TxClient,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	const named = await db.assuranceElement.findMany({
-		where: { caseId, deletedAt: null, name: { startsWith: prefix } },
+		where: { caseId, name: { startsWith: prefix } },
 		select: { name: true },
 	});
 	const inUse = new Set(named.map((element) => element.name));
 	let next = startAt;
-	while (inUse.has(`${prefix}${next}`)) {
+	while (inUse.has(`${prefix}${next}`) || alsoTaken?.has(`${prefix}${next}`)) {
 		next += 1;
 	}
 	return `${prefix}${next}`;
@@ -680,7 +792,8 @@ async function generateDefeaterPropertyClaimName(
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
 	prefix: string,
-	db: TxClient
+	db: TxClient,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
@@ -701,7 +814,13 @@ async function generateDefeaterPropertyClaimName(
 				deletedAt: null,
 			},
 		});
-		return `${parentInfo.name}.${siblingCount + 1}`;
+		return await nextFreeName(
+			caseId,
+			`${parentInfo.name}.`,
+			siblingCount + 1,
+			db,
+			alsoTaken
+		);
 	}
 
 	const caseWideCount = await db.assuranceElement.count({
@@ -713,7 +832,7 @@ async function generateDefeaterPropertyClaimName(
 			NOT: { parent: { elementType: "PROPERTY_CLAIM", isDefeater: true } },
 		},
 	});
-	return await nextFreeFlatName(caseId, prefix, caseWideCount + 1, db);
+	return await nextFreeName(caseId, prefix, caseWideCount + 1, db, alsoTaken);
 }
 
 /**
@@ -741,7 +860,8 @@ async function generatePlainPropertyClaimName(
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
 	prefix: string,
-	db: TxClient
+	db: TxClient,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	if (
 		parentInfo?.elementType === "PROPERTY_CLAIM" &&
@@ -762,7 +882,13 @@ async function generatePlainPropertyClaimName(
 				deletedAt: null,
 			},
 		});
-		return `${parentInfo.name}.${siblingCount + 1}`;
+		return await nextFreeName(
+			caseId,
+			`${parentInfo.name}.`,
+			siblingCount + 1,
+			db,
+			alsoTaken
+		);
 	}
 
 	if (parentId && parentInfo?.elementType === "STRATEGY") {
@@ -810,7 +936,13 @@ async function generatePlainPropertyClaimName(
 						deletedAt: null,
 					},
 				});
-				return `${ancestor.name}.${siblingCount + 1}`;
+				return await nextFreeName(
+					caseId,
+					`${ancestor.name}.`,
+					siblingCount + 1,
+					db,
+					alsoTaken
+				);
 			}
 		}
 		// Strategy is under a goal, or under a defeater property claim —
@@ -852,7 +984,7 @@ async function generatePlainPropertyClaimName(
 			},
 		},
 	});
-	return await nextFreeFlatName(caseId, prefix, caseWideCount + 1, db);
+	return await nextFreeName(caseId, prefix, caseWideCount + 1, db, alsoTaken);
 }
 
 /**
@@ -877,7 +1009,8 @@ async function generateElementName(
 	parentId: string | null,
 	parentInfo: ParentInfoForNaming,
 	isDefeater: boolean,
-	db: TxClient = prisma
+	db: TxClient = prisma,
+	alsoTaken?: ReadonlySet<string>
 ): Promise<string> {
 	const prefix = toPrefix(elementType, isDefeater);
 
@@ -888,14 +1021,16 @@ async function generateElementName(
 					parentId,
 					parentInfo,
 					prefix,
-					db
+					db,
+					alsoTaken
 				)
 			: await generatePlainPropertyClaimName(
 					caseId,
 					parentId,
 					parentInfo,
 					prefix,
-					db
+					db,
+					alsoTaken
 				);
 	}
 
@@ -911,7 +1046,7 @@ async function generateElementName(
 			deletedAt: null,
 		},
 	});
-	return `${prefix}${caseWideCount + 1}`;
+	return await nextFreeName(caseId, prefix, caseWideCount + 1, db, alsoTaken);
 }
 
 /**
@@ -1022,18 +1157,22 @@ export async function regenerateNameForIsDefeaterChange(
 	elementType: PrismaElementType,
 	caseId: string,
 	parentId: string | null,
-	isDefeater: boolean
+	isDefeater: boolean,
+	alsoTaken?: ReadonlySet<string>,
+	db: TxClient = prisma
 ): Promise<string> {
 	const { parentInfo } =
 		elementType === "PROPERTY_CLAIM" && parentId
-			? await calculatePropertyClaimLevel(parentId)
+			? await calculatePropertyClaimLevel(parentId, db)
 			: { parentInfo: null };
 	return generateElementName(
 		elementType,
 		caseId,
 		parentId,
 		parentInfo,
-		isDefeater
+		isDefeater,
+		db,
+		alsoTaken
 	);
 }
 
@@ -1047,6 +1186,13 @@ export const GOAL_DEFEATER_NEEDS_PARENT =
 
 /** A case has one ordinary goal; counter-goals are not counted. */
 export const ONE_GOAL_PER_CASE = "A case can only have one goal claim";
+
+/** The top goal is the root of the case, so it never takes a parent. */
+export const TOP_GOAL_NEEDS_NO_PARENT =
+	"parentId cannot be set on the top goal; only a counter-goal has a parent";
+
+/** The top goal is the root of the case, so it cannot be moved to the side area. */
+const TOP_GOAL_CANNOT_BE_DETACHED = "The top goal cannot be detached";
 
 /**
  * Checks if a case already has a live, non-defeater goal element, leaving out
@@ -1196,19 +1342,24 @@ async function validateElementReferences(
 		return { error: GOAL_DEFEATER_NEEDS_PARENT };
 	}
 
-	if (parentId) {
-		const parentError = await validateParentIdInCase(caseId, parentId, db);
-		if (parentError) {
-			return { error: parentError };
-		}
-	}
-
 	if (
 		elementType === "GOAL" &&
 		!input.isDefeater &&
 		(await caseHasGoal(caseId, db))
 	) {
 		return { error: ONE_GOAL_PER_CASE };
+	}
+
+	if (parentId) {
+		const parentError = await validateParentIdInCase(
+			caseId,
+			parentId,
+			{ elementType, isDefeater: input.isDefeater },
+			db
+		);
+		if (parentError) {
+			return { error: parentError };
+		}
 	}
 
 	const moduleReferenceIdError = await enforceModuleReferenceIdRules(
@@ -1321,6 +1472,14 @@ async function prepareElementCreate(
 	if (!getCorePrefix(elementType)) {
 		return { error: `Unknown element type '${input.elementType}'` };
 	}
+	const retiredTypeError = retiredElementTypeRefusal(elementType);
+	if (retiredTypeError) {
+		return { error: retiredTypeError };
+	}
+	const misplacedFieldError = rejectFieldsNotApplicable(elementType, input);
+	if (misplacedFieldError) {
+		return { error: misplacedFieldError };
+	}
 	const parentId = resolveParentId(input);
 	const isDefeater = input.isDefeater ?? false;
 
@@ -1399,6 +1558,7 @@ export async function createElementWithin(
 	userId: string,
 	input: CreateElementInput
 ): Promise<{ data: ElementResponse } | { error: string }> {
+	await lockCaseForElementWrite(tx, input.caseId);
 	const prepared = await prepareElementCreate(tx, userId, input);
 	if ("error" in prepared) {
 		return prepared;
@@ -1527,7 +1687,7 @@ function buildUpdateData(input: UpdateElementInput): Record<string, unknown> {
 	if (input.defeatsElementId !== undefined) {
 		updateData.defeatsElementId = input.defeatsElementId;
 		// The author explicitly set (or cleared) the defeat target — whatever
-		// dangling flag was left over from a previous import no longer
+		// dangling flag was left over from an import, a deletion or a detach no longer
 		// describes the current state, declared or not (mirrors
 		// citationDangling's reset above).
 		updateData.defeatsDangling = false;
@@ -1610,6 +1770,13 @@ async function validateParentChange(
 }
 
 /**
+ * The refusal for any `parentId` on a piece of evidence through the general
+ * edit. Starts with `parentId ` so `ERROR_MAPPINGS` answers it with a 400.
+ */
+export const EVIDENCE_PARENT_CHANGE_ERROR =
+	"parentId cannot be set on evidence; use move or detach";
+
+/**
  * Validates and applies a parentId change to `updateData` IN PLACE, for
  * `updateElement`'s move-operation branch: existence/soft-delete/same-case
  * checks, then the circular-reference guard, then (for a property claim)
@@ -1625,6 +1792,9 @@ async function applyParentChangeForUpdate(
 	updateData: Record<string, unknown>
 ): Promise<{ error: string } | undefined> {
 	if (newParentId === null) {
+		if (existing.elementType === "EVIDENCE") {
+			return { error: EVIDENCE_PARENT_CHANGE_ERROR };
+		}
 		// Detaching — allowed unconditionally.
 		updateData.parentId = null;
 		return;
@@ -1641,6 +1811,11 @@ async function applyParentChangeForUpdate(
 		newParent.caseId !== existing.caseId
 	) {
 		return { error: "Element not found" };
+	}
+
+	// Evidence hangs from claims through links, never through parentId.
+	if (existing.elementType === "EVIDENCE") {
+		return { error: EVIDENCE_PARENT_CHANGE_ERROR };
 	}
 
 	const validationError = await validateParentChange(elementId, newParentId);
@@ -1661,7 +1836,8 @@ async function applyParentChangeForUpdate(
 /**
  * The goal rules for an update, judged on what the goal will be once the update
  * is applied: a goal defeater (counter-goal) has a parent, and a case has one
- * ordinary goal. An update that leaves `isDefeater` and `parentId` alone is not
+ * ordinary goal, which never takes a parent. An update that leaves `isDefeater`
+ * and `parentId` alone is not
  * held to the first rule, so a counter-goal stored without a parent can still
  * be edited. A counter-goal made ordinary is the only change that can add an
  * ordinary goal, so that is the only one checked against the others.
@@ -1674,7 +1850,8 @@ async function enforceGoalRulesOnUpdate(
 		isDefeater: boolean;
 		parentId: string | null;
 	},
-	input: UpdateElementInput
+	input: UpdateElementInput,
+	db: TxClient = prisma
 ): Promise<{ error: string } | undefined> {
 	if (existing.elementType !== "GOAL") {
 		return;
@@ -1690,10 +1867,84 @@ async function enforceGoalRulesOnUpdate(
 	if (
 		existing.isDefeater &&
 		!isDefeater &&
-		(await caseHasGoal(existing.caseId, prisma, elementId))
+		(await caseHasGoal(existing.caseId, db, elementId))
 	) {
 		return { error: ONE_GOAL_PER_CASE };
 	}
+	if (changesPlace && !isDefeater && parentId) {
+		return { error: TOP_GOAL_NEEDS_NO_PARENT };
+	}
+}
+
+/**
+ * Only counter-goals hang from evidence, judged on what the element will be
+ * once the update is applied: the new parent (input, else stored) and the
+ * counter-goal flag (input, else stored). An update that moves nothing and
+ * leaves the flag alone is not held to it, so an element already stored
+ * beneath evidence can still be edited. A parent outside the case or in the
+ * bin is left to the parent change, which answers "Element not found".
+ */
+async function enforceBeneathEvidenceOnUpdate(
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	},
+	input: UpdateElementInput
+): Promise<{ error: string } | undefined> {
+	const newParentId = resolveParentId(input);
+	if (newParentId === undefined && input.isDefeater === undefined) {
+		return;
+	}
+	const parentId = newParentId === undefined ? existing.parentId : newParentId;
+	if (!parentId) {
+		return;
+	}
+	const parent = await prisma.assuranceElement.findFirst({
+		where: { id: parentId, caseId: existing.caseId, deletedAt: null },
+		select: { elementType: true },
+	});
+	if (
+		parent &&
+		isBeneathEvidenceRefused(
+			{
+				elementType: existing.elementType,
+				isDefeater: input.isDefeater ?? existing.isDefeater,
+			},
+			parent.elementType
+		)
+	) {
+		return { error: ONLY_COUNTER_GOALS_BENEATH_EVIDENCE };
+	}
+}
+
+/**
+ * The rules an update must meet for the element's type: the text fields it
+ * fills in belong to the type, the goal rules, and only counter-goals hang from
+ * evidence. The first refusal is returned.
+ */
+async function enforceTypeRulesOnUpdate(
+	elementId: string,
+	existing: {
+		caseId: string;
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	},
+	input: UpdateElementInput
+): Promise<{ error: string } | undefined> {
+	const misplacedFieldError = rejectFieldsNotApplicable(
+		existing.elementType,
+		input
+	);
+	if (misplacedFieldError) {
+		return { error: misplacedFieldError };
+	}
+	return (
+		(await enforceGoalRulesOnUpdate(elementId, existing, input)) ??
+		(await enforceBeneathEvidenceOnUpdate(existing, input))
+	);
 }
 
 /**
@@ -1810,13 +2061,13 @@ async function validateUpdateElementFields(
 		return { error: defeatsElementIdError };
 	}
 
-	const goalRuleError = await enforceGoalRulesOnUpdate(
+	const typeRuleError = await enforceTypeRulesOnUpdate(
 		elementId,
 		existing,
 		input
 	);
-	if (goalRuleError) {
-		return goalRuleError;
+	if (typeRuleError) {
+		return typeRuleError;
 	}
 
 	// Named context entries: unique names on this element, and ids unique in
@@ -1866,7 +2117,8 @@ async function applyRegeneratedNameOnDefeaterFlip(
 		isDefeater: boolean;
 	},
 	effectiveParentId: string | null,
-	updateData: Record<string, unknown>
+	updateData: Record<string, unknown>,
+	db: TxClient
 ): Promise<void> {
 	if (
 		input.isDefeater === undefined ||
@@ -1879,7 +2131,9 @@ async function applyRegeneratedNameOnDefeaterFlip(
 		existing.elementType,
 		existing.caseId,
 		effectiveParentId,
-		input.isDefeater
+		input.isDefeater,
+		undefined,
+		db
 	);
 }
 
@@ -1909,6 +2163,55 @@ export async function updateElementWithin(
 	});
 	await touchCase(tx, caseId);
 	return transformToResponse(updated);
+}
+
+/**
+ * Writes an update under the case lock. A goal's rules are judged again on the
+ * goal as it stands once the lock is held, because the checks before the
+ * transaction ran while another write to the case could still be in flight.
+ */
+async function writeUpdateUnderCaseLock(
+	tx: TxClient,
+	elementId: string,
+	existing: { caseId: string; elementType: PrismaElementType },
+	input: UpdateElementInput,
+	updateData: Prisma.AssuranceElementUpdateInput,
+	flip: {
+		existing: { elementType: PrismaElementType; isDefeater: boolean };
+		effectiveParentId: string | null;
+	}
+): Promise<{ data: ElementResponse } | { error: string }> {
+	await lockCaseForElementWrite(tx, existing.caseId);
+	// The new name of a defeater flip is picked once the lock is held, so two
+	// flips in one case see each other's names.
+	await applyRegeneratedNameOnDefeaterFlip(
+		input,
+		{ ...existing, ...flip.existing },
+		flip.effectiveParentId,
+		updateData,
+		tx
+	);
+	if (existing.elementType === "GOAL") {
+		const current = await tx.assuranceElement.findUnique({
+			where: { id: elementId },
+			select: { isDefeater: true, parentId: true },
+		});
+		if (!current) {
+			return { error: "Element not found" };
+		}
+		const goalRuleError = await enforceGoalRulesOnUpdate(
+			elementId,
+			{ ...existing, ...current },
+			input,
+			tx
+		);
+		if (goalRuleError) {
+			return goalRuleError;
+		}
+	}
+	return {
+		data: await updateElementWithin(tx, elementId, existing.caseId, updateData),
+	};
 }
 
 /**
@@ -1995,18 +2298,12 @@ export async function updateElement(
 		// so a simultaneous move + flip regenerates against the right class.
 		const effectiveParentId =
 			newParentId !== undefined ? newParentId : existing.parentId;
-		await applyRegeneratedNameOnDefeaterFlip(
-			input,
-			existing,
-			effectiveParentId,
-			updateData
+		return await prisma.$transaction((tx) =>
+			writeUpdateUnderCaseLock(tx, elementId, existing, input, updateData, {
+				existing,
+				effectiveParentId,
+			})
 		);
-
-		return {
-			data: await prisma.$transaction((tx) =>
-				updateElementWithin(tx, elementId, existing.caseId, updateData)
-			),
-		};
 	} catch (error) {
 		log.error("Failed to update element", { error });
 		return { error: "Failed to update element" };
@@ -2033,6 +2330,35 @@ async function nullifyDanglingCitations(
 	await tx.assuranceElement.updateMany({
 		where: { citedElementId: { in: citedElementIds } },
 		data: { citedElementId: null, citationDangling: true },
+	});
+}
+
+/**
+ * When an element leaves the argument tree (deleted or detached together with
+ * its descendants), a challenge elsewhere in the case that still names it is
+ * left unlinked and flagged `defeatsDangling`, the same way citations are. A
+ * challenge inside the removed set is left alone: it normally hangs from the
+ * element it challenges and goes and comes back with it, and that holds for a
+ * challenge in the bin as well. `keptIds` names further challenges to leave
+ * alone: those in the bin beneath the removed element, and those the same write
+ * gives a new target.
+ */
+export async function nullifyDanglingDefeats(
+	tx: TxClient,
+	caseId: string,
+	removedIds: string[],
+	keptIds: string[] = []
+): Promise<void> {
+	if (removedIds.length === 0) {
+		return;
+	}
+	await tx.assuranceElement.updateMany({
+		where: {
+			caseId,
+			defeatsElementId: { in: removedIds },
+			id: { notIn: [...removedIds, ...keptIds] },
+		},
+		data: { defeatsElementId: null, defeatsDangling: true },
 	});
 }
 
@@ -2070,6 +2396,11 @@ export async function deleteElementWithin(
 ): Promise<void> {
 	const descendantIds = await getDescendantIds(elementId, tx);
 	const allIds = [elementId, ...descendantIds];
+	// A descendant binned on its own earlier is still part of this subtree: its
+	// challenge stays with the element it challenges, for a later restore.
+	const subtreeIds = await getDescendantIds(elementId, tx, {
+		includeDeleted: true,
+	});
 	await tx.assuranceElement.updateMany({
 		where: { id: { in: allIds } },
 		data: { deletedAt: new Date(), deletedById: userId },
@@ -2079,6 +2410,7 @@ export async function deleteElementWithin(
 	// `caseId` — every deleted id (the element and its
 	// descendants) may be cited from anywhere.
 	await nullifyDanglingCitations(tx, allIds);
+	await nullifyDanglingDefeats(tx, caseId, allIds, subtreeIds);
 	await touchCase(tx, caseId);
 }
 
@@ -2112,9 +2444,10 @@ export async function deleteElement(
 
 		// Gather descendants, soft-delete, and nullify+flag any dangling
 		// citations (ADR 0004 D5) atomically
-		await prisma.$transaction((tx) =>
-			deleteElementWithin(tx, userId, elementId, existing.caseId)
-		);
+		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, existing.caseId);
+			await deleteElementWithin(tx, userId, elementId, existing.caseId);
+		});
 
 		return { data: true };
 	} catch (error) {
@@ -2134,7 +2467,12 @@ export async function detachElement(
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, deletedAt: true },
+			select: {
+				caseId: true,
+				elementType: true,
+				deletedAt: true,
+				isDefeater: true,
+			},
 		});
 
 		if (!existing) {
@@ -2151,6 +2489,16 @@ export async function detachElement(
 			return { error: "Element not found" };
 		}
 
+		// A counter-goal needs the parent it challenges, and the top goal is the
+		// root of the case: neither leaves the argument tree.
+		if (existing.elementType === "GOAL") {
+			return {
+				error: existing.isDefeater
+					? GOAL_DEFEATER_NEEDS_PARENT
+					: TOP_GOAL_CANNOT_BE_DETACHED,
+			};
+		}
+
 		// Move to sandbox, clear parent, and nullify+flag any dangling
 		// citations (ADR 0004 D5) atomically — a detached element is no
 		// longer part of the case's argument tree, so a citation pointing at
@@ -2159,6 +2507,7 @@ export async function detachElement(
 		// the detached element — see attachElement's cascade below), so the
 		// sweep covers descendants too, the same way deleteElement's does.
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, existing.caseId);
 			await tx.assuranceElement.update({
 				where: { id: elementId },
 				data: {
@@ -2166,8 +2515,23 @@ export async function detachElement(
 					inSandbox: true,
 				},
 			});
+			// Evidence hangs from its claims through links, so leaving the
+			// tree means leaving every claim it supported.
+			if (existing.elementType === "EVIDENCE") {
+				await tx.evidenceLink.deleteMany({ where: { evidenceId: elementId } });
+			}
 			const descendantIds = await getDescendantIds(elementId, tx);
 			await nullifyDanglingCitations(tx, [elementId, ...descendantIds]);
+			// A descendant binned on its own is still part of the detached subtree.
+			const subtreeIds = await getDescendantIds(elementId, tx, {
+				includeDeleted: true,
+			});
+			await nullifyDanglingDefeats(
+				tx,
+				existing.caseId,
+				[elementId, ...descendantIds],
+				subtreeIds
+			);
 			await touchCase(tx, existing.caseId);
 		});
 
@@ -2176,6 +2540,42 @@ export async function detachElement(
 		log.error("Failed to detach element", { error });
 		return { error: "Failed to detach element" };
 	}
+}
+
+/**
+ * Attaches a piece of evidence to a claim. Evidence hangs from claims through
+ * links, never through `parentId`, so this adds the link and takes the
+ * evidence (and anything beneath it) out of the side area.
+ */
+async function attachEvidence(
+	evidenceId: string,
+	caseId: string,
+	claimId: string,
+	claimType: PrismaElementType
+): ServiceResult {
+	if (claimType !== "PROPERTY_CLAIM") {
+		return { error: "parentId must be a property claim to attach evidence" };
+	}
+	await prisma.$transaction(async (tx) => {
+		await lockCaseForElementWrite(tx, caseId);
+		await tx.evidenceLink.createMany({
+			data: [{ evidenceId, claimId }],
+			skipDuplicates: true,
+		});
+		await tx.assuranceElement.update({
+			where: { id: evidenceId },
+			data: { inSandbox: false },
+		});
+		const descendantIds = await getDescendantIds(evidenceId, tx);
+		if (descendantIds.length > 0) {
+			await tx.assuranceElement.updateMany({
+				where: { id: { in: descendantIds } },
+				data: { inSandbox: false },
+			});
+		}
+		await touchCase(tx, caseId);
+	});
+	return { data: true };
 }
 
 /**
@@ -2200,7 +2600,12 @@ export async function attachElement(
 		// Get existing element to check permissions
 		const existing = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { caseId: true, elementType: true, deletedAt: true },
+			select: {
+				caseId: true,
+				elementType: true,
+				deletedAt: true,
+				isDefeater: true,
+			},
 		});
 
 		if (!existing) {
@@ -2220,7 +2625,7 @@ export async function attachElement(
 		// Validate parent exists, is not deleted, and belongs to the same case
 		const parentElement = await prisma.assuranceElement.findUnique({
 			where: { id: parentId },
-			select: { caseId: true, deletedAt: true },
+			select: { caseId: true, elementType: true, deletedAt: true },
 		});
 
 		if (
@@ -2231,14 +2636,32 @@ export async function attachElement(
 			return { error: "Element not found" };
 		}
 
+		if (existing.elementType === "EVIDENCE") {
+			return await attachEvidence(
+				elementId,
+				existing.caseId,
+				parentId,
+				parentElement.elementType
+			);
+		}
+
 		// Validate parent change doesn't create circular reference
 		const validationError = await validateParentChange(elementId, parentId);
 		if (validationError) {
 			return { error: validationError };
 		}
 
+		const parentRefusal = attachParentRefusal(
+			existing,
+			parentElement.elementType
+		);
+		if (parentRefusal) {
+			return { error: parentRefusal };
+		}
+
 		// Calculate level, attach, and cascade sandbox removal atomically
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, existing.caseId);
 			let level: number | undefined;
 			if (existing.elementType === "PROPERTY_CLAIM") {
 				const parent = await tx.assuranceElement.findFirst({
@@ -2354,6 +2777,7 @@ export async function moveElement(
 
 		// Perform the move atomically
 		await prisma.$transaction(async (tx) => {
+			await lockCaseForElementWrite(tx, element.caseId);
 			if (element.elementType === "EVIDENCE") {
 				// Evidence uses EvidenceLink rather than parentId
 				// Remove existing evidence link(s) for this evidence element
@@ -2435,17 +2859,119 @@ export async function getSandboxElements(
 }
 
 /**
- * Restores a soft-deleted element and all its descendants
+ * After elements are restored, renames any whose name a live element of the
+ * case now also carries (a typed, imported or renumbered name taken while the
+ * element was in the bin). `restoredIds` lists parents before their children.
+ * A renamed element's dotted descendants follow it (P1.2.1 becomes P1.4.1);
+ * any that still clash are named afresh. Names no live element shares are left
+ * as they are.
+ */
+async function renameRestoredOnClash(
+	tx: TxClient,
+	caseId: string,
+	restoredIds: string[]
+): Promise<void> {
+	const rows = await tx.assuranceElement.findMany({
+		where: { id: { in: restoredIds } },
+		select: {
+			id: true,
+			name: true,
+			elementType: true,
+			isDefeater: true,
+			parentId: true,
+		},
+	});
+	const byId = new Map(rows.map((row) => [row.id, row]));
+	const renames: { from: string; to: string }[] = [];
+	for (const id of restoredIds) {
+		const row = byId.get(id);
+		if (!row?.name) {
+			continue;
+		}
+		const followed = followRenamedPrefix(row.name, renames);
+		const name = (await isNameHeldByAnother(tx, caseId, id, followed))
+			? await freshNameFor(tx, caseId, row)
+			: followed;
+		if (name !== row.name) {
+			renames.push({ from: row.name, to: name });
+			await tx.assuranceElement.update({ where: { id }, data: { name } });
+		}
+	}
+}
+
+/** A dotted name with the part a renamed ancestor gave up replaced by its new name. */
+function followRenamedPrefix(
+	name: string,
+	renames: { from: string; to: string }[]
+): string {
+	let rename: { from: string; to: string } | undefined;
+	for (const candidate of renames) {
+		if (
+			name.startsWith(`${candidate.from}.`) &&
+			(!rename || candidate.from.length > rename.from.length)
+		) {
+			rename = candidate;
+		}
+	}
+	return rename ? `${rename.to}${name.slice(rename.from.length)}` : name;
+}
+
+async function isNameHeldByAnother(
+	tx: TxClient,
+	caseId: string,
+	elementId: string,
+	name: string
+): Promise<boolean> {
+	const holder = await tx.assuranceElement.findFirst({
+		where: { caseId, deletedAt: null, name, id: { not: elementId } },
+		select: { id: true },
+	});
+	return holder !== null;
+}
+
+async function freshNameFor(
+	tx: TxClient,
+	caseId: string,
+	row: {
+		elementType: PrismaElementType;
+		isDefeater: boolean;
+		parentId: string | null;
+	}
+): Promise<string> {
+	const { parentInfo } =
+		row.elementType === "PROPERTY_CLAIM" && row.parentId
+			? await calculatePropertyClaimLevel(row.parentId, tx)
+			: { parentInfo: null };
+	return await generateElementName(
+		row.elementType,
+		caseId,
+		row.parentId,
+		parentInfo,
+		row.isDefeater,
+		tx
+	);
+}
+
+/**
+ * Restores a soft-deleted element and all its descendants. Returns the name
+ * the element carries once restored, which differs from the one it was
+ * deleted with when another element took that name in the meantime.
  */
 export async function restoreElement(
 	userId: string,
 	elementId: string
-): ServiceResult {
+): ServiceResult<{ name: string | null }> {
 	try {
 		// Get the element (including deleted ones)
 		const element = await prisma.assuranceElement.findUnique({
 			where: { id: elementId },
-			select: { parentId: true, caseId: true, deletedAt: true },
+			select: {
+				parentId: true,
+				caseId: true,
+				deletedAt: true,
+				elementType: true,
+				isDefeater: true,
+			},
 		});
 
 		if (!element) {
@@ -2474,17 +3000,37 @@ export async function restoreElement(
 		}
 
 		// Gather deleted descendants and restore atomically
-		await prisma.$transaction(async (tx) => {
-			const descendantIds = await getDeletedDescendantIds(elementId, tx);
-			const allIds = [elementId, ...descendantIds];
-			await tx.assuranceElement.updateMany({
-				where: { id: { in: allIds } },
-				data: { deletedAt: null, deletedById: null },
-			});
-			await touchCase(tx, element.caseId);
-		});
-
-		return { data: true };
+		// A deleted top goal comes back only while the case has no other one,
+		// judged under the case lock so a goal made in the meantime counts.
+		return await prisma.$transaction(
+			async (
+				tx
+			): ServiceResult<{
+				name: string | null;
+			}> => {
+				await lockCaseForElementWrite(tx, element.caseId);
+				if (
+					element.elementType === "GOAL" &&
+					!element.isDefeater &&
+					(await caseHasGoal(element.caseId, tx, elementId))
+				) {
+					return { error: ONE_GOAL_PER_CASE };
+				}
+				const descendantIds = await getDeletedDescendantIds(elementId, tx);
+				const allIds = [elementId, ...descendantIds];
+				await tx.assuranceElement.updateMany({
+					where: { id: { in: allIds } },
+					data: { deletedAt: null, deletedById: null },
+				});
+				await renameRestoredOnClash(tx, element.caseId, allIds);
+				await touchCase(tx, element.caseId);
+				const restored = await tx.assuranceElement.findUnique({
+					where: { id: elementId },
+					select: { name: true },
+				});
+				return { data: { name: restored?.name ?? null } };
+			}
+		);
 	} catch (error) {
 		log.error("Failed to restore element", { error });
 		return { error: "Failed to restore element" };

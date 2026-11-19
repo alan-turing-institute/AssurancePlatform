@@ -2075,7 +2075,7 @@
       "get": {
         "operationId": "get-elements-{id}",
         "summary": "GET /api/elements/[id]",
-        "description": "",
+        "description": "Gets a single element by ID. A challenge whose target was deleted or detached comes back with no `defeatsElementId` and `defeatsDangling` true.",
         "tags": [
           "Elements"
         ],
@@ -2098,7 +2098,7 @@
       "put": {
         "operationId": "put-elements-{id}",
         "summary": "PUT /api/elements/[id] (400 without a parent, 422 for a second goal)",
-        "description": "",
+        "description": "Updates an existing element. A `parentId` on evidence, including `null`, answers 400: evidence is moved with the move route and detached with the detach route. Moving an element beneath evidence also answers 400, because only counter-goals hang from evidence. Turning a counter-goal into an ordinary goal answers 422 (\"A case can only have one goal claim\") when the case already has an ordinary goal; otherwise, if it would keep a parent (the one sent, or its stored one when `parentId` is left out), 400 with \"parentId cannot be set on the top goal; only a counter-goal has a parent\". Send `parentId` null with `isDefeater` false to make it the top goal. The top goal never takes a parent, so a `parentId` on it answers 400. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. An empty assumption or justification (an empty string, spaces or null) clears the stored text; leaving the field out keeps it.",
         "tags": [
           "Elements"
         ],
@@ -2124,7 +2124,7 @@
       "delete": {
         "operationId": "delete-elements-{id}",
         "summary": "DELETE /api/elements/[id]",
-        "description": "",
+        "description": "Deletes an element. A challenge elsewhere in the case that named it is left unlinked and marked `defeatsDangling`.",
         "tags": [
           "Elements"
         ],
@@ -2152,7 +2152,7 @@
       "post": {
         "operationId": "post-cases-{id}-batch",
         "summary": "Apply batch updates to case elements",
-        "description": "Applies multiple element changes (create, update, delete) atomically.",
+        "description": "Applies multiple element changes (create, update, delete) atomically. Used by the JSON editor to sync changes back to the database. The goal rules hold for the goals as the batch leaves them: a goal defeater (counter-goal) has a parent, the top goal has none, and a case has one ordinary goal. The element rules of the single-element routes hold too: a new element's type fits its parent, only counter-goals hang from evidence, the old element types cannot be created, and a filled-in field belongs to the element's type.",
         "tags": [
           "Elements"
         ],
@@ -2198,7 +2198,7 @@
       "post": {
         "operationId": "post-cases-{id}-elements",
         "summary": "Create a new element in a case",
-        "description": "Creates a goal, strategy, property claim, evidence, or other",
+        "description": "Creates a goal, strategy, property claim, evidence, or other element type within the case hierarchy. Requires EDIT permission. A goal defeater (counter-goal) needs a `parentId`, and a case has one ordinary goal. The element's type must fit its parent: a counter-goal may hang from anything, beneath evidence only a counter-goal may hang, and otherwise the usual parent and child pairs apply. The four old types (context, justification, assumption, contract) can no longer be created. A non-empty assumption, justification, context or link that the element's type does not hold answers 400. Generated names stay unique in the case, deleted elements' names included.",
         "tags": [
           "Elements"
         ],
@@ -2241,7 +2241,7 @@
       "post": {
         "operationId": "post-elements-{id}-attach",
         "summary": "POST /api/elements/[id]/attach",
-        "description": "",
+        "description": "Attaches an element to a parent (moves from sandbox). Evidence is linked to the named property claim instead of taking a parentId; any other parent answers 400. A new parent that cannot hold the element's type answers 400, and beneath evidence only a counter-goal can hang.",
         "tags": [
           "Elements"
         ],
@@ -2314,7 +2314,7 @@
       "post": {
         "operationId": "post-elements-{id}-detach",
         "summary": "POST /api/elements/[id]/detach",
-        "description": "",
+        "description": "Detaches an element (moves to sandbox). Detached evidence leaves every claim it supported, and a challenge elsewhere in the case that named the element is left unlinked and marked `defeatsDangling`. A goal cannot be detached: a counter-goal needs its parent and the top goal is the root, so both answer 400.",
         "tags": [
           "Elements"
         ],
@@ -2404,7 +2404,7 @@
       "post": {
         "operationId": "post-elements-{id}-restore",
         "summary": "POST /api/elements/[id]/restore",
-        "description": "",
+        "description": "Restores a soft-deleted element and its descendants. Restoring a deleted top goal while the case has another answers 422. An element whose name another live element now carries is given a new name, and so are any descendants that still clash.",
         "tags": [
           "Elements"
         ],
@@ -2418,6 +2418,9 @@
           },
           "403": {
             "$ref": "#/components/responses/403"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
           },
           "500": {
             "$ref": "#/components/responses/500"

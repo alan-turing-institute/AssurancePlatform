@@ -67,6 +67,113 @@ describe("POST /api/elements/[id]/attach", () => {
 		expect(inDb?.parentId).toBe(goal.id);
 	});
 
+	it.each([
+		"CONTEXT",
+		"JUSTIFICATION",
+		"ASSUMPTION",
+		"CONTRACT",
+	] as const)("attaches a %s element from the side area under a claim", async (elementType) => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+		});
+		const stored = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			inSandbox: true,
+		});
+		// Written straight to the table: the factory only builds current types.
+		const oldElement = await prisma.assuranceElement.update({
+			where: { id: stored.id },
+			data: { elementType },
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postAttach(oldElement.id, { parentId: claim.id });
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: oldElement.id },
+		});
+		expect(inDb?.parentId).toBe(claim.id);
+		expect(inDb?.inSandbox).toBe(false);
+	});
+
+	it.each([
+		"CONTEXT",
+		"JUSTIFICATION",
+		"ASSUMPTION",
+		"CONTRACT",
+	] as const)("refuses to attach a %s element beneath a piece of evidence", async (elementType) => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const evidence = await createTestElement(testCase.id, owner.id, {
+			elementType: "EVIDENCE",
+		});
+		const stored = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			inSandbox: true,
+		});
+		const oldElement = await prisma.assuranceElement.update({
+			where: { id: stored.id },
+			data: { elementType },
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postAttach(oldElement.id, {
+			parentId: evidence.id,
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toBe(
+			"parentId cannot be a piece of evidence unless the element is a counter-goal"
+		);
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: oldElement.id },
+		});
+		expect(inDb?.parentId).toBeNull();
+		expect(inDb?.inSandbox).toBe(true);
+	});
+
+	it.each([
+		["CONTEXT", "AWAY_GOAL"],
+		["CONTEXT", "MODULE"],
+		["JUSTIFICATION", "AWAY_GOAL"],
+		["ASSUMPTION", "MODULE"],
+	] as const)("refuses to attach a %s element beneath a parent of type %s", async (elementType, parentType) => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const referenced = await createTestCase(owner.id);
+		const parent = await createTestElement(testCase.id, owner.id, {
+			elementType: parentType,
+			moduleReferenceId: referenced.id,
+			moduleEmbedType: "REFERENCE",
+		});
+		const stored = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			inSandbox: true,
+		});
+		const oldElement = await prisma.assuranceElement.update({
+			where: { id: stored.id },
+			data: { elementType },
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postAttach(oldElement.id, {
+			parentId: parent.id,
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toBe("parentId cannot be an away goal or a module");
+		const inDb = await prisma.assuranceElement.findUnique({
+			where: { id: oldElement.id },
+		});
+		expect(inDb?.parentId).toBeNull();
+		expect(inDb?.inSandbox).toBe(true);
+	});
+
 	it("rejects a legacy snake_case body (goal_id) with 400 and does not attach", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id);

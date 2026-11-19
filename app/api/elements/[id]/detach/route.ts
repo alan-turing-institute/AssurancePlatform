@@ -9,7 +9,8 @@ import { detachElement } from "@/lib/services/element-service";
 
 /**
  * POST /api/elements/[id]/detach
- * Detaches an element (moves to sandbox)
+ *
+ * @description Detaches an element (moves to sandbox). Detached evidence leaves every claim it supported, and a challenge elsewhere in the case that named the element is left unlinked and marked `defeatsDangling`. A goal cannot be detached: a counter-goal needs its parent and the top goal is the root, so both answer 400.
  */
 export async function POST(
 	_request: Request,

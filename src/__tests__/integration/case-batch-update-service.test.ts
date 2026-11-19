@@ -900,7 +900,7 @@ describe("applyBatchUpdate", () => {
 			const user = await createTestUser();
 			const testCase = await createTestCase(user.id);
 			const mover = await createTestElement(testCase.id, user.id, {
-				elementType: "GOAL",
+				elementType: "PROPERTY_CLAIM",
 			});
 			const newParent = await createTestElement(testCase.id, user.id, {
 				elementType: "GOAL",
@@ -999,10 +999,10 @@ describe("applyBatchUpdate", () => {
 			const roots: Awaited<ReturnType<typeof createTestElement>>[] = [];
 			for (let i = 0; i < 5; i++) {
 				const root = await createTestElement(testCase.id, user.id, {
-					elementType: "GOAL",
+					elementType: "STRATEGY",
 				});
 				await createTestElement(testCase.id, user.id, {
-					elementType: "STRATEGY",
+					elementType: "PROPERTY_CLAIM",
 					parentId: root.id,
 				});
 				roots.push(root);
@@ -2695,6 +2695,242 @@ describe("applyBatchUpdate", () => {
 		});
 	});
 
+	describe("moving an element out of a parent the same batch deletes", () => {
+		it("applies a move the deletes do not take, and leaves the deleted parent's other children alone", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const first = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const second = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P2",
+				parentId: goal.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: first.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			// P2 is deleted, but P1.1 does not hang from it: its move is its own.
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: second.id },
+					{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+				])
+			);
+
+			expect(data.summary).toEqual({ created: 0, updated: 1, deleted: 1 });
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: moved.id },
+			});
+			expect(row?.parentId).toBe(goal.id);
+			expect(row?.deletedAt).toBeNull();
+		});
+
+		it("keeps the moved element, under its new parent, at the right level", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const parent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: parent.id,
+			});
+			const staying = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.2",
+				parentId: parent.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			const data = expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: parent.id },
+					{ type: "delete", elementId: staying.id },
+					{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+				])
+			);
+
+			expect(data.summary).toEqual({ created: 0, updated: 1, deleted: 2 });
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: moved.id },
+			});
+			expect(row?.parentId).toBe(goal.id);
+			expect(row?.level).toBe(1);
+			expect(
+				await prisma.assuranceElement.count({
+					where: { id: { in: [parent.id, staying.id] } },
+				})
+			).toBe(0);
+		});
+
+		it("keeps the moved element when its new parent is created in the same batch", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const parent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: parent.id,
+			});
+			const newId = crypto.randomUUID();
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: parent.id },
+					{
+						type: "create",
+						elementId: newId,
+						parentId: goal.id,
+						data: {
+							id: newId,
+							type: "PROPERTY_CLAIM",
+							name: "P2",
+							description: "Made in the same edit",
+							inSandbox: false,
+						},
+					},
+					{ type: "update", elementId: moved.id, data: { parentId: newId } },
+				])
+			);
+
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: moved.id },
+			});
+			expect(row?.parentId).toBe(newId);
+		});
+
+		it("keeps the subtree of a moved element when only a grandparent is deleted", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const grandparent = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const middle = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1",
+				parentId: grandparent.id,
+			});
+			const moved = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1.1",
+				parentId: middle.id,
+			});
+			const leaf = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1.1.1.1",
+				parentId: moved.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: grandparent.id },
+					{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+				])
+			);
+
+			const kept = await prisma.assuranceElement.findMany({
+				where: { id: { in: [moved.id, leaf.id] } },
+				orderBy: { name: "asc" },
+			});
+			expect(kept.map((row) => row.parentId)).toEqual([goal.id, moved.id]);
+			expect(
+				await prisma.assuranceElement.count({
+					where: { id: { in: [grandparent.id, middle.id] } },
+				})
+			).toBe(0);
+		});
+
+		it("keeps a counter-goal moved from evidence the same batch deletes", async () => {
+			const user = await createTestUser();
+			const testCase = await createTestCase(user.id);
+			const goal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "G1",
+			});
+			const claim = await createTestElement(testCase.id, user.id, {
+				elementType: "PROPERTY_CLAIM",
+				name: "P1",
+				parentId: goal.id,
+			});
+			const evidence = await createTestElement(testCase.id, user.id, {
+				elementType: "EVIDENCE",
+				name: "E1",
+			});
+			const counterGoal = await createTestElement(testCase.id, user.id, {
+				elementType: "GOAL",
+				name: "CG1",
+				isDefeater: true,
+				parentId: evidence.id,
+			});
+			const { applyBatchUpdate } = await import(
+				"@/lib/services/case-batch-update-service"
+			);
+
+			expectSuccess(
+				await applyBatchUpdate(user.id, testCase.id, [
+					{ type: "delete", elementId: evidence.id },
+					{
+						type: "update",
+						elementId: counterGoal.id,
+						data: { parentId: claim.id },
+					},
+				])
+			);
+
+			const row = await prisma.assuranceElement.findUnique({
+				where: { id: counterGoal.id },
+			});
+			expect(row?.parentId).toBe(claim.id);
+			expect(
+				await prisma.assuranceElement.findUnique({
+					where: { id: evidence.id },
+				})
+			).toBeNull();
+		});
+	});
+
 	describe("defeatsElementId cross-case reference (regression)", () => {
 		it("rejects a create whose defeatsElementId belongs to a different case", async () => {
 			const user = await createTestUser();
@@ -3325,6 +3561,53 @@ describe("applyBatchUpdate", () => {
 						where: { id: claim.id },
 					});
 					expect(updated?.name).toBe("P1");
+				});
+
+				it("a flip does not reuse the name of a defeater created earlier in the same batch", async () => {
+					const user = await createTestUser();
+					const testCase = await createTestCase(user.id);
+					const claim = await createTestElement(testCase.id, user.id, {
+						elementType: "PROPERTY_CLAIM",
+						name: "P1",
+						isDefeater: false,
+					});
+
+					const { applyBatchUpdate } = await import(
+						"@/lib/services/case-batch-update-service"
+					);
+
+					const createdId = crypto.randomUUID();
+					const changes: ElementChange[] = [
+						{
+							type: "create",
+							elementId: createdId,
+							parentId: null,
+							data: {
+								id: createdId,
+								type: "PROPERTY_CLAIM",
+								name: "CP1",
+								description: "A defeater created in the same batch",
+								inSandbox: false,
+								isDefeater: true,
+							},
+						},
+						{
+							type: "update",
+							elementId: claim.id,
+							data: { isDefeater: true },
+						},
+					];
+
+					expectSuccess(await applyBatchUpdate(user.id, testCase.id, changes));
+
+					const created = await prisma.assuranceElement.findUniqueOrThrow({
+						where: { id: createdId },
+					});
+					const flipped = await prisma.assuranceElement.findUniqueOrThrow({
+						where: { id: claim.id },
+					});
+					expect(created.name).toBe("CP1");
+					expect(flipped.name).toBe("CP2");
 				});
 			});
 		});

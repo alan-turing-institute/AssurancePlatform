@@ -179,6 +179,46 @@ describe.sequential("createAssuranceCase", () => {
 		expect(created).not.toBeNull();
 		expect(created?.name).toBe("Brand New Case");
 	});
+
+	it("refuses a name of only spaces with a field error and stores nothing", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const { createAssuranceCase } = await import("@/actions/assurance-cases");
+		const result = await createAssuranceCase({
+			name: "   ",
+			description: "Spaces for a name",
+		});
+
+		expect(result.success).toBe(false);
+		if (result.success) {
+			return;
+		}
+		expect(result.fieldErrors?.name).toBeTruthy();
+		expect(
+			await prisma.assuranceCase.count({ where: { createdById: user.id } })
+		).toBe(0);
+	});
+
+	it("stores a padded name trimmed", async () => {
+		const user = await createTestUser();
+		await mockAuth(user.id, user.username, user.email);
+
+		const { createAssuranceCase } = await import("@/actions/assurance-cases");
+		const result = await createAssuranceCase({
+			name: " X ",
+			description: "Padded name",
+		});
+
+		expect(result.success).toBe(true);
+		if (!result.success) {
+			return;
+		}
+		const created = await prisma.assuranceCase.findUnique({
+			where: { id: result.data.id },
+		});
+		expect(created?.name).toBe("X");
+	});
 });
 
 // ============================================

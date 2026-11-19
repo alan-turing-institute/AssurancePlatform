@@ -27,6 +27,7 @@ import {
 	createElementWithin,
 	deleteElementWithin,
 	type ElementResponse,
+	lockCaseForElementWrite,
 	unlinkEvidenceWithin,
 	updateElementWithin,
 } from "@/lib/services/element-service";
@@ -1014,6 +1015,10 @@ async function saveUnderLock(
 	context: SaveBase,
 	offered: HealthCheck[]
 ): Promise<SaveOutcome> {
+	// The case lock comes first: the element service takes it too, and a save
+	// that took the claim first could meet a case write that holds the case and
+	// waits for the claim.
+	await lockCaseForElementWrite(tx, context.caseId);
 	const [claimRow] = await lockClaim(tx, claimId);
 	if (!claimRow || claimRow.deleted_at) {
 		return { kind: "refused", error: CLAIM_NOT_FOUND };
@@ -1182,6 +1187,7 @@ export async function retireCriteria(
 	try {
 		const outcome = await prisma.$transaction(
 			async (tx): Promise<RetireOutcome> => {
+				await lockCaseForElementWrite(tx, caseId);
 				await lockClaim(tx, claimId);
 				const row = await tx.pluginHealthCriteria.findUnique({
 					where: { claimId },
@@ -1308,6 +1314,7 @@ export async function addEvidenceNode(
 	try {
 		const outcome = await prisma.$transaction(
 			async (tx): Promise<{ error: string } | { change: ElementEvent }> => {
+				await lockCaseForElementWrite(tx, caseId);
 				const [claimRow] = await lockClaim(tx, claimId);
 				if (!claimRow || claimRow.deleted_at) {
 					return { error: CLAIM_NOT_FOUND };

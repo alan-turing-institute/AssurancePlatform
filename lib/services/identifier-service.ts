@@ -2,7 +2,9 @@ import { compareIdentifiers } from "@/lib/case/identifier-utils";
 import { getElementPrefix } from "@/lib/element-names/prefix-registry";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { lockCaseForElementWrite } from "@/lib/services/element-service";
 import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
+import type { TxClient } from "@/lib/utils/tree-traversal";
 
 // ---------------------------------------------------------------------------
 // Constants & types
@@ -390,8 +392,52 @@ export async function resetIdentifiers(
 		return { error: "Permission denied" };
 	}
 
+	// The case lock comes first, as in every other element writer, and the
+	// elements are read under it so a create committed meanwhile is renamed too.
+	await prisma.$transaction(
+		async (tx) => {
+			await lockCaseForElementWrite(tx, caseId);
+			const { elements, nameMap } = await namesForCase(tx, caseId);
+			for (const element of elements) {
+				const newName = nameMap.get(element.id) || element.name || "X";
+				await tx.assuranceElement.update({
+					where: { id: element.id },
+					data: { name: newName },
+				});
+			}
+			// Bump the case's updatedAt so version checks (JSON editor 409) see
+			// this bulk rename, like every other element-level write.
+			await tx.assuranceCase.update({
+				where: { id: caseId },
+				data: { updatedAt: new Date() },
+			});
+		},
+		// The per-element loop is O(elements), so the timeout is widened past
+		// Prisma's 5s default.
+		{ timeout: 30_000, maxWait: 10_000 }
+	);
+
+	// Emit SSE event for real-time updates. Every viewer's canvas reads the case
+	// again after it, the acting user's included (the page does not update
+	// optimistically for a reset); `userId` only stops the acting user being
+	// shown a notice about their own action.
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { username: true },
+	});
+	emitSSEEvent("case:updated", caseId, {
+		action: "identifiers-reset",
+		userId,
+		username: user?.username ?? "Someone",
+	});
+
+	return { data: null };
+}
+
+/** The case's live elements, creation order, with the hierarchical name each should carry. */
+async function namesForCase(tx: TxClient, caseId: string) {
 	// Get all elements for this case (excluding deleted), ordered by creation date
-	const elements = await prisma.assuranceElement.findMany({
+	const elements = await tx.assuranceElement.findMany({
 		where: { caseId, deletedAt: null },
 		orderBy: { createdAt: "asc" },
 		select: {
@@ -405,7 +451,7 @@ export async function resetIdentifiers(
 	});
 
 	// Get evidence links (evidence linked to claims via many-to-many)
-	const evidenceLinks = await prisma.evidenceLink.findMany({
+	const evidenceLinks = await tx.evidenceLink.findMany({
 		where: {
 			evidence: { caseId, deletedAt: null },
 			claim: { caseId, deletedAt: null },
@@ -448,46 +494,5 @@ export async function resetIdentifiers(
 	// Build tree structure and generate hierarchical names
 	const tree = buildElementTree(connectedElements);
 	const nameMap = generateHierarchicalNames(tree);
-
-	// Update all elements with new names, then bump the case's updatedAt so
-	// version checks (JSON editor 409) see this bulk rename — same rule as
-	// every other element-level write (see touchCase in element-service.ts).
-	// Callback form (rather than the array form): the case update is a
-	// different Prisma model from the element updates, so it can't share
-	// the array's inferred element type.
-	await prisma.$transaction(
-		async (tx) => {
-			for (const element of elements) {
-				const newName = nameMap.get(element.id) || element.name || "X";
-				await tx.assuranceElement.update({
-					where: { id: element.id },
-					data: { name: newName },
-				});
-			}
-			await tx.assuranceCase.update({
-				where: { id: caseId },
-				data: { updatedAt: new Date() },
-			});
-		},
-		// Callback form's per-element loop is O(elements), unlike the array
-		// form it replaced — widened past Prisma's 5s default the same way
-		// user-management-service.ts's deletion transaction is.
-		{ timeout: 30_000, maxWait: 10_000 }
-	);
-
-	// Emit SSE event for real-time updates. Every viewer's canvas reads the case
-	// again after it, the acting user's included (the page does not update
-	// optimistically for a reset); `userId` only stops the acting user being
-	// shown a notice about their own action.
-	const user = await prisma.user.findUnique({
-		where: { id: userId },
-		select: { username: true },
-	});
-	emitSSEEvent("case:updated", caseId, {
-		action: "identifiers-reset",
-		userId,
-		username: user?.username ?? "Someone",
-	});
-
-	return { data: null };
+	return { elements, nameMap };
 }
