@@ -68,7 +68,7 @@ export function IntegrationTokenRow({
 						: " · never used"}
 					{token.expiresAt
 						? ` · expires ${formatShortDate(token.expiresAt)}`
-						: ""}
+						: !token.revokedAt && " · No end date"}
 					{token.revokedAt
 						? ` · revoked ${formatShortDate(token.revokedAt)}`
 						: ""}

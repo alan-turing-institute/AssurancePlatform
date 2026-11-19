@@ -38,7 +38,7 @@ overrides:
 
 patchedDependencies:
   nextstepjs@2.3.0:
-    hash: c6be8c3b1cf6c7ed4723fc79d7a3cbeebbb02b9f3ea1425ac7150d35eca7750d
+    hash: a328449eec52d59c0fad49c9655b2875d47ddfddd711497604767ec1c1026ab2
     path: patches/nextstepjs@2.3.0.patch
 
 importers:
@@ -281,7 +281,7 @@ importers:
         version: 0.4.6(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       nextstepjs:
         specifier: ^2.3.0
-        version: 2.3.0(patch_hash=c6be8c3b1cf6c7ed4723fc79d7a3cbeebbb02b9f3ea1425ac7150d35eca7750d)(motion@13.4.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.63.0)(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 2.3.0(patch_hash=a328449eec52d59c0fad49c9655b2875d47ddfddd711497604767ec1c1026ab2)(motion@13.4.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.63.0)(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       pg:
         specifier: ^8.23.0
         version: 8.23.0
@@ -15960,7 +15960,7 @@ snapshots:
       - '@types/node'
       - babel-plugin-macros
 
-  nextstepjs@2.3.0(patch_hash=c6be8c3b1cf6c7ed4723fc79d7a3cbeebbb02b9f3ea1425ac7150d35eca7750d)(motion@13.4.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.63.0)(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  nextstepjs@2.3.0(patch_hash=a328449eec52d59c0fad49c9655b2875d47ddfddd711497604767ec1c1026ab2)(motion@13.4.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(next@16.4.5(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.63.0)(@types/node@26.5.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       motion: 13.4.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0

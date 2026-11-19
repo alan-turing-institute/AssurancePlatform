@@ -124,16 +124,6 @@
       }
     },
     {
-      "includes": ["components/cases/sanitised-html.tsx"],
-      "linter": {
-        "rules": {
-          "security": {
-            "noDangerouslySetInnerHtml": "off"
-          }
-        }
-      }
-    },
-    {
       "includes": ["lib/schemas/**"],
       "plugins": ["./lint-rules/no-bare-zod-object.grit"]
     }

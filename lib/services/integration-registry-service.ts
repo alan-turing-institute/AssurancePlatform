@@ -868,6 +868,9 @@ export async function rotateToken(
 		if (oldToken.revokedAt) {
 			return { error: "Cannot rotate a revoked token" };
 		}
+		if (oldToken.expiresAt && oldToken.expiresAt <= new Date()) {
+			return { error: "Cannot rotate an expired token" };
+		}
 		if (oldToken.integration.status !== "ACTIVE") {
 			return { error: "Cannot rotate a token for a non-active integration" };
 		}
@@ -878,7 +881,12 @@ export async function rotateToken(
 				? oldToken.expiresAt
 				: overlapUntil;
 
-		const { secret, data } = issueTokenRecord(oldToken.integrationId);
+		// The replacement keeps the end date the old token was given, not the
+		// shortened overlap date written onto the old token below.
+		const { secret, data } = issueTokenRecord(
+			oldToken.integrationId,
+			oldToken.expiresAt ?? undefined
+		);
 
 		const [, apiToken] = await prisma.$transaction([
 			prisma.apiToken.update({

@@ -225,6 +225,45 @@ describe("useIntegrations", () => {
 			expect(JSON.stringify(result.current)).not.toContain(issued?.secret);
 		});
 
+		it("issueToken sends the chosen end date and sends no expiresAt without one", async () => {
+			const bodies: unknown[] = [];
+			server.use(
+				http.get("/api/integrations", () =>
+					HttpResponse.json({ integrations: [makeIntegration()] })
+				),
+				http.post(
+					"/api/integrations/integration-1/tokens",
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								secret: "tea_live_secretvalue",
+								token: {
+									id: "token-1",
+									tokenPrefix: "tea_live_",
+									createdAt: "2026-07-05T00:00:00.000Z",
+									expiresAt: null,
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			const { result } = renderHook(() => useIntegrations());
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			await act(async () => {
+				await result.current.issueToken("integration-1", {
+					expiresAt: "2099-03-04T23:59:59.999Z",
+				});
+				await result.current.issueToken("integration-1");
+			});
+
+			expect(bodies).toEqual([{ expiresAt: "2099-03-04T23:59:59.999Z" }, {}]);
+		});
+
 		it("rotateToken resolves the new secret plus the old token's overlap window", async () => {
 			server.use(
 				http.get("/api/integrations", () =>

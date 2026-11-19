@@ -201,7 +201,7 @@ export function CaseInformationSection({
 					<h4 className="font-medium text-muted-foreground text-sm">
 						Description
 					</h4>
-					<p className="text-sm">
+					<p className="wrap-anywhere whitespace-pre-line text-sm">
 						{information?.description || "No description provided."}
 					</p>
 				</div>

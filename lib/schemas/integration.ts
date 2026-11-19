@@ -103,9 +103,8 @@ export const updateIntegrationSchema = z
  * asking for an already-dead token is always a mistake worth rejecting at
  * the boundary rather than silently honouring.
  */
-// No `z.infer` alias here — nothing currently consumes an issueTokenSchema
-// type outside the route's own `.safeParse` call. Add one back when an
-// expiry-picker UI lands and a caller needs the parsed shape by name.
+// No `z.infer` alias here — nothing consumes an issueTokenSchema type
+// outside the route's own `.safeParse` call.
 export const issueTokenSchema = z.strictObject({
 	expiresAt: z.coerce
 		.date()

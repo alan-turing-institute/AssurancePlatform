@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, KeyRound, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { IntegrationDeleteDialog } from "./integration-delete-dialog";
 import { IntegrationRevokedTokens } from "./integration-revoked-tokens";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
+import { IntegrationTokenIssueDialog } from "./integration-token-issue-dialog";
 import { IntegrationTokenRow } from "./integration-token-row";
 import {
 	IntegrationTokenSecretModal,
@@ -69,7 +70,10 @@ export interface IntegrationCardProps {
 	deleting: boolean;
 	integration: IntegrationListItem;
 	onDelete: (id: string) => void;
-	onIssueToken: (id: string) => Promise<IssuedTokenResult | null>;
+	onIssueToken: (
+		id: string,
+		options?: { expiresAt?: string }
+	) => Promise<IssuedTokenResult | null>;
 	onReactivate: (id: string) => void;
 	onRevoke: (id: string) => void;
 	onRevokeToken: (integrationId: string, tokenId: string) => void;
@@ -116,6 +120,8 @@ export function IntegrationCard({
 	pendingTokenKey,
 }: IntegrationCardProps) {
 	const [tokenReveal, setTokenReveal] = useState<TokenReveal | null>(null);
+	const [issueDialogOpen, setIssueDialogOpen] = useState(false);
+	const issueButtonRef = useRef<HTMLButtonElement>(null);
 	const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
@@ -144,11 +150,16 @@ export function IntegrationCard({
 	const activeTokens = sortTokensByDateDesc(activeTokensRaw, "createdAt");
 	const revokedTokens = sortTokensByDateDesc(revokedTokensRaw, "revokedAt");
 
-	async function handleIssueToken() {
-		const result = await onIssueToken(integration.id);
+	async function handleIssueToken(expiresAt?: string): Promise<boolean> {
+		const result = await onIssueToken(
+			integration.id,
+			expiresAt ? { expiresAt } : undefined
+		);
 		if (result) {
 			setTokenReveal({ secret: result.secret });
+			return true;
 		}
+		return false;
 	}
 
 	async function handleRotateToken(tokenId: string) {
@@ -273,7 +284,8 @@ export function IntegrationCard({
 								? undefined
 								: "Only an ACTIVE integration can issue a token"
 						}
-						onClick={handleIssueToken}
+						onClick={() => setIssueDialogOpen(true)}
+						ref={issueButtonRef}
 						size="sm"
 						type="button"
 						variant="outline"
@@ -327,6 +339,14 @@ export function IntegrationCard({
 				onRemove={removeAccess}
 				onRetry={refetchCaseGrants}
 				removingCaseId={removingCaseId}
+			/>
+
+			<IntegrationTokenIssueDialog
+				issuing={isIssuing}
+				onIssue={handleIssueToken}
+				onOpenChange={setIssueDialogOpen}
+				open={issueDialogOpen}
+				returnFocusRef={issueButtonRef}
 			/>
 
 			<IntegrationTokenSecretModal

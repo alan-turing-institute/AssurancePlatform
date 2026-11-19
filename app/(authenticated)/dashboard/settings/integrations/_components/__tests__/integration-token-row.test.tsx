@@ -10,6 +10,8 @@ import { IntegrationTokenRow } from "../integration-token-row";
 const ROTATE_REGEX = /rotate/i;
 const ROTATING_REGEX = /rotating/i;
 const REVOKE_REGEX = /revoke/i;
+const NO_END_DATE_REGEX = /No end date/;
+const EXPIRES_REGEX = /expires /;
 
 function makeToken(
 	overrides: Partial<IntegrationTokenSummary> = {}
@@ -46,6 +48,31 @@ describe("IntegrationTokenRow", () => {
 		).toBeInTheDocument();
 	});
 
+	it("says No end date for a token without one and shows the date for a token with one", () => {
+		const { rerender } = renderWithoutProviders(
+			<IntegrationTokenRow
+				canRotate
+				onRevoke={vi.fn()}
+				onRotate={vi.fn()}
+				pending={false}
+				token={makeToken()}
+			/>
+		);
+		expect(screen.getByText(NO_END_DATE_REGEX)).toBeInTheDocument();
+
+		rerender(
+			<IntegrationTokenRow
+				canRotate
+				onRevoke={vi.fn()}
+				onRotate={vi.fn()}
+				pending={false}
+				token={makeToken({ expiresAt: "2099-03-04T23:59:59.999Z" })}
+			/>
+		);
+		expect(screen.queryByText(NO_END_DATE_REGEX)).not.toBeInTheDocument();
+		expect(screen.getByText(EXPIRES_REGEX)).toBeInTheDocument();
+	});
+
 	it("renders a revoked token distinctly, with no rotate/revoke actions", () => {
 		renderWithoutProviders(
 			<IntegrationTokenRow
@@ -58,6 +85,7 @@ describe("IntegrationTokenRow", () => {
 		);
 
 		expect(screen.getByText("Revoked")).toBeInTheDocument();
+		expect(screen.queryByText(NO_END_DATE_REGEX)).not.toBeInTheDocument();
 		expect(screen.queryByText("Live")).not.toBeInTheDocument();
 		expect(
 			screen.queryByRole("button", { name: ROTATE_REGEX })
