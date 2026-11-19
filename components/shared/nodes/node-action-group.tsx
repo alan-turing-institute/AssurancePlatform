@@ -43,14 +43,12 @@ export default function NodeActionGroup({
 	addPopover,
 	commentCount = 0,
 }: NodeActionGroupProps) {
-	const {
-		setCommentsSheetOpen,
-		setCommentsSheetNode,
-		assuranceCase,
-		readOnlyCanvas,
-	} = useStore();
+	const setCommentsSheetOpen = useStore((state) => state.setCommentsSheetOpen);
+	const setCommentsSheetNode = useStore((state) => state.setCommentsSheetNode);
+	const permissions = useStore((state) => state.assuranceCase?.permissions);
+	const readOnlyCanvas = useStore((state) => state.readOnlyCanvas);
 
-	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "edit");
+	const readOnly = !caseAccessAtLeast(permissions, "edit");
 
 	const handleEditClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
