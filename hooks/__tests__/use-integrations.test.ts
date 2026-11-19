@@ -6,6 +6,7 @@ import type {
 	IssuedTokenResult,
 	RotatedTokenResult,
 } from "@/lib/schemas/integration";
+import { toast } from "@/lib/toast";
 import { server } from "@/src/__tests__/mocks/server";
 import { useIntegrations } from "../use-integrations";
 
@@ -225,6 +226,45 @@ describe("useIntegrations", () => {
 			expect(JSON.stringify(result.current)).not.toContain(issued?.secret);
 		});
 
+		it("issueToken sends the chosen end date and sends no expiresAt without one", async () => {
+			const bodies: unknown[] = [];
+			server.use(
+				http.get("/api/integrations", () =>
+					HttpResponse.json({ integrations: [makeIntegration()] })
+				),
+				http.post(
+					"/api/integrations/integration-1/tokens",
+					async ({ request }) => {
+						bodies.push(await request.json());
+						return HttpResponse.json(
+							{
+								secret: "tea_live_secretvalue",
+								token: {
+									id: "token-1",
+									tokenPrefix: "tea_live_",
+									createdAt: "2026-07-05T00:00:00.000Z",
+									expiresAt: null,
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			const { result } = renderHook(() => useIntegrations());
+			await waitFor(() => expect(result.current.loading).toBe(false));
+
+			await act(async () => {
+				await result.current.issueToken("integration-1", {
+					expiresAt: "2099-03-04T23:59:59.999Z",
+				});
+				await result.current.issueToken("integration-1");
+			});
+
+			expect(bodies).toEqual([{ expiresAt: "2099-03-04T23:59:59.999Z" }, {}]);
+		});
+
 		it("rotateToken resolves the new secret plus the old token's overlap window", async () => {
 			server.use(
 				http.get("/api/integrations", () =>
@@ -239,6 +279,7 @@ describe("useIntegrations", () => {
 										lastUsedAt: null,
 										expiresAt: null,
 										revokedAt: null,
+										replacedByTokenId: null,
 									},
 								],
 							}),
@@ -275,6 +316,40 @@ describe("useIntegrations", () => {
 			expect(JSON.stringify(result.current)).not.toContain(rotated?.secret);
 		});
 
+		it("rotateToken reloads the list and shows the server message when the token was already replaced", async () => {
+			let lists = 0;
+			server.use(
+				http.get("/api/integrations", () => {
+					lists += 1;
+					return HttpResponse.json({ integrations: [makeIntegration()] });
+				}),
+				http.post("/api/integrations/integration-1/tokens/token-1/rotate", () =>
+					HttpResponse.json(
+						{ error: "Cannot rotate a token that has already been replaced" },
+						{ status: 409 }
+					)
+				)
+			);
+
+			const { result } = renderHook(() => useIntegrations());
+			await waitFor(() => expect(result.current.loading).toBe(false));
+			const before = lists;
+
+			let rotated: RotatedTokenResult | null | undefined;
+			await act(async () => {
+				rotated = await result.current.rotateToken("integration-1", "token-1");
+			});
+
+			expect(rotated).toBeNull();
+			expect(lists).toBe(before + 1);
+			expect(vi.mocked(toast)).toHaveBeenLastCalledWith(
+				expect.objectContaining({
+					title: "Couldn't rotate token",
+					description: "Cannot rotate a token that has already been replaced",
+				})
+			);
+		});
+
 		it("revokeToken issues the DELETE and refetches", async () => {
 			let revokedAt: string | null = null;
 			server.use(
@@ -290,6 +365,7 @@ describe("useIntegrations", () => {
 										lastUsedAt: null,
 										expiresAt: null,
 										revokedAt,
+										replacedByTokenId: null,
 									},
 								],
 							}),

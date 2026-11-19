@@ -16,6 +16,7 @@ import {
 	FormControl,
 	FormField,
 	FormItem,
+	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
 import {
@@ -77,7 +78,7 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 
 			// Find the index of the updated comment in the existing comments array
 			const updatedComments = nodeComments.map((com) =>
-				com.id === updatedComment.id ? updatedComment : com
+				com.id === updatedComment.id ? { ...com, ...updatedComment } : com
 			);
 
 			setNodeComments(updatedComments);
@@ -114,6 +115,7 @@ const CommentsEditForm = ({ comment, setEdit }: CommentsEditFormProps) => {
 					name="comment"
 					render={({ field }) => (
 						<FormItem>
+							<FormLabel className="sr-only">Edit comment</FormLabel>
 							<FormControl>
 								<Textarea
 									placeholder="Type your message here."

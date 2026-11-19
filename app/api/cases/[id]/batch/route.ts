@@ -18,22 +18,19 @@ import { emitSSEEvent } from "@/lib/services/sse-connection-manager";
 /**
  * Apply batch updates to case elements
  *
- * @description Applies multiple element changes (create, update, delete) atomically.
- * Used by the JSON editor to sync changes back to the database.
- * The goal rules hold for the goals as the batch leaves them: a goal defeater
- * (counter-goal) has a parent, and a case has one ordinary goal.
+ * @description Applies multiple element changes (create, update, delete) atomically. Used by the JSON editor to sync changes back to the database. The goal rules hold for the goals as the batch leaves them: a goal defeater (counter-goal) has a parent, the top goal has none, and a case has one ordinary goal. The element rules of the single-element routes hold too: a new element's type fits its parent, only counter-goals hang from evidence, the old element types cannot be created, and a filled-in field belongs to the element's type. Moves that would put an element beneath itself, directly or through other moves in the same batch, answer 400 and change nothing. `inSandbox` cannot be changed in a batch: a new element must have it false and an update must leave it as stored; otherwise 400. Use the detach and attach routes. A null `parentId` on an update answers 400 for anything but a goal.
  *
  * @pathParam id - Case ID (UUID)
  * @body { changes: ElementChange[], expectedVersion?: string }
  * @response 200 - Success with summary of changes
- * @response 400 - Validation error (including a goal defeater without a parent, and an element changed more than once)
+ * @response 400 - Validation error (including a goal defeater without a parent, an element changed more than once, an element moved beneath itself, a changed `inSandbox`, and anything but a counter-goal placed beneath evidence)
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 409 - Conflict (case was modified)
  * @response 422 - The batch would leave the case with a second ordinary goal
  * @response 413 - Payload too large
  * @add 409,422
- * @auth bearer
+ * @auth SessionAuth
  * @tag Elements
  */
 export async function POST(

@@ -11,6 +11,10 @@ import { restoreElement } from "@/lib/services/element-service";
 /**
  * POST /api/elements/[id]/restore
  * Restores a soft-deleted element and its descendants
+ *
+ * @description Restores a soft-deleted element and its descendants. Restoring a deleted top goal while the case has another answers 422. An element whose name another live element now carries is given a new name, and so are any descendants that still clash.
+ * @add 422
+ * @auth SessionAuth
  */
 export async function POST(
 	_request: Request,
@@ -41,7 +45,10 @@ export async function POST(
 			const username = session.username || session.email || "Someone";
 			emitSSEEvent("element:restored", element.caseId, {
 				elementId,
-				elementName: noticeElementName(element),
+				elementName: noticeElementName({
+					description: element.description,
+					name: result.data.name,
+				}),
 				username,
 				userId: session.userId,
 			});

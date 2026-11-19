@@ -16,7 +16,7 @@
 import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Handle, Position, useReactFlow } from "reactflow";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,6 +30,7 @@ import {
 	appearanceAttribute,
 	drawnContentAttribute,
 } from "@/lib/case/plugin-display-capture";
+import { scheduleLayout } from "@/lib/case/schedule-layout";
 import type { ElementAppearance } from "@/lib/plugins/slots";
 import type { ContextEntry } from "@/lib/schemas/context-entry";
 import useStore from "@/store/store";
@@ -202,7 +203,8 @@ export default function BaseNode({
 	expandTour,
 	terms: termsInReach,
 }: BaseNodeProps) {
-	const { layoutNodes, layoutDirection } = useStore();
+	const layoutNodes = useStore((state) => state.layoutNodes);
+	const layoutDirection = useStore((state) => state.layoutDirection);
 	const { descriptionText, isHint, terms } = cardText(
 		description,
 		termsInReach,
@@ -210,6 +212,13 @@ export default function BaseNode({
 	);
 	const [isExpanded, setIsExpanded] = useState(initialExpanded);
 	const { fitView, getNodes, getEdges } = useReactFlow();
+	const mountedRef = useRef(true);
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
 
 	const targetPosition =
 		layoutDirection === "LR" ? Position.Left : Position.Top;
@@ -248,17 +257,15 @@ export default function BaseNode({
 		setIsExpanded(!isExpanded);
 	};
 
-	// Trigger layout after animation completes
+	// Ask for a layout once the animation completes; requests from many cards
+	// are coalesced into one layout that runs after the DOM has settled.
 	const handleAnimationComplete = () => {
-		// Use requestAnimationFrame to ensure DOM has updated after animation
-		window.requestAnimationFrame(() => {
-			window.requestAnimationFrame(() => {
-				const currentNodes = getNodes();
-				const currentEdges = getEdges();
-				layoutNodes(currentNodes, currentEdges).then(() => {
-					fitView();
-				});
-			});
+		scheduleLayout({
+			fitView,
+			getEdges,
+			getNodes,
+			isActive: () => mountedRef.current,
+			layoutNodes,
 		});
 	};
 

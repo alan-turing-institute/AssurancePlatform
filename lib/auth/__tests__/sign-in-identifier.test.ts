@@ -2,6 +2,7 @@ import { createHash, createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KELVIN_SIGN } from "@/src/__tests__/helpers/identifier-characters";
 import {
+	identifierFingerprint,
 	isEmailName,
 	normaliseSignInIdentifier,
 	signInIdentifierKey,
@@ -112,5 +113,25 @@ describe("signInIdentifierKey", () => {
 		expect(signInIdentifierKey(`${head.slice(1)}x`)).not.toBe(
 			signInIdentifierKey(head)
 		);
+	});
+});
+
+describe("identifierFingerprint", () => {
+	it("gives the same key as signInIdentifierKey", () => {
+		expect(identifierFingerprint("Demo@Example.com")).toBe(
+			signInIdentifierKey("demo@example.com")
+		);
+	});
+
+	it("returns undefined instead of throwing when no secret is configured", () => {
+		vi.stubEnv("NEXTAUTH_SECRET", "");
+
+		expect(identifierFingerprint("demo@example.com")).toBeUndefined();
+	});
+
+	it("returns undefined for a value that is empty or not a string", () => {
+		expect(identifierFingerprint("")).toBeUndefined();
+		expect(identifierFingerprint(undefined)).toBeUndefined();
+		expect(identifierFingerprint(null)).toBeUndefined();
 	});
 });

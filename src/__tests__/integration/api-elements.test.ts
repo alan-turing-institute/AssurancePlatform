@@ -381,4 +381,32 @@ describe("PUT /api/elements/[id] — permission matrix backfill", () => {
 		const body = await response.json();
 		expect(body.error).toBe("Element not found");
 	});
+
+	it("answers 400 when parentId is one of the element's own children", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			role: "TOP_LEVEL",
+		});
+		const claim = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: goal.id,
+		});
+		const child = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: claim.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PUT } = await importRoute();
+		const response = await PUT(putRequest(claim.id, { parentId: child.id }), {
+			params: Promise.resolve({ id: claim.id }),
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toBe(
+			"Cannot move element to one of its descendants"
+		);
+	});
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Ban, KeyRound, PauseCircle, PlayCircle, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import { IntegrationDeleteDialog } from "./integration-delete-dialog";
 import { IntegrationRevokedTokens } from "./integration-revoked-tokens";
 import { scopeLabel } from "./integration-scope-labels";
 import { IntegrationStatusBadge } from "./integration-status-badge";
+import { IntegrationTokenIssueDialog } from "./integration-token-issue-dialog";
 import { IntegrationTokenRow } from "./integration-token-row";
 import {
 	IntegrationTokenSecretModal,
@@ -69,7 +70,10 @@ export interface IntegrationCardProps {
 	deleting: boolean;
 	integration: IntegrationListItem;
 	onDelete: (id: string) => void;
-	onIssueToken: (id: string) => Promise<IssuedTokenResult | null>;
+	onIssueToken: (
+		id: string,
+		options?: { expiresAt?: string }
+	) => Promise<IssuedTokenResult | null>;
 	onReactivate: (id: string) => void;
 	onRevoke: (id: string) => void;
 	onRevokeToken: (integrationId: string, tokenId: string) => void;
@@ -116,6 +120,16 @@ export function IntegrationCard({
 	pendingTokenKey,
 }: IntegrationCardProps) {
 	const [tokenReveal, setTokenReveal] = useState<TokenReveal | null>(null);
+	const [issueDialogOpen, setIssueDialogOpen] = useState(false);
+	const issueButtonRef = useRef<HTMLButtonElement>(null);
+	const cardRef = useRef<HTMLDivElement>(null);
+	const tokenListRef = useRef<HTMLFieldSetElement>(null);
+	// The token whose Rotate button should take focus once the secret dialog
+	// has closed after a successful rotation.
+	const focusAfterRevealRef = useRef<string | null>(null);
+	// The token whose rotation was refused; focus returns to its row once the
+	// reloaded list has rendered.
+	const [refusedTokenId, setRefusedTokenId] = useState<string | null>(null);
 	const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
@@ -144,16 +158,80 @@ export function IntegrationCard({
 	const activeTokens = sortTokensByDateDesc(activeTokensRaw, "createdAt");
 	const revokedTokens = sortTokensByDateDesc(revokedTokensRaw, "revokedAt");
 
-	async function handleIssueToken() {
-		const result = await onIssueToken(integration.id);
+	async function handleIssueToken(expiresAt?: string): Promise<boolean> {
+		const result = await onIssueToken(
+			integration.id,
+			expiresAt ? { expiresAt } : undefined
+		);
 		if (result) {
 			setTokenReveal({ secret: result.secret });
+			return true;
 		}
+		return false;
 	}
+
+	/**
+	 * Moves focus to a token row's Rotate button, else its Revoke button, else
+	 * the token list, else Issue new token — whichever still exists after the
+	 * list reloaded, so a button that disappears never strands focus on the page.
+	 * Focus moves only if it was lost (on the page body, nowhere, or inside this
+	 * card); if the person has moved to something else meanwhile, it stays there.
+	 */
+	const focusTokenControl = useCallback((tokenId: string) => {
+		const active = document.activeElement;
+		const focusLost =
+			!active || active === document.body || cardRef.current?.contains(active);
+		if (!focusLost) {
+			return;
+		}
+		const row = cardRef.current?.querySelector<HTMLElement>(
+			`[data-token-id="${CSS.escape(tokenId)}"]`
+		);
+		const target =
+			row?.querySelector<HTMLElement>(
+				'[data-token-action="rotate"]:not(:disabled)'
+			) ??
+			row?.querySelector<HTMLElement>(
+				'[data-token-action="revoke"]:not(:disabled)'
+			) ??
+			tokenListRef.current ??
+			issueButtonRef.current;
+		target?.focus();
+	}, []);
+
+	// After the secret dialog has gone, move focus to the new token's Rotate
+	// button. The dialog's own focus restore runs in a zero-delay timer queued
+	// when it unmounts, so this one is queued after it and wins.
+	useEffect(() => {
+		const tokenId = focusAfterRevealRef.current;
+		if (tokenReveal !== null || !tokenId) {
+			return;
+		}
+		focusAfterRevealRef.current = null;
+		const timer = setTimeout(() => focusTokenControl(tokenId), 0);
+		return () => clearTimeout(timer);
+	}, [tokenReveal, focusTokenControl]);
+
+	// A refused rotation reloads the list, which can remove the button that had
+	// focus. This runs after that redraw, once the request is no longer pending.
+	useEffect(() => {
+		if (
+			refusedTokenId === null ||
+			pendingTokenKey === `${integration.id}:${refusedTokenId}`
+		) {
+			return;
+		}
+		setRefusedTokenId(null);
+		focusTokenControl(refusedTokenId);
+	}, [refusedTokenId, pendingTokenKey, integration.id, focusTokenControl]);
 
 	async function handleRotateToken(tokenId: string) {
 		const result = await onRotateToken(integration.id, tokenId);
+		if (!result) {
+			setRefusedTokenId(tokenId);
+		}
 		if (result) {
+			focusAfterRevealRef.current = result.token.id;
 			setTokenReveal({
 				secret: result.secret,
 				notice: `The previous token stays valid until ${formatFullDate(
@@ -175,6 +253,7 @@ export function IntegrationCard({
 		<div
 			className="space-y-4 rounded-lg border border-border bg-card p-4"
 			data-testid={`integration-card-${integration.id}`}
+			ref={cardRef}
 		>
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="space-y-1">
@@ -273,7 +352,8 @@ export function IntegrationCard({
 								? undefined
 								: "Only an ACTIVE integration can issue a token"
 						}
-						onClick={handleIssueToken}
+						onClick={() => setIssueDialogOpen(true)}
+						ref={issueButtonRef}
 						size="sm"
 						type="button"
 						variant="outline"
@@ -290,7 +370,12 @@ export function IntegrationCard({
 							: "No tokens issued yet."}
 					</p>
 				) : (
-					<div className="space-y-2">
+					<fieldset
+						aria-label="Active tokens"
+						className="m-0 min-w-0 space-y-2 border-0 p-0"
+						ref={tokenListRef}
+						tabIndex={-1}
+					>
 						{activeTokens.map((token) => (
 							<IntegrationTokenRow
 								canRotate={integrationActive}
@@ -301,7 +386,7 @@ export function IntegrationCard({
 								token={token}
 							/>
 						))}
-					</div>
+					</fieldset>
 				)}
 
 				<IntegrationRevokedTokens tokens={revokedTokens} />
@@ -327,6 +412,14 @@ export function IntegrationCard({
 				onRemove={removeAccess}
 				onRetry={refetchCaseGrants}
 				removingCaseId={removingCaseId}
+			/>
+
+			<IntegrationTokenIssueDialog
+				issuing={isIssuing}
+				onIssue={handleIssueToken}
+				onOpenChange={setIssueDialogOpen}
+				open={issueDialogOpen}
+				returnFocusRef={issueButtonRef}
 			/>
 
 			<IntegrationTokenSecretModal

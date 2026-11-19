@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
 import { validateTemplateConfig } from "../schemas";
 import {
@@ -326,6 +326,22 @@ describe("Template System", () => {
 				expect(document.metadata.elementCount).toBeGreaterThan(0);
 			});
 
+			it("should state the export time, not the case's last change, as Exported At", async () => {
+				vi.useFakeTimers();
+				vi.setSystemTime(new Date("2024-03-01T12:30:00Z"));
+				try {
+					const document = await new FullReportTemplate().render({ caseData });
+					const block = document.sections
+						.flatMap((s) => s.blocks)
+						.find((b) => b.type === "metadata" && b.key === "Exported At");
+
+					expect(block).toMatchObject({ value: document.metadata.exportedAt });
+					expect(document.metadata.exportedAt).toBe("2024-03-01T12:30:00.000Z");
+				} finally {
+					vi.useRealTimers();
+				}
+			});
+
 			it("should apply branding", async () => {
 				const template = new FullReportTemplate({
 					primaryColour: "#123456",
@@ -368,6 +384,24 @@ describe("Template System", () => {
 				const sectionTypes = document.sections.map((s) => s.type);
 				expect(sectionTypes).toContain("evidence");
 				expect(sectionTypes).toContain("title-page");
+			});
+
+			it("should state the export time, not the case's last change, as Exported At", async () => {
+				vi.useFakeTimers();
+				vi.setSystemTime(new Date("2024-03-01T12:30:00Z"));
+				try {
+					const document = await new EvidenceListTemplate().render({
+						caseData,
+					});
+					const block = document.sections
+						.flatMap((s) => s.blocks)
+						.find((b) => b.type === "metadata" && b.key === "Exported At");
+
+					expect(block).toMatchObject({ value: document.metadata.exportedAt });
+					expect(document.metadata.exportedAt).toBe("2024-03-01T12:30:00.000Z");
+				} finally {
+					vi.useRealTimers();
+				}
 			});
 
 			it("should not include diagram section", async () => {

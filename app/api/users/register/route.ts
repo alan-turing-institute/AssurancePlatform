@@ -8,6 +8,7 @@ import {
 	serviceErrorToAppError,
 } from "@/lib/api-response";
 import { extractClientIp } from "@/lib/auth/extract-client-ip";
+import { identifierFingerprint } from "@/lib/auth/sign-in-identifier";
 import { registerUserSchema } from "@/lib/schemas/user";
 import {
 	checkAndRecordRateLimit,
@@ -18,6 +19,7 @@ import { registerUser } from "@/lib/services/user-service";
 /**
  * POST /api/users/register
  * Registers a new user with Prisma auth.
+ * @add 429
  */
 export async function POST(request: Request) {
 	try {
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
 		// Check rate limit before processing
 		const rateLimitResult = await checkAndRecordRateLimit(
 			RATE_LIMIT_CONFIGS.register,
-			{ ipAddress, email },
+			{ ipAddress, emailKey: identifierFingerprint(email) },
 			{ ipAddress, userAgent }
 		);
 

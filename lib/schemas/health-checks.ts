@@ -220,7 +220,13 @@ function toParamList(value: unknown, ctx: z.RefinementCtx): unknown {
 	return specs;
 }
 
-const paramsSchema = z.unknown().transform(toParamList).pipe(paramListSchema);
+const paramsSchema = z
+	.unknown()
+	.transform(toParamList)
+	.pipe(paramListSchema)
+	.describe(
+		"The check's settings: a list of setting descriptions, or an object of setting names to default values (text, a number, or true or false)"
+	);
 
 // ---------------------------------------------------------------------------
 // Recommendations

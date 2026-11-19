@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { detectImageFormat } from "../file-storage-service";
+import { describe, expect, it, vi } from "vitest";
+
+const { deleteBlob } = vi.hoisted(() => ({
+	deleteBlob: vi.fn(async () => true),
+}));
+
+vi.mock("../blob-storage-service", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../blob-storage-service")>()),
+	deleteBlob,
+}));
+
+import { deleteFile, detectImageFormat } from "../file-storage-service";
 
 const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
 const PNG_BYTES = Buffer.from([
@@ -57,5 +67,24 @@ describe("detectImageFormat", () => {
 
 	it("returns null for content with no recognised signature", () => {
 		expect(detectImageFormat(Buffer.from("not an image", "ascii"))).toBeNull();
+	});
+});
+
+describe("deleteFile", () => {
+	it("deletes the blob for a real legacy blob URL", async () => {
+		deleteBlob.mockClear();
+		await deleteFile(
+			"https://teastorageaccount.blob.core.windows.net/media/images/a.png"
+		);
+		expect(deleteBlob).toHaveBeenCalledWith("images/a.png");
+	});
+
+	it("does not touch blob storage for a value that only names the blob host in its path", async () => {
+		deleteBlob.mockClear();
+		const result = await deleteFile(
+			"https://example.com/x/blob.core.windows.net/media/images/a.png"
+		);
+		expect(result).toBe(false);
+		expect(deleteBlob).not.toHaveBeenCalled();
 	});
 });

@@ -74,12 +74,12 @@ describe("CookiePolicyPage", () => {
 		it("should display the platform URL link", () => {
 			render(<CookiePolicyPage />);
 			const platformLink = screen.getByRole("link", {
-				name: "https://assuranceplatform.azurewebsites.net/",
+				name: "https://assuranceplatform.turing.ac.uk/",
 			});
 			expect(platformLink).toBeInTheDocument();
 			expect(platformLink).toHaveAttribute(
 				"href",
-				"https://assuranceplatform.azurewebsites.net/"
+				"https://assuranceplatform.turing.ac.uk/"
 			);
 		});
 

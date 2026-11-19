@@ -28,11 +28,27 @@ SEED_USER_PASSWORD=<printed password> pnpm exec tsx scripts/check-pages.ts --bas
 List every page the change can affect, not only the one you edited.
 For a UI-library upgrade, or a change to a shared component or layout, use `--all`.
 Each page reports its status, page errors, console errors, layout shift, accessibility violations and placeholder text.
-A page fails on a status of 400 or above, any page error, placeholder text, or a redirect to the sign-in page.
+A page fails on a status of 400 or above, any page error, placeholder text, a redirect to the sign-in page, or an accessibility scan that did not run.
+`--write-baseline` refuses to write, exits non-zero and changes nothing when any page's scan did not run or any page did not load properly (no response, a status of 400 or above, a page error, or a redirect to the sign-in page).
 Accessibility and layout shift are compared with `.a11y-baseline.json`, which records what each page has today.
-A page fails only on a new accessibility rule, a higher count for a rule already recorded, or layout shift above the baseline plus 0.02 (with 0.1 as the floor).
+Counts are kinds of failing element, not elements: repeated elements with the same tag, role and sorted class list (read from the element's full opening tag) count once, and colour contrast counts distinct foreground and background colour pairs with the large-text flag.
+The raw element counts are reported as `axe.nodeCounts` and are not compared.
+A page fails only on a new accessibility rule, a higher count of kinds for a rule already recorded, or layout shift above the baseline plus 0.02 (with 0.1 as the floor).
 Each result's `baselineDelta` shows what is new.
-If a change deliberately alters a page's accessibility or layout, regenerate the file with `--all --write-baseline` and include the diff in the change.
+The five sign-in pages (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth-error`) are checked signed out; every other page is checked signed in as the seed user.
+Every page under `/docs` is compared with the shared `/docs` entry, unless the baseline has an entry for that exact path, which is used instead.
+The curriculum page `/docs/curriculum/tea-trainee/01-first-sip/exploration` embeds a canvas and has its own entry.
+The server's database also holds one trashed case with an archived Discover copy, so those pages are measured populated.
+If a change deliberately alters a page's accessibility or layout, regenerate the file from a fresh server with:
+
+```bash
+SEED_USER_PASSWORD=<printed password> DATABASE_URL=postgresql://tea_user:tea_password@localhost:5433/<printed db> pnpm exec tsx scripts/check-pages.ts --base-url <url> --all --write-baseline /docs/platform-guide/building-a-case /docs/technical-guide/ci-cd-pipeline/changelog /docs/curriculum/tea-trainee/01-first-sip/exploration
+```
+
+and include the diff in the change.
+A run on a few pages with `--write-baseline` updates only the entries for the pages it checked and leaves every other entry as it was.
+For docs and other shared or dynamic routes the entry is rewritten from only the pages checked in that run, so rerun the full command above rather than a partial one.
+A page is written to its own exact-path entry only when the file already has one; keep the existing entries when regenerating.
 
 ## 3. Prove the change itself
 

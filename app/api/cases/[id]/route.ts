@@ -16,14 +16,13 @@ import {
 /**
  * Get an assurance case by ID
  *
- * @description Retrieves the full case structure including goals, strategies,
- * property claims, evidence, and comments. Requires VIEW permission.
+ * @description Retrieves the full case structure: goals, strategies, property claims and evidence. Each element carries commentCount, the number of comments and replies on it; the comments themselves come from GET /api/elements/{id}/comments. Requires VIEW permission.
  *
  * @pathParam id - Case ID (UUID)
  * @response 200 - Full case data with nested elements
  * @response 401 - Unauthorised
  * @response 404 - Case not found or no access
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function GET(
@@ -56,7 +55,7 @@ export async function GET(
  * @response 401 - Unauthorised
  * @response 403 - Permission denied
  * @response 413 - Payload too large
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function PUT(
@@ -102,7 +101,7 @@ export async function PUT(
  * @response 401 - Unauthorised
  * @response 403 - Permission denied (ADMIN required)
  * @response 404 - Case not found or already deleted
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function DELETE(

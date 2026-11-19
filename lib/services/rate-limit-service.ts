@@ -21,7 +21,11 @@ export interface RateLimitConfig {
 }
 
 export interface RateLimitIdentifiers {
-	email?: string;
+	/**
+	 * A keyed fingerprint of an email address, from `signInIdentifierKey` or
+	 * `identifierFingerprint`. Never typed text: it is stored as given.
+	 */
+	emailKey?: string;
 	ipAddress?: string;
 	userId?: string;
 }
@@ -139,7 +143,7 @@ function getIdentifierValue(
 		case "ip":
 			return identifiers.ipAddress;
 		case "email":
-			return identifiers.email?.toLowerCase();
+			return identifiers.emailKey;
 		case "user_id":
 			return identifiers.userId;
 		default:
@@ -432,7 +436,7 @@ export async function checkAndRecordRateLimit(
 				reason: result.reason,
 				identifiers: {
 					ip: identifiers.ipAddress,
-					email: identifiers.email,
+					identifier: identifiers.emailKey,
 					userId: identifiers.userId,
 				},
 				securityContext,

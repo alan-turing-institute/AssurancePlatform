@@ -18,6 +18,7 @@ import { sweepHealthStaleness } from "@/lib/services/health-staleness-sweep-serv
  * @response 200 - { success: true, casesNotified: number, staleClaimsNotified: number }
  * @response 401 - Unauthorised (invalid or missing token)
  * @response 500 - Server error
+ * @auth CronSecret
  * @tag Cron
  */
 export async function POST(request: Request) {

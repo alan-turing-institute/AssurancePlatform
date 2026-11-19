@@ -142,12 +142,13 @@ enum PublishStatus {
 /// Tracks password reset attempts for rate limiting and security monitoring.
 model PasswordResetAttempt {
   id          String   @id @default(uuid())
-  email       String
+  /// Keyed fingerprint of the lowercased, trimmed address; null when the server secret is missing. The address itself is never stored.
+  emailKey    String?  @map("email_key")
   ipAddress   String   @map("ip_address")
   attemptedAt DateTime @default(now()) @map("attempted_at")
   successful  Boolean  @default(false)
 
-  @@index([email, attemptedAt])
+  @@index([emailKey, attemptedAt])
   @@index([ipAddress, attemptedAt])
   @@map("password_reset_attempts")
 }
@@ -172,7 +173,7 @@ model SecurityAuditLog {
 model RateLimitAttempt {
   id             String   @id @default(uuid())
   endpoint       String   /// Endpoint identifier, e.g., "register", "invite_accept", "password_reset"
-  identifier     String   /// The rate-limited identifier (IP address, email, or user ID)
+  identifier     String   /// The rate-limited identifier (IP address, keyed email fingerprint, or user ID)
   identifierType String   @map("identifier_type") /// Type of identifier: "ip", "email", or "user_id"
   attemptedAt    DateTime @default(now()) @map("attempted_at")
   blocked        Boolean  @default(false) /// True if this attempt was rate-limited/rejected
@@ -370,7 +371,7 @@ model CaseInvite {
   email           String    /// Email address of the invitee
   permission      PermissionLevel /// Permission level granted when accepted
 
-  inviteToken     String    @unique @map("invite_token") /// Unique token for the invite URL
+  inviteTokenHash String    @unique @map("invite_token_hash") /// SHA-256 of the token in the invite URL; the token itself is never stored
   inviteExpiresAt DateTime  @map("invite_expires_at") /// Invitation expiry timestamp
   acceptedAt      DateTime? @map("accepted_at") /// When the invite was accepted (null if pending)
   acceptedById    String?   @map("accepted_by_id") /// User who accepted (may differ from email if account existed)
@@ -442,12 +443,12 @@ model AssuranceElement {
   // Dialogical reasoning (defeaters)
   isDefeater          Boolean          @default(false) @map("is_defeater") /// True if element is a counter-argument
   defeatsElementId    String?          @map("defeats_element_id") /// Element this defeater challenges
-  // True when defeatsElementId was blanked because the imported target
-  // wasn't part of the same import (or the flag was set with no target at
-  // all) — dangling-defeat indicator, set only by case-import-service.ts's
-  // resolveImportedDefeatsElementId (mirrors citationDangling below; import
-  // is the only write path that can produce this, since defeatsElementId is
-  // always same-case and normal author edits go through element-service.ts).
+  // True when defeatsElementId was blanked because the target is no longer
+  // part of the argument — dangling-defeat indicator (mirrors citationDangling
+  // below). Set when an import's target wasn't part of the same import (or the
+  // flag came with no target at all), and when the target is deleted or
+  // detached, by element-service.ts and the batch update service. An author
+  // setting or clearing defeatsElementId resets it.
   defeatsDangling     Boolean          @default(false) @map("defeats_dangling")
 
   // Level (calculated, for property claims)
@@ -1139,17 +1140,20 @@ enum IntegrationStatus {
 /// Bearer tokens issued to an integration, never free-floating. Hashed at
 /// rest; plaintext shown once at issuance.
 model ApiToken {
-  id            String    @id @default(uuid())
-  integrationId String    @map("integration_id")
-  tokenHash     String    @unique @map("token_hash") /// SHA-256 of the secret
-  tokenPrefix   String    @map("token_prefix") /// Leading chars of the secret, for identification in UI/logs
-  expiresAt     DateTime? @map("expires_at")
-  lastUsedAt    DateTime? @map("last_used_at")
-  revokedAt     DateTime? @map("revoked_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id                String    @id @default(uuid())
+  integrationId     String    @map("integration_id")
+  tokenHash         String    @unique @map("token_hash") /// SHA-256 of the secret
+  tokenPrefix       String    @map("token_prefix") /// Leading chars of the secret, for identification in UI/logs
+  expiresAt         DateTime? @map("expires_at")
+  lastUsedAt        DateTime? @map("last_used_at")
+  revokedAt         DateTime? @map("revoked_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  replacedByTokenId String?   @unique @map("replaced_by_token_id") /// The token issued when this one was rotated
 
   // Relations
   integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  replacedBy  ApiToken?   @relation("ApiTokenReplacement", fields: [replacedByTokenId], references: [id], onDelete: SetNull)
+  replaces    ApiToken?   @relation("ApiTokenReplacement")
 
   @@map("api_tokens")
 }

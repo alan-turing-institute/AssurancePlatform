@@ -78,41 +78,107 @@ interface ScreenPoint {
 	y: number;
 }
 
+interface ScreenBox {
+	height: number;
+	width: number;
+	x: number;
+	y: number;
+}
+
+interface CanvasGeometry {
+	g1: ScreenBox | null;
+	paths: ScreenPoint[][];
+	settled: boolean;
+	texted: (ScreenBox | null)[];
+}
+
 /**
- * Samples an SVG `<path>`'s position in actual screen pixels at evenly
- * spaced points along its length — via `getPointAtLength` +
- * `getScreenCTM().matrixTransform`, the standard way to convert a path's
- * own local (flow-space) coordinates into the same viewport-pixel space
- * `boundingBox()` returns for the node cards. Reading the `d` attribute's
- * raw numbers directly would compare flow-space to pixel-space — wrong
+ * Reads the G1 card, each card whose text contains one of `cardTexts`, and
+ * every edge path matching `pathSelector` — card rectangles and path points
+ * both in viewport pixels — in one `page.evaluate`, so all of them come from
+ * the same frame. Path points are sampled at evenly spaced lengths via
+ * `getPointAtLength` + `getScreenCTM().matrixTransform`; reading the `d`
+ * attribute's raw numbers would compare flow-space to pixel-space, wrong
  * whenever the canvas is panned or zoomed.
+ *
+ * The reading is returned once two consecutive readings, three animation
+ * frames apart, are identical — the canvas re-fits its view after each
+ * layout pass, which moves every on-screen coordinate.
  */
-async function sampleEdgePathScreenPoints(
+async function readSettledCanvasGeometry(
 	page: Page,
-	selector: string,
-	pathIndex: number,
+	cardTexts: string[],
+	pathSelector: string,
 	steps = 60
-): Promise<ScreenPoint[]> {
+): Promise<CanvasGeometry> {
 	return await page.evaluate(
-		([sel, index, stepCount]) => {
-			const paths = document.querySelectorAll(sel as string);
-			const pathEl = paths[index as number] as SVGPathElement;
-			const ctm = pathEl.getScreenCTM();
-			if (!ctm) {
-				return [];
-			}
-			const length = pathEl.getTotalLength();
-			const points: { x: number; y: number }[] = [];
-			for (let i = 0; i <= (stepCount as number); i++) {
-				const point = pathEl.getPointAtLength(
-					(length * i) / (stepCount as number)
+		async ([texts, selector, stepCount]) => {
+			const toBox = (el: Element | undefined) => {
+				if (!el) {
+					return null;
+				}
+				const r = el.getBoundingClientRect();
+				return { x: r.x, y: r.y, width: r.width, height: r.height };
+			};
+			const read = () => {
+				const nodes = Array.from(
+					document.querySelectorAll(".react-flow__node")
 				);
-				const screenPoint = point.matrixTransform(ctm);
-				points.push({ x: screenPoint.x, y: screenPoint.y });
+				const g1Card = nodes.find((node) =>
+					Array.from(node.querySelectorAll("*")).some(
+						(child) => child.textContent?.trim() === "G1"
+					)
+				);
+				const paths = Array.from(
+					document.querySelectorAll(selector as string)
+				).map((el) => {
+					const pathEl = el as SVGPathElement;
+					const ctm = pathEl.getScreenCTM();
+					if (!ctm) {
+						return [];
+					}
+					const length = pathEl.getTotalLength();
+					const points: { x: number; y: number }[] = [];
+					for (let i = 0; i <= (stepCount as number); i++) {
+						const p = pathEl
+							.getPointAtLength((length * i) / (stepCount as number))
+							.matrixTransform(ctm);
+						points.push({ x: p.x, y: p.y });
+					}
+					return points;
+				});
+				return {
+					g1: toBox(g1Card),
+					texted: (texts as string[]).map((text) =>
+						toBox(nodes.find((node) => node.textContent?.includes(text)))
+					),
+					paths,
+				};
+			};
+			const frames = (count: number) =>
+				new Promise<void>((resolve) => {
+					const tick = (left: number) =>
+						left === 0
+							? resolve()
+							: requestAnimationFrame(() => tick(left - 1));
+					tick(count);
+				});
+			let previous = JSON.stringify(read());
+			let settled = false;
+			// Bounded so a canvas that never settles still yields a reading,
+			// flagged as unsettled.
+			for (let attempt = 0; attempt < 200; attempt++) {
+				await frames(3);
+				const current = JSON.stringify(read());
+				if (current === previous) {
+					settled = true;
+					break;
+				}
+				previous = current;
 			}
-			return points;
+			return { ...JSON.parse(previous), settled };
 		},
-		[selector, pathIndex, steps] as const
+		[cardTexts, pathSelector, steps] as const
 	);
 }
 
@@ -268,21 +334,25 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			page,
 			"Second defeater on G1."
 		);
-		await addEvidenceOn(
+		const evidenceCard = await addEvidenceOn(
 			page,
 			secondDefeater,
 			"Evidence under the second defeater."
 		);
+		await expect(evidenceCard).toBeVisible();
 
 		// Two defeaters -> two dashed challenges edges.
 		await expect(page.locator(CHALLENGES_EDGE_PATH_SELECTOR)).toHaveCount(2);
 
-		const g1Box = await g1Node(page).boundingBox();
-		const firstDefeater = page.locator(".react-flow__node", {
-			hasText: "First defeater on G1.",
-		});
-		const firstDefeaterBox = await firstDefeater.boundingBox();
-		const secondDefeaterBox = await secondDefeater.boundingBox();
+		// Cards and edge points are read together, from one settled frame.
+		const geometry = await readSettledCanvasGeometry(
+			page,
+			["First defeater on G1.", "Second defeater on G1."],
+			SUPPORT_EDGE_PATH_SELECTOR
+		);
+		expect(geometry.settled).toBe(true);
+		const g1Box = geometry.g1;
+		const [firstDefeaterBox, secondDefeaterBox] = geometry.texted;
 		expect(g1Box).toBeTruthy();
 		expect(firstDefeaterBox).toBeTruthy();
 		expect(secondDefeaterBox).toBeTruthy();
@@ -293,15 +363,8 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			(secondDefeaterBox?.y ?? 0) + (secondDefeaterBox?.height ?? 0)
 		);
 
-		const supportPaths = page.locator(SUPPORT_EDGE_PATH_SELECTOR);
-		const count = await supportPaths.count();
-		expect(count).toBeGreaterThan(0);
-		for (let i = 0; i < count; i++) {
-			const points = await sampleEdgePathScreenPoints(
-				page,
-				SUPPORT_EDGE_PATH_SELECTOR,
-				i
-			);
+		expect(geometry.paths.length).toBeGreaterThan(0);
+		for (const points of geometry.paths) {
 			expect(points.length).toBeGreaterThan(0);
 
 			// The connector never passes THROUGH either defeater's card — a
@@ -334,7 +397,20 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 			page,
 			"A defeater challenging G1."
 		);
-		await addEvidenceOn(page, defeaterCard, "Evidence under the defeater.");
+		const evidenceCard = await addEvidenceOn(
+			page,
+			defeaterCard,
+			"Evidence under the defeater."
+		);
+		await expect(evidenceCard).toBeVisible();
+		await expect(page.locator(SUPPORT_EDGE_PATH_SELECTOR)).toHaveCount(2);
+
+		// Clicking inside a card (the add-child menu) selects it, and the
+		// selection survives the redraws that follow an edit; clear it by
+		// clicking empty canvas so the baseline starts with nothing selected.
+		await page
+			.locator(".react-flow__pane")
+			.click({ position: { x: 20, y: 200 } });
 
 		// Baseline: nothing highlighted before any node is selected.
 		await expect(
@@ -372,5 +448,14 @@ test.describe("Side-attached elements (ADR 0005)", () => {
 		await expect(
 			page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`)
 		).toHaveCount(0);
+
+		// A highlight that comes back after a later redraw must fail: sample
+		// the count across a short window instead of reading it once.
+		for (let sample = 0; sample < 10; sample++) {
+			await page.waitForTimeout(200);
+			expect(
+				await page.locator(`.react-flow__edge.${EDGE_HIGHLIGHT_CLASS}`).count()
+			).toBe(0);
+		}
 	});
 });

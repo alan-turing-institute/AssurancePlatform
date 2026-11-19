@@ -39,6 +39,9 @@ name: Fallow Audit (retired)
 on:
   workflow_dispatch: {}
 
+# The job only echoes; it needs no token permissions.
+permissions: {}
+
 jobs:
   retired:
     name: Retired — see build.yaml's Structural Quality (blocking) job

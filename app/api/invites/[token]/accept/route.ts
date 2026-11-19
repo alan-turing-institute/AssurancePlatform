@@ -18,6 +18,16 @@ import {
  * POST /api/invites/[token]/accept
  * Accepts a case invite using the token.
  * User must be authenticated.
+ *
+ * @response 200 - `{ success, case_id, redirect_url }`
+ * @response 400 - The code matches no invitation, its case is in the Trash, or the invitation has expired
+ * @response 401 - No session
+ * @response 403 - The invitation was sent to a different email address
+ * @response 409 - The invitation has already been used
+ * @response 429 - Too many attempts
+ * @add 409,429
+ * @auth SessionAuth
+ * @tag Invites
  */
 export async function POST(
 	_request: Request,

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import prisma from "@/lib/prisma";
+import { captureLogs } from "../helpers/capture-logs";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestCase,
@@ -34,6 +35,10 @@ vi.mock("@/lib/services/sse-connection-manager", () => ({
 beforeEach(async () => {
 	await mockNoAuth();
 });
+
+const DATABASE_WORDS_PATTERN = /prisma|unique constraint/i;
+const CYCLE_MESSAGE_PATTERN =
+	/^Circular reference detected when moving element /;
 
 async function postBatch(caseId: string, body: unknown) {
 	const { POST } = await import("@/app/api/cases/[id]/batch/route");
@@ -334,5 +339,188 @@ describe("POST /api/cases/[id]/batch — the editor must be able to view the cas
 		});
 		expect(row?.moduleReferenceId).toBe(unviewable.id);
 		expect(row?.description).toBe("Reworded again");
+	});
+});
+
+describe("POST /api/cases/[id]/batch — failures inside the transaction", () => {
+	it("answers a fixed 500 without database text and logs the detail", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+		});
+		const taken = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		// Passes every check made before the transaction, then fails inside it:
+		// the new element's id is one the case already uses.
+		const logs = captureLogs();
+		let response: Response;
+		try {
+			response = await postBatch(testCase.id, {
+				changes: [
+					{
+						type: "create",
+						elementId: taken.id,
+						parentId: goal.id,
+						data: {
+							id: taken.id,
+							type: "STRATEGY",
+							name: "S9",
+							description: "Reuses an id",
+							inSandbox: false,
+						},
+					},
+				],
+			});
+		} finally {
+			logs.restore();
+		}
+
+		expect(response.status).toBe(500);
+		const body = await response.json();
+		expect(body).toEqual({
+			error: "Failed to apply batch update",
+			code: "INTERNAL",
+		});
+		expect(JSON.stringify(body)).not.toMatch(DATABASE_WORDS_PATTERN);
+		const failure = logs.entries.find(
+			(entry) => entry.msg === "Batch update failed"
+		);
+		expect(JSON.stringify(failure)).toMatch(DATABASE_WORDS_PATTERN);
+	});
+
+	it("keeps the cycle refusal's message", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const root = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+		});
+		const child = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: root.id,
+		});
+		const other = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			parentId: root.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		// Each move looks safe alone; together they make a loop.
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{ type: "update", elementId: child.id, data: { parentId: other.id } },
+				{ type: "update", elementId: other.id, data: { parentId: child.id } },
+			],
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(CYCLE_MESSAGE_PATTERN);
+		expect(body.code).toBe("VALIDATION");
+	});
+
+	it("answers 400 for two strategies moved under each other and keeps both under the goal", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			role: "TOP_LEVEL",
+		});
+		const s1 = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		const s2 = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{ type: "update", elementId: s1.id, data: { parentId: s2.id } },
+				{ type: "update", elementId: s2.id, data: { parentId: s1.id } },
+			],
+		});
+
+		expect(response.status).toBe(400);
+		const body = await response.json();
+		expect(body.error).toMatch(CYCLE_MESSAGE_PATTERN);
+		expect(body.code).toBe("VALIDATION");
+		const rows = await prisma.assuranceElement.findMany({
+			where: { id: { in: [s1.id, s2.id] } },
+			select: { parentId: true },
+		});
+		expect(rows.map((row) => row.parentId)).toEqual([goal.id, goal.id]);
+	});
+
+	it("answers 400 for an element made its own parent", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			role: "TOP_LEVEL",
+		});
+		const strategy = await createTestElement(testCase.id, owner.id, {
+			elementType: "STRATEGY",
+			parentId: goal.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{
+					type: "update",
+					elementId: strategy.id,
+					data: { parentId: strategy.id },
+				},
+			],
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).code).toBe("VALIDATION");
+	});
+});
+
+describe("POST /api/cases/[id]/batch — a move out of a parent the same edit deletes", () => {
+	it("answers 200 and keeps the moved element", async () => {
+		const owner = await createTestUser();
+		const testCase = await createTestCase(owner.id);
+		const goal = await createTestElement(testCase.id, owner.id, {
+			elementType: "GOAL",
+			name: "G1",
+		});
+		const parent = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1",
+			parentId: goal.id,
+		});
+		const moved = await createTestElement(testCase.id, owner.id, {
+			elementType: "PROPERTY_CLAIM",
+			name: "P1.1",
+			parentId: parent.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const response = await postBatch(testCase.id, {
+			changes: [
+				{ type: "delete", elementId: parent.id },
+				{ type: "update", elementId: moved.id, data: { parentId: goal.id } },
+			],
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			success: true,
+			summary: { created: 0, updated: 1, deleted: 1 },
+		});
+		const row = await prisma.assuranceElement.findUnique({
+			where: { id: moved.id },
+		});
+		expect(row?.parentId).toBe(goal.id);
 	});
 });

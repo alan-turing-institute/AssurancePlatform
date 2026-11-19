@@ -2,7 +2,7 @@
 
 ![An illustration representing the collaborative development of a structured assurance case. The image shows various groups of people working together across different workstations linked by different paths.](hero.gif)
 
-[![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.azurewebsites.net/)](https://assuranceplatform.azurewebsites.net/)
+[![Go to the TEA Platform](https://img.shields.io/badge/Go%20to%20the%20TEA%20Platform-0F76B8?style=flat&link=https://assuranceplatform.turing.ac.uk/)](https://assuranceplatform.turing.ac.uk/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8198986.svg)](https://doi.org/10.5281/zenodo.8198986)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -32,7 +32,7 @@ Whether you're new to assurance cases or looking to deepen your expertise, our s
 - **TEA Specialist** — Develop advanced skills in building and reviewing assurance cases
 - **TEA Expert** — Master the art of facilitating assurance processes across organisations
 
-Explore the [TEA Curriculum](https://assuranceplatform.azurewebsites.net/docs/curriculum) to begin your learning journey.
+Explore the [TEA Curriculum](https://assuranceplatform.turing.ac.uk/docs/curriculum) to begin your learning journey.
 
 ### Developer Information 💻
 
@@ -60,7 +60,7 @@ docker-compose -f docker-compose.local.yml up -d --build
 # Access at http://localhost:3000
 ```
 
-For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.azurewebsites.net/docs/technical-guide).
+For detailed setup instructions, API documentation, and contribution guidelines, see our [Technical Documentation](https://assuranceplatform.turing.ac.uk/docs/technical-guide).
 
 ### Further Resources 📚
 

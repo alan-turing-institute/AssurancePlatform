@@ -11,6 +11,7 @@ import { dismissMigrationNotice } from "@/lib/services/user-service";
  * POST /api/users/me/migration-notice
  * Marks the migration notice as seen for the current user.
  * Only succeeds if the user has a valid email address (not a placeholder).
+ * @auth SessionAuth
  */
 export async function POST() {
 	try {

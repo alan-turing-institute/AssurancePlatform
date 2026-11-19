@@ -88,6 +88,32 @@ export async function waitForLockWait(
 }
 
 /**
+ * Whether no transaction holds a lock on the element's row: asks for the lock
+ * with NOWAIT, which fails at once when another transaction has the row.
+ */
+export async function elementRowIsFree(elementId: string): Promise<boolean> {
+	try {
+		await prisma.$transaction(async (tx) => {
+			await tx.$queryRaw`SELECT id FROM assurance_elements WHERE id = ${elementId} FOR UPDATE NOWAIT`;
+		});
+		return true;
+	} catch (error) {
+		if (isLockNotAvailable(error)) {
+			return false;
+		}
+		throw error;
+	}
+}
+
+/** Whether a failed query reports Postgres SQLSTATE 55P03 (lock not available). */
+function isLockNotAvailable(error: unknown): boolean {
+	// The text form carries the message; the JSON form carries the error's own
+	// enumerable fields, including the database code at
+	// `meta.driverAdapterError.cause.originalCode`.
+	return `${String(error)} ${JSON.stringify(error)}`.includes("55P03");
+}
+
+/**
  * Opens a transaction, runs `mutate` inside it (typically a write that
  * takes a row lock), then blocks the transaction open — holding that lock —
  * until `release()` or `rollback()` is called. Any other transaction that

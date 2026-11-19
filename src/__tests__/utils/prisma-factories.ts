@@ -407,6 +407,7 @@ type ApiTokenOverrides = Partial<{
 	expiresAt: Date;
 	lastUsedAt: Date;
 	revokedAt: Date;
+	replacedByTokenId: string;
 }>;
 
 export function createTestApiToken(
@@ -422,6 +423,7 @@ export function createTestApiToken(
 			expiresAt: overrides.expiresAt,
 			lastUsedAt: overrides.lastUsedAt,
 			revokedAt: overrides.revokedAt,
+			replacedByTokenId: overrides.replacedByTokenId,
 		},
 	});
 }

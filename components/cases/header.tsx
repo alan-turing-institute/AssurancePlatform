@@ -7,6 +7,7 @@ import SearchNodes from "@/components/cases/search-nodes";
 import { useChangeDetection } from "@/hooks/use-change-detection";
 import { useStatusModal } from "@/hooks/use-status-modal";
 import { type ReactFlowNode, toggleHiddenForParent } from "@/lib/case";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import type { PublishStatusType } from "@/lib/services/case-response-types";
 import { toastError } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -135,9 +136,7 @@ const Header = ({ setOpen }: HeaderProps) => {
 		}
 	};
 
-	const canEditCase =
-		assuranceCase?.permissions === "manage" ||
-		assuranceCase?.permissions === "edit";
+	const canEditCase = caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
 	// Opens the status/publish dialog immediately using state already known
 	// (from `assuranceCase` and this header's own `useChangeDetection` call

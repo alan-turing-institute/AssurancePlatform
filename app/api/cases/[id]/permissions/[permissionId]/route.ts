@@ -19,6 +19,7 @@ import { updatePermissionSchema } from "@/lib/schemas/permission";
  * Updates a permission level. Requires ADMIN permission.
  *
  * Body: { permission: string, type?: "user" | "team" }
+ * @auth SessionAuth
  */
 export async function PATCH(
 	request: Request,
@@ -66,6 +67,7 @@ export async function PATCH(
  * Revokes a permission. Requires ADMIN permission.
  *
  * Query param: ?type=team (optional, defaults to user)
+ * @auth SessionAuth
  */
 export async function DELETE(
 	request: Request,

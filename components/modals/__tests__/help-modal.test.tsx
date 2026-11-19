@@ -6,6 +6,7 @@ import {
 	ELEMENT_GUIDE,
 } from "@/lib/help/help-guide";
 import { resetTourControls, useTourControls } from "@/lib/tours/tour-controls";
+import { mockUsePathname } from "@/src/__tests__/mocks/next-navigation-mocks";
 import useStore from "@/store/store";
 
 const onCloseSpy = vi.fn();
@@ -42,6 +43,10 @@ describe("HelpModal", () => {
 		startTourSpy.mockClear();
 		resetTourControls();
 		useTourControls.setState({ startTour: startTourSpy });
+	});
+
+	afterEach(() => {
+		mockUsePathname.mockReturnValue("/");
 	});
 
 	it("opens from the hook and renders the sheet title", () => {
@@ -115,6 +120,40 @@ describe("HelpModal", () => {
 
 		expect(onCloseSpy).toHaveBeenCalledTimes(1);
 		expect(startTourSpy).toHaveBeenCalledWith("case-canvas");
+	});
+
+	it("closes the sheet when Full documentation is clicked", async () => {
+		const user = userEvent.setup();
+		render(<HelpModal />);
+
+		const link = screen.getByRole("link", { name: "Full documentation" });
+		expect(link).toHaveAttribute("href", "/docs");
+		await user.click(link);
+
+		expect(onCloseSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("closes the sheet when the path changes, and not on first render", () => {
+		mockUsePathname.mockReturnValue("/case/1");
+		const { rerender } = render(<HelpModal />);
+		expect(onCloseSpy).not.toHaveBeenCalled();
+
+		mockUsePathname.mockReturnValue("/docs");
+		rerender(<HelpModal />);
+
+		expect(onCloseSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the sheet open when Read more in the docs is clicked", async () => {
+		const user = userEvent.setup();
+		render(<HelpModal />);
+
+		await user.click(screen.getByRole("button", { name: "Goal" }));
+		const link = screen.getByRole("link", { name: READ_MORE_LINK_NAME });
+
+		expect(link).toHaveAttribute("target", "_blank");
+		await user.click(link);
+		expect(onCloseSpy).not.toHaveBeenCalled();
 	});
 
 	it("narrows to an entry whose match is only in its body text, case-insensitively", async () => {

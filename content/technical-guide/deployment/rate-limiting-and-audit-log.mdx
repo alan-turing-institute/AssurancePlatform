@@ -7,11 +7,23 @@ Rate limits slow repeated attempts against selected account and machine-authenti
 
 ## Apply the configured limits
 
-`lib/services/rate-limit-service.ts` declares named configurations. Registration allows five attempts per IP and three per email in one hour. Invitation acceptance allows 20 per IP and 10 per user ID in one hour. Password sign-in allows 10 failed attempts per email or username and 20 per IP in 15 minutes; a successful sign-in hands back its own attempt and clears the failures counted against that email or username (for a name shared by several accounts, only the newest), while the per-IP count keeps earlier failures. Failed machine bearer authentication allows 20 attempts per IP in 15 minutes. Valid machine polling does not spend the failed-auth budget. Server calls to a model provider on a user's behalf (connection tests, search checks and quick setup) share 20 calls per user in 10 minutes. The service counts stored `RateLimitAttempt` rows inside the rolling window, returns an allowed flag and retry delay, and records attempts. A request blocked through the shared check-and-record helper also generates a security event, and a blocked machine request writes a `machine_auth_rate_limited` audit row.
-Password reset is limited separately by `lib/services/password-reset-service.ts`, which allows three requests per email and ten per IP in one hour and counts them in its own `PasswordResetAttempt` table.
+`lib/services/rate-limit-service.ts` declares named configurations.
+Registration allows five attempts per IP and three per email in one hour.
+Invitation acceptance allows 20 per IP and 10 per user ID in one hour.
+Password sign-in allows 10 failed attempts per email or username and 20 per IP in 15 minutes.
+A successful sign-in hands back its own attempt and clears the failures counted against that email or username (for a name shared by several accounts, only the newest), while the per-IP count keeps earlier failures.
+Failed machine bearer authentication allows 20 attempts per IP in 15 minutes.
+Valid machine polling does not spend the failed-auth budget.
+Server calls to a model provider on a user's behalf (connection tests, search checks and quick setup) share 20 calls per user in 10 minutes.
+The service counts stored `RateLimitAttempt` rows inside the rolling window, returns an allowed flag and retry delay, and records attempts.
+A request blocked through the shared check-and-record helper also generates a security event, and a blocked machine request writes a `machine_auth_rate_limited` audit row.
+Email limits count a keyed fingerprint of the address, made with a secret only the server holds, so the table never holds an address someone typed.
+The sign-in limit counts the typed email or username the same way.
+Password reset has its own limit, kept in its own table by `lib/services/password-reset-service.ts`.
+It allows three per email and ten per IP in one hour, with the email counted the same way.
 Behind Cloudflare with `CLOUDFLARE_ORIGIN_SECRET` set, an IPv6 visitor is counted, and logged, by their /64 network, because one IPv6 connection holds a whole /64.
 
-Call the shared limit check from a route with the relevant IP, email or user ID. The helper skips an identifier that is absent; it does not invent an identity. Keep authentication and authorisation guards in place after a request passes the limit. A limit is scoped to its configured endpoint and identifier type, not a global cap on every action by one person.
+Call the shared limit check from a route with the relevant IP, email fingerprint or user ID. The helper skips an identifier that is absent; it does not invent an identity. Keep authentication and authorisation guards in place after a request passes the limit. A limit is scoped to its configured endpoint and identifier type, not a global cap on every action by one person.
 
 ## Record audit events
 
@@ -21,4 +33,6 @@ Choose specific event names and metadata that explain an outcome without includi
 
 ## Limits and code location
 
-The present configuration protects registration, invite acceptance, password reset, password sign-in, model-provider calls and failed machine authentication. Do not describe it as blanket throttling of all API routes. Rate-limit policy and persistence are in `lib/services/rate-limit-service.ts` (password reset: `lib/services/password-reset-service.ts`); audit persistence is in `lib/services/security-audit-service.ts`; log formatting is in `lib/audit/security-log.ts` and `lib/logger.ts`.
+The present configuration protects registration, invite acceptance, password reset, password sign-in, model-provider calls and failed machine authentication.
+Do not describe it as blanket throttling of all API routes.
+Rate-limit policy and persistence for every limit except password reset are in `lib/services/rate-limit-service.ts`; the password-reset limit lives in `lib/services/password-reset-service.ts`; audit persistence is in `lib/services/security-audit-service.ts`; log formatting is in `lib/audit/security-log.ts` and `lib/logger.ts`.

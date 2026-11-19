@@ -39,7 +39,7 @@ export type CreateAssuranceCaseData = z.output<
  */
 export const updateAssuranceCaseSchema = z
 	.strictObject({
-		name: z.string().min(1).max(255).optional(),
+		name: newCaseNameSchema.optional(),
 		description: z.string().min(1).max(5000).optional(),
 		colourProfile: z.string().optional(),
 		layoutDirection: z.enum(["TB", "LR"]).optional(),

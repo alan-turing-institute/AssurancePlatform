@@ -225,6 +225,27 @@ describe("applying a rewording against the real element routes", () => {
 		expect((await stored(claim.id)).context ?? []).toEqual([]);
 	});
 
+	it.each([
+		"assumption",
+		"justification",
+	] as const)("clears the %s again on Undo when the suggestion filled an empty one", async (field) => {
+		const { testCase, claim } = await setup();
+		routeFetchToHandlers();
+		await applySuggestion(
+			testCase.id,
+			reword(claim.id, {
+				[field]: { before: "", after: "Training is refreshed yearly" },
+			})
+		);
+		expect((await stored(claim.id))[field]).toBe(
+			"Training is refreshed yearly"
+		);
+
+		await applyUndo(recorded());
+
+		expect((await stored(claim.id))[field] ?? "").toBe("");
+	});
+
 	it("puts the earlier context list back on Undo when the element already had one", async () => {
 		const { testCase, claim } = await setup();
 		await prisma.assuranceElement.update({

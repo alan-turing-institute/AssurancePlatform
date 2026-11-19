@@ -1306,6 +1306,29 @@ describe("NodeEditDialog — defined terms", () => {
 		);
 	});
 
+	it("records a claim's never-stored status as null before an edit that sets one", async () => {
+		const user = userEvent.setup();
+		captureUpdate();
+		vi.mocked(recordUpdate).mockClear();
+		const onOpenChange = renderClaim(claimWith({}));
+
+		const description = await screen.findByLabelText("Description");
+		await user.clear(description);
+		await user.type(description, "Separation holds under load");
+		await user.click(
+			screen.getByRole("combobox", { name: "Assertion status" })
+		);
+		await user.click(
+			await screen.findByRole("option", { name: "Needs support" })
+		);
+		await user.click(screen.getByRole("button", { name: "Update Property" }));
+
+		await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+		const [, , before, after] = vi.mocked(recordUpdate).mock.calls[0]!;
+		expect(before).toHaveProperty("assertionStatus", null);
+		expect(after).toHaveProperty("assertionStatus", "NEEDS_SUPPORT");
+	});
+
 	it("names a plain entry, gives it a value, and sends the named entry", async () => {
 		const user = userEvent.setup();
 		const captured = captureUpdate();

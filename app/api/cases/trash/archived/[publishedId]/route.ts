@@ -21,7 +21,7 @@ import { removeArchivedCopy } from "@/lib/services/case-trash-service";
  * @response 200 - { success: true }
  * @response 401 - Unauthorised
  * @response 404 - Archived copy not found, or not owned by the caller
- * @auth bearer
+ * @auth SessionAuth
  * @tag Cases
  */
 export async function DELETE(

@@ -430,7 +430,7 @@ export class FullReportTemplate extends BaseTemplate {
 				// Section title rendered automatically by exporters
 				this.metadata("Case Name", caseData.case.name),
 				this.metadata("Export Version", caseData.version),
-				this.metadata("Exported At", caseData.exportedAt),
+				this.metadata("Exported At", this.exportedAt),
 			],
 		};
 	}

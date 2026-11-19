@@ -5,7 +5,8 @@ sidebar_position: 5
 sidebar_label: 'API Reference'
 ---
 
-The application serves its generated API reference at [/api-docs](/api-docs). That page reads the OpenAPI document at `/openapi.json`. Route definitions and their annotations live in `app/api/`; the `docs:generate` package script runs `next-openapi-gen generate`. Use the generated reference for paths, methods, request shapes and responses.
+The application serves its generated API reference at [/api-docs](/api-docs). That page reads the OpenAPI document at `/openapi.json`. Route definitions and their annotations live in `app/api/`; the `docs:generate` package script runs `next-openapi-gen generate` and then a correction step, `scripts/openapi/correct-openapi.ts`, driven by a table of every operation in `scripts/openapi/operations.ts`.
+A test, `lib/__tests__/openapi-matches-routes.test.ts`, fails when the document and the routes disagree. Use the generated reference for paths, methods, request shapes and responses.
 
 ## Browser requests
 

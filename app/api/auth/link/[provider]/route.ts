@@ -38,6 +38,8 @@ function publicBaseUrl(): string {
  * redirects to the NextAuth OAuth endpoint. The signIn callback in
  * lib/auth/config.ts verifies that intent and merges the OAuth credentials
  * into the existing account.
+ *
+ * @auth SessionAuth
  */
 export async function GET(_request: Request, { params }: RouteParams) {
 	const { provider } = await params;

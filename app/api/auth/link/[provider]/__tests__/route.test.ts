@@ -71,7 +71,7 @@ describe("GET /api/auth/link/[provider]", () => {
 
 		const location = response.headers.get("location");
 		expect(location).not.toBeNull();
-		expect(location?.startsWith(PUBLIC_ORIGIN)).toBe(true);
+		expect(new URL(location as string).origin).toBe(PUBLIC_ORIGIN);
 
 		const locationUrl = new URL(location as string);
 		expect(locationUrl.pathname).toBe("/api/auth/signin/google");

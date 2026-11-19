@@ -24,7 +24,7 @@ import { Input } from "../ui/input";
 
 type FormValues = ResetPasswordFormInput;
 
-type TokenState = "loading" | "valid" | "invalid" | "expired";
+type TokenState = "loading" | "valid" | "invalid";
 
 const ResetPasswordForm = () => {
 	const router = useRouter();
@@ -62,8 +62,6 @@ const ResetPasswordForm = () => {
 				if (result.valid) {
 					setTokenState("valid");
 					setEmail(result.email ?? null);
-				} else if (result.error?.includes("expired")) {
-					setTokenState("expired");
 				} else {
 					setTokenState("invalid");
 				}
@@ -125,40 +123,19 @@ const ResetPasswordForm = () => {
 		);
 	}
 
-	// Invalid token state
+	// Unusable link state (malformed, unknown, used or expired: one message for all)
 	if (tokenState === "invalid") {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-destructive bg-destructive/20 px-4 py-6">
-					<h3 className="font-semibold text-destructive dark:text-destructive">
-						Invalid reset link
-					</h3>
-					<p className="mt-2 text-destructive/80 text-sm">
-						This password reset link is invalid. Please request a new one.
-					</p>
-				</div>
-				<div className="mt-6 text-center">
-					<Link
-						className="font-semibold text-primary text-sm hover:text-primary/80"
-						href="/forgot-password"
-					>
-						Request new reset link
-					</Link>
-				</div>
-			</div>
-		);
-	}
-
-	// Expired token state
-	if (tokenState === "expired") {
-		return (
-			<div className="mx-auto w-full max-w-sm lg:w-96">
-				<div className="rounded-md border border-warning bg-warning/20 px-4 py-6">
+				<div
+					className="rounded-md border border-warning bg-warning/20 px-4 py-6"
+					role="alert"
+				>
 					<h3 className="font-semibold text-warning dark:text-warning">
-						Link expired
+						This link can&apos;t be used
 					</h3>
 					<p className="mt-2 text-sm text-warning/80">
-						This password reset link has expired. Please request a new one.
+						It may have expired or already been used.
 					</p>
 				</div>
 				<div className="mt-6 text-center">

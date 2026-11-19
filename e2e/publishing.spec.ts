@@ -1,6 +1,7 @@
 import { expect, test } from "./helpers/auth";
 import { CASE_URL_PATTERN } from "./helpers/constants";
 import { CaseEditorPage } from "./pages/case-editor-page";
+import { DashboardPage } from "./pages/dashboard-page";
 
 // ADR 0003 §2 retired the READY_TO_PUBLISH intermediate state — a case is
 // now either DRAFT or PUBLISHED. The status pill opens the guided Publish
@@ -23,7 +24,7 @@ test.describe("Publishing", () => {
 
 	test("status button shows Draft for a draft case", async ({ page }) => {
 		await page.goto("/dashboard");
-		await page.getByText("Simple Case").click();
+		await new DashboardPage(page).caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);
@@ -37,7 +38,7 @@ test.describe("Publishing", () => {
 		// "Simple Case" is seeded DRAFT with no case-information record
 		// (prisma/seed/dev-seed.ts) — every required field is missing.
 		await page.goto("/dashboard");
-		await page.getByText("Simple Case").click();
+		await new DashboardPage(page).caseCard("Simple Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);
@@ -69,7 +70,7 @@ test.describe("Publishing", () => {
 	}) => {
 		// "Medium Case" is seeded as PUBLISHED (prisma/seed/dev-seed.ts).
 		await page.goto("/dashboard");
-		await page.getByText("Medium Case").click();
+		await new DashboardPage(page).caseCard("Medium Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);
@@ -81,7 +82,7 @@ test.describe("Publishing", () => {
 		page,
 	}) => {
 		await page.goto("/dashboard");
-		await page.getByText("Medium Case").click();
+		await new DashboardPage(page).caseCard("Medium Case").click();
 		await page.waitForURL(CASE_URL_PATTERN);
 
 		const editor = new CaseEditorPage(page);

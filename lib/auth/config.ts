@@ -569,7 +569,7 @@ async function takeSignInSlots(
 			"@/lib/services/rate-limit-service"
 		);
 		return await takeRateLimitSlot(RATE_LIMIT_CONFIGS.signIn, {
-			email: signInIdentifierKey(identifier),
+			emailKey: signInIdentifierKey(identifier),
 			ipAddress,
 		});
 	} catch (error) {

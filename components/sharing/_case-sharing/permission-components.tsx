@@ -1,7 +1,7 @@
 "use client";
 
 import { MoreVertical, Trash2, Users } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -88,10 +88,6 @@ export function UserPermissionRow({
 		<div className="flex items-center justify-between">
 			<div className="flex items-center gap-3">
 				<Avatar className="h-8 w-8">
-					<AvatarImage
-						alt={permission.user.username}
-						src={`https://avatar.vercel.sh/${permission.user.email}`}
-					/>
 					<AvatarFallback>
 						{getInitials(permission.user.username)}
 					</AvatarFallback>

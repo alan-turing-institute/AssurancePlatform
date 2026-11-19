@@ -4,6 +4,7 @@ import { PanelRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useCasePanelSlot } from "@/hooks/use-case-panel-slot";
+import { caseAccessAtLeast } from "@/lib/case/case-access";
 import type { CasePanelRegistration } from "@/lib/plugins/slots/index";
 import useStore from "@/store/store";
 import ActionTooltip from "../ui/action-tooltip";
@@ -75,9 +76,7 @@ export function CasePanelButtons() {
 	if (!assuranceCase) {
 		return null;
 	}
-	const canEdit =
-		assuranceCase.permissions === "edit" ||
-		assuranceCase.permissions === "manage";
+	const canEdit = caseAccessAtLeast(assuranceCase.permissions, "edit");
 	return (
 		<>
 			{registrations.map((registration) => (

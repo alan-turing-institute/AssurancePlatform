@@ -77,3 +77,23 @@ export function signInIdentifierKey(identifier: string): string {
 		.update(KEY_CONTEXT + counted)
 		.digest("hex");
 }
+
+/**
+ * The same key as `signInIdentifierKey`, for a log or audit entry that must
+ * not hold what a person typed. Returns `undefined` instead of throwing when
+ * the key cannot be made (no `NEXTAUTH_SECRET`, or a value that is not a
+ * string), so the caller leaves the field out and carries on. A throw here
+ * would make a request for an unknown address fail while one for a real
+ * address succeeded, which tells a stranger which addresses have accounts.
+ */
+export function identifierFingerprint(
+	identifier: string | null | undefined
+): string | undefined {
+	try {
+		return typeof identifier === "string" && identifier !== ""
+			? signInIdentifierKey(identifier)
+			: undefined;
+	} catch {
+		return undefined;
+	}
+}

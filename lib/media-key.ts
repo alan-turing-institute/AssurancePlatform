@@ -8,7 +8,7 @@
 
 const UPLOADS_PATH_PREFIX = "/uploads/";
 const BLOB_URL_PATTERN =
-	/^https:\/\/[^/]+\.blob\.core\.windows\.net\/media\/(.+)$/;
+	/^https:\/\/[a-z0-9]{3,24}\.blob\.core\.windows\.net\/media\/(.+)$/;
 const URL_SCHEME_PATTERN = /^https?:\/\//i;
 const HTTPS_SCHEME_PATTERN = /^https:\/\//i;
 const CASE_FEATURE_IMAGE_KEY_PREFIX = "cases/";
@@ -29,6 +29,18 @@ export function toMediaKey(stored: string): string {
 		return blobMatch[1];
 	}
 	return stored;
+}
+
+/**
+ * True when `stored` is a legacy Azure blob URL: `https://`, a storage
+ * account name (3 to 24 lowercase letters or digits) followed by
+ * `.blob.core.windows.net`, then the `media`
+ * container. The host is matched from the start of the value, so a blob host
+ * name in a later path segment, query string or fragment does not qualify,
+ * and neither does a host that merely ends in the blob suffix.
+ */
+export function isLegacyBlobUrl(stored: string): boolean {
+	return BLOB_URL_PATTERN.test(stored);
 }
 
 /**

@@ -10,6 +10,7 @@ import { resetIdentifiers } from "@/lib/services/identifier-service";
 /**
  * POST /api/cases/[id]/update-ids
  * Resets all element identifiers (names) with hierarchical naming for property claims.
+ * @auth SessionAuth
  */
 export async function POST(
 	_request: Request,

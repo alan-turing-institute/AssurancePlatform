@@ -67,3 +67,28 @@ export function getHighlightedEdges(edges: Edge[], nodes: Node[]): Edge[] {
 		};
 	});
 }
+
+/**
+ * Removes the display-only highlight that `getHighlightedEdges` adds. React
+ * Flow's `getEdges()` returns the highlighted copies, so edges read back from
+ * it and written to the store would otherwise keep the highlight after the
+ * card is deselected. Edges without a highlight keep their reference.
+ */
+export function clearEdgeHighlight(edges: Edge[]): Edge[] {
+	return edges.map((edge) => {
+		if (!edge.data?.highlighted) {
+			return edge;
+		}
+		const { highlighted: _highlighted, ...data } = edge.data;
+		const { zIndex: _zIndex, ...rest } = edge;
+		return {
+			...rest,
+			data,
+			className:
+				edge.className
+					?.split(" ")
+					.filter((name) => name && name !== CASE_EDGE_HIGHLIGHT_CLASS)
+					.join(" ") || undefined,
+		};
+	});
+}

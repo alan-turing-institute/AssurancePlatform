@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { fetchPublishedItemBySlug } from "@/actions/discover";
-import { SanitisedHtml } from "@/components/cases/sanitised-html";
 import { formatShortDate } from "@/lib/date";
 import { resolveFeatureImageSrc } from "@/lib/discover-image";
 import { ArchivedOnNotice } from "../_components/archived-status";
@@ -133,10 +132,9 @@ const DiscoverItemPage = async ({ params }: DiscoverItemPageProps) => {
 								</div>
 							)}
 							{item.description ? (
-								<SanitisedHtml
-									className="prose max-w-none prose-a:text-primary"
-									html={item.description}
-								/>
+								<p className="wrap-anywhere whitespace-pre-line">
+									{item.description}
+								</p>
 							) : (
 								<p>No description has been provided for this item.</p>
 							)}

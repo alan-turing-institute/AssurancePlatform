@@ -481,12 +481,9 @@ describe('applyUndo("update")', () => {
 		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockOkResponse()));
 	});
 
-	it("fetches the element endpoint with the before snapshot, including inSandbox", async () => {
-		// Regression test for the history-service half of the layout-direction
-		// key-case fix: undo of an "update" command must send `inSandbox`
-		// (camelCase) — an `in_sandbox` body is silently stripped by the zod
-		// schema and the undo never persists. This assertion pins the exact
-		// request body, so it fails against the pre-fix `in_sandbox` key.
+	it("fetches the element endpoint with the before snapshot and no inSandbox", async () => {
+		// The general edit does not move an element into or out of the side
+		// area, so the request body carries no `inSandbox` key.
 		const command: HistoryCommand = {
 			type: "update",
 			elementId: "elem-90",
@@ -530,7 +527,6 @@ describe('applyUndo("update")', () => {
 				assumption: null,
 				justification: null,
 				context: [],
-				inSandbox: true,
 			}),
 		});
 	});
@@ -849,7 +845,7 @@ describe('applyRedo("update")', () => {
 		vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockOkResponse()));
 	});
 
-	it("fetches the element endpoint with the after snapshot, including inSandbox", async () => {
+	it("fetches the element endpoint with the after snapshot and no inSandbox", async () => {
 		const command: HistoryCommand = {
 			type: "update",
 			elementId: "elem-92",
@@ -893,7 +889,6 @@ describe('applyRedo("update")', () => {
 				assumption: null,
 				justification: null,
 				context: [],
-				inSandbox: true,
 			}),
 		});
 	});
