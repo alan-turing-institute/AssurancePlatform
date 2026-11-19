@@ -17,7 +17,7 @@ import {
  *
  * Lists the integrations the signed-in user owns, never anyone else's.
  * Each entry carries a summary of every token issued for it: prefix,
- * timestamps, expiry and revocation state.
+ * timestamps, expiry, revocation and replacement state.
  * A token's secret and hash are never returned; the secret is shown once,
  * when the token is issued.
  *

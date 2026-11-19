@@ -175,12 +175,15 @@ export type IntegrationStatus = "ACTIVE" | "SUSPENDED" | "REVOKED";
  * the plaintext secret or hash, only what's needed to identify and manage it.
  * `revokedAt`/`expiresAt` are both nullable and independent: a token can be
  * expired but not revoked, or revoked before its expiry ever arrives.
+ * `replacedByTokenId` is the id of the token issued when this one was rotated,
+ * or null if it has not been rotated.
  */
 export interface IntegrationTokenSummary {
 	createdAt: string;
 	expiresAt: string | null;
 	id: string;
 	lastUsedAt: string | null;
+	replacedByTokenId: string | null;
 	revokedAt: string | null;
 	tokenPrefix: string;
 }

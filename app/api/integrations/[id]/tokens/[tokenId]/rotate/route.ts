@@ -19,16 +19,18 @@ import { rotateToken } from "@/lib/services/integration-registry-service";
  * The new secret is returned once, in this response.
  * The integration in the path must be the one the token belongs to; otherwise
  * the answer is the same 404 as for a token that does not exist.
+ * A token can be rotated once: after that, its replacement is the one to
+ * rotate next.
  * Only the owner can rotate a token.
  *
- * @description Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked or expired token, or a token of an integration that is not active, is refused with 409.
+ * @description Issues a replacement token (secret returned once) and limits the old token to a 24-hour overlap; a revoked, expired or already replaced token, or a token of an integration that is not active, is refused with 409.
  * @pathParam id - Integration ID (UUID), which must be the integration the token belongs to
  * @pathParam tokenId - Token ID (UUID)
  * @response 200 - `{ secret, token: { id, tokenPrefix, createdAt, expiresAt }, oldTokenId, overlapUntil }`
  * @response 400 - Validation error
  * @response 401 - Unauthorised
  * @response 404 - Token not found (covers non-existent, not-owned, and belonging to a different integration than the path, with the same message)
- * @response 409 - The token is already revoked or past its end date, or its integration is not active
+ * @response 409 - The token is already revoked, past its end date or already replaced, or its integration is not active
  * @add 404,409
  * @auth SessionAuth
  * @tag Integrations

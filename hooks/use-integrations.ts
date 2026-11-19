@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { requestJson } from "@/lib/request-json";
+import { RequestJsonError, requestJson } from "@/lib/request-json";
 import type {
 	IntegrationListItem,
 	IssuedTokenResult,
@@ -253,6 +253,9 @@ export function useIntegrations(): UseIntegrationsResult {
 				await load();
 				return result;
 			} catch (err) {
+				if (err instanceof RequestJsonError && err.status === 409) {
+					await load();
+				}
 				toast({
 					variant: "destructive",
 					title: "Couldn't rotate token",

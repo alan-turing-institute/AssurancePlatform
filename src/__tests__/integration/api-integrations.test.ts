@@ -121,6 +121,30 @@ describe("GET /api/integrations", () => {
 		expect(revoked?.revokedAt).not.toBeNull();
 		expect(expired?.expiresAt).not.toBeNull();
 	});
+
+	it("lists the replacement's id on a rotated token and null otherwise", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const replacement = await createTestApiToken(integration.id);
+		const rotated = await createTestApiToken(integration.id, {
+			replacedByTokenId: replacement.id,
+		});
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { GET } = await import("@/app/api/integrations/route");
+		const body = await (await GET()).json();
+
+		const tokens = body.integrations[0].tokens as Array<{
+			id: string;
+			replacedByTokenId: string | null;
+		}>;
+		expect(tokens.find((t) => t.id === rotated.id)?.replacedByTokenId).toBe(
+			replacement.id
+		);
+		expect(
+			tokens.find((t) => t.id === replacement.id)?.replacedByTokenId
+		).toBeNull();
+	});
 });
 
 describe("POST /api/integrations", () => {
@@ -892,6 +916,35 @@ describe("Lifecycle conflict responses (409) — route level", () => {
 			tokenParams(integration.id, inDate.id)
 		);
 		expect(accepted.status).toBe(200);
+	});
+
+	it("rotate: a second rotation of the same token is 409 and adds no token", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(owner.id);
+		const apiToken = await createTestApiToken(integration.id);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { POST } = await import(
+			"@/app/api/integrations/[id]/tokens/[tokenId]/rotate/route"
+		);
+		const rotate = () =>
+			POST(
+				jsonRequest(
+					`/api/integrations/${integration.id}/tokens/${apiToken.id}/rotate`,
+					"POST"
+				),
+				tokenParams(integration.id, apiToken.id)
+			);
+		expect((await rotate()).status).toBe(200);
+
+		const second = await rotate();
+		expect(second.status).toBe(409);
+		expect((await second.json()).error).toBe(
+			"Cannot rotate a token that has already been replaced"
+		);
+		expect(
+			await prisma.apiToken.count({ where: { integrationId: integration.id } })
+		).toBe(2);
 	});
 
 	it("rotate: 409 when the token is already revoked", async () => {

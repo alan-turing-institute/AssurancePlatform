@@ -675,7 +675,10 @@ Table api_tokens {
   lastUsedAt DateTime
   revokedAt DateTime
   createdAt DateTime [default: `now()`, not null]
+  replacedByTokenId String [unique, note: 'The token issued when this one was rotated']
   integration integrations [not null]
+  replacedBy api_tokens
+  replaces api_tokens
 
   Note: 'Bearer tokens issued to an integration, never free-floating. Hashed at
 rest; plaintext shown once at issuance.'
@@ -1149,6 +1152,8 @@ Ref: integrations.ownerId > users.id
 Ref: integrations.systemUserId > users.id
 
 Ref: api_tokens.integrationId > integrations.id [delete: Cascade]
+
+Ref: api_tokens.replacedByTokenId - api_tokens.id [delete: Set Null]
 
 Ref: plugin_health_evidence.claimId > assurance_elements.id [delete: Cascade]
 
