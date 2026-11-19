@@ -142,12 +142,13 @@ enum PublishStatus {
 /// Tracks password reset attempts for rate limiting and security monitoring.
 model PasswordResetAttempt {
   id          String   @id @default(uuid())
-  email       String
+  /// Keyed fingerprint of the lowercased, trimmed address; null when the server secret is missing. The address itself is never stored.
+  emailKey    String?  @map("email_key")
   ipAddress   String   @map("ip_address")
   attemptedAt DateTime @default(now()) @map("attempted_at")
   successful  Boolean  @default(false)
 
-  @@index([email, attemptedAt])
+  @@index([emailKey, attemptedAt])
   @@index([ipAddress, attemptedAt])
   @@map("password_reset_attempts")
 }
@@ -172,7 +173,7 @@ model SecurityAuditLog {
 model RateLimitAttempt {
   id             String   @id @default(uuid())
   endpoint       String   /// Endpoint identifier, e.g., "register", "invite_accept", "password_reset"
-  identifier     String   /// The rate-limited identifier (IP address, email, or user ID)
+  identifier     String   /// The rate-limited identifier (IP address, keyed email fingerprint, or user ID)
   identifierType String   @map("identifier_type") /// Type of identifier: "ip", "email", or "user_id"
   attemptedAt    DateTime @default(now()) @map("attempted_at")
   blocked        Boolean  @default(false) /// True if this attempt was rate-limited/rejected

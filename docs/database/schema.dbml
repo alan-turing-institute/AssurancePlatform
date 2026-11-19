@@ -64,7 +64,7 @@ Table users {
 
 Table password_reset_attempts {
   id String [pk]
-  email String [not null]
+  emailKey String [note: 'Keyed fingerprint of the lowercased, trimmed address; null when the server secret is missing. The address itself is never stored.']
   ipAddress String [not null]
   attemptedAt DateTime [default: `now()`, not null]
   successful Boolean [not null, default: false]
@@ -87,7 +87,7 @@ Table security_audit_logs {
 Table rate_limit_attempts {
   id String [pk]
   endpoint String [not null, note: 'Endpoint identifier, e.g., "register", "invite_accept", "password_reset"']
-  identifier String [not null, note: 'The rate-limited identifier (IP address, email, or user ID)']
+  identifier String [not null, note: 'The rate-limited identifier (IP address, keyed email fingerprint, or user ID)']
   identifierType String [not null, note: 'Type of identifier: "ip", "email", or "user_id"']
   attemptedAt DateTime [default: `now()`, not null]
   blocked Boolean [not null, default: false, note: 'True if this attempt was rate-limited/rejected']

@@ -5,6 +5,8 @@ import {
 	generateInviteToken,
 	hashInviteToken,
 } from "@/lib/services/case-invite-service";
+import { restoreCase, softDeleteCase } from "@/lib/services/case-trash-service";
+import { expectSuccess } from "../utils/assertion-helpers";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import { createTestCase, createTestUser } from "../utils/prisma-factories";
 
@@ -141,5 +143,94 @@ describe("POST /api/invites/[token]/accept", () => {
 		});
 		expect(await permissionUserIds(s.caseId)).toEqual([]);
 		expect((await storedInvite(s.token)).acceptedAt).toBeNull();
+	});
+});
+
+describe("POST /api/invites/[token]/accept for a case in the Trash", () => {
+	const unknownCodeAnswer = async () => {
+		const user = await createTestUser();
+		await signInAs(user);
+		const response = await accept(generateInviteToken());
+		return { status: response.status, body: await response.json() };
+	};
+
+	const binnedScene = async () => {
+		const s = await scene();
+		expectSuccess(await softDeleteCase(s.owner.id, s.caseId));
+		return s;
+	};
+
+	it("answers exactly as for an unknown code and grants nothing", async () => {
+		const expected = await unknownCodeAnswer();
+		const s = await binnedScene();
+		await signInAs(s.invitee);
+
+		const response = await accept(s.token);
+
+		expect({ status: response.status, body: await response.json() }).toEqual(
+			expected
+		);
+		expect(await permissionUserIds(s.caseId)).toEqual([]);
+		expect((await storedInvite(s.token)).acceptedAt).toBeNull();
+	});
+
+	it("refuses another account the same way, not with 403", async () => {
+		const expected = await unknownCodeAnswer();
+		const s = await binnedScene();
+		await signInAs(await createTestUser());
+
+		const response = await accept(s.token);
+
+		expect({ status: response.status, body: await response.json() }).toEqual(
+			expected
+		);
+	});
+
+	it("lets the invitee accept after the case is restored", async () => {
+		const s = await binnedScene();
+		await signInAs(s.invitee);
+		expect((await accept(s.token)).status).toBe(400);
+
+		expectSuccess(await restoreCase(s.owner.id, s.caseId));
+		const response = await accept(s.token);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({
+			success: true,
+			case_id: s.caseId,
+		});
+		expect(await permissionUserIds(s.caseId)).toEqual([s.invitee.id]);
+	});
+
+	it("reports an expired invitation after a restore past its end date", async () => {
+		const s = await binnedScene();
+		await restoreCase(s.owner.id, s.caseId);
+		await prisma.caseInvite.update({
+			where: { inviteTokenHash: hashInviteToken(s.token) },
+			data: { inviteExpiresAt: new Date(Date.now() - 60_000) },
+		});
+		await signInAs(s.invitee);
+
+		const response = await accept(s.token);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({
+			error: "Invite has expired",
+		});
+	});
+
+	it("records the refusal with the invitation id and no code", async () => {
+		const s = await binnedScene();
+		await signInAs(s.invitee);
+
+		await accept(s.token);
+
+		const rows = await prisma.securityAuditLog.findMany({
+			where: { eventType: "invite_acceptance_case_in_trash" },
+		});
+		expect(rows).toHaveLength(1);
+		const invite = await storedInvite(s.token);
+		expect(rows[0]?.metadata).toMatchObject({ inviteId: invite.id });
+		expect(rows[0]?.metadata).not.toHaveProperty("inviteToken");
 	});
 });
