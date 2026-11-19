@@ -14,7 +14,7 @@ The repository's `prepare` script points Git at `.githooks/`. Its pre-push hook 
 
 ## Build workflow
 
-`.github/workflows/build.yaml` runs on pull requests, matching pushes to `main` or `staging`, and manual dispatch. The `validate` job runs Ultracite and TypeScript. It runs `pnpm docs:generate` and fails if `public/openapi.json` changes. On pull requests it also runs `scripts/check-advisories.ts`, which fails the job when `pnpm audit` reports a high or critical advisory that is not in `.advisory-baseline.json`, or when a baseline entry has expired. Push runs skip this step, so a newly published advisory does not block a deploy.
+`.github/workflows/build.yaml` runs on pull requests, matching pushes to `main` or `staging`, and manual dispatch. The `validate` job runs Ultracite and TypeScript. It runs `pnpm docs:generate` and fails if `public/openapi.json` changes. On pull requests it also runs `scripts/check-advisories.ts`, which fails the job when `pnpm audit` reports a high or critical advisory that is not in `.advisory-baseline.json`, or when the baseline entry for a reported advisory has expired. Push runs skip this step, so a newly published advisory does not block a deploy.
 
 The tests run as parallel jobs, each on its own runner.
 The unit tests are split into three shards, named `Unit tests (shard 1/3)` to `Unit tests (shard 3/3)`.

@@ -37,7 +37,7 @@ The hook is an early check; CI remains the shared gate. Local setup uses Node 20
 
 ## Integration database
 
-Integration tests use the `postgres-test` service in `docker-compose.local.yml`, separate from the development database. Start the container before the package test script. The pre-commit hook `scripts/run-integration-tests.sh` runs the integration tests only when a PostgreSQL server answers on the test database's host and port (`localhost:5433` unless `INTEGRATION_TEST_ADMIN_DATABASE_URL` overrides it), and otherwise skips with a message:
+Integration tests use the `postgres-test` service in `docker-compose.local.yml`, separate from the development database. The pre-commit hook `scripts/run-integration-tests.sh` runs the integration tests only when a PostgreSQL server answers on the test database's host and port (`localhost:5433` unless `INTEGRATION_TEST_ADMIN_DATABASE_URL` overrides it), and otherwise skips with a message. Start the container before the package test script:
 
 ```sh
 docker compose -f docker-compose.local.yml up -d postgres-test
