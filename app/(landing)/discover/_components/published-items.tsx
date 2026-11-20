@@ -103,7 +103,10 @@ function PublishedItems({ items }: PublishedItemsProps) {
 						onValueChange={(value) => setSelectedSector(value)}
 						value={selectedSector}
 					>
-						<SelectTrigger className="w-full rounded-lg border border-border bg-muted shadow-xs focus:border-primary focus:ring-3 focus:ring-ring md:w-56 md:shrink-0">
+						<SelectTrigger
+							aria-label="Filter by sector"
+							className="w-full rounded-lg border border-border bg-muted shadow-xs focus:border-primary focus:ring-3 focus:ring-ring md:w-56 md:shrink-0"
+						>
 							<SelectValue placeholder="Select a sector" />
 						</SelectTrigger>
 						<SelectContent>

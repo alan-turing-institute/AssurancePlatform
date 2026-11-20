@@ -1,8 +1,7 @@
 {
   "/": {
     "violations": {
-      "color-contrast": 1,
-      "definition-list": 1
+      "color-contrast": 1
     },
     "cls": 0.1518
   },
@@ -31,63 +30,45 @@
     "cls": 0.0001
   },
   "/dashboard": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/patterns": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/settings": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0.0357
   },
   "/dashboard/settings/integrations": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/settings/plugins": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/settings/teams": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/shared": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/teams": {
-    "violations": {
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/trash": {
     "violations": {
-      "color-contrast": 1,
-      "list": 2
+      "color-contrast": 1
     },
     "cls": 0
   },
   "/discover": {
     "violations": {
-      "button-name": 1,
       "color-contrast": 1
     },
     "cls": 0.0154
@@ -142,6 +123,6 @@
     "violations": {
       "color-contrast": 2
     },
-    "cls": 0.0025
+    "cls": 0.0033
   }
 }

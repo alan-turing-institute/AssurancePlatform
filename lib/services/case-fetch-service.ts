@@ -750,6 +750,8 @@ export async function getCaseNameForViewer(
 export interface AssuranceCaseSummary {
 	createdDate: string;
 	description?: string;
+	/** Whether the case has a stored screenshot; false means the card needs no image request. */
+	hasScreenshot: boolean;
 	id: string;
 	isDemo?: boolean;
 	kind: CaseKind;
@@ -768,10 +770,12 @@ export interface AssuranceCaseSummary {
 /**
  * Selects only the caller's own grants on a case: their direct permission and
  * the permissions of the teams they belong to. Without the two filters the
- * query would return every collaborator's grant.
+ * query would return every collaborator's grant. It also selects whether the
+ * case has a screenshot row, without reading the image address.
  */
 function callerGrantsSelect(userId: string) {
 	return {
+		caseImage: { select: { id: true } },
 		userPermissions: {
 			where: { userId },
 			select: { permission: true },
@@ -793,6 +797,27 @@ function levelFromGrants(c: {
 		highest = maxPermission(highest, grant.permission);
 	}
 	return mapPermissionToFrontend(highest, false);
+}
+
+/** The summary fields common to every case list. */
+function baseCaseSummary(c: {
+	caseImage: { id: string } | null;
+	createdAt: Date;
+	createdById: string | null;
+	description: string | null;
+	id: string;
+	name: string;
+	updatedAt: Date;
+}) {
+	return {
+		id: c.id,
+		name: c.name,
+		description: c.description ?? undefined,
+		createdDate: c.createdAt.toISOString(),
+		updatedDate: c.updatedAt.toISOString(),
+		owner: c.createdById ?? undefined,
+		hasScreenshot: c.caseImage !== null,
+	};
 }
 
 /**
@@ -833,12 +858,7 @@ export async function listOwnAndDirectlySharedCases(
 	});
 
 	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description ?? undefined,
-		createdDate: c.createdAt.toISOString(),
-		updatedDate: c.updatedAt.toISOString(),
-		owner: c.createdById ?? undefined,
+		...baseCaseSummary(c),
 		isDemo: c.isDemo,
 		kind: c.kind,
 		permissions: c.createdById === userId ? "owner" : levelFromGrants(c),
@@ -944,12 +964,7 @@ export async function listSharedCases(
 
 		return {
 			data: cases.map((c) => ({
-				id: c.id,
-				name: c.name,
-				description: c.description ?? undefined,
-				createdDate: c.createdAt.toISOString(),
-				updatedDate: c.updatedAt.toISOString(),
-				owner: c.createdById ?? undefined,
+				...baseCaseSummary(c),
 				kind: c.kind,
 				permissions: levelFromGrants(c),
 				published: c.published,
