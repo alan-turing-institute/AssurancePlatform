@@ -11,13 +11,13 @@ interface RouteContext {
 }
 
 /**
- * Starting a GitHub sign-in takes its permissions from the provider's own
- * setting. A `scope` in the query string would be merged over that setting by
- * the library, so a request that names one is refused before it reaches the
- * library. Every other request, including every other provider's, is passed
- * through unchanged.
+ * Starting a GitHub sign-in takes its permissions and addresses from the
+ * provider's own settings. Any query parameter would be merged over those
+ * settings by the library, so a request that carries one is refused before it
+ * reaches the library. Every other request, including every other provider's,
+ * is passed through unchanged.
  */
-async function startsGitHubSignInWithScope(
+async function startsGitHubSignInWithQuery(
 	req: NextRequest,
 	context: RouteContext
 ): Promise<boolean> {
@@ -25,16 +25,24 @@ async function startsGitHubSignInWithScope(
 	return (
 		nextauth?.[0] === "signin" &&
 		nextauth[1] === "github" &&
-		req.nextUrl.searchParams.has("scope")
+		req.nextUrl.searchParams.size > 0
 	);
 }
 
 export { handler as GET };
 
+/**
+ * The NextAuth sign-in and callback handler. It is not part of the published
+ * API.
+ *
+ * @ignore
+ */
 export async function POST(req: NextRequest, context: RouteContext) {
-	if (await startsGitHubSignInWithScope(req, context)) {
+	if (await startsGitHubSignInWithQuery(req, context)) {
 		return apiError(
-			validationError("A GitHub sign-in request cannot set its own scope")
+			validationError(
+				"A GitHub sign-in request cannot carry its own parameters"
+			)
 		);
 	}
 	return handler(req, context);

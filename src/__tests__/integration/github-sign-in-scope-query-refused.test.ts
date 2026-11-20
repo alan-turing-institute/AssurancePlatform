@@ -53,7 +53,7 @@ describe("POST /api/auth/signin/github with a scope in the query", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toEqual({
-			error: "A GitHub sign-in request cannot set its own scope",
+			error: "A GitHub sign-in request cannot carry its own parameters",
 			code: "VALIDATION",
 		});
 	});
@@ -80,9 +80,15 @@ describe("other POST requests to the sign-in route", () => {
 	});
 
 	it("pass a GitHub sign-in without a scope through to the library", async () => {
-		const response = await post("signin/github");
+		const request = new NextRequest(`${BASE}/signin/github`, {
+			method: "POST",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({ csrfToken: "token" }),
+		});
+		const context = params("signin", "github");
+		const response = await POST(request, context);
 
-		expect(libraryHandler).toHaveBeenCalledTimes(1);
+		expect(libraryHandler).toHaveBeenCalledWith(request, context);
 		expect(await response.text()).toBe(LIBRARY_ANSWER);
 	});
 

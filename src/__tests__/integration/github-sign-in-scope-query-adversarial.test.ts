@@ -224,11 +224,17 @@ describe("a request without a scope query", () => {
 		"?Scope=repo",
 		"?scopes=repo",
 		"?scope[]=repo",
+		"?scope%20=repo",
 		"?x-scope=repo",
-	])("keeps the default scope for the near miss %s", async (query) => {
+		"?redirect_uri=https%3A%2F%2Fexample.test",
+		"?client_id=other",
+		"?prompt=none",
+		"?login=someone",
+	])("refuses the query %s with 400 and no redirect", async (query) => {
 		const response = await post("signin/github", query);
 
-		expect(authoriseScope(response)).toBe(DEFAULT_SCOPE);
+		expect(response.status).toBe(400);
+		expect(response.headers.get("location")).toBeNull();
 	});
 
 	it.each([
