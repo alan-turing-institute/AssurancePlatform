@@ -46,6 +46,7 @@ import {
 	useContextNaming,
 } from "@/hooks/use-context-naming";
 import { useElementPanelSlot } from "@/hooks/use-element-panel-slot";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
 import {
 	ASSERTION_STATUS_LABELS,
@@ -529,6 +530,7 @@ export default function NodeEditDialog({
 	open,
 	onOpenChange,
 }: NodeEditDialogProps) {
+	const returnFocus = useReturnFocus();
 	const [loading, setLoading] = useState(false);
 	const [newContextValue, setNewContextValue] = useState("");
 	const componentId = useId();
@@ -915,6 +917,7 @@ export default function NodeEditDialog({
 					"max-h-9/10 overflow-y-auto",
 					wideTab ? "sm:max-w-2xl" : "sm:max-w-lg"
 				)}
+				onCloseAutoFocus={returnFocus.onCloseAutoFocus}
 				// `onPointerDownOutside` is the path this fix targets: it's
 				// the click-through case where a click inside the dialog
 				// falls through to the Dialog's own overlay while the
@@ -930,6 +933,7 @@ export default function NodeEditDialog({
 					}
 				}}
 				onOpenAutoFocus={(event) => {
+					returnFocus.onOpenAutoFocus(event);
 					if (focusDescriptionOnOpen) {
 						event.preventDefault();
 					}

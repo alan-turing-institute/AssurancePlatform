@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJsonValidation } from "@/hooks/use-json-validation";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { fetchAndRefreshCase } from "@/lib/case";
 import { writingClearsPlaceholder } from "@/lib/case/placeholders";
 import {
@@ -387,6 +388,7 @@ function JsonLoadingSkeleton() {
 }
 
 const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
+	const returnFocus = useReturnFocus();
 	const { assuranceCase, setAssuranceCase } = useStore();
 	const { recordOperation, isApplying: isUndoRedoApplying } = useHistoryStore();
 	const { resolvedTheme } = useTheme();
@@ -698,6 +700,7 @@ const JsonViewPanel = ({ isOpen, onClose }: JsonViewPanelProps) => {
 	return (
 		<Sheet onOpenChange={handleSheetOpenChange} open={isOpen}>
 			<SheetContent
+				{...returnFocus}
 				className={cn(
 					"flex w-full flex-col transition-[max-width] duration-200 motion-reduce:transition-none",
 					// The sheet primitive's own base sets `sm:max-w-sm` (side="left"

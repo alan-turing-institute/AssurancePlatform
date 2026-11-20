@@ -15,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCaseInformation } from "@/hooks/use-case-information";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import {
 	placeholderCountMessage,
 	unsetVariableCountMessage,
@@ -54,6 +55,21 @@ interface StatusModalProps {
 	unsetVariableCount?: number;
 }
 
+function formatPublishedAt(
+	publishedAt: Date | string | null | undefined
+): string | null {
+	if (!publishedAt) {
+		return null;
+	}
+	return new Date(publishedAt).toLocaleDateString("en-GB", {
+		day: "2-digit",
+		month: "2-digit",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
 /**
  * Modal for managing publish status transitions (ADR 0003 §2 — the single
  * guided Publish flow lives here, in the case editor).
@@ -82,6 +98,7 @@ export function StatusModal({
 	unpublishLoading = false,
 	unsetVariableCount = 0,
 }: StatusModalProps) {
+	const returnFocus = useReturnFocus();
 	const [loading, setLoading] = useState(false);
 
 	const handleAction = async (action: (() => Promise<void>) | undefined) => {
@@ -98,19 +115,11 @@ export function StatusModal({
 		}
 	};
 
-	const formattedDate = publishedAt
-		? new Date(publishedAt).toLocaleDateString("en-GB", {
-				day: "2-digit",
-				month: "2-digit",
-				year: "numeric",
-				hour: "2-digit",
-				minute: "2-digit",
-			})
-		: null;
+	const formattedDate = formatPublishedAt(publishedAt);
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" {...returnFocus}>
 				<StatusModalHeader
 					hasChanges={hasChanges}
 					itemName={itemName}

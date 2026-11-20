@@ -97,7 +97,7 @@ export function ImageUpload({
 							unoptimized
 						/>
 					</div>
-					<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+					<div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60 opacity-0 transition-opacity duration-300 group-focus-within:opacity-100 group-hover:opacity-100">
 						<Button
 							disabled={disabled}
 							onClick={handleRemove}

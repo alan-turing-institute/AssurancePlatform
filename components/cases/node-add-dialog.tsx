@@ -8,7 +8,7 @@ import {
 	Scale,
 	ShieldAlert,
 } from "lucide-react";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import type { Node } from "reactflow";
 import AddCitedElementForm, {
 	type CitedElementKind,
@@ -22,6 +22,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 
 interface NodeAddDialogProps {
 	/** The type of element to create (strategy, claim, evidence, defeater, away-goal, module) */
@@ -34,6 +35,8 @@ interface NodeAddDialogProps {
 	onOpenChange: (open: boolean) => void;
 	/** Whether the dialog is open */
 	open: boolean;
+	/** Receives focus on close when the opener has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Get display label for element type */
@@ -123,7 +126,9 @@ export default function NodeAddDialog({
 	elementType,
 	open,
 	onOpenChange,
+	returnFocusRef,
 }: NodeAddDialogProps) {
+	const returnFocus = useReturnFocus(returnFocusRef);
 	const [_unresolvedChanges, setUnresolvedChanges] = useState(false);
 
 	const handleClose = () => {
@@ -142,7 +147,10 @@ export default function NodeAddDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+			<DialogContent
+				className="max-h-[85vh] overflow-y-auto sm:max-w-md"
+				{...returnFocus}
+			>
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						{icon}

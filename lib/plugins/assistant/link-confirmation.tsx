@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import type { LinkSafetyConfig, LinkSafetyModalProps } from "streamdown";
 import {
 	AlertDialog,
@@ -12,6 +11,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 
 /**
  * The step between a click on a link in model text and the new tab. It is a
@@ -26,7 +26,7 @@ function LinkConfirmation({
 	onConfirm,
 	url,
 }: LinkSafetyModalProps) {
-	const opener = useRef<Element | null>(null);
+	const returnFocus = useReturnFocus();
 	return (
 		<AlertDialog
 			onOpenChange={(open) => {
@@ -39,14 +39,10 @@ function LinkConfirmation({
 			<AlertDialogContent
 				className="nokey"
 				onCloseAutoFocus={(event) => {
+					returnFocus.onCloseAutoFocus(event);
 					event.preventDefault();
-					if (opener.current instanceof HTMLElement) {
-						opener.current.focus();
-					}
 				}}
-				onOpenAutoFocus={() => {
-					opener.current = document.activeElement;
-				}}
+				onOpenAutoFocus={returnFocus.onOpenAutoFocus}
 			>
 				<AlertDialogHeader>
 					<AlertDialogTitle>Open external link?</AlertDialogTitle>

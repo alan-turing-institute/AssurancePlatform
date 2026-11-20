@@ -20,6 +20,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { useHelpModal } from "@/hooks/modal-hooks";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import {
 	CANVAS_OPTION_GUIDE,
 	ELEMENT_GUIDE,
@@ -92,6 +93,7 @@ function HelpGuideSection({ entries, title }: HelpGuideSectionProps) {
  * the same content under the name "Element Legend".
  */
 export const HelpModal = () => {
+	const returnFocus = useReturnFocus();
 	const helpModal = useHelpModal();
 	const { assuranceCase } = useStore();
 	const [query, setQuery] = useState("");
@@ -143,6 +145,7 @@ export const HelpModal = () => {
 			<SheetContent
 				className="flex w-full flex-col gap-4 overflow-y-auto sm:max-w-xl"
 				data-testid="help-sheet"
+				{...returnFocus}
 			>
 				<SheetHeader>
 					<SheetTitle>Help</SheetTitle>

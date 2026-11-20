@@ -1,8 +1,7 @@
 {
   "/": {
     "violations": {
-      "color-contrast": 3,
-      "definition-list": 1
+      "color-contrast": 1
     },
     "cls": 0.1518
   },
@@ -15,7 +14,7 @@
   },
   "/auth-error": {
     "violations": {
-      "color-contrast": 2
+      "color-contrast": 1
     },
     "cls": 0
   },
@@ -27,136 +26,100 @@
     "cls": 0.0003
   },
   "/cookie-policy": {
-    "violations": {
-      "color-contrast": 2
-    },
+    "violations": {},
     "cls": 0.0001
   },
   "/dashboard": {
-    "violations": {
-      "color-contrast": 2,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/patterns": {
-    "violations": {
-      "color-contrast": 2,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/settings": {
-    "violations": {
-      "color-contrast": 4,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0.0357
   },
   "/dashboard/settings/integrations": {
-    "violations": {
-      "color-contrast": 4,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/settings/plugins": {
-    "violations": {
-      "color-contrast": 3,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/settings/teams": {
-    "violations": {
-      "color-contrast": 3,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/shared": {
-    "violations": {
-      "color-contrast": 2,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/teams": {
-    "violations": {
-      "color-contrast": 2,
-      "list": 2
-    },
+    "violations": {},
     "cls": 0
   },
   "/dashboard/trash": {
     "violations": {
-      "color-contrast": 4,
-      "list": 2
+      "color-contrast": 1
     },
     "cls": 0
   },
   "/discover": {
     "violations": {
-      "button-name": 1,
-      "color-contrast": 3
+      "color-contrast": 1
     },
     "cls": 0.0154
   },
   "/discover/{slug}": {
     "violations": {
-      "color-contrast": 2
+      "color-contrast": 1
     },
     "cls": 0.008
   },
   "/docs": {
     "violations": {
-      "color-contrast": 2,
+      "color-contrast": 1,
       "svg-img-alt": 1
     },
     "cls": 0.0859
   },
   "/docs/curriculum/tea-trainee/01-first-sip/exploration": {
     "violations": {
-      "color-contrast": 2,
+      "color-contrast": 1,
       "nested-interactive": 1,
       "svg-img-alt": 1
     },
     "cls": 0
   },
   "/feedback": {
+    "violations": {},
+    "cls": 0
+  },
+  "/forgot-password": {
+    "violations": {},
+    "cls": 0
+  },
+  "/login": {
+    "violations": {},
+    "cls": 0
+  },
+  "/privacy-policy": {
+    "violations": {},
+    "cls": 0.0001
+  },
+  "/register": {
     "violations": {
       "color-contrast": 1
     },
     "cls": 0
   },
-  "/forgot-password": {
-    "violations": {
-      "color-contrast": 2
-    },
-    "cls": 0
-  },
-  "/login": {
-    "violations": {
-      "color-contrast": 2
-    },
-    "cls": 0
-  },
-  "/privacy-policy": {
-    "violations": {
-      "color-contrast": 2
-    },
-    "cls": 0.0001
-  },
-  "/register": {
-    "violations": {
-      "color-contrast": 2
-    },
-    "cls": 0
-  },
   "/reset-password": {
     "violations": {
-      "color-contrast": 3
+      "color-contrast": 2
     },
-    "cls": 0.0025
+    "cls": 0.0033
   }
 }

@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import ActionTooltip from "../ui/action-tooltip";
 import { Button } from "../ui/button";
 
@@ -25,6 +26,7 @@ interface SearchNodesProps {
 	nodes: Node[];
 }
 const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
+	const returnFocus = useReturnFocus();
 	const [value, setValue] = useState("");
 	const [searchOpen, setSearchOpen] = useState(false);
 
@@ -66,7 +68,10 @@ const SearchNodes = ({ nodes, focusNode }: SearchNodesProps) => {
 				</Button>
 			</ActionTooltip>
 			<Dialog onOpenChange={handleSearchClose} open={searchOpen}>
-				<DialogContent className="sm:max-w-md md:max-w-xl lg:max-w-2xl">
+				<DialogContent
+					className="sm:max-w-md md:max-w-xl lg:max-w-2xl"
+					{...returnFocus}
+				>
 					<DialogHeader>
 						<DialogTitle>Search Nodes</DialogTitle>
 						<DialogDescription>

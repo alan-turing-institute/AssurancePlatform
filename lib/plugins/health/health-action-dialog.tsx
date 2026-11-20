@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { toast } from "@/lib/toast";
 
 export interface HealthActionRequest {
@@ -66,7 +67,7 @@ async function readErrorMessage(response: Response): Promise<string> {
  * error toast when it refuses. The dialog stays open on a refusal so the
  * person can read it and try again; a 409 also calls `onRefused`, because it
  * means the list the person was looking at is out of date. When the dialog
- * closes, focus goes back to `returnFocusTo`.
+ * closes, focus goes back to `returnFocusTo`, otherwise to whatever opened it.
  */
 export function HealthActionDialog({
 	buildRequest,
@@ -83,6 +84,7 @@ export function HealthActionDialog({
 	submitVariant = "default",
 	title,
 }: HealthActionDialogProps) {
+	const returnFocus = useReturnFocus();
 	const [reason, setReason] = useState("");
 	const [pending, setPending] = useState(false);
 	const canSubmit = reason.trim().length > 0 && fieldsValid && !pending;
@@ -135,8 +137,11 @@ export function HealthActionDialog({
 					if (returnFocusTo?.current) {
 						event.preventDefault();
 						returnFocusTo.current.focus();
+						return;
 					}
+					returnFocus.onCloseAutoFocus(event);
 				}}
+				onOpenAutoFocus={returnFocus.onOpenAutoFocus}
 			>
 				<DialogHeader>
 					<DialogTitle>{title}</DialogTitle>

@@ -267,4 +267,137 @@ test.describe("Case management", () => {
 		await page.mouse.click(5, 5);
 		await expect(dialogTitle).not.toBeVisible();
 	});
+
+	test("Space activates the case toolbar buttons and the settings switch", async ({
+		page,
+	}) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const help = page.getByTestId("toolbar-help");
+		await help.waitFor({ state: "visible" });
+		await help.focus();
+		await page.keyboard.press("Space");
+		await expect(
+			page
+				.getByRole("dialog", { name: "Help", exact: true })
+				.getByRole("heading", { name: "Help", exact: true, level: 2 })
+		).toBeVisible();
+		await page.keyboard.press("Escape");
+
+		const settings = page.getByRole("button", {
+			name: "Settings",
+			exact: true,
+		});
+		await settings.focus();
+		await page.keyboard.press("Enter");
+		// The popover has no accessible name, so it is identified by its switch.
+		const popover = page.getByRole("dialog").filter({
+			has: page.getByRole("switch", {
+				name: "Show unsupported markers",
+				exact: true,
+			}),
+		});
+		const marker = popover.getByRole("switch", {
+			name: "Show unsupported markers",
+			exact: true,
+		});
+		await expect(marker).toBeVisible();
+		await expect(marker).toBeEnabled();
+		const before = (await marker.getAttribute("aria-checked")) ?? "";
+		await marker.focus();
+		await page.keyboard.press("Space");
+		await expect(marker).not.toHaveAttribute("aria-checked", before);
+		// Restore the saved account setting.
+		await expect(marker).toBeEnabled();
+		await page.keyboard.press("Space");
+		await expect(marker).toHaveAttribute("aria-checked", before);
+		await expect(marker).toBeEnabled();
+	});
+
+	test("Space presses buttons in the edit element dialog", async ({ page }) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = g1EditButton(page);
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		const dialog = page.getByRole("dialog", {
+			name: "Editing G1",
+			exact: true,
+		});
+		// Give the named entry a value so that removing its name warns.
+		await dialog
+			.getByRole("textbox", { name: "Context entry 1 value", exact: true })
+			.fill("5");
+		const removeName = dialog.getByRole("button", {
+			name: "Remove name of context entry 1",
+			exact: true,
+		});
+		await removeName.focus();
+		await page.keyboard.press("Space");
+		await expect(dialog.getByRole("alert")).toContainText(
+			"loses its value (5)"
+		);
+
+		const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+		await cancel.focus();
+		await page.keyboard.press("Space");
+		await expect(dialog).not.toBeVisible();
+	});
+
+	test("the case information form can be crossed by keyboard", async ({
+		page,
+	}) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const title = page.getByTestId("case-title-button");
+		await title.focus();
+		await page.keyboard.press("Enter");
+		const sheet = page.getByRole("dialog", {
+			name: "Update Assurance Case",
+			exact: true,
+		});
+		const authors = sheet.getByRole("textbox", {
+			name: "Authors",
+			exact: true,
+		});
+		await authors.fill("Ada Lovelace");
+		await page.keyboard.press("Enter");
+
+		const stops = [
+			sheet.getByRole("button", {
+				name: "How author entry works",
+				exact: true,
+			}),
+			sheet.getByRole("button", { name: "Remove Ada Lovelace", exact: true }),
+			sheet.getByRole("combobox", { name: "Sector", exact: true }),
+			sheet.locator("[tabindex='0']", { hasText: "Upload an image" }),
+			sheet.getByRole("button", {
+				name: "Save case information",
+				exact: true,
+			}),
+		];
+
+		await authors.focus();
+		for (const stop of stops) {
+			await page.keyboard.press("Tab");
+			await expect(stop).toBeFocused();
+		}
+
+		for (const stop of [...stops].reverse().slice(1)) {
+			await page.keyboard.press("Shift+Tab");
+			await expect(stop).toBeFocused();
+		}
+		await page.keyboard.press("Shift+Tab");
+		await expect(authors).toBeFocused();
+	});
 });

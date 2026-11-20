@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import type { Node } from "reactflow";
 import { useEdges, useNodes } from "reactflow";
 import {
@@ -12,6 +12,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { moveCaseElement } from "@/lib/case";
 import {
 	getCompatibleParentTypes,
@@ -28,6 +29,8 @@ export interface MoveElementDialogProps {
 	nodeType: DiagramNodeType;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
+	/** Receives focus on close when the opener has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Map canonical parent types from the compatibility module to ReactFlow node types */
@@ -67,7 +70,9 @@ export function MoveElementDialog({
 	nodeType,
 	open,
 	onOpenChange,
+	returnFocusRef,
 }: MoveElementDialogProps) {
+	const returnFocus = useReturnFocus(returnFocusRef);
 	// Cast to Node[] for untyped data property access — matches codebase convention
 	const allNodes = useNodes() as Node[];
 	const allEdges = useEdges();
@@ -149,7 +154,7 @@ export function MoveElementDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent>
+			<DialogContent {...returnFocus}>
 				<DialogHeader>
 					<DialogTitle>Move element</DialogTitle>
 					<DialogDescription>
