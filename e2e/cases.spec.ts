@@ -331,4 +331,54 @@ test.describe("Case management", () => {
 		await page.keyboard.press("Space");
 		await expect(dialog).not.toBeVisible();
 	});
+
+	test("the case information form can be crossed by keyboard", async ({
+		page,
+	}) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const title = page.getByTestId("case-title-button");
+		await title.focus();
+		await page.keyboard.press("Enter");
+		const sheet = page.getByRole("dialog", {
+			name: "Update Assurance Case",
+			exact: false,
+		});
+		const authors = sheet.getByRole("textbox", {
+			name: "Authors",
+			exact: true,
+		});
+		await authors.fill("Ada Lovelace");
+		await page.keyboard.press("Enter");
+
+		const stops = [
+			sheet.getByRole("button", {
+				name: "How author entry works",
+				exact: true,
+			}),
+			sheet.getByRole("button", { name: "Remove Ada Lovelace", exact: true }),
+			sheet.getByRole("combobox", { name: "Sector", exact: true }),
+			sheet.locator("[tabindex='0']", { hasText: "Upload an image" }),
+			sheet.getByRole("button", {
+				name: "Save case information",
+				exact: true,
+			}),
+		];
+
+		await authors.focus();
+		for (const stop of stops) {
+			await page.keyboard.press("Tab");
+			await expect(stop).toBeFocused();
+		}
+
+		for (const stop of [...stops].reverse().slice(1)) {
+			await page.keyboard.press("Shift+Tab");
+			await expect(stop).toBeFocused();
+		}
+		await page.keyboard.press("Shift+Tab");
+		await expect(authors).toBeFocused();
+	});
 });
