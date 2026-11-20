@@ -17,6 +17,12 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from "../ui/input-group";
 
 const RegisterForm = () => {
 	const [loading, setLoading] = useState(false);
@@ -194,30 +200,29 @@ const RegisterForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Password</FormLabel>
-									<FormControl>
-										<div className="relative">
-											<Input
+									<InputGroup className="h-10">
+										<FormControl>
+											<InputGroupInput
 												type={showPassword1 ? "text" : "password"}
 												{...field}
 											/>
-											<Button
+										</FormControl>
+										<InputGroupAddon align="inline-end">
+											<InputGroupButton
 												aria-label={
 													showPassword1 ? "Hide password" : "Show password"
 												}
-												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
 												onClick={() => setShowPassword1(!showPassword1)}
-												size="icon"
-												type="button"
-												variant="ghost"
+												size="icon-xs"
 											>
 												{showPassword1 ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</Button>
-										</div>
-									</FormControl>
+											</InputGroupButton>
+										</InputGroupAddon>
+									</InputGroup>
 									<FormMessage />
 								</FormItem>
 							)}
@@ -228,30 +233,29 @@ const RegisterForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Confirm Password</FormLabel>
-									<FormControl>
-										<div className="relative">
-											<Input
+									<InputGroup className="h-10">
+										<FormControl>
+											<InputGroupInput
 												type={showPassword2 ? "text" : "password"}
 												{...field}
 											/>
-											<Button
+										</FormControl>
+										<InputGroupAddon align="inline-end">
+											<InputGroupButton
 												aria-label={
 													showPassword2 ? "Hide password" : "Show password"
 												}
-												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
 												onClick={() => setShowPassword2(!showPassword2)}
-												size="icon"
-												type="button"
-												variant="ghost"
+												size="icon-xs"
 											>
 												{showPassword2 ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</Button>
-										</div>
-									</FormControl>
+											</InputGroupButton>
+										</InputGroupAddon>
+									</InputGroup>
 									<FormMessage />
 								</FormItem>
 							)}

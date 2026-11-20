@@ -18,7 +18,7 @@ function makeData(
 	return {
 		canUnlinkGitHub: true,
 		canUnlinkGoogle: true,
-		github: { connected: false },
+		github: { connected: false, hasImportAccess: false },
 		google: {
 			connected: true,
 			email: "user@example.com",
@@ -30,6 +30,43 @@ function makeData(
 		primaryAuthProvider: "LOCAL",
 	};
 }
+
+const GITHUB_NO_IMPORT_NOTE =
+	"Connected for sign-in. To import from GitHub, connect again from Import File.";
+
+describe("ConnectedAccountsForm GitHub note", () => {
+	it("explains that import needs a new connection when GitHub is linked without import access", () => {
+		renderWithoutProviders(
+			<ConnectedAccountsForm
+				data={{
+					...makeData(),
+					github: { connected: true, hasImportAccess: false },
+				}}
+			/>
+		);
+
+		expect(screen.getByText(GITHUB_NO_IMPORT_NOTE)).toBeInTheDocument();
+	});
+
+	it("shows no note when GitHub is linked with import access", () => {
+		renderWithoutProviders(
+			<ConnectedAccountsForm
+				data={{
+					...makeData(),
+					github: { connected: true, hasImportAccess: true },
+				}}
+			/>
+		);
+
+		expect(screen.queryByText(GITHUB_NO_IMPORT_NOTE)).not.toBeInTheDocument();
+	});
+
+	it("shows no note when GitHub is not linked", () => {
+		renderWithoutProviders(<ConnectedAccountsForm data={makeData()} />);
+
+		expect(screen.queryByText(GITHUB_NO_IMPORT_NOTE)).not.toBeInTheDocument();
+	});
+});
 
 describe("ConnectedAccountsForm", () => {
 	it("shows the needs-re-authorisation state with a Reconnect button when Google's Drive tokens are gone", () => {

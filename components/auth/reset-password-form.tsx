@@ -20,7 +20,12 @@ import {
 	FormLabel,
 	FormMessage,
 } from "../ui/form";
-import { Input } from "../ui/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from "../ui/input-group";
 
 type FormValues = ResetPasswordFormInput;
 
@@ -195,31 +200,30 @@ const ResetPasswordForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>New password</FormLabel>
-									<div className="relative">
+									<InputGroup className="h-10">
 										<FormControl>
-											<Input
+											<InputGroupInput
 												autoComplete="new-password"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
 										</FormControl>
-										<Button
-											aria-label={
-												showPassword ? "Hide password" : "Show password"
-											}
-											className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
-											onClick={() => setShowPassword(!showPassword)}
-											size="icon"
-											type="button"
-											variant="ghost"
-										>
-											{showPassword ? (
-												<EyeOff className="h-4 w-4" />
-											) : (
-												<Eye className="h-4 w-4" />
-											)}
-										</Button>
-									</div>
+										<InputGroupAddon align="inline-end">
+											<InputGroupButton
+												aria-label={
+													showPassword ? "Hide password" : "Show password"
+												}
+												onClick={() => setShowPassword(!showPassword)}
+												size="icon-xs"
+											>
+												{showPassword ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</InputGroupButton>
+										</InputGroupAddon>
+									</InputGroup>
 									<FormDescription>
 										Must be at least 8 characters with one uppercase letter, one
 										number, and one special character.
@@ -234,33 +238,34 @@ const ResetPasswordForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Confirm new password</FormLabel>
-									<div className="relative">
+									<InputGroup className="h-10">
 										<FormControl>
-											<Input
+											<InputGroupInput
 												autoComplete="new-password"
 												type={showConfirmPassword ? "text" : "password"}
 												{...field}
 											/>
 										</FormControl>
-										<Button
-											aria-label={
-												showConfirmPassword ? "Hide password" : "Show password"
-											}
-											className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
-											onClick={() =>
-												setShowConfirmPassword(!showConfirmPassword)
-											}
-											size="icon"
-											type="button"
-											variant="ghost"
-										>
-											{showConfirmPassword ? (
-												<EyeOff className="h-4 w-4" />
-											) : (
-												<Eye className="h-4 w-4" />
-											)}
-										</Button>
-									</div>
+										<InputGroupAddon align="inline-end">
+											<InputGroupButton
+												aria-label={
+													showConfirmPassword
+														? "Hide password"
+														: "Show password"
+												}
+												onClick={() =>
+													setShowConfirmPassword(!showConfirmPassword)
+												}
+												size="icon-xs"
+											>
+												{showConfirmPassword ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</InputGroupButton>
+										</InputGroupAddon>
+									</InputGroup>
 									<FormMessage />
 								</FormItem>
 							)}

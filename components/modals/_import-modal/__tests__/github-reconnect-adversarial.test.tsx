@@ -92,7 +92,7 @@ describe("GitHubImportTab connect button", () => {
 			/>
 		);
 
-		await user.click(screen.getByRole("button"));
+		await user.click(screen.getByRole("button", { name: "Connect GitHub" }));
 
 		expect(window.location.href).toBe("/api/auth/link/github");
 	});

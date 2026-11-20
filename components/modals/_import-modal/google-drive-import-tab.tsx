@@ -63,7 +63,7 @@ function GoogleConnectPrompt() {
 			</p>
 			<Button onClick={handleConnect} variant="outline">
 				<GoogleIcon className="mr-2 h-4 w-4" />
-				Sign in with Google
+				Connect Google
 			</Button>
 		</div>
 	);
