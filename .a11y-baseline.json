@@ -137,8 +137,7 @@
   },
   "/login": {
     "violations": {
-      "color-contrast": 2,
-      "label": 1
+      "color-contrast": 2
     },
     "cls": 0
   },
@@ -150,8 +149,7 @@
   },
   "/register": {
     "violations": {
-      "color-contrast": 2,
-      "label": 1
+      "color-contrast": 2
     },
     "cls": 0
   },
@@ -159,6 +157,6 @@
     "violations": {
       "color-contrast": 3
     },
-    "cls": 0.0033
+    "cls": 0.0025
   }
 }
