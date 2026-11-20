@@ -2,7 +2,7 @@
  * Theme Presets
  *
  * Curated colour presets in OKLCH format.
- * Modern Minimal is the default — the first entry in the array is used
+ * TEA (the platform's own palette) is the default — the first entry in the array is used
  * by ThemePresetProvider when no preference is saved.
  *
  * To add a new preset: create a file in this directory, then add it to the
@@ -19,8 +19,10 @@ import { highContrastPreset } from "./high-contrast";
 import { modernMinimalPreset } from "./modern-minimal";
 import { retroArcadePreset } from "./retro-arcade";
 import { sunsetHorizonPreset } from "./sunset-horizon";
+import { teaPreset } from "./tea";
 
 export const themePresets: ThemePreset[] = [
+	teaPreset,
 	modernMinimalPreset,
 	catpuccinPreset,
 	highContrastPreset,
