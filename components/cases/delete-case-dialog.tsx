@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -10,6 +11,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import type { CaseItemName } from "@/lib/case-item-name";
 import type { PublishedCopyChoice } from "@/lib/schemas/case-trash";
 
@@ -22,6 +24,8 @@ interface DeleteCaseDialogProps {
 	loading: boolean;
 	onCancel: () => void;
 	onConfirm: (publishedCopy: PublishedCopyChoice) => void;
+	/** Receives focus on close when the opener has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -40,7 +44,9 @@ export function DeleteCaseDialog({
 	loading,
 	onCancel,
 	onConfirm,
+	returnFocusRef,
 }: DeleteCaseDialogProps) {
+	const returnFocus = useReturnFocus(returnFocusRef);
 	return (
 		<AlertDialog
 			onOpenChange={(open) => {
@@ -50,7 +56,7 @@ export function DeleteCaseDialog({
 			}}
 			open={isOpen}
 		>
-			<AlertDialogContent>
+			<AlertDialogContent {...returnFocus}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>
 						{`This ${itemName} is published on Discover`}
