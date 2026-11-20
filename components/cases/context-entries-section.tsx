@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, PlusIcon, Tag, Trash2 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -198,13 +198,33 @@ const ENTRY_PARTS: readonly EntryPart[] = ["name", "text", "value"];
 
 function UnnameWarning({
 	entry,
+	hasValue,
 	onCancel,
+	onClose,
 	onConfirm,
 }: {
 	entry: NamedContextEntry;
+	/** Whether the entry still has a value; the warning is about losing it. */
+	hasValue: boolean;
+	/** Keep the name: closes the warning and returns focus to the row. */
 	onCancel: () => void;
+	/** Close the warning without moving focus. */
+	onClose: () => void;
 	onConfirm: () => void;
 }) {
+	const keepRef = useRef<HTMLButtonElement>(null);
+	// Keep name is the safe choice, so focus starts there.
+	useEffect(() => {
+		keepRef.current?.focus();
+	}, []);
+	useEffect(() => {
+		if (!hasValue) {
+			onClose();
+		}
+	}, [hasValue, onClose]);
+	if (!hasValue) {
+		return null;
+	}
 	return (
 		<div
 			className="space-y-2 rounded-md border border-warning/50 bg-warning/10 p-2 text-xs"
@@ -218,7 +238,13 @@ function UnnameWarning({
 				<Button onClick={onConfirm} size="sm" type="button" variant="outline">
 					Remove name and value
 				</Button>
-				<Button onClick={onCancel} size="sm" type="button" variant="ghost">
+				<Button
+					onClick={onCancel}
+					ref={keepRef}
+					size="sm"
+					type="button"
+					variant="ghost"
+				>
 					Keep name
 				</Button>
 			</div>
@@ -285,6 +311,8 @@ function NamedEntryRow({
 	problemId?: string;
 }) {
 	const [confirming, setConfirming] = useState(false);
+	const removeNameRef = useRef<HTMLButtonElement>(null);
+	const closeWarning = useCallback(() => setConfirming(false), []);
 	const boxes = useRef<Record<EntryPart, HTMLInputElement | null>>({
 		name: null,
 		text: null,
@@ -349,6 +377,7 @@ function NamedEntryRow({
 										onClick={() =>
 											hasValue ? setConfirming(true) : onUnname()
 										}
+										ref={removeNameRef}
 										size="sm"
 										type="button"
 										variant="ghost"
@@ -362,7 +391,12 @@ function NamedEntryRow({
 						{confirming && (
 							<UnnameWarning
 								entry={current}
-								onCancel={() => setConfirming(false)}
+								hasValue={hasValue}
+								onCancel={() => {
+									setConfirming(false);
+									removeNameRef.current?.focus();
+								}}
+								onClose={closeWarning}
 								onConfirm={onUnname}
 							/>
 						)}
