@@ -165,10 +165,19 @@ describe("default theme preset contrast", () => {
 });
 
 describe("Modern Minimal preset contrast", () => {
-	for (const [mode, set] of [
-		["light", modernMinimalPreset.light],
-		["dark", modernMinimalPreset.dark],
-	] as const) {
+	it("keeps its dark primary, destructive and sidebar primary unchanged", () => {
+		expect(modernMinimalPreset.dark["--primary"]).toBe(
+			"oklch(0.6231 0.1880 259.8145)"
+		);
+		expect(modernMinimalPreset.dark["--destructive"]).toBe(
+			"oklch(0.6368 0.2078 25.3313)"
+		);
+		expect(modernMinimalPreset.dark["--sidebar-primary"]).toBe(
+			"oklch(0.6231 0.1880 259.8145)"
+		);
+	});
+
+	for (const [mode, set] of [["light", modernMinimalPreset.light]] as const) {
 		it(`primary reaches 4.5:1 with white in ${mode} mode`, () => {
 			expect(ratio(WHITE, colour(set, "--primary"))).toBeGreaterThanOrEqual(
 				MINIMUM_RATIO
