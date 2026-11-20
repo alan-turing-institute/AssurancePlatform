@@ -1,7 +1,7 @@
 "use client";
 
 import { Database, FolderOpenDot, Loader2, Route } from "lucide-react";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import type { Node } from "reactflow";
 import {
 	Dialog,
@@ -27,6 +27,8 @@ export interface AttachElementDialogProps {
 	nodeType: DiagramNodeType;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
+	/** Receives focus on close when the opener has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Map display types to icons */
@@ -41,8 +43,9 @@ export function AttachElementDialog({
 	nodeType,
 	open,
 	onOpenChange,
+	returnFocusRef,
 }: AttachElementDialogProps) {
-	const returnFocus = useReturnFocus();
+	const returnFocus = useReturnFocus(returnFocusRef);
 	const { orphanedElements } = useStore();
 	const [loading, setLoading] = useState(false);
 

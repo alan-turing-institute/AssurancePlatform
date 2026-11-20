@@ -7,7 +7,7 @@ import {
 	Trash2,
 	Unplug,
 } from "lucide-react";
-import { useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import type { Node } from "reactflow";
 import { useEdges, useNodes } from "reactflow";
 import ActionTooltip from "@/components/ui/action-tooltip";
@@ -211,6 +211,7 @@ interface ConfirmationDialogsProps {
 	onDeleteOpenChange: (v: boolean) => void;
 	onDetachOpenChange: (v: boolean) => void;
 	onMoveOpenChange: (v: boolean) => void;
+	triggerRef: RefObject<HTMLElement | null>;
 }
 
 function ConfirmationDialogs({
@@ -225,9 +226,12 @@ function ConfirmationDialogs({
 	onMoveOpenChange,
 	onConfirmDetach,
 	onConfirmDelete,
+	triggerRef,
 }: ConfirmationDialogsProps) {
-	const detachReturnFocus = useReturnFocus();
-	const deleteReturnFocus = useReturnFocus();
+	// The menu item that opened each dialog is gone by the time it closes, so
+	// focus goes back to the menu's button.
+	const detachReturnFocus = useReturnFocus(triggerRef);
+	const deleteReturnFocus = useReturnFocus(triggerRef);
 	const nodeName = (node.data?.name as string) || "this element";
 
 	return (
@@ -237,6 +241,7 @@ function ConfirmationDialogs({
 				nodeType={nodeType}
 				onOpenChange={onMoveOpenChange}
 				open={moveOpen}
+				returnFocusRef={triggerRef}
 			/>
 
 			<AlertDialog onOpenChange={onDetachOpenChange} open={detachOpen}>
@@ -329,6 +334,7 @@ export default function NodeOptionsMenu({
 	const [detachDialogOpen, setDetachDialogOpen] = useState(false);
 	const [attachDialogOpen, setAttachDialogOpen] = useState(false);
 	const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+	const triggerRef = useRef<HTMLButtonElement>(null);
 
 	const readOnly = !caseAccessAtLeast(assuranceCase?.permissions, "edit");
 
@@ -419,7 +425,7 @@ export default function NodeOptionsMenu({
 	return (
 		<>
 			<DropdownMenu>
-				<ActionTooltip label={MORE_OPTIONS_LABEL}>
+				<ActionTooltip label={MORE_OPTIONS_LABEL} ref={triggerRef}>
 					<DropdownMenuTrigger asChild>
 						<button
 							aria-label={MORE_OPTIONS_LABEL}
@@ -476,6 +482,7 @@ export default function NodeOptionsMenu({
 				nodeType={nodeType}
 				onOpenChange={setAttachDialogOpen}
 				open={attachDialogOpen}
+				returnFocusRef={triggerRef}
 			/>
 
 			{!isGoal && (
@@ -491,6 +498,7 @@ export default function NodeOptionsMenu({
 					onDeleteOpenChange={setDeleteDialogOpen}
 					onDetachOpenChange={setDetachDialogOpen}
 					onMoveOpenChange={setMoveDialogOpen}
+					triggerRef={triggerRef}
 				/>
 			)}
 		</>

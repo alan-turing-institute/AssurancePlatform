@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type RefObject, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 
@@ -13,6 +13,8 @@ interface AlertModalProps {
 	message?: string;
 	onClose: () => void;
 	onConfirm: () => void;
+	/** Receives focus on close when the opener has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 export const AlertModal: React.FC<AlertModalProps> = ({
@@ -24,6 +26,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
 	confirmButtonText,
 	cancelButtonText,
 	children,
+	returnFocusRef,
 }) => {
 	const [isMounted, setIsMounted] = useState(false);
 
@@ -40,6 +43,7 @@ export const AlertModal: React.FC<AlertModalProps> = ({
 			description={message ? message : "This action cannot be undone."}
 			isOpen={isOpen}
 			onClose={onClose}
+			returnFocusRef={returnFocusRef}
 			title="Are you sure?"
 		>
 			{children}

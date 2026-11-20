@@ -8,7 +8,7 @@ import {
 	Scale,
 	ShieldAlert,
 } from "lucide-react";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import type { Node } from "reactflow";
 import AddCitedElementForm, {
 	type CitedElementKind,
@@ -35,6 +35,8 @@ interface NodeAddDialogProps {
 	onOpenChange: (open: boolean) => void;
 	/** Whether the dialog is open */
 	open: boolean;
+	/** Receives focus on close when the opener has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /** Get display label for element type */
@@ -124,8 +126,9 @@ export default function NodeAddDialog({
 	elementType,
 	open,
 	onOpenChange,
+	returnFocusRef,
 }: NodeAddDialogProps) {
-	const returnFocus = useReturnFocus();
+	const returnFocus = useReturnFocus(returnFocusRef);
 	const [_unresolvedChanges, setUnresolvedChanges] = useState(false);
 
 	const handleClose = () => {

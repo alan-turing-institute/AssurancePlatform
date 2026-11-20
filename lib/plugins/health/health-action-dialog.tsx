@@ -67,7 +67,7 @@ async function readErrorMessage(response: Response): Promise<string> {
  * error toast when it refuses. The dialog stays open on a refusal so the
  * person can read it and try again; a 409 also calls `onRefused`, because it
  * means the list the person was looking at is out of date. When the dialog
- * closes, focus goes back to `returnFocusTo`.
+ * closes, focus goes back to `returnFocusTo`, otherwise to whatever opened it.
  */
 export function HealthActionDialog({
 	buildRequest,

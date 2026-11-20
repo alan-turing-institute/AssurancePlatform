@@ -112,6 +112,23 @@ describe("useReturnFocus edge cases", () => {
 		expect(document.activeElement).toBe(newer);
 	});
 
+	it("falls through to the fallback when an attached opener cannot take focus", () => {
+		const opener = addButton("Delete");
+		const fallback = addButton("Menu");
+		const { result } = renderHook(() => useReturnFocus({ current: fallback }));
+
+		opener.focus();
+		result.current.onOpenAutoFocus(cancelable());
+		const inside = addButton("Inside");
+		inside.focus();
+		opener.disabled = true;
+		const close = cancelable();
+		result.current.onCloseAutoFocus(close);
+
+		expect(document.activeElement).toBe(fallback);
+		expect(close.defaultPrevented).toBe(true);
+	});
+
 	it("keeps the same handlers across renders", () => {
 		const { result, rerender } = renderHook(() => useReturnFocus());
 		const before = result.current;

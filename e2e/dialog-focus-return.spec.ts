@@ -45,7 +45,7 @@ test.describe("Dialog focus return", () => {
 
 		await closeWithEscape(
 			page,
-			page.getByRole("dialog", { name: "Are you sure?" })
+			page.getByRole("dialog", { name: "Are you sure?", exact: true })
 		);
 		await expect(opener).toBeFocused();
 	});
@@ -58,7 +58,7 @@ test.describe("Dialog focus return", () => {
 		await openWithKeyboard(opener);
 
 		await closeWithButton(
-			page.getByRole("dialog", { name: "Are you sure?" }),
+			page.getByRole("dialog", { name: "Are you sure?", exact: true }),
 			"Cancel"
 		);
 		await expect(opener).toBeFocused();
@@ -73,7 +73,7 @@ test.describe("Dialog focus return", () => {
 
 		await closeWithEscape(
 			page,
-			page.getByRole("dialog", { name: "Are you sure?" })
+			page.getByRole("dialog", { name: "Are you sure?", exact: true })
 		);
 		await expect(opener).toBeFocused();
 	});
@@ -86,7 +86,7 @@ test.describe("Dialog focus return", () => {
 		await openWithKeyboard(opener);
 
 		await closeWithButton(
-			page.getByRole("dialog", { name: "Are you sure?" }),
+			page.getByRole("dialog", { name: "Are you sure?", exact: true }),
 			"No, keep current identifiers"
 		);
 		await expect(opener).toBeFocused();
@@ -133,7 +133,7 @@ test.describe("Dialog focus return", () => {
 
 		await closeWithEscape(
 			page,
-			page.getByRole("dialog", { name: "Are you sure?" })
+			page.getByRole("dialog", { name: "Are you sure?", exact: true })
 		);
 		await expect(opener).toBeFocused();
 	});
@@ -145,10 +145,16 @@ test.describe("Dialog focus return", () => {
 		await dashboard.goto();
 		await expect(dashboard.caseGrid).toBeVisible();
 
-		const opener = page.getByRole("button", { name: "Import File" });
+		const opener = page.getByRole("button", {
+			name: "Import File",
+			exact: true,
+		});
 		await openWithKeyboard(opener);
 
-		const dialog = page.getByRole("dialog");
+		const dialog = page.getByRole("dialog", {
+			name: "Import Case",
+			exact: true,
+		});
 		await closeWithEscape(page, dialog);
 		await expect(opener).toBeFocused();
 	});
