@@ -122,6 +122,7 @@ export function IntegrationCard({
 	const [tokenReveal, setTokenReveal] = useState<TokenReveal | null>(null);
 	const [issueDialogOpen, setIssueDialogOpen] = useState(false);
 	const issueButtonRef = useRef<HTMLButtonElement>(null);
+	const deleteButtonRef = useRef<HTMLButtonElement>(null);
 	const cardRef = useRef<HTMLDivElement>(null);
 	const tokenListRef = useRef<HTMLFieldSetElement>(null);
 	// The token whose Rotate button should take focus once the secret dialog
@@ -130,6 +131,9 @@ export function IntegrationCard({
 	// The token whose rotation was refused; focus returns to its row once the
 	// reloaded list has rendered.
 	const [refusedTokenId, setRefusedTokenId] = useState<string | null>(null);
+	const [focusAfterRevoke, setFocusAfterRevoke] = useState<
+		"integration" | "token" | null
+	>(null);
 	const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
@@ -225,6 +229,33 @@ export function IntegrationCard({
 		focusTokenControl(refusedTokenId);
 	}, [refusedTokenId, pendingTokenKey, integration.id, focusTokenControl]);
 
+	// A confirmed revoke removes the button that opened its confirmation (the
+	// integration's Revoke button, or the token's row) once the request
+	// finishes, which would leave focus on the page body. When the request is
+	// done, focus goes to the control that replaces it, if focus was lost.
+	useEffect(() => {
+		if (focusAfterRevoke === null) {
+			return;
+		}
+		const busy =
+			focusAfterRevoke === "integration"
+				? pending
+				: pendingTokenKey?.startsWith(`${integration.id}:`);
+		if (busy) {
+			return;
+		}
+		setFocusAfterRevoke(null);
+		const active = document.activeElement;
+		const focusLost =
+			!active || active === document.body || cardRef.current?.contains(active);
+		if (focusLost) {
+			(focusAfterRevoke === "integration"
+				? deleteButtonRef
+				: issueButtonRef
+			).current?.focus();
+		}
+	}, [focusAfterRevoke, pending, pendingTokenKey, integration.id]);
+
 	async function handleRotateToken(tokenId: string) {
 		const result = await onRotateToken(integration.id, tokenId);
 		if (!result) {
@@ -245,6 +276,7 @@ export function IntegrationCard({
 		const tokenId = confirmRevokeTokenId;
 		setConfirmRevokeTokenId(null);
 		if (tokenId) {
+			setFocusAfterRevoke("token");
 			onRevokeToken(integration.id, tokenId);
 		}
 	}
@@ -330,6 +362,7 @@ export function IntegrationCard({
 								: "Revoke first — delete is permanent"
 						}
 						onClick={() => setConfirmDeleteOpen(true)}
+						ref={deleteButtonRef}
 						size="sm"
 						type="button"
 						variant="destructive"
@@ -424,6 +457,7 @@ export function IntegrationCard({
 
 			<IntegrationTokenSecretModal
 				onClose={() => setTokenReveal(null)}
+				returnFocusRef={issueButtonRef}
 				reveal={tokenReveal}
 			/>
 
@@ -436,8 +470,10 @@ export function IntegrationCard({
 				onClose={() => setConfirmRevokeOpen(false)}
 				onConfirm={() => {
 					setConfirmRevokeOpen(false);
+					setFocusAfterRevoke("integration");
 					onRevoke(integration.id);
 				}}
+				returnFocusRef={deleteButtonRef}
 			/>
 
 			<IntegrationDeleteDialog
@@ -462,6 +498,7 @@ export function IntegrationCard({
 				message="Revoking this token takes effect immediately and cannot be undone — any caller still using it will start failing to authenticate right away."
 				onClose={() => setConfirmRevokeTokenId(null)}
 				onConfirm={handleConfirmRevokeToken}
+				returnFocusRef={issueButtonRef}
 			/>
 		</div>
 	);
