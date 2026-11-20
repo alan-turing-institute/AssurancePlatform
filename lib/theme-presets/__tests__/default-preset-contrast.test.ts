@@ -10,6 +10,11 @@ const MINIMUM_RATIO = 4.5;
 const HOVER_OPACITY = 0.9;
 const WHITE: Rgb = [1, 1, 1];
 
+/** Browsers paint 8-bit channels, so ratios are computed from rounded values. */
+function toEightBit(channel: number): number {
+	return Math.round(channel * 255) / 255;
+}
+
 function oklchToRgb(value: string): Rgb {
 	const match = value.match(OKLCH_PATTERN);
 	if (!match) {
@@ -32,9 +37,11 @@ function oklchToRgb(value: string): Rgb {
 	];
 	return linear.map((channel) => {
 		const clamped = Math.min(1, Math.max(0, channel));
-		return clamped <= 0.003_130_8
-			? 12.92 * clamped
-			: 1.055 * clamped ** (1 / 2.4) - 0.055;
+		const encoded =
+			clamped <= 0.003_130_8
+				? 12.92 * clamped
+				: 1.055 * clamped ** (1 / 2.4) - 0.055;
+		return toEightBit(encoded);
 	}) as Rgb;
 }
 
@@ -59,8 +66,8 @@ function colour(set: ThemeVariableSet, name: ThemeVariable): Rgb {
 }
 
 function blend(top: Rgb, bottom: Rgb, opacity: number): Rgb {
-	return top.map(
-		(channel, i) => channel * opacity + (bottom[i] ?? 0) * (1 - opacity)
+	return top.map((channel, i) =>
+		toEightBit(channel * opacity + (bottom[i] ?? 0) * (1 - opacity))
 	) as Rgb;
 }
 
@@ -111,6 +118,39 @@ describe("default theme preset contrast", () => {
 					ratio(colour(set, "--accent-foreground"), colour(set, "--accent"))
 				).toBeGreaterThanOrEqual(MINIMUM_RATIO);
 			});
+
+			it("sidebar accent text reaches 4.5:1 on sidebar accent", () => {
+				expect(
+					ratio(
+						colour(set, "--sidebar-accent-foreground"),
+						colour(set, "--sidebar-accent")
+					)
+				).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+			});
+
+			it("sidebar muted text reaches 4.5:1 on the sidebar", () => {
+				expect(
+					ratio(colour(set, "--sidebar-muted"), colour(set, "--sidebar"))
+				).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+			});
+
+			it("sidebar text at 70 per cent opacity reaches 4.5:1 on the sidebar", () => {
+				const sidebar = colour(set, "--sidebar");
+				const text = blend(colour(set, "--sidebar-foreground"), sidebar, 0.7);
+				expect(ratio(text, sidebar)).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+			});
+
+			it("body text reaches 4.5:1 at 70 per cent opacity on card and 80 per cent on background", () => {
+				const foreground = colour(set, "--foreground");
+				const card = colour(set, "--card");
+				const background = colour(set, "--background");
+				expect(
+					ratio(blend(foreground, card, 0.7), card)
+				).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+				expect(
+					ratio(blend(foreground, background, 0.8), background)
+				).toBeGreaterThanOrEqual(MINIMUM_RATIO);
+			});
 		});
 	}
 
@@ -133,6 +173,12 @@ describe("Modern Minimal preset contrast", () => {
 			expect(ratio(WHITE, colour(set, "--primary"))).toBeGreaterThanOrEqual(
 				MINIMUM_RATIO
 			);
+		});
+
+		it(`sidebar primary reaches 4.5:1 with white in ${mode} mode`, () => {
+			expect(
+				ratio(WHITE, colour(set, "--sidebar-primary"))
+			).toBeGreaterThanOrEqual(MINIMUM_RATIO);
 		});
 
 		it(`destructive reaches 4.5:1 with white in ${mode} mode, also at 90 per cent opacity`, () => {

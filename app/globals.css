@@ -45,7 +45,7 @@
 
 :root {
 	--background: oklch(0.9578 0.0058 264.5321);
-	--foreground: oklch(0.4355 0.043 279.325);
+	--foreground: oklch(0.3534 0.043 279.325);
 
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.4355 0.043 279.325);
@@ -90,14 +90,14 @@
 	--info-foreground: oklch(0.202 0.0629 254.8129);
 
 	--sidebar: oklch(0.9335 0.0087 264.5206);
-	--sidebar-foreground: oklch(0.4355 0.043 279.325);
+	--sidebar-foreground: oklch(0.3122 0.043 279.325);
 	--sidebar-primary: oklch(0.5547 0.2503 297.0156);
 	--sidebar-primary-foreground: oklch(1 0 0);
 	--sidebar-accent: oklch(0.682 0.1448 235.3822);
-	--sidebar-accent-foreground: oklch(1 0 0);
+	--sidebar-accent-foreground: oklch(0.2429 0.0304 283.911);
 	--sidebar-border: oklch(0.8083 0.0174 271.1982);
 	--sidebar-ring: oklch(0.5547 0.2503 297.0156);
-	--sidebar-muted: oklch(0.6 0.03 272);
+	--sidebar-muted: oklch(0.5209 0.03 272);
 
 	--font-sans:
 		"Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -183,7 +183,7 @@
 	--sidebar-accent-foreground: oklch(0.2429 0.0304 283.911);
 	--sidebar-border: oklch(0.4037 0.032 280.152);
 	--sidebar-ring: oklch(0.7871 0.1187 304.7693);
-	--sidebar-muted: oklch(0.55 0.035 274);
+	--sidebar-muted: oklch(0.5878 0.035 274);
 
 	--shadow-2xs: 0 1px oklch(0 0 0 / 0.07);
 	--shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.07);
