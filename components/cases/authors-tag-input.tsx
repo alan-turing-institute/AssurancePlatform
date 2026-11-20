@@ -1,5 +1,6 @@
 "use client";
 
+import { Portal as TooltipPortal } from "@radix-ui/react-tooltip";
 import { InfoIcon, X } from "lucide-react";
 import { forwardRef, type KeyboardEvent, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -143,10 +144,16 @@ export const AuthorsTagInput = forwardRef<
 									<InfoIcon className="h-4 w-4" />
 								</button>
 							</TooltipTrigger>
-							<TooltipContent className="max-w-xs">
-								Type a name and press Enter to add it as a tag. Click the × on a
-								tag, or press Backspace with an empty input, to remove it.
-							</TooltipContent>
+							{/* The tip is portalled out of the sheet: left in place, its
+							removal when focus leaves the button mutates the sheet's focus
+							scope mid-move, and the scope pulls focus back to the sheet
+							instead of letting Tab reach the next control. */}
+							<TooltipPortal>
+								<TooltipContent className="max-w-xs">
+									Type a name and press Enter to add it as a tag. Click the × on
+									a tag, or press Backspace with an empty input, to remove it.
+								</TooltipContent>
+							</TooltipPortal>
 						</Tooltip>
 					</TooltipProvider>
 				</div>

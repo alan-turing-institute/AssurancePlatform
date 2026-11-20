@@ -495,8 +495,45 @@ describe("The warning while it is showing", () => {
 		const session = openEditor([SAVED_WINDOW]);
 		await removeName(session, 1);
 
-		await setValue(session, 1, "10 minutes");
+		await session.user.type(
+			await screen.findByLabelText("Context entry 1 value"),
+			" ago"
+		);
 
-		expectWarningNaming("window", "10 minutes");
+		expectWarningNaming("window", "5 minutes ago");
+	});
+});
+
+describe("Keyboard focus around the warning", () => {
+	it("focuses Keep name when the warning opens", async () => {
+		const session = openEditor([SAVED_WINDOW]);
+
+		await removeName(session, 1);
+
+		expect(screen.getByRole("button", { name: "Keep name" })).toHaveFocus();
+	});
+
+	it("returns focus to Remove name after Keep name", async () => {
+		const session = openEditor([SAVED_WINDOW]);
+		await removeName(session, 1);
+
+		await answer(session, "Keep name");
+
+		expectNoWarning();
+		expect(
+			screen.getByRole("button", { name: "Remove name of context entry 1" })
+		).toHaveFocus();
+	});
+
+	it("closes the warning when the value is cleared while it is open", async () => {
+		const session = openEditor([SAVED_WINDOW]);
+		await removeName(session, 1);
+
+		await setValue(session, 1, "");
+
+		expectNoWarning();
+		expect(
+			screen.queryByText("loses its value", { exact: false })
+		).not.toBeInTheDocument();
 	});
 });

@@ -39,6 +39,7 @@ import SupportEdge from "@/components/cases/support-edge";
 import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import { stopSpaceScrollOnDiagramItem } from "@/lib/case/stop-space-scroll";
 import { caseExportToAssuranceCase } from "@/lib/docs/case-export-to-assurance-case";
 import {
 	type SelectedElementSummary,
@@ -179,8 +180,10 @@ function ReadOnlyCaseCanvasInner({
 			nodesConnectable={false}
 			nodesDraggable={false}
 			nodeTypes={nodeTypes}
+			onKeyDown={stopSpaceScrollOnDiagramItem}
 			onNodesChange={onNodesChange}
 			onSelectionChange={handleSelectionChange}
+			panActivationKeyCode={null}
 		>
 			<Controls />
 			<Background />
