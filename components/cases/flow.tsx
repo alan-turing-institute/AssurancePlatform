@@ -231,6 +231,7 @@ function Flow({ liveUpdatesNotice }: FlowProps) {
 						nodesDraggable={false}
 						nodeTypes={nodeTypes}
 						onNodesChange={onNodesChange}
+						panActivationKeyCode={null}
 					>
 						<Controls className="z-50" />
 						<Background />

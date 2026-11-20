@@ -181,6 +181,7 @@ function ReadOnlyCaseCanvasInner({
 			nodeTypes={nodeTypes}
 			onNodesChange={onNodesChange}
 			onSelectionChange={handleSelectionChange}
+			panActivationKeyCode={null}
 		>
 			<Controls />
 			<Background />

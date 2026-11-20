@@ -267,4 +267,68 @@ test.describe("Case management", () => {
 		await page.mouse.click(5, 5);
 		await expect(dialogTitle).not.toBeVisible();
 	});
+
+	test("Space activates the case toolbar buttons and the settings switch", async ({
+		page,
+	}) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const help = page.getByTestId("toolbar-help");
+		await help.waitFor({ state: "visible" });
+		await help.focus();
+		await page.keyboard.press("Space");
+		await expect(
+			page.getByRole("heading", { name: "Help", exact: true, level: 2 })
+		).toBeVisible();
+		await page.keyboard.press("Escape");
+
+		const settings = page.getByRole("button", {
+			name: "Settings",
+			exact: true,
+		});
+		await settings.focus();
+		await page.keyboard.press("Enter");
+		const popover = page.getByRole("dialog");
+		const marker = popover.getByRole("switch", {
+			name: "Show unsupported markers",
+			exact: true,
+		});
+		await expect(marker).toBeVisible();
+		const before = await marker.getAttribute("aria-checked");
+		await marker.focus();
+		await page.keyboard.press("Space");
+		await expect(marker).not.toHaveAttribute("aria-checked", before ?? "");
+	});
+
+	test("Space presses buttons in the edit element dialog", async ({ page }) => {
+		const dashboard = new DashboardPage(page);
+		await dashboard.goto();
+		await dashboard.caseCard("Simple Case").click();
+		await page.waitForURL(CASE_URL_PATTERN);
+
+		const editButton = g1EditButton(page);
+		await editButton.waitFor({ state: "visible" });
+		await editButton.click();
+
+		const dialog = page.getByRole("dialog", { name: "Editing G1" });
+		// Give the named entry a value so that removing its name warns.
+		await dialog
+			.getByRole("textbox", { name: "Context entry 1 value", exact: true })
+			.fill("5");
+		const removeName = dialog.getByRole("button", {
+			name: "Remove name of context entry 1",
+			exact: true,
+		});
+		await removeName.focus();
+		await page.keyboard.press("Space");
+		await expect(dialog.getByRole("alert")).toBeVisible();
+
+		const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
+		await cancel.focus();
+		await page.keyboard.press("Space");
+		await expect(dialog).not.toBeVisible();
+	});
 });
