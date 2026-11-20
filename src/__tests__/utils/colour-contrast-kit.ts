@@ -7,7 +7,8 @@ export function toEightBit(channel: number): number {
 	return Math.round(channel * 255) / 255;
 }
 
-export function oklchToRgb(value: string): Rgb {
+/** With `rounded` false the channels keep full precision, as axe reads them. */
+export function oklchToRgb(value: string, rounded = true): Rgb {
 	const match = value.match(OKLCH_PATTERN);
 	if (!match) {
 		throw new Error(`Not an OKLCH colour: ${value}`);
@@ -33,7 +34,7 @@ export function oklchToRgb(value: string): Rgb {
 			clamped <= 0.003_130_8
 				? 12.92 * clamped
 				: 1.055 * clamped ** (1 / 2.4) - 0.055;
-		return toEightBit(encoded);
+		return rounded ? toEightBit(encoded) : encoded;
 	}) as Rgb;
 }
 
