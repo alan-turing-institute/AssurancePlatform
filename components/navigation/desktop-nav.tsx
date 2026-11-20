@@ -90,7 +90,7 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 								))}
 							</ul>
 						</li>
-						<li>
+						<li aria-hidden="true">
 							<Separator className="bg-sidebar-border" />
 						</li>
 						<li>

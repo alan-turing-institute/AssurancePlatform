@@ -799,6 +799,27 @@ function levelFromGrants(c: {
 	return mapPermissionToFrontend(highest, false);
 }
 
+/** The summary fields common to every case list. */
+function baseCaseSummary(c: {
+	caseImage: { id: string } | null;
+	createdAt: Date;
+	createdById: string | null;
+	description: string | null;
+	id: string;
+	name: string;
+	updatedAt: Date;
+}) {
+	return {
+		id: c.id,
+		name: c.name,
+		description: c.description ?? undefined,
+		createdDate: c.createdAt.toISOString(),
+		updatedDate: c.updatedAt.toISOString(),
+		owner: c.createdById ?? undefined,
+		hasScreenshot: c.caseImage !== null,
+	};
+}
+
 /**
  * Reads the non-deleted cases of one kind that the user created or has been
  * given a direct permission on, newest first. Throws on a database failure;
@@ -837,13 +858,7 @@ export async function listOwnAndDirectlySharedCases(
 	});
 
 	return cases.map((c) => ({
-		id: c.id,
-		name: c.name,
-		description: c.description ?? undefined,
-		createdDate: c.createdAt.toISOString(),
-		updatedDate: c.updatedAt.toISOString(),
-		owner: c.createdById ?? undefined,
-		hasScreenshot: c.caseImage !== null,
+		...baseCaseSummary(c),
 		isDemo: c.isDemo,
 		kind: c.kind,
 		permissions: c.createdById === userId ? "owner" : levelFromGrants(c),
@@ -949,13 +964,7 @@ export async function listSharedCases(
 
 		return {
 			data: cases.map((c) => ({
-				id: c.id,
-				name: c.name,
-				description: c.description ?? undefined,
-				createdDate: c.createdAt.toISOString(),
-				updatedDate: c.updatedAt.toISOString(),
-				owner: c.createdById ?? undefined,
-				hasScreenshot: c.caseImage !== null,
+				...baseCaseSummary(c),
 				kind: c.kind,
 				permissions: levelFromGrants(c),
 				published: c.published,

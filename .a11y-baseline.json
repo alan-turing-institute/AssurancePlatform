@@ -10,7 +10,7 @@
       "button-name": 1,
       "color-contrast": 7
     },
-    "cls": 0.0205
+    "cls": 0.0927
   },
   "/auth-error": {
     "violations": {
@@ -148,6 +148,6 @@
     "violations": {
       "color-contrast": 3
     },
-    "cls": 0.0025
+    "cls": 0.0033
   }
 }
