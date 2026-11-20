@@ -54,7 +54,7 @@ function GitHubConnectPrompt() {
 				variant="outline"
 			>
 				<Github className="mr-2 h-4 w-4" />
-				Sign in with GitHub
+				Connect GitHub
 			</Button>
 		</div>
 	);

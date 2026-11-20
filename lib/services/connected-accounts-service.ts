@@ -23,6 +23,11 @@ export interface ConnectedAccountsData {
 		connected: boolean;
 		username?: string;
 		tokenExpiry?: Date | null;
+		/**
+		 * Whether a stored, unexpired token is available for importing from
+		 * GitHub. Presence only; the token is never decrypted or returned.
+		 */
+		hasImportAccess: boolean;
 	};
 
 	/** Google connection status */
@@ -118,6 +123,7 @@ export async function getConnectedAccounts(
 				passwordHash: true,
 				githubId: true,
 				githubUsername: true,
+				githubAccessToken: true,
 				githubTokenExpiresAt: true,
 				googleId: true,
 				googleEmail: true,
@@ -145,6 +151,12 @@ export async function getConnectedAccounts(
 					connected: hasGitHub,
 					username: user.githubUsername ?? undefined,
 					tokenExpiry: user.githubTokenExpiresAt,
+					hasImportAccess:
+						!!user.githubAccessToken &&
+						!(
+							user.githubTokenExpiresAt &&
+							user.githubTokenExpiresAt < new Date()
+						),
 				},
 				google: {
 					connected: hasGoogle,

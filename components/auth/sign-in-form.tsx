@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
 import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
+import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import {
 	Form,
@@ -21,6 +22,12 @@ import {
 	FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from "../ui/input-group";
 
 const RATE_LIMITED_PREFIX = `${SIGN_IN_RATE_LIMITED}:`;
 
@@ -92,12 +99,14 @@ const SignInForm = () => {
 			} else {
 				setLoading(false);
 				setErrors([signInFailureMessage(result?.error)]);
+				form.setFocus("password");
 			}
 		} catch (_error) {
 			setLoading(false);
 			setErrors([
 				"Connection error. Please check your internet and try again.",
 			]);
+			form.setFocus("password");
 		}
 	}
 
@@ -146,11 +155,10 @@ const SignInForm = () => {
 			)}
 
 			{errors?.map((error) => (
-				<div
-					className="mt-4 -mb-4 rounded-md border border-destructive bg-destructive/20 px-4 py-2 text-destructive"
-					key={crypto.randomUUID()}
-				>
-					<p>{error}</p>
+				<div className="mt-4 -mb-4" key={error}>
+					<Alert variant="destructive">
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
 				</div>
 			))}
 
@@ -188,31 +196,32 @@ const SignInForm = () => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Password</FormLabel>
-									<FormControl>
-										<div className="relative">
-											<Input
+									<InputGroup className="h-10">
+										<FormControl>
+											{/* Cancels the shared text box's focus offset so the group's own ring shows. */}
+											<InputGroupInput
 												autoComplete="current-password"
+												className="focus-visible:ring-offset-0"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
-											<Button
+										</FormControl>
+										<InputGroupAddon align="inline-end">
+											<InputGroupButton
 												aria-label={
 													showPassword ? "Hide password" : "Show password"
 												}
-												className="absolute top-1/2 right-2 h-8 w-8 -translate-y-1/2"
 												onClick={() => setShowPassword(!showPassword)}
-												size="icon"
-												type="button"
-												variant="ghost"
+												size="icon-xs"
 											>
 												{showPassword ? (
 													<EyeOff className="h-4 w-4" />
 												) : (
 													<Eye className="h-4 w-4" />
 												)}
-											</Button>
-										</div>
-									</FormControl>
+											</InputGroupButton>
+										</InputGroupAddon>
+									</InputGroup>
 									<FormMessage />
 								</FormItem>
 							)}
@@ -316,6 +325,9 @@ const SignInForm = () => {
 							)}
 						</Button>
 					</div>
+					<p className="mt-4 text-center text-muted-foreground text-sm">
+						GitHub sign-in reads your profile and email address only.
+					</p>
 				</div>
 			</div>
 		</div>

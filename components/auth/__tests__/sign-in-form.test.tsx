@@ -29,7 +29,7 @@ async function signInWith(query: string) {
 	const user = userEvent.setup();
 	const { container } = renderWithoutProviders(<SignInForm />);
 	await user.type(screen.getByLabelText(IDENTIFIER_REGEX), "alice");
-	// The password label is attached to a wrapper element, not the input.
+	// The password input is found by type; its label is attached to the input itself.
 	const passwordInput = container.querySelector('input[type="password"]');
 	if (!passwordInput) {
 		throw new Error("password input not rendered");
@@ -103,5 +103,50 @@ describe("SignInForm redirect after sign-in", () => {
 		await waitFor(() => {
 			expect(mockReplace).toHaveBeenCalledWith("/cases/1");
 		});
+	});
+});
+
+describe("SignInForm accessibility and wording", () => {
+	beforeEach(() => {
+		resetNavigationMocks();
+		mockUseSearchParams.mockReturnValue(new URLSearchParams());
+		vi.mocked(signIn).mockReset();
+	});
+
+	it("labels the password box", () => {
+		renderWithoutProviders(<SignInForm />);
+
+		const password = screen.getByLabelText("Password");
+
+		expect(password).toBeInstanceOf(HTMLInputElement);
+		expect(password).toHaveAttribute("type", "password");
+	});
+
+	it("announces a failed sign-in", async () => {
+		vi.mocked(signIn).mockResolvedValue({
+			ok: false,
+			error: "CredentialsSignin",
+			status: 401,
+			url: null,
+		});
+		const user = userEvent.setup();
+		renderWithoutProviders(<SignInForm />);
+		await user.type(screen.getByLabelText(IDENTIFIER_REGEX), "alice");
+		await user.type(screen.getByLabelText("Password"), "Passw0rd!Passw0rd");
+		await user.click(screen.getByRole("button", { name: LOGIN_BUTTON_REGEX }));
+
+		const alert = await screen.findByRole("alert");
+
+		expect(alert).toHaveTextContent("Invalid credentials");
+	});
+
+	it("states what GitHub sign-in reads", () => {
+		renderWithoutProviders(<SignInForm />);
+
+		expect(
+			screen.getByText(
+				"GitHub sign-in reads your profile and email address only."
+			)
+		).toBeInTheDocument();
 	});
 });

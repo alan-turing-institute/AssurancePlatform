@@ -95,12 +95,14 @@ function ProviderCard({
 	connected,
 	needsReauthorisation,
 	details,
+	note,
 	canUnlink,
 	unlinkReason,
 	onConnect,
 	onDisconnect,
 	loading,
 }: {
+	note?: string;
 	name: string;
 	icon: React.ReactNode;
 	connected: boolean;
@@ -130,6 +132,9 @@ function ProviderCard({
 					<p className="text-muted-foreground text-sm">{status.label}</p>
 					{status.description && (
 						<p className="mt-1 text-warning text-xs">{status.description}</p>
+					)}
+					{connected && note && (
+						<p className="mt-1 text-muted-foreground text-xs">{note}</p>
 					)}
 				</div>
 			</div>
@@ -253,6 +258,11 @@ export function ConnectedAccountsForm({ data }: ConnectedAccountsFormProps) {
 						icon={<Github className="h-5 w-5" />}
 						loading={loading === "github"}
 						name="GitHub"
+						note={
+							data.github.hasImportAccess
+								? undefined
+								: "Connected for sign-in. To import from GitHub, connect again from Import File."
+						}
 						onConnect={() => handleConnect("github")}
 						onDisconnect={() => handleDisconnectClick("github")}
 						unlinkReason="You cannot disconnect GitHub because it is your only way to sign in. Connect another provider first."

@@ -75,6 +75,60 @@ describe("getConnectedAccounts", () => {
 	});
 });
 
+describe("getConnectedAccounts GitHub import access", () => {
+	async function githubImportAccess(
+		data: Partial<{
+			githubAccessToken: string | null;
+			githubTokenExpiresAt: Date | null;
+		}>
+	) {
+		const user = await createTestUser();
+		await prisma.user.update({
+			where: { id: user.id },
+			data: { githubId: "github-account-id", ...data },
+		});
+		const result = await getConnectedAccounts(user.id);
+		if (!("data" in result)) {
+			throw new Error("expected success");
+		}
+		return result.data.github;
+	}
+
+	it("is false when the token was cleared but the GitHub account is still linked", async () => {
+		const github = await githubImportAccess({ githubAccessToken: null });
+
+		expect(github.connected).toBe(true);
+		expect(github.hasImportAccess).toBe(false);
+	});
+
+	it("is true with a stored token that has not expired", async () => {
+		const github = await githubImportAccess({
+			githubAccessToken: "stored-token",
+			githubTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+		});
+
+		expect(github.hasImportAccess).toBe(true);
+	});
+
+	it("is true with a stored token that has no expiry", async () => {
+		const github = await githubImportAccess({
+			githubAccessToken: "stored-token",
+			githubTokenExpiresAt: null,
+		});
+
+		expect(github.hasImportAccess).toBe(true);
+	});
+
+	it("is false with a stored token that has expired", async () => {
+		const github = await githubImportAccess({
+			githubAccessToken: "stored-token",
+			githubTokenExpiresAt: new Date(Date.now() - 60 * 1000),
+		});
+
+		expect(github.hasImportAccess).toBe(false);
+	});
+});
+
 describe("unlinkProvider('google')", () => {
 	it("clears all five Google columns and, when Google was the sign-in provider, switches authProvider to LOCAL (password present)", async () => {
 		const user = await createTestUser({ authProvider: "GOOGLE" });

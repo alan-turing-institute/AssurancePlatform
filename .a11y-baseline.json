@@ -103,9 +103,7 @@
     "cls": 0
   },
   "/login": {
-    "violations": {
-      "label": 1
-    },
+    "violations": {},
     "cls": 0
   },
   "/privacy-policy": {
@@ -114,8 +112,7 @@
   },
   "/register": {
     "violations": {
-      "color-contrast": 1,
-      "label": 1
+      "color-contrast": 1
     },
     "cls": 0
   },

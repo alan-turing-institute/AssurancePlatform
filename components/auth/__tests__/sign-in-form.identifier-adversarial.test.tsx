@@ -35,7 +35,7 @@ function identifierInput(): HTMLInputElement {
 	return screen.getByLabelText(IDENTIFIER_LABEL) as HTMLInputElement;
 }
 
-/** The password label sits on a wrapper, so the input is the form's second one. */
+/** The password input is the form's second input. */
 function passwordInput(container: HTMLElement): HTMLInputElement {
 	const input = container.querySelectorAll("input")[1];
 	if (!input) {
