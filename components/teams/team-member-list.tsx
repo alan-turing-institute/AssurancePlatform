@@ -3,7 +3,7 @@
 import { MoreVertical, Shield, ShieldCheck, UserMinus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,10 @@ export function TeamMemberList({
 	const [removeModalOpen, setRemoveModalOpen] = useState(false);
 	const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
 	const [loading, setLoading] = useState(false);
+	// Each row has its own menu button; the one whose menu opened the removal
+	// dialog receives focus when the dialog closes.
+	const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+	const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
 
 	const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "OWNER";
 
@@ -170,6 +174,9 @@ export function TeamMemberList({
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
+													ref={(el) => {
+														triggerRefs.current[member.id] = el;
+													}}
 													size="icon"
 													title="More options"
 													variant="ghost"
@@ -201,6 +208,8 @@ export function TeamMemberList({
 												<DropdownMenuItem
 													className="text-destructive"
 													onClick={() => {
+														removeTriggerRef.current =
+															triggerRefs.current[member.id] ?? null;
 														setMemberToRemove(member);
 														setRemoveModalOpen(true);
 													}}
@@ -226,6 +235,7 @@ export function TeamMemberList({
 					setMemberToRemove(null);
 				}}
 				onConfirm={handleRemoveMember}
+				returnFocusRef={removeTriggerRef}
 			/>
 		</>
 	);

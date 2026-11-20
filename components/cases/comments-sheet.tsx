@@ -9,6 +9,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { caseAccessAtLeast } from "@/lib/case/case-access";
 import useStore from "@/store/store";
 import NodeComment from "./node-comment";
@@ -26,6 +27,7 @@ type NodeWithData = Node & {
  * Can be triggered from NodeActionGroup or other components.
  */
 export default function CommentsSheet() {
+	const returnFocus = useReturnFocus();
 	const {
 		commentsSheetOpen,
 		commentsSheetNode,
@@ -55,7 +57,11 @@ export default function CommentsSheet() {
 
 	return (
 		<Sheet onOpenChange={handleOpenChange} open={commentsSheetOpen}>
-			<SheetContent className="overflow-y-scroll" data-testid="comments-sheet">
+			<SheetContent
+				className="overflow-y-scroll"
+				data-testid="comments-sheet"
+				{...returnFocus}
+			>
 				<SheetHeader>
 					<SheetTitle>Comments for {nodeName}</SheetTitle>
 					<SheetDescription>

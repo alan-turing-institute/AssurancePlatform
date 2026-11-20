@@ -15,6 +15,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { formatShortDate } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
@@ -39,6 +40,7 @@ interface ArchivedCopiesListProps {
  * only when non-empty.
  */
 export function ArchivedCopiesList({ copies }: ArchivedCopiesListProps) {
+	const returnFocus = useReturnFocus();
 	const router = useRouter();
 	const [isRemoving, setIsRemoving] = useState<string | null>(null);
 	const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
@@ -158,7 +160,7 @@ export function ArchivedCopiesList({ copies }: ArchivedCopiesListProps) {
 			</div>
 
 			<AlertDialog onOpenChange={setRemoveDialogOpen} open={removeDialogOpen}>
-				<AlertDialogContent>
+				<AlertDialogContent {...returnFocus}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Remove from Discover?</AlertDialogTitle>
 						<AlertDialogDescription>

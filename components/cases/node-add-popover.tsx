@@ -8,7 +8,7 @@ import {
 	Scale,
 	ShieldAlert,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Node } from "reactflow";
 import type { DiagramNodeType } from "@/components/shared/nodes/node-config";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,9 @@ export default function NodeAddPopover({
 	onOpenChange,
 	children,
 }: NodeAddPopoverProps) {
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	// The element type stays set after the dialog closes so the dialog remains
+	// mounted long enough for its close-focus handler to run.
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedElementType, setSelectedElementType] = useState<string | null>(
 		null
@@ -133,13 +136,6 @@ export default function NodeAddPopover({
 		onOpenChange(false);
 		setSelectedElementType(type);
 		setDialogOpen(true);
-	};
-
-	const handleDialogClose = (isOpen: boolean) => {
-		setDialogOpen(isOpen);
-		if (!isOpen) {
-			setSelectedElementType(null);
-		}
 	};
 
 	// If no options, don't render
@@ -159,7 +155,9 @@ export default function NodeAddPopover({
 			(`disableOutsidePointerEvents`), so the canvas never intercepts the
 			click in the first place. */}
 			<Popover modal onOpenChange={onOpenChange} open={open}>
-				<PopoverTrigger asChild>{children}</PopoverTrigger>
+				<PopoverTrigger asChild ref={triggerRef}>
+					{children}
+				</PopoverTrigger>
 				<PopoverContent align="start" className="w-56 p-2" side="top">
 					<div className="flex flex-col gap-1">
 						<p className="mb-1 px-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
@@ -184,8 +182,9 @@ export default function NodeAddPopover({
 				elementType={selectedElementType}
 				node={node}
 				nodeType={nodeType}
-				onOpenChange={handleDialogClose}
+				onOpenChange={setDialogOpen}
 				open={dialogOpen}
+				returnFocusRef={triggerRef}
 			/>
 		</>
 	);

@@ -25,6 +25,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCaseSharingModal } from "@/hooks/use-case-sharing-modal";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { useSelectDismissGuard } from "@/hooks/use-select-dismiss-guard";
 import { InviteLinkPanel } from "./_case-sharing/invite-link-panel";
 import {
@@ -41,6 +42,7 @@ import {
 } from "./_case-sharing/use-case-permissions";
 
 export function CaseSharingDialog() {
+	const returnFocus = useReturnFocus();
 	const sharingModal = useCaseSharingModal();
 
 	const form = useForm<ShareFormValues>({
@@ -90,6 +92,7 @@ export function CaseSharingDialog() {
 		>
 			<DialogContent
 				className="max-w-lg"
+				{...returnFocus}
 				onInteractOutside={(event) => {
 					if (shouldGuardFocusDismiss()) {
 						event.preventDefault();
