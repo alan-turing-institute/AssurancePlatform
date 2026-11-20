@@ -136,6 +136,27 @@ describe("default theme preset contrast", () => {
 				);
 			});
 
+			it("body text at 70 per cent opacity reaches 4.5:1 on a 10 per cent primary tint over the background and over the accent", () => {
+				for (const base of ["--background", "--accent"] as const) {
+					const ratioOnTint = weakest((rounded) => {
+						const surface = blend(
+							colour(set, "--primary", rounded),
+							colour(set, base, rounded),
+							0.1,
+							rounded
+						);
+						const ink = blend(
+							colour(set, "--foreground", rounded),
+							surface,
+							0.7,
+							rounded
+						);
+						return [ink, surface];
+					});
+					expect(ratioOnTint).toBeGreaterThan(MINIMUM_RATIO);
+				}
+			});
+
 			it("destructive reaches 4.5:1 on accent", () => {
 				expect(textOn(set, "--destructive", "--accent")).toBeGreaterThan(
 					MINIMUM_RATIO

@@ -100,14 +100,14 @@
   },
   "/docs": {
     "violations": {
-      "color-contrast": 2,
+      "color-contrast": 1,
       "svg-img-alt": 1
     },
     "cls": 0.0859
   },
   "/docs/curriculum/tea-trainee/01-first-sip/exploration": {
     "violations": {
-      "color-contrast": 2,
+      "color-contrast": 1,
       "nested-interactive": 1,
       "svg-img-alt": 1
     },
