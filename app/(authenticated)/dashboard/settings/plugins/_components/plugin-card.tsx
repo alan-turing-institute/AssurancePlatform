@@ -149,14 +149,14 @@ export function PluginCard({
 			)}
 
 			<div className="flex items-center justify-between gap-4">
-				<p
+				<output
 					className={cn(
 						"text-sm",
 						locked ? "text-muted-foreground" : "text-foreground"
 					)}
 				>
 					{pending ? "Saving…" : statusMessage(plugin)}
-				</p>
+				</output>
 				{plugin.docsPath && (
 					<Button asChild className="h-auto p-0" variant="link">
 						<Link href={plugin.docsPath}>Learn more</Link>

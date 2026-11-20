@@ -44,8 +44,8 @@ export interface UsePluginSettingsResult {
 	loading: boolean;
 	plugins: PluginSettingsListItem[];
 	togglePlugin: (pluginId: string, enabled: boolean) => Promise<void>;
-	/** The pluginId currently mid-toggle, or `null` if none is in flight. */
-	togglingId: string | null;
+	/** The pluginIds currently mid-toggle; empty if none is in flight. */
+	togglingIds: ReadonlySet<string>;
 }
 
 /**
@@ -64,12 +64,14 @@ export interface UsePluginSettingsResult {
  */
 export function usePluginSettings(): UsePluginSettingsResult {
 	const { data, loading, error, reload } = useFetchOnMount(fetchPlugins);
-	const [togglingId, setTogglingId] = useState<string | null>(null);
+	const [togglingIds, setTogglingIds] = useState<ReadonlySet<string>>(
+		() => new Set()
+	);
 	const plugins = data ?? [];
 
 	const togglePlugin = useCallback(
 		async (pluginId: string, enabled: boolean) => {
-			setTogglingId(pluginId);
+			setTogglingIds((current) => new Set(current).add(pluginId));
 			try {
 				await requestPluginToggle(pluginId, enabled);
 				await reload();
@@ -81,11 +83,15 @@ export function usePluginSettings(): UsePluginSettingsResult {
 						err instanceof Error ? err.message : "Something went wrong",
 				});
 			} finally {
-				setTogglingId(null);
+				setTogglingIds((current) => {
+					const next = new Set(current);
+					next.delete(pluginId);
+					return next;
+				});
 			}
 		},
 		[reload]
 	);
 
-	return { plugins, loading, error, togglingId, togglePlugin };
+	return { plugins, loading, error, togglingIds, togglePlugin };
 }

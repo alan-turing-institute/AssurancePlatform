@@ -733,6 +733,9 @@ describe("IntegrationCard", () => {
 
 			expect(await screen.findByText(NO_END_DATE_WARNING_REGEX)).toBeVisible();
 			expect(onIssueToken).not.toHaveBeenCalled();
+			expect(
+				screen.getByRole("button", { name: GO_BACK_REGEX })
+			).toHaveAccessibleDescription(NO_END_DATE_WARNING_REGEX);
 
 			await user.click(
 				screen.getByRole("button", { name: ISSUE_WITHOUT_END_DATE_REGEX })
@@ -927,7 +930,10 @@ describe("IntegrationCard", () => {
 
 			await user.click(screen.getByRole("button", { name: ROTATE_REGEX }));
 			await user.click(
-				await screen.findByRole("button", { name: DONE_BUTTON_REGEX })
+				await screen.findByRole("button", {
+					name: DONE_BUTTON_REGEX,
+					hidden: true,
+				})
 			);
 
 			await waitFor(() =>

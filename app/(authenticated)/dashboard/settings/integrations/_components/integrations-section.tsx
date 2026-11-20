@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIntegrations } from "@/hooks/use-integrations";
@@ -35,12 +35,33 @@ export function IntegrationsSection() {
 		revokeToken,
 	} = useIntegrations();
 
+	const registerButtonRef = useRef<HTMLButtonElement>(null);
 	const [registerOpen, setRegisterOpen] = useState(false);
+	const [checkFocusAfterDelete, setCheckFocusAfterDelete] = useState(false);
 	// Bumped on every "open" click and used as the dialog's `key` — remounting
 	// it is how it gets a fresh `useForm` state each time it opens (React's
 	// own recommended fix for "resetting state when a prop changes", rather
 	// than a `useEffect` watching `open` to imperatively call `form.reset()`).
 	const [registerDialogInstance, setRegisterDialogInstance] = useState(0);
+
+	// A deleted card takes its Delete button with it, so focus would fall to the
+	// page body. A failed delete leaves the button in place and focus untouched.
+	async function handleDelete(id: string) {
+		await deleteIntegration(id);
+		setCheckFocusAfterDelete(true);
+	}
+
+	// Runs after the commit that removed the deleted card.
+	useEffect(() => {
+		if (!checkFocusAfterDelete) {
+			return;
+		}
+		setCheckFocusAfterDelete(false);
+		const active = document.activeElement;
+		if (!active || active === document.body) {
+			registerButtonRef.current?.focus();
+		}
+	}, [checkFocusAfterDelete]);
 
 	return (
 		<div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">
@@ -63,6 +84,7 @@ export function IntegrationsSection() {
 							setRegisterDialogInstance((instance) => instance + 1);
 							setRegisterOpen(true);
 						}}
+						ref={registerButtonRef}
 						type="button"
 					>
 						<Plus aria-hidden="true" className="h-4 w-4" />
@@ -96,7 +118,7 @@ export function IntegrationsSection() {
 							deleting={deletingId === integration.id}
 							integration={integration}
 							key={integration.id}
-							onDelete={deleteIntegration}
+							onDelete={handleDelete}
 							onIssueToken={issueToken}
 							onReactivate={reactivateIntegration}
 							onRevoke={revokeIntegration}
@@ -114,6 +136,7 @@ export function IntegrationsSection() {
 				onOpenChange={setRegisterOpen}
 				onSubmit={registerIntegration}
 				open={registerOpen}
+				returnFocusRef={registerButtonRef}
 				submitting={registering}
 			/>
 		</div>

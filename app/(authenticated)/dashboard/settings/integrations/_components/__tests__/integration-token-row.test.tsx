@@ -154,18 +154,29 @@ describe("IntegrationTokenRow", () => {
 		).not.toBeInTheDocument();
 	});
 
-	it("disables rotate (but not revoke) when the parent integration isn't ACTIVE", () => {
+	it("keeps rotate focusable but inert, with its reason as the description, when the parent integration isn't ACTIVE", async () => {
+		const user = userEvent.setup();
+		const onRotate = vi.fn();
 		renderWithoutProviders(
 			<IntegrationTokenRow
 				canRotate={false}
 				onRevoke={vi.fn()}
-				onRotate={vi.fn()}
+				onRotate={onRotate}
 				pending={false}
 				token={makeToken()}
 			/>
 		);
 
-		expect(screen.getByRole("button", { name: ROTATE_REGEX })).toBeDisabled();
+		const rotate = screen.getByRole("button", { name: ROTATE_REGEX });
+		expect(rotate).not.toBeDisabled();
+		expect(rotate).toHaveAttribute("aria-disabled", "true");
+		expect(rotate).toHaveAccessibleDescription(
+			"Only an ACTIVE integration's tokens can be rotated"
+		);
+		await user.tab();
+		expect(rotate).toHaveFocus();
+		await user.click(rotate);
+		expect(onRotate).not.toHaveBeenCalled();
 		expect(
 			screen.getByRole("button", { name: REVOKE_REGEX })
 		).not.toBeDisabled();
@@ -203,7 +214,9 @@ describe("IntegrationTokenRow", () => {
 			/>
 		);
 
-		expect(screen.getByRole("button", { name: ROTATING_REGEX })).toBeDisabled();
+		expect(
+			screen.getByRole("button", { name: ROTATING_REGEX })
+		).toHaveAttribute("aria-disabled", "true");
 		expect(screen.getByRole("button", { name: REVOKE_REGEX })).toBeDisabled();
 	});
 });

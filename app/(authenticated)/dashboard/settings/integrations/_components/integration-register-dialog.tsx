@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { RefObject } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { SCOPES } from "@/lib/auth/scopes";
 import {
 	type RegisterIntegrationBody,
@@ -36,6 +38,8 @@ export interface IntegrationRegisterDialogProps {
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (input: RegisterIntegrationBody) => Promise<boolean>;
 	open: boolean;
+	/** Receives focus on close when the element that opened the dialog has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 	submitting: boolean;
 }
 
@@ -73,8 +77,10 @@ export function IntegrationRegisterDialog({
 	onOpenChange,
 	onSubmit,
 	open,
+	returnFocusRef,
 	submitting,
 }: IntegrationRegisterDialogProps) {
+	const returnFocus = useReturnFocus(returnFocusRef);
 	const form = useForm<
 		RegisterIntegrationFormInput,
 		unknown,
@@ -93,7 +99,10 @@ export function IntegrationRegisterDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+			<DialogContent
+				className="max-h-[85vh] overflow-y-auto sm:max-w-lg"
+				{...returnFocus}
+			>
 				<DialogHeader>
 					<DialogTitle>Register an integration</DialogTitle>
 					<DialogDescription>

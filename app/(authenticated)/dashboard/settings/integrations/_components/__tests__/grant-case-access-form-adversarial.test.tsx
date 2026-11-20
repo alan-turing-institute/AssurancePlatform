@@ -87,6 +87,34 @@ describe("GrantCaseAccessForm case list", () => {
 		expect(await optionNames()).toEqual(["Not yet"]);
 	});
 
+	it("filters cases by typed text", async () => {
+		administrable.mockResolvedValue([
+			{ id: "a", name: "Alpha assurance" },
+			{ id: "b", name: "Beta safety" },
+			{ id: "c", name: "Alpha review" },
+		]);
+		renderForm();
+		const user = userEvent.setup();
+		await user.click(
+			await screen.findByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+		);
+
+		await user.type(screen.getByPlaceholderText("Search cases"), "alpha");
+
+		expect(
+			screen.getAllByRole("option").map((option) => option.textContent)
+		).toEqual(["Alpha assurance", "Alpha review"]);
+	});
+
+	it("moves focus to the form when it opens", () => {
+		administrable.mockResolvedValue([]);
+		renderForm();
+
+		expect(
+			screen.getByRole("form", { name: "Grant access to a case" })
+		).toHaveFocus();
+	});
+
 	it("grants the case that was picked when two cases share a name", async () => {
 		administrable.mockResolvedValue([
 			{ id: "first-id", name: "Same name" },
@@ -117,7 +145,10 @@ describe("GrantCaseAccessForm empty states", () => {
 		expect(
 			screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 		).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toBeDisabled();
+		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toHaveAttribute(
+			"aria-disabled",
+			"true"
+		);
 	});
 
 	it("says every case is granted, not that there are none, when each listed case is granted", async () => {
@@ -133,7 +164,10 @@ describe("GrantCaseAccessForm empty states", () => {
 		expect(
 			screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 		).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toBeDisabled();
+		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toHaveAttribute(
+			"aria-disabled",
+			"true"
+		);
 	});
 
 	it("shows neither message while the list is still loading, and then only the right one", async () => {
@@ -170,6 +204,9 @@ describe("GrantCaseAccessForm empty states", () => {
 			screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 		).not.toBeInTheDocument();
 		expect(screen.queryByText(ALL_GRANTED_REGEX)).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toBeDisabled();
+		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toHaveAttribute(
+			"aria-disabled",
+			"true"
+		);
 	});
 });

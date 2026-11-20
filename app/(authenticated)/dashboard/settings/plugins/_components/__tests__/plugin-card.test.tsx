@@ -250,6 +250,14 @@ describe("PluginCard", () => {
 		expect(screen.getByText("Saving…")).toBeInTheDocument();
 	});
 
+	it("announces the saving state", () => {
+		renderWithoutProviders(
+			<PluginCard onToggle={vi.fn()} pending plugin={makePlugin()} />
+		);
+
+		expect(screen.getByRole("status")).toHaveTextContent("Saving…");
+	});
+
 	it("ignores input on the switch while a toggle is pending", async () => {
 		const onToggle = vi.fn();
 		const user = userEvent.setup();

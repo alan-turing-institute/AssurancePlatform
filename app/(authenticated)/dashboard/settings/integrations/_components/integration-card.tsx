@@ -122,6 +122,7 @@ export function IntegrationCard({
 	const [tokenReveal, setTokenReveal] = useState<TokenReveal | null>(null);
 	const [issueDialogOpen, setIssueDialogOpen] = useState(false);
 	const issueButtonRef = useRef<HTMLButtonElement>(null);
+	const deleteButtonRef = useRef<HTMLButtonElement>(null);
 	const cardRef = useRef<HTMLDivElement>(null);
 	const tokenListRef = useRef<HTMLFieldSetElement>(null);
 	// The token whose Rotate button should take focus once the secret dialog
@@ -130,6 +131,10 @@ export function IntegrationCard({
 	// The token whose rotation was refused; focus returns to its row once the
 	// reloaded list has rendered.
 	const [refusedTokenId, setRefusedTokenId] = useState<string | null>(null);
+	const [focusAfterRevoke, setFocusAfterRevoke] = useState<
+		{ kind: "integration" } | { kind: "token"; tokenId: string } | null
+	>(null);
+	const revokeButtonRef = useRef<HTMLButtonElement>(null);
 	const [confirmRevokeOpen, setConfirmRevokeOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 	const [confirmRevokeTokenId, setConfirmRevokeTokenId] = useState<
@@ -174,8 +179,9 @@ export function IntegrationCard({
 	 * Moves focus to a token row's Rotate button, else its Revoke button, else
 	 * the token list, else Issue new token — whichever still exists after the
 	 * list reloaded, so a button that disappears never strands focus on the page.
-	 * Focus moves only if it was lost (on the page body, nowhere, or inside this
-	 * card); if the person has moved to something else meanwhile, it stays there.
+	 * A control marked aria-disabled is skipped. Focus moves only if it was lost
+	 * (on the page body, nowhere, or inside this card); if the person has moved
+	 * to something else meanwhile, it stays there.
 	 */
 	const focusTokenControl = useCallback((tokenId: string) => {
 		const active = document.activeElement;
@@ -189,7 +195,7 @@ export function IntegrationCard({
 		);
 		const target =
 			row?.querySelector<HTMLElement>(
-				'[data-token-action="rotate"]:not(:disabled)'
+				'[data-token-action="rotate"]:not([aria-disabled="true"])'
 			) ??
 			row?.querySelector<HTMLElement>(
 				'[data-token-action="revoke"]:not(:disabled)'
@@ -225,6 +231,40 @@ export function IntegrationCard({
 		focusTokenControl(refusedTokenId);
 	}, [refusedTokenId, pendingTokenKey, integration.id, focusTokenControl]);
 
+	// A confirmed revoke can remove the button that opened its confirmation
+	// (the integration's Revoke button, or the token's row), which would leave
+	// focus on the page body. When the request is done, focus goes back to the
+	// opener if it survived (a refused revoke), else to the control that
+	// replaces it. Focus that is already somewhere on the page is left alone.
+	useEffect(() => {
+		if (focusAfterRevoke === null) {
+			return;
+		}
+		const busy =
+			focusAfterRevoke.kind === "integration"
+				? pending
+				: pendingTokenKey?.startsWith(`${integration.id}:`);
+		if (busy) {
+			return;
+		}
+		setFocusAfterRevoke(null);
+		const active = document.activeElement;
+		if (active && active !== document.body && active.isConnected) {
+			return;
+		}
+		if (focusAfterRevoke.kind === "token") {
+			focusTokenControl(focusAfterRevoke.tokenId);
+			return;
+		}
+		(revokeButtonRef.current ?? deleteButtonRef.current)?.focus();
+	}, [
+		focusAfterRevoke,
+		pending,
+		pendingTokenKey,
+		integration.id,
+		focusTokenControl,
+	]);
+
 	async function handleRotateToken(tokenId: string) {
 		const result = await onRotateToken(integration.id, tokenId);
 		if (!result) {
@@ -245,6 +285,7 @@ export function IntegrationCard({
 		const tokenId = confirmRevokeTokenId;
 		setConfirmRevokeTokenId(null);
 		if (tokenId) {
+			setFocusAfterRevoke({ kind: "token", tokenId });
 			onRevokeToken(integration.id, tokenId);
 		}
 	}
@@ -309,18 +350,19 @@ export function IntegrationCard({
 						</Button>
 					)}
 					{integration.status !== "REVOKED" && (
-						<Button
+						<DisabledButtonHint
 							aria-label="Revoke this integration"
 							className="text-destructive hover:text-destructive"
 							disabled={pending}
 							onClick={() => setConfirmRevokeOpen(true)}
+							ref={revokeButtonRef}
 							size="sm"
 							type="button"
 							variant="outline"
 						>
 							<Ban aria-hidden="true" className="h-3.5 w-3.5" />
 							Revoke
-						</Button>
+						</DisabledButtonHint>
 					)}
 					<DisabledButtonHint
 						disabled={deleting || !integrationRevoked}
@@ -330,6 +372,7 @@ export function IntegrationCard({
 								: "Revoke first — delete is permanent"
 						}
 						onClick={() => setConfirmDeleteOpen(true)}
+						ref={deleteButtonRef}
 						size="sm"
 						type="button"
 						variant="destructive"
@@ -424,6 +467,7 @@ export function IntegrationCard({
 
 			<IntegrationTokenSecretModal
 				onClose={() => setTokenReveal(null)}
+				returnFocusRef={issueButtonRef}
 				reveal={tokenReveal}
 			/>
 
@@ -436,8 +480,10 @@ export function IntegrationCard({
 				onClose={() => setConfirmRevokeOpen(false)}
 				onConfirm={() => {
 					setConfirmRevokeOpen(false);
+					setFocusAfterRevoke({ kind: "integration" });
 					onRevoke(integration.id);
 				}}
+				returnFocusRef={deleteButtonRef}
 			/>
 
 			<IntegrationDeleteDialog
@@ -462,6 +508,7 @@ export function IntegrationCard({
 				message="Revoking this token takes effect immediately and cannot be undone — any caller still using it will start failing to authenticate right away."
 				onClose={() => setConfirmRevokeTokenId(null)}
 				onConfirm={handleConfirmRevokeToken}
+				returnFocusRef={issueButtonRef}
 			/>
 		</div>
 	);

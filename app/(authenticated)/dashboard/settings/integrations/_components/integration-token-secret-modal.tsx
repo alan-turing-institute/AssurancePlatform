@@ -21,6 +21,8 @@ export interface TokenReveal {
 
 export interface IntegrationTokenSecretModalProps {
 	onClose: () => void;
+	/** Receives focus on close when the element that opened the dialog has left the page. */
+	returnFocusRef?: React.RefObject<HTMLElement | null>;
 	reveal: TokenReveal | null;
 }
 
@@ -35,6 +37,7 @@ export interface IntegrationTokenSecretModalProps {
 export function IntegrationTokenSecretModal({
 	onClose,
 	reveal,
+	returnFocusRef,
 }: IntegrationTokenSecretModalProps) {
 	const [copied, setCopied] = useState(false);
 
@@ -67,6 +70,7 @@ export function IntegrationTokenSecretModal({
 			description="Copy it now — for security, it will not be shown again."
 			isOpen
 			onClose={handleClose}
+			returnFocusRef={returnFocusRef}
 			title="Token secret"
 		>
 			<div className="space-y-4">

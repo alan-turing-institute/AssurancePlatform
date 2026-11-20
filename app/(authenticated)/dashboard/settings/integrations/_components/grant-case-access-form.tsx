@@ -1,9 +1,9 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchAdministrableCases } from "@/actions/assurance-cases";
-import { Button } from "@/components/ui/button";
+import { DisabledButtonHint } from "@/components/ui/disabled-button-hint";
 import {
 	Select,
 	SelectContent,
@@ -12,6 +12,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import type { CaseGrantPermission } from "@/lib/schemas/integration";
+import { CasePicker } from "./case-picker";
 
 interface CaseOption {
 	id: string;
@@ -150,11 +151,15 @@ export function GrantCaseAccessForm({
 		};
 	}, []);
 
+	const focusOnMount = useCallback((form: HTMLFormElement | null) => {
+		form?.focus();
+	}, []);
+
 	const availableCases = cases.filter((c) => !existingCaseIds.includes(c.id));
 
 	async function handleSubmit(event: FormEvent) {
 		event.preventDefault();
-		if (!selectedCaseId) {
+		if (!selectedCaseId || granting) {
 			return;
 		}
 		await onGrant(selectedCaseId, selectedPermission);
@@ -162,8 +167,11 @@ export function GrantCaseAccessForm({
 
 	return (
 		<form
+			aria-label="Grant access to a case"
 			className="space-y-3 rounded-md border border-border border-dashed p-3"
 			onSubmit={handleSubmit}
+			ref={focusOnMount}
+			tabIndex={-1}
 		>
 			{grantError && (
 				<p className="text-destructive text-xs" role="alert">
@@ -180,18 +188,11 @@ export function GrantCaseAccessForm({
 
 			{!casesLoading && availableCases.length > 0 && (
 				<div className="flex flex-wrap items-center gap-2">
-					<Select onValueChange={setSelectedCaseId} value={selectedCaseId}>
-						<SelectTrigger aria-label="Case" className="h-8 w-56 text-xs">
-							<SelectValue placeholder="Choose a case…" />
-						</SelectTrigger>
-						<SelectContent>
-							{availableCases.map((c) => (
-								<SelectItem key={c.id} value={c.id}>
-									{c.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
+					<CasePicker
+						cases={availableCases}
+						onChange={setSelectedCaseId}
+						value={selectedCaseId}
+					/>
 
 					<Select
 						onValueChange={(value) =>
@@ -217,7 +218,7 @@ export function GrantCaseAccessForm({
 			)}
 
 			<div className="flex items-center gap-2">
-				<Button
+				<DisabledButtonHint
 					disabled={granting}
 					onClick={onCancel}
 					size="sm"
@@ -225,14 +226,14 @@ export function GrantCaseAccessForm({
 					variant="outline"
 				>
 					Cancel
-				</Button>
-				<Button
+				</DisabledButtonHint>
+				<DisabledButtonHint
 					disabled={granting || !selectedCaseId || availableCases.length === 0}
 					size="sm"
 					type="submit"
 				>
 					{granting ? "Granting…" : "Grant access"}
-				</Button>
+				</DisabledButtonHint>
 			</div>
 		</form>
 	);

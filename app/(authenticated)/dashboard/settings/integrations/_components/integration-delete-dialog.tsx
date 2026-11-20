@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { type RefObject, useId, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 
 export interface IntegrationDeleteDialogProps {
 	/** True while THIS integration's delete request is in flight. */
@@ -21,6 +22,8 @@ export interface IntegrationDeleteDialogProps {
 	onConfirm: () => void;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
+	/** Receives focus on close when the element that opened the dialog has left the page. */
+	returnFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -39,7 +42,9 @@ export function IntegrationDeleteDialog({
 	onConfirm,
 	onOpenChange,
 	open,
+	returnFocusRef,
 }: IntegrationDeleteDialogProps) {
+	const returnFocus = useReturnFocus(returnFocusRef);
 	const [confirmText, setConfirmText] = useState("");
 	const inputId = useId();
 	const nameMatches = confirmText === integrationName;
@@ -58,7 +63,7 @@ export function IntegrationDeleteDialog({
 
 	return (
 		<AlertDialog onOpenChange={handleOpenChange} open={open}>
-			<AlertDialogContent>
+			<AlertDialogContent {...returnFocus}>
 				<AlertDialogHeader>
 					<AlertDialogTitle>Delete {integrationName}?</AlertDialogTitle>
 					<AlertDialogDescription>

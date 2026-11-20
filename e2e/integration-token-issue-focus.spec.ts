@@ -8,6 +8,7 @@ import { registerIntegration } from "@/lib/services/integration-registry-service
 
 const unique = `e2e-token-focus-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 let integrationId: string | undefined;
+let systemUserId: string | undefined;
 
 test.beforeAll(async () => {
 	const owner = await prisma.user.findUniqueOrThrow({
@@ -22,12 +23,17 @@ test.beforeAll(async () => {
 		throw new Error(`Failed to seed test integration: ${registered.error}`);
 	}
 	integrationId = registered.data.integration.id;
+	systemUserId = registered.data.systemUserId;
 });
 
 test.afterAll(async () => {
-	// Deleting the integration cascades its tokens.
+	// Deleting the integration cascades its tokens; the machine user it
+	// registered is removed once nothing references it.
 	if (integrationId) {
 		await prisma.integration.deleteMany({ where: { id: integrationId } });
+	}
+	if (systemUserId) {
+		await prisma.user.deleteMany({ where: { id: systemUserId } });
 	}
 	await prisma.$disconnect();
 });

@@ -57,7 +57,7 @@ function useScrollToAiModelsOnce(shown: boolean) {
  * "AI models" block follows the cards.
  */
 export function PluginsSection() {
-	const { plugins, loading, error, togglingId, togglePlugin } =
+	const { plugins, loading, error, togglingIds, togglePlugin } =
 		usePluginSettings();
 	const showModels = !(loading || error) && usesModels(plugins);
 	useScrollToAiModelsOnce(showModels);
@@ -102,7 +102,7 @@ export function PluginsSection() {
 						<PluginCard
 							key={plugin.pluginId}
 							onToggle={togglePlugin}
-							pending={togglingId === plugin.pluginId}
+							pending={togglingIds.has(plugin.pluginId)}
 							plugin={plugin}
 						/>
 					))}
