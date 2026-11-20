@@ -69,13 +69,17 @@ export function IntegrationTokenIssueDialog({
 	const refocusSubmitRef = useRef(false);
 
 	useEffect(() => {
+		// A closing dialog has already handed focus back to the opener.
+		if (!open) {
+			return;
+		}
 		if (confirming) {
 			goBackRef.current?.focus();
 		} else if (refocusSubmitRef.current && !issuing) {
 			refocusSubmitRef.current = false;
 			submitRef.current?.focus();
 		}
-	}, [confirming, issuing]);
+	}, [confirming, issuing, open]);
 
 	function close() {
 		onOpenChange(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Plus } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DisabledButtonHint } from "@/components/ui/disabled-button-hint";
 import type {
@@ -69,6 +69,15 @@ export function CaseAccessSection({
 	removingCaseId,
 }: CaseAccessSectionProps) {
 	const [addOpen, setAddOpen] = useState(false);
+	// Set when the form closes, so the button that replaces it takes focus as it
+	// mounts; the form held focus, and its unmounting would drop it to the body.
+	const returnFocusToButton = useRef(false);
+	const focusGrantButton = useCallback((button: HTMLButtonElement | null) => {
+		if (button && returnFocusToButton.current) {
+			returnFocusToButton.current = false;
+			button.focus();
+		}
+	}, []);
 
 	// Both the open-trigger and Cancel route through these, not just Cancel:
 	// clearing only on close would still leave a window (open → immediately
@@ -83,6 +92,7 @@ export function CaseAccessSection({
 
 	function closeForm() {
 		onClearGrantError();
+		returnFocusToButton.current = true;
 		setAddOpen(false);
 	}
 
@@ -148,6 +158,7 @@ export function CaseAccessSection({
 						disabled={!integrationActive}
 						disabledReason="Only an ACTIVE integration can be granted access to a case"
 						onClick={openForm}
+						ref={focusGrantButton}
 						size="sm"
 						type="button"
 						variant="outline"

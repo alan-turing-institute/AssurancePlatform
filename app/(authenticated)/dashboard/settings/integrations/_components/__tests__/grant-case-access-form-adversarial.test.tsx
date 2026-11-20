@@ -87,6 +87,34 @@ describe("GrantCaseAccessForm case list", () => {
 		expect(await optionNames()).toEqual(["Not yet"]);
 	});
 
+	it("filters cases by typed text", async () => {
+		administrable.mockResolvedValue([
+			{ id: "a", name: "Alpha assurance" },
+			{ id: "b", name: "Beta safety" },
+			{ id: "c", name: "Alpha review" },
+		]);
+		renderForm();
+		const user = userEvent.setup();
+		await user.click(
+			await screen.findByRole("combobox", { name: CASE_COMBOBOX_REGEX })
+		);
+
+		await user.type(screen.getByPlaceholderText("Search cases"), "alpha");
+
+		expect(
+			screen.getAllByRole("option").map((option) => option.textContent)
+		).toEqual(["Alpha assurance", "Alpha review"]);
+	});
+
+	it("moves focus to the form when it opens", () => {
+		administrable.mockResolvedValue([]);
+		renderForm();
+
+		expect(
+			screen.getByRole("form", { name: "Grant access to a case" })
+		).toHaveFocus();
+	});
+
 	it("grants the case that was picked when two cases share a name", async () => {
 		administrable.mockResolvedValue([
 			{ id: "first-id", name: "Same name" },

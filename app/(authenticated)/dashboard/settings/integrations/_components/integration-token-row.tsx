@@ -3,6 +3,7 @@
 import { RotateCw, ShieldOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DisabledButtonHint } from "@/components/ui/disabled-button-hint";
 import { formatRelativeToNow, formatShortDate } from "@/lib/date";
 import type { IntegrationTokenSummary } from "@/lib/schemas/integration";
 import { cn } from "@/lib/utils";
@@ -83,22 +84,22 @@ export function IntegrationTokenRow({
 			{isLive && (
 				<div className="flex shrink-0 items-center gap-2">
 					{!isReplaced && (
-						<Button
+						<DisabledButtonHint
 							data-token-action="rotate"
 							disabled={pending || !canRotate}
-							onClick={() => onRotate(token.id)}
-							size="sm"
-							title={
+							disabledReason={
 								canRotate
 									? undefined
 									: "Only an ACTIVE integration's tokens can be rotated"
 							}
+							onClick={() => onRotate(token.id)}
+							size="sm"
 							type="button"
 							variant="outline"
 						>
 							<RotateCw aria-hidden="true" className="h-3.5 w-3.5" />
 							{pending ? "Rotating…" : "Rotate"}
-						</Button>
+						</DisabledButtonHint>
 					)}
 					<Button
 						aria-label="Revoke this token"
