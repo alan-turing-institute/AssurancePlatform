@@ -22,6 +22,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 
 interface NodeAddDialogProps {
 	/** The type of element to create (strategy, claim, evidence, defeater, away-goal, module) */
@@ -124,6 +125,7 @@ export default function NodeAddDialog({
 	open,
 	onOpenChange,
 }: NodeAddDialogProps) {
+	const returnFocus = useReturnFocus();
 	const [_unresolvedChanges, setUnresolvedChanges] = useState(false);
 
 	const handleClose = () => {
@@ -142,7 +144,10 @@ export default function NodeAddDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+			<DialogContent
+				className="max-h-[85vh] overflow-y-auto sm:max-w-md"
+				{...returnFocus}
+			>
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						{icon}

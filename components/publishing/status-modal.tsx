@@ -15,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCaseInformation } from "@/hooks/use-case-information";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import {
 	placeholderCountMessage,
 	unsetVariableCountMessage,
@@ -82,6 +83,7 @@ export function StatusModal({
 	unpublishLoading = false,
 	unsetVariableCount = 0,
 }: StatusModalProps) {
+	const returnFocus = useReturnFocus();
 	const [loading, setLoading] = useState(false);
 
 	const handleAction = async (action: (() => Promise<void>) | undefined) => {
@@ -110,7 +112,7 @@ export function StatusModal({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md" {...returnFocus}>
 				<StatusModalHeader
 					hasChanges={hasChanges}
 					itemName={itemName}

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { formatShortDate } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import type { CaseKind } from "@/lib/schemas/case-export";
@@ -62,6 +63,7 @@ function DaysRemainingBadge({ days }: { days: number }) {
 }
 
 export function TrashList({ cases }: TrashListProps) {
+	const returnFocus = useReturnFocus();
 	const router = useRouter();
 	const [isRestoring, setIsRestoring] = useState<string | null>(null);
 	const [isPurging, setIsPurging] = useState<string | null>(null);
@@ -243,7 +245,7 @@ export function TrashList({ cases }: TrashListProps) {
 			</div>
 
 			<AlertDialog onOpenChange={setPurgeDialogOpen} open={purgeDialogOpen}>
-				<AlertDialogContent>
+				<AlertDialogContent {...returnFocus}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Permanently delete case?</AlertDialogTitle>
 						<AlertDialogDescription>

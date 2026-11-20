@@ -28,6 +28,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import {
 	deleteAssuranceCaseNode,
 	detachCaseElement,
@@ -225,6 +226,8 @@ function ConfirmationDialogs({
 	onConfirmDetach,
 	onConfirmDelete,
 }: ConfirmationDialogsProps) {
+	const detachReturnFocus = useReturnFocus();
+	const deleteReturnFocus = useReturnFocus();
 	const nodeName = (node.data?.name as string) || "this element";
 
 	return (
@@ -237,7 +240,7 @@ function ConfirmationDialogs({
 			/>
 
 			<AlertDialog onOpenChange={onDetachOpenChange} open={detachOpen}>
-				<AlertDialogContent>
+				<AlertDialogContent {...detachReturnFocus}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Detach {nodeName}?</AlertDialogTitle>
 						<AlertDialogDescription>
@@ -270,7 +273,7 @@ function ConfirmationDialogs({
 			</AlertDialog>
 
 			<AlertDialog onOpenChange={onDeleteOpenChange} open={deleteOpen}>
-				<AlertDialogContent>
+				<AlertDialogContent {...deleteReturnFocus}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete {nodeName}?</AlertDialogTitle>
 						<AlertDialogDescription>

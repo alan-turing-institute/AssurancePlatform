@@ -12,6 +12,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { moveCaseElement } from "@/lib/case";
 import {
 	getCompatibleParentTypes,
@@ -68,6 +69,7 @@ export function MoveElementDialog({
 	open,
 	onOpenChange,
 }: MoveElementDialogProps) {
+	const returnFocus = useReturnFocus();
 	// Cast to Node[] for untyped data property access — matches codebase convention
 	const allNodes = useNodes() as Node[];
 	const allEdges = useEdges();
@@ -149,7 +151,7 @@ export function MoveElementDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent>
+			<DialogContent {...returnFocus}>
 				<DialogHeader>
 					<DialogTitle>Move element</DialogTitle>
 					<DialogDescription>

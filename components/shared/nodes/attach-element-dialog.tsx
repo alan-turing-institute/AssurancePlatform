@@ -11,6 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useReturnFocus } from "@/hooks/use-return-focus";
 import { attachCaseElement } from "@/lib/case";
 import {
 	getCompatibleChildTypes,
@@ -41,6 +42,7 @@ export function AttachElementDialog({
 	open,
 	onOpenChange,
 }: AttachElementDialogProps) {
+	const returnFocus = useReturnFocus();
 	const { orphanedElements } = useStore();
 	const [loading, setLoading] = useState(false);
 
@@ -98,7 +100,7 @@ export function AttachElementDialog({
 
 	return (
 		<Dialog onOpenChange={onOpenChange} open={open}>
-			<DialogContent>
+			<DialogContent {...returnFocus}>
 				<DialogHeader>
 					<DialogTitle>Attach element</DialogTitle>
 					<DialogDescription>
