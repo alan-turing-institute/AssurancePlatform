@@ -32,6 +32,8 @@ import { DeleteCaseDialog } from "./delete-case-dialog";
 export interface CaseCardData {
 	createdDate?: string;
 	description?: string;
+	/** False when the case has no stored screenshot, so the card shows the default image without asking for one. */
+	hasScreenshot?: boolean;
 	id: number | string;
 	isDemo?: boolean;
 	/** CASE for an ordinary case, PATTERN for a pattern: a pattern is badged wherever it is listed. */
@@ -116,11 +118,18 @@ const CaseCard = ({ assuranceCase }: CaseCardProps) => {
 		}
 	}, [id]);
 
+	const hasScreenshot = assuranceCase.hasScreenshot !== false;
+
 	useEffect(() => {
+		if (!hasScreenshot) {
+			setImgSrc("/images/assurance-case-medium.png");
+			setImageLoading(false);
+			return;
+		}
 		fetchScreenshot().catch(() => {
 			// Handle error silently - image loading state already updated in fetchScreenshot
 		});
-	}, [fetchScreenshot]);
+	}, [fetchScreenshot, hasScreenshot]);
 
 	return (
 		<div className="group relative min-h-105">
