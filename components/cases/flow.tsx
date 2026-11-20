@@ -28,6 +28,7 @@ import { convertAssuranceCase } from "@/lib/case/convert-case";
 import { getHighlightedEdges } from "@/lib/case/edge-highlight";
 import { keepLiveSelection } from "@/lib/case/keep-live-selection";
 import { getLayoutedElements } from "@/lib/case/layout-helper";
+import { stopSpaceScrollOnDiagramItem } from "@/lib/case/stop-space-scroll";
 import { logger } from "@/lib/logger";
 import { toast } from "@/lib/toast";
 import useStore from "@/store/store";
@@ -230,6 +231,7 @@ function Flow({ liveUpdatesNotice }: FlowProps) {
 						nodesConnectable={false}
 						nodesDraggable={false}
 						nodeTypes={nodeTypes}
+						onKeyDown={stopSpaceScrollOnDiagramItem}
 						onNodesChange={onNodesChange}
 						panActivationKeyCode={null}
 					>

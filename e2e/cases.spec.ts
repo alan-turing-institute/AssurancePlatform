@@ -281,7 +281,9 @@ test.describe("Case management", () => {
 		await help.focus();
 		await page.keyboard.press("Space");
 		await expect(
-			page.getByRole("heading", { name: "Help", exact: true, level: 2 })
+			page
+				.getByRole("dialog", { name: "Help", exact: true })
+				.getByRole("heading", { name: "Help", exact: true, level: 2 })
 		).toBeVisible();
 		await page.keyboard.press("Escape");
 
@@ -291,16 +293,28 @@ test.describe("Case management", () => {
 		});
 		await settings.focus();
 		await page.keyboard.press("Enter");
-		const popover = page.getByRole("dialog");
+		// The popover has no accessible name, so it is identified by its switch.
+		const popover = page.getByRole("dialog").filter({
+			has: page.getByRole("switch", {
+				name: "Show unsupported markers",
+				exact: true,
+			}),
+		});
 		const marker = popover.getByRole("switch", {
 			name: "Show unsupported markers",
 			exact: true,
 		});
 		await expect(marker).toBeVisible();
-		const before = await marker.getAttribute("aria-checked");
+		await expect(marker).toBeEnabled();
+		const before = (await marker.getAttribute("aria-checked")) ?? "";
 		await marker.focus();
 		await page.keyboard.press("Space");
-		await expect(marker).not.toHaveAttribute("aria-checked", before ?? "");
+		await expect(marker).not.toHaveAttribute("aria-checked", before);
+		// Restore the saved account setting.
+		await expect(marker).toBeEnabled();
+		await page.keyboard.press("Space");
+		await expect(marker).toHaveAttribute("aria-checked", before);
+		await expect(marker).toBeEnabled();
 	});
 
 	test("Space presses buttons in the edit element dialog", async ({ page }) => {
@@ -313,7 +327,10 @@ test.describe("Case management", () => {
 		await editButton.waitFor({ state: "visible" });
 		await editButton.click();
 
-		const dialog = page.getByRole("dialog", { name: "Editing G1" });
+		const dialog = page.getByRole("dialog", {
+			name: "Editing G1",
+			exact: true,
+		});
 		// Give the named entry a value so that removing its name warns.
 		await dialog
 			.getByRole("textbox", { name: "Context entry 1 value", exact: true })
@@ -324,7 +341,9 @@ test.describe("Case management", () => {
 		});
 		await removeName.focus();
 		await page.keyboard.press("Space");
-		await expect(dialog.getByRole("alert")).toBeVisible();
+		await expect(dialog.getByRole("alert")).toContainText(
+			"loses its value (5)"
+		);
 
 		const cancel = dialog.getByRole("button", { name: "Cancel", exact: true });
 		await cancel.focus();
@@ -345,7 +364,7 @@ test.describe("Case management", () => {
 		await page.keyboard.press("Enter");
 		const sheet = page.getByRole("dialog", {
 			name: "Update Assurance Case",
-			exact: false,
+			exact: true,
 		});
 		const authors = sheet.getByRole("textbox", {
 			name: "Authors",

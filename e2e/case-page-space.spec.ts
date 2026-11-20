@@ -28,6 +28,7 @@ const SPACE = "Space";
 const DARK = /dark/;
 const TRAILING_XY = / x y$/;
 const SELECTED = /selected/;
+const SCROLL_SETTLE_MS = 800;
 
 for (const caseName of CASES) {
 	test.describe(`Space on the case page (${caseName})`, () => {
@@ -284,5 +285,20 @@ test.describe("the docs page's read-only canvas", () => {
 		await expect(node).toBeVisible();
 		await pressKeyOn(page, node, SPACE);
 		await expect(node).toHaveClass(SELECTED);
+	});
+
+	test("Space on a canvas node does not scroll the page", async ({ page }) => {
+		await page.goto(DOCS);
+		const node = page.locator(".react-flow__node", { hasText: "G1" }).first();
+		await expect(node).toBeVisible();
+		await page.setViewportSize({ width: 1280, height: 400 });
+		await node.focus();
+		await expect(node).toBeFocused();
+		const before = await page.evaluate(() => window.scrollY);
+		await page.keyboard.press("Space");
+		await expect(node).toHaveClass(SELECTED);
+		// The browser's Space scroll is animated, so give it time to show.
+		await page.waitForTimeout(SCROLL_SETTLE_MS);
+		expect(await page.evaluate(() => window.scrollY)).toBe(before);
 	});
 });
