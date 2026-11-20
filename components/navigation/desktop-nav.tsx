@@ -90,7 +90,9 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 								))}
 							</ul>
 						</li>
-						<Separator className="bg-sidebar-border" />
+						<li>
+							<Separator className="bg-sidebar-border" />
+						</li>
 						<li>
 							<div className="flex items-center justify-between">
 								<div className="font-semibold text-sidebar-foreground text-xs leading-6">
@@ -107,9 +109,9 @@ const DesktopNav = ({ teams }: DesktopNavProps) => {
 							</div>
 							<ul className="-mx-2 mt-2 space-y-1">
 								{teams.length === 0 && (
-									<p className="px-2 text-sidebar-muted text-sm">
+									<li className="px-2 text-sidebar-muted text-sm">
 										No teams added
-									</p>
+									</li>
 								)}
 								{teams.length > 0 &&
 									teams.map((team) => (

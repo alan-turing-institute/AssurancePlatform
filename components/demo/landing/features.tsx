@@ -82,17 +82,17 @@ export default function Features() {
 				<dl className="mx-auto grid max-w-2xl grid-cols-1 gap-x-6 gap-y-10 text-base text-muted-foreground leading-7 sm:grid-cols-2 lg:mx-0 lg:max-w-none lg:grid-cols-3 lg:gap-x-8 lg:gap-y-16">
 					{features.map((feature) => (
 						<div className="relative pl-9" key={feature.name}>
-							<div className="inline font-semibold text-foreground">
+							<dt className="inline font-semibold text-foreground">
 								<feature.icon
 									aria-hidden="true"
 									className="absolute top-1 left-1 h-5 w-5 text-primary"
 								/>
 								{feature.name}
-							</div>{" "}
-							<div className="inline text-pretty">
+							</dt>{" "}
+							<dd className="inline text-pretty">
 								<br />
 								{feature.description}
-							</div>
+							</dd>
 						</div>
 					))}
 				</dl>

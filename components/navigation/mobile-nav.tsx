@@ -173,9 +173,9 @@ export const MobileNav = ({
 											</div>
 											<ul className="-mx-2 mt-2 space-y-1">
 												{teams.length === 0 && (
-													<p className="px-2 text-sidebar-muted text-sm">
+													<li className="px-2 text-sidebar-muted text-sm">
 														No teams added
-													</p>
+													</li>
 												)}
 												{teams.length > 0 &&
 													teams.map((team) => (

@@ -13,6 +13,7 @@ import { validateInput } from "@/lib/validation/input-validation";
 interface AssuranceCase {
 	createdDate?: string;
 	description?: string;
+	hasScreenshot?: boolean;
 	id: number | string;
 	isDemo?: boolean;
 	kind?: CaseKind;
