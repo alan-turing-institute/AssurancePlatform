@@ -29,7 +29,7 @@ async function signInWith(query: string) {
 	const user = userEvent.setup();
 	const { container } = renderWithoutProviders(<SignInForm />);
 	await user.type(screen.getByLabelText(IDENTIFIER_REGEX), "alice");
-	// The password label is attached to a wrapper element, not the input.
+	// The password input is found by type; its label is attached to the input itself.
 	const passwordInput = container.querySelector('input[type="password"]');
 	if (!passwordInput) {
 		throw new Error("password input not rendered");

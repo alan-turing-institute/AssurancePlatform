@@ -202,7 +202,9 @@ const RegisterForm = () => {
 									<FormLabel>Password</FormLabel>
 									<InputGroup className="h-10">
 										<FormControl>
+											{/* Cancels the shared text box's focus offset so the group's own ring shows. */}
 											<InputGroupInput
+												className="focus-visible:ring-offset-0"
 												type={showPassword1 ? "text" : "password"}
 												{...field}
 											/>
@@ -235,7 +237,9 @@ const RegisterForm = () => {
 									<FormLabel>Confirm Password</FormLabel>
 									<InputGroup className="h-10">
 										<FormControl>
+											{/* Cancels the shared text box's focus offset so the group's own ring shows. */}
 											<InputGroupInput
+												className="focus-visible:ring-offset-0"
 												type={showPassword2 ? "text" : "password"}
 												{...field}
 											/>

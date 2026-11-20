@@ -202,8 +202,10 @@ const ResetPasswordForm = () => {
 									<FormLabel>New password</FormLabel>
 									<InputGroup className="h-10">
 										<FormControl>
+											{/* Cancels the shared text box's focus offset so the group's own ring shows. */}
 											<InputGroupInput
 												autoComplete="new-password"
+												className="focus-visible:ring-offset-0"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
@@ -240,8 +242,10 @@ const ResetPasswordForm = () => {
 									<FormLabel>Confirm new password</FormLabel>
 									<InputGroup className="h-10">
 										<FormControl>
+											{/* Cancels the shared text box's focus offset so the group's own ring shows. */}
 											<InputGroupInput
 												autoComplete="new-password"
+												className="focus-visible:ring-offset-0"
 												type={showConfirmPassword ? "text" : "password"}
 												{...field}
 											/>

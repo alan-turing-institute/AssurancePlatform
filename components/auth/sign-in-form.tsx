@@ -155,9 +155,11 @@ const SignInForm = () => {
 			)}
 
 			{errors?.map((error) => (
-				<Alert className="mt-4 -mb-4" key={error} variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
+				<div className="mt-4 -mb-4" key={error}>
+					<Alert variant="destructive">
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				</div>
 			))}
 
 			<div className="mt-10">
@@ -196,8 +198,10 @@ const SignInForm = () => {
 									<FormLabel>Password</FormLabel>
 									<InputGroup className="h-10">
 										<FormControl>
+											{/* Cancels the shared text box's focus offset so the group's own ring shows. */}
 											<InputGroupInput
 												autoComplete="current-password"
+												className="focus-visible:ring-offset-0"
 												type={showPassword ? "text" : "password"}
 												{...field}
 											/>
