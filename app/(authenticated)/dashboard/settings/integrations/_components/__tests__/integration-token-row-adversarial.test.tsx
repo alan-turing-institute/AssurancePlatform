@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { IntegrationTokenSummary } from "@/lib/schemas/integration";
 import { IntegrationTokenRow } from "../integration-token-row";
 
+const ROTATE_REGEX = /rotat/i;
+
 const REASON = "Only an ACTIVE integration's tokens can be rotated";
 
 function token(
@@ -40,7 +42,7 @@ function setup(
 }
 
 function rotate() {
-	return screen.getByRole("button", { name: /rotat/i });
+	return screen.getByRole("button", { name: ROTATE_REGEX });
 }
 
 describe("Rotate on a token of an integration that cannot rotate", () => {
@@ -108,7 +110,7 @@ describe("Rotate on an active integration", () => {
 
 	it("is absent once the token has been replaced", () => {
 		setup({ canRotate: true }, token({ replacedByTokenId: "tok-2" }));
-		expect(screen.queryByRole("button", { name: /rotat/i })).toBeNull();
+		expect(screen.queryByRole("button", { name: ROTATE_REGEX })).toBeNull();
 	});
 
 	it("is absent from a revoked token", () => {
@@ -116,7 +118,7 @@ describe("Rotate on an active integration", () => {
 			{ canRotate: false },
 			token({ revokedAt: new Date("2026-02-01T00:00:00Z").toISOString() })
 		);
-		expect(screen.queryByRole("button", { name: /rotat/i })).toBeNull();
+		expect(screen.queryByRole("button", { name: ROTATE_REGEX })).toBeNull();
 		expect(screen.queryByText(REASON)).toBeNull();
 	});
 });

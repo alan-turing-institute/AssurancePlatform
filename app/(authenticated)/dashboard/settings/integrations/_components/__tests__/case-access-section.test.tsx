@@ -383,7 +383,7 @@ describe("CaseAccessSection", () => {
 			const submitButton = screen.getByRole("button", {
 				name: GRANTING_BUTTON_REGEX,
 			});
-			expect(submitButton).toBeDisabled();
+			expect(submitButton).toHaveAttribute("aria-disabled", "true");
 
 			await user.click(submitButton);
 			expect(onGrant).not.toHaveBeenCalled();
@@ -434,7 +434,7 @@ describe("CaseAccessSection", () => {
 			).toBeNull();
 			expect(
 				screen.getByRole("button", { name: GRANT_SUBMIT_REGEX })
-			).toBeDisabled();
+			).toHaveAttribute("aria-disabled", "true");
 		});
 
 		it("says every case is already granted, with no picker, when all of them are", async () => {

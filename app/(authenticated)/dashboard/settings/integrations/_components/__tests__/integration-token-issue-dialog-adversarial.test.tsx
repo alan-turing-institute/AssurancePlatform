@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { describe, expect, it } from "vitest";
 import { IntegrationTokenIssueDialog } from "../integration-token-issue-dialog";
 
+const NO_END_DATE_REGEX = /no end date and keeps working until you revoke it/;
+
 // Where focus lands after a dialog closes is the browser's behaviour and is
 // proved end to end; these tests cover the dialog's own state.
 function Harness() {
@@ -38,9 +40,7 @@ describe("token issue dialog", () => {
 		await user.click(screen.getByRole("button", { name: "Issue token" }));
 		expect(
 			await screen.findByRole("button", { name: "Go back" })
-		).toHaveAccessibleDescription(
-			/no end date and keeps working until you revoke it/
-		);
+		).toHaveAccessibleDescription(NO_END_DATE_REGEX);
 	});
 
 	it("moves focus to Go back on the warning step", async () => {
@@ -48,7 +48,9 @@ describe("token issue dialog", () => {
 		render(<Harness />);
 		await openDialog(user);
 		await user.click(screen.getByRole("button", { name: "Issue token" }));
-		expect(await screen.findByRole("button", { name: "Go back" })).toHaveFocus();
+		expect(
+			await screen.findByRole("button", { name: "Go back" })
+		).toHaveFocus();
 	});
 
 	it("reopens on the form step with an empty date after closing from the warning", async () => {

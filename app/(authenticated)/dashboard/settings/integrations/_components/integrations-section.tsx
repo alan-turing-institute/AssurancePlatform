@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIntegrations } from "@/hooks/use-integrations";
@@ -37,6 +37,7 @@ export function IntegrationsSection() {
 
 	const registerButtonRef = useRef<HTMLButtonElement>(null);
 	const [registerOpen, setRegisterOpen] = useState(false);
+	const [checkFocusAfterDelete, setCheckFocusAfterDelete] = useState(false);
 	// Bumped on every "open" click and used as the dialog's `key` — remounting
 	// it is how it gets a fresh `useForm` state each time it opens (React's
 	// own recommended fix for "resetting state when a prop changes", rather
@@ -47,15 +48,20 @@ export function IntegrationsSection() {
 	// page body. A failed delete leaves the button in place and focus untouched.
 	async function handleDelete(id: string) {
 		await deleteIntegration(id);
-		// Wait for the refreshed list to render before asking where focus is.
-		await new Promise<void>((resolve) => {
-			requestAnimationFrame(() => resolve());
-		});
+		setCheckFocusAfterDelete(true);
+	}
+
+	// Runs after the commit that removed the deleted card.
+	useEffect(() => {
+		if (!checkFocusAfterDelete) {
+			return;
+		}
+		setCheckFocusAfterDelete(false);
 		const active = document.activeElement;
 		if (!active || active === document.body) {
 			registerButtonRef.current?.focus();
 		}
-	}
+	}, [checkFocusAfterDelete]);
 
 	return (
 		<div className="grid max-w-7xl grid-cols-1 gap-x-8 gap-y-10 px-4 py-16 sm:px-6 md:grid-cols-3 lg:px-8">

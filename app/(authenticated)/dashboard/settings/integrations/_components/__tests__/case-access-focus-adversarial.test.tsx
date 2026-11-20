@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseAccessSection } from "../case-access-section";
 
+const GRANT_BUTTON_REGEX = /^grant/i;
+
 const fetchAdministrableCases = vi.hoisted(() => vi.fn());
 
 vi.mock("@/actions/assurance-cases", async (importOriginal) => ({
@@ -18,7 +20,9 @@ const CASES = [
 
 const GRANT = "Grant access to a case…";
 
-function view(overrides: Partial<Parameters<typeof CaseAccessSection>[0]> = {}) {
+function view(
+	overrides: Partial<Parameters<typeof CaseAccessSection>[0]> = {}
+) {
 	const props = {
 		grantError: null,
 		granting: false,
@@ -73,8 +77,10 @@ describe("grant form focus", () => {
 		const { props, user } = view();
 		await user.click(grantButton());
 		await user.click(await screen.findByRole("combobox", { name: "Case" }));
-		await user.click(await screen.findByRole("option", { name: "Second case" }));
-		await user.click(screen.getByRole("button", { name: /^grant/i }));
+		await user.click(
+			await screen.findByRole("option", { name: "Second case" })
+		);
+		await user.click(screen.getByRole("button", { name: GRANT_BUTTON_REGEX }));
 		await waitFor(() => expect(grantButton()).toHaveFocus());
 		expect(props.onGrant).toHaveBeenCalledExactlyOnceWith("c2", "VIEW");
 	});
@@ -86,7 +92,7 @@ describe("grant form focus", () => {
 		await user.click(grantButton());
 		await user.click(await screen.findByRole("combobox", { name: "Case" }));
 		await user.click(await screen.findByRole("option", { name: "First case" }));
-		const submit = screen.getByRole("button", { name: /^grant/i });
+		const submit = screen.getByRole("button", { name: GRANT_BUTTON_REGEX });
 		await user.click(submit);
 		await waitFor(() => expect(props.onGrant).toHaveBeenCalled());
 		expect(grantForm()).toBeTruthy();

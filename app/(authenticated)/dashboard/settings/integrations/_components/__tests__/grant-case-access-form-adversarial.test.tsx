@@ -145,7 +145,10 @@ describe("GrantCaseAccessForm empty states", () => {
 		expect(
 			screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 		).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toBeDisabled();
+		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toHaveAttribute(
+			"aria-disabled",
+			"true"
+		);
 	});
 
 	it("says every case is granted, not that there are none, when each listed case is granted", async () => {
@@ -161,7 +164,10 @@ describe("GrantCaseAccessForm empty states", () => {
 		expect(
 			screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 		).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toBeDisabled();
+		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toHaveAttribute(
+			"aria-disabled",
+			"true"
+		);
 	});
 
 	it("shows neither message while the list is still loading, and then only the right one", async () => {
@@ -198,6 +204,9 @@ describe("GrantCaseAccessForm empty states", () => {
 			screen.queryByRole("combobox", { name: CASE_COMBOBOX_REGEX })
 		).not.toBeInTheDocument();
 		expect(screen.queryByText(ALL_GRANTED_REGEX)).not.toBeInTheDocument();
-		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toBeDisabled();
+		expect(screen.getByRole("button", { name: SUBMIT_REGEX })).toHaveAttribute(
+			"aria-disabled",
+			"true"
+		);
 	});
 });

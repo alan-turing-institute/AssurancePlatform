@@ -102,9 +102,9 @@ describe("CasePicker selection", () => {
 		const { user } = await open(THREE);
 		await user.click(screen.getByRole("option", { name: "Gamma" }));
 		expect(screen.queryAllByRole("option")).toHaveLength(0);
-		expect(screen.getByRole("combobox", { name: "Case" }).textContent).toContain(
-			"Gamma"
-		);
+		expect(
+			screen.getByRole("combobox", { name: "Case" }).textContent
+		).toContain("Gamma");
 	});
 
 	it("selects the highlighted item with the keyboard", async () => {
@@ -114,11 +114,11 @@ describe("CasePicker selection", () => {
 		expect(onChange).toHaveBeenCalledExactlyOnceWith("id-2");
 	});
 
-	it("shows the placeholder when the value matches no case", async () => {
+	it("shows the placeholder when the value matches no case", () => {
 		render(<CasePicker cases={THREE} onChange={vi.fn()} value="gone" />);
-		expect(screen.getByRole("combobox", { name: "Case" }).textContent).toContain(
-			"Choose a case"
-		);
+		expect(
+			screen.getByRole("combobox", { name: "Case" }).textContent
+		).toContain("Choose a case");
 	});
 
 	it("shows an empty-list message when there are no cases", async () => {
