@@ -61,27 +61,21 @@
     "cls": 0
   },
   "/discover": {
-    "violations": {
-      "color-contrast": 1
-    },
+    "violations": {},
     "cls": 0.0154
   },
   "/discover/{slug}": {
-    "violations": {
-      "color-contrast": 1
-    },
+    "violations": {},
     "cls": 0.008
   },
   "/docs": {
     "violations": {
-      "color-contrast": 1,
       "svg-img-alt": 1
     },
     "cls": 0.0859
   },
   "/docs/curriculum/tea-trainee/01-first-sip/exploration": {
     "violations": {
-      "color-contrast": 1,
       "nested-interactive": 1,
       "svg-img-alt": 1
     },
@@ -104,9 +98,7 @@
     "cls": 0.0001
   },
   "/register": {
-    "violations": {
-      "color-contrast": 1
-    },
+    "violations": {},
     "cls": 0
   },
   "/reset-password": {
