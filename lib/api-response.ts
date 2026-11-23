@@ -418,6 +418,25 @@ const ERROR_MAPPINGS: Array<{
 			/^Password change is not available for OAuth accounts$|^No password set for this account$/,
 		factory: () => forbidden(),
 	},
+	// `publish-service.ts`'s `unpublishAssuranceCase` and `updatePublishedCase`:
+	// the case is a draft, so there is nothing to unpublish or update — a state
+	// conflict (409), not a 500.
+	{ pattern: /^Case is not published$/, factory: conflict },
+	// `publish-service.ts`'s `updatePublishedCase`: the case is marked published
+	// but has no current published row — a state conflict (409).
+	{ pattern: /^No published version found$/, factory: conflict },
+	// `publish-service.ts`'s `executeStatusTransition`: a status change the case
+	// cannot make from where it is, such as DRAFT to DRAFT — a state conflict
+	// (409).
+	{ pattern: /^Invalid status transition: /, factory: conflict },
+	// `case-information-service.ts`'s `CASE_INFORMATION_INCOMPLETE`, raised by
+	// `publishSnapshot` when the composed snapshot lacks a required field — a
+	// validation failure (400), as at the route's own gate.
+	{
+		pattern:
+			/^Case information is incomplete — add the missing fields before publishing$/,
+		factory: () => validationError(""),
+	},
 ];
 
 /**

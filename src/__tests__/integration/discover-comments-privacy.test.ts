@@ -12,6 +12,7 @@ import { publishAssuranceCase } from "@/lib/services/publish-service";
 import { expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCase,
+	createTestCaseInformation,
 	createTestComment,
 	createTestElement,
 	createTestUser,
@@ -48,6 +49,7 @@ describe("Discover — comments never reach the public surface", () => {
 			content: COMMENT_BODY,
 		});
 
+		await createTestCaseInformation(testCase.id);
 		expectSuccess(await publishAssuranceCase(owner.id, testCase.id));
 
 		// The raw stored snapshot itself has no comments — not just the public

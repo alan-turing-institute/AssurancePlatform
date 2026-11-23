@@ -446,6 +446,9 @@ export async function createTestCaseWithGoal(
 		name: "Top-level goal",
 		role: "TOP_LEVEL",
 	});
+	// Publishing refuses a snapshot whose case information lacks a required
+	// field, so a case meant to be published starts with complete information.
+	await createTestCaseInformation(testCase.id);
 	return testCase;
 }
 
@@ -611,14 +614,18 @@ export function createTestCaseInformation(
 	overrides: CaseInformationOverrides = {}
 ): Promise<CaseInformation> {
 	const n = nextId();
-	return prisma.caseInformation.create({
-		data: {
-			caseId,
-			description: overrides.description ?? `Test case information ${n}`,
-			authors: overrides.authors ?? "Ada Lovelace",
-			sector: overrides.sector ?? "Healthcare",
-			featureImageUrl:
-				overrides.featureImageUrl ?? `https://example.com/image-${n}.png`,
-		},
+	const fields = {
+		description: overrides.description ?? `Test case information ${n}`,
+		authors: overrides.authors ?? "Ada Lovelace",
+		sector: overrides.sector ?? "Healthcare",
+		featureImageUrl:
+			overrides.featureImageUrl ?? `https://example.com/image-${n}.png`,
+	};
+	// An upsert, so a test can set the fields of a case whose fixture already
+	// gave it complete information.
+	return prisma.caseInformation.upsert({
+		where: { caseId },
+		create: { caseId, ...fields },
+		update: fields,
 	});
 }

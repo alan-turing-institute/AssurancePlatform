@@ -14,6 +14,7 @@ import {
 } from "../utils/counter-goal-kit";
 import {
 	createTestCase,
+	createTestCaseInformation,
 	createTestElement,
 	createTestUser,
 } from "../utils/prisma-factories";
@@ -233,6 +234,7 @@ describe("a parentless counter-goal beside the top goal, read elsewhere", () => 
 		const { publishAssuranceCase } = await import(
 			"@/lib/services/publish-service"
 		);
+		await createTestCaseInformation(clash.caseId);
 		const published = await publishAssuranceCase(owner.id, clash.caseId);
 		if ("error" in published) {
 			throw new Error(published.error);

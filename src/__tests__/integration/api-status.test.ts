@@ -60,6 +60,7 @@ describe("PATCH /api/cases/[id]/status — first-publish completeness gate (raw 
 		const user = await createTestUser();
 		const testCase = await createTestCaseWithGoal(user.id);
 		// No case information record at all — every required field missing.
+		await prisma.caseInformation.delete({ where: { caseId: testCase.id } });
 		await mockAuth(user.id, user.username, user.email);
 
 		const { PATCH } = await import("@/app/api/cases/[id]/status/route");

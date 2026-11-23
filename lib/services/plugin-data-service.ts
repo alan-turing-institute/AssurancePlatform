@@ -1,10 +1,11 @@
 import { logger } from "@/lib/logger";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import { assertPluginEnabledForUser } from "@/lib/services/plugin-enablement-service";
-import {
-	type PermissionLevel,
-	type PluginData,
+import type {
+	PermissionLevel,
+	PluginData,
 	Prisma,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -46,13 +47,6 @@ export interface PluginDataLocation {
 	 * semantics would hide a caller bug.
 	 */
 	elementId?: string | null;
-}
-
-function isUniqueConstraintError(error: unknown): boolean {
-	return (
-		error instanceof Prisma.PrismaClientKnownRequestError &&
-		error.code === "P2002"
-	);
 }
 
 /**

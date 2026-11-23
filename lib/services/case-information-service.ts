@@ -233,6 +233,10 @@ export async function checkCaseInformationCompleteness(
 	return { data: { complete: missingFields.length === 0, missingFields } };
 }
 
+/** The refusal for a publish whose case information lacks a required field. */
+export const CASE_INFORMATION_INCOMPLETE =
+	"Case information is incomplete — add the missing fields before publishing";
+
 /**
  * The case-information half of the publish-readiness gate, shared by every
  * route that can move a case to PUBLISHED — first publish
@@ -270,8 +274,7 @@ export async function requireCaseInformationComplete(
 			])
 		);
 		return {
-			error:
-				"Case information is incomplete — add the missing fields before publishing",
+			error: CASE_INFORMATION_INCOMPLETE,
 			fieldErrors,
 		};
 	}

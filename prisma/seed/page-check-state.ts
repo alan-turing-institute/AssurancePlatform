@@ -47,6 +47,14 @@ async function createFixtureCase(userId: string): Promise<string> {
 			createdById: userId,
 		},
 	});
+	await prisma.caseInformation.create({
+		data: {
+			caseId: created.id,
+			description: "A small case that is published and then trashed",
+			authors: "Seed author",
+			sector: "Healthcare",
+		},
+	});
 	return created.id;
 }
 

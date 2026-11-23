@@ -24,7 +24,10 @@ import {
 	save,
 	signIn,
 } from "../utils/live-node-kit";
-import { createTestElement } from "../utils/prisma-factories";
+import {
+	createTestCaseInformation,
+	createTestElement,
+} from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -227,6 +230,7 @@ describe("exports carry the node as plain evidence", () => {
 describe("a published case and its public page carry the node as plain evidence", () => {
 	async function publish() {
 		const { world, node } = await worldWithNodeAndResult();
+		await createTestCaseInformation(world.kase.id);
 		const published = await publishAssuranceCase(world.owner.id, world.kase.id);
 		if (!("data" in published)) {
 			throw new Error(`publish failed: ${JSON.stringify(published)}`);
@@ -282,6 +286,7 @@ describe("a published case and its public page carry the node as plain evidence"
 	it("shows a published case as changed after a node is added, and not after plain settings are accepted", async () => {
 		const world = await nodeWorld();
 		const second = await addClaim(world, "P2");
+		await createTestCaseInformation(world.kase.id);
 		const published = await publishAssuranceCase(world.owner.id, world.kase.id);
 		expect("data" in published).toBe(true);
 		const before = await detectChanges(world.owner.id, world.kase.id, false);

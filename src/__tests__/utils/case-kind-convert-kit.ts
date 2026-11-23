@@ -284,7 +284,12 @@ export async function createRichCase(
 		content: "An element comment",
 	});
 	await prisma.caseInformation.create({
-		data: { caseId: testCase.id, description: "About", authors: "Ada" },
+		data: {
+			caseId: testCase.id,
+			description: "About",
+			authors: "Ada",
+			sector: "Healthcare",
+		},
 	});
 	await prisma.caseInvite.create({
 		data: {

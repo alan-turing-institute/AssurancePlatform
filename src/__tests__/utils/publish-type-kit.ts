@@ -37,7 +37,7 @@ let counter = 0;
 /** A case or pattern with a top goal, owned by a new user, ready to publish. */
 export async function openCase(
 	kind: Kind,
-	options: { withInformation?: boolean } = {}
+	options: { withInformation?: boolean } = { withInformation: true }
 ): Promise<OpenCase> {
 	counter += 1;
 	const owner = await createTestUser();
