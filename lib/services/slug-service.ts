@@ -28,9 +28,10 @@ type TransactionClient = TransactionCallback extends (
  * `publish-service.ts` — so a case's public address survives any number of
  * renames.
  *
- * Accepts an optional transaction client so the uniqueness check and the
- * row insert that consumes its result can run inside the same transaction
- * (`publishAssuranceCase` does this) without a TOCTOU gap between the two.
+ * Accepts an optional transaction client so the check runs in the publish
+ * transaction (`publishAssuranceCase` does this). Two transactions at read
+ * committed can still both pick the same slug; the unique index on current
+ * slugs rejects the second insert, and the publish retries with a fresh pick.
  */
 export async function generateUniqueSlug(
 	name: string,

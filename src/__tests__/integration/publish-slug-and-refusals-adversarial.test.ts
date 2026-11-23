@@ -140,15 +140,21 @@ describe("a first publish of a case that is already published", () => {
 		const first = await publishCase(scene.caseId);
 		const [firstRow] = await currentRows(scene.caseId);
 		const second = await publishCase(scene.caseId);
+		const afterSecond = await currentRows(scene.caseId);
 		const third = await publishCase(scene.caseId);
 
 		expect([first.status, second.status, third.status]).toEqual([
 			200, 200, 200,
 		]);
+		expect(afterSecond.map((row) => row.slug)).toEqual(["keep-my-slug"]);
 		const rows = await currentRows(scene.caseId);
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.slug).toBe(firstRow?.slug);
 		expect(rows[0]?.slug).toBe("keep-my-slug");
+		const all = await publishedRows(scene.caseId);
+		expect(new Set(all.map((row) => row.slug))).toEqual(
+			new Set(["keep-my-slug"])
+		);
 	});
 
 	it("leaves one current row and one slug when two first publishes queue behind the case row", async () => {
@@ -193,10 +199,13 @@ describe("case information cleared between the route's check and the snapshot", 
 		const response = await publishing;
 
 		expect(response.status).toBe(400);
-		expect(await response.json()).toMatchObject({
+		const body = await response.json();
+		expect(body).toMatchObject({
 			error: INCOMPLETE,
 			code: "VALIDATION",
 		});
+		// The route's own gate names the missing fields; the snapshot check does not.
+		expect(body).not.toHaveProperty("fieldErrors");
 		expect(await publishedRows(scene.caseId)).toEqual([]);
 		const stored = await prisma.assuranceCase.findUniqueOrThrow({
 			where: { id: scene.caseId },

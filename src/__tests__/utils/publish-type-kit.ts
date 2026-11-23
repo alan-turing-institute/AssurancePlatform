@@ -37,7 +37,7 @@ let counter = 0;
 /** A case or pattern with a top goal, owned by a new user, ready to publish. */
 export async function openCase(
 	kind: Kind,
-	options: { withInformation?: boolean } = { withInformation: true }
+	{ withInformation = true }: { withInformation?: boolean } = {}
 ): Promise<OpenCase> {
 	counter += 1;
 	const owner = await createTestUser();
@@ -48,7 +48,7 @@ export async function openCase(
 		name: "G1",
 		role: "TOP_LEVEL",
 	});
-	if (options.withInformation) {
+	if (withInformation) {
 		await createTestCaseInformation(testCase.id);
 	}
 	return { caseId: testCase.id, name, ownerId: owner.id };
