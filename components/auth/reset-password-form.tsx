@@ -136,10 +136,10 @@ const ResetPasswordForm = () => {
 					className="rounded-md border border-warning bg-warning/20 px-4 py-6"
 					role="alert"
 				>
-					<h3 className="font-semibold text-warning dark:text-warning">
+					<h3 className="font-semibold text-warning-foreground">
 						This link can&apos;t be used
 					</h3>
-					<p className="mt-2 text-sm text-warning/80">
+					<p className="mt-2 text-sm text-warning-foreground">
 						It may have expired or already been used.
 					</p>
 				</div>
@@ -160,10 +160,10 @@ const ResetPasswordForm = () => {
 		return (
 			<div className="mx-auto w-full max-w-sm lg:w-96">
 				<div className="rounded-md border border-success bg-success/20 px-4 py-6">
-					<h3 className="font-semibold text-success dark:text-success">
+					<h3 className="font-semibold text-success-foreground">
 						Password reset successful
 					</h3>
-					<p className="mt-2 text-sm text-success/80">
+					<p className="mt-2 text-sm text-success-foreground">
 						Your password has been reset. Redirecting you to login...
 					</p>
 				</div>

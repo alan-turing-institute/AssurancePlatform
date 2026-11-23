@@ -41,10 +41,10 @@ interface TrashListProps {
 
 function getDaysRemainingColour(days: number): string {
 	if (days > 7) {
-		return "bg-success/10 text-success ring-success/20";
+		return "bg-success/10 text-success-foreground ring-success/20";
 	}
 	if (days > 3) {
-		return "bg-warning/10 text-warning ring-warning/20";
+		return "bg-warning/10 text-warning-foreground ring-warning/20";
 	}
 	return "bg-destructive/10 text-destructive ring-destructive/20";
 }

@@ -33,7 +33,8 @@ const statusConfig: Record<
 	},
 	PUBLISHED: {
 		label: "Published",
-		className: "bg-success/10 text-success ring-success/20 hover:bg-success/20",
+		className:
+			"bg-success/10 text-success-foreground ring-success/20 hover:bg-success/20",
 		tooltip: "Click to manage publish status",
 	},
 };

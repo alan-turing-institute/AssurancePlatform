@@ -1,9 +1,7 @@
 {
   "/": {
-    "violations": {
-      "color-contrast": 1
-    },
-    "cls": 0.1518
+    "violations": {},
+    "cls": 0.0001
   },
   "/api-docs": {
     "violations": {
@@ -13,14 +11,11 @@
     "cls": 0.0927
   },
   "/auth-error": {
-    "violations": {
-      "color-contrast": 1
-    },
+    "violations": {},
     "cls": 0
   },
   "/case/{caseId}": {
     "violations": {
-      "color-contrast": 1,
       "nested-interactive": 4
     },
     "cls": 0.0003
@@ -62,9 +57,7 @@
     "cls": 0
   },
   "/dashboard/trash": {
-    "violations": {
-      "color-contrast": 1
-    },
+    "violations": {},
     "cls": 0
   },
   "/discover": {
@@ -117,9 +110,7 @@
     "cls": 0
   },
   "/reset-password": {
-    "violations": {
-      "color-contrast": 2
-    },
+    "violations": {},
     "cls": 0.0033
   }
 }
