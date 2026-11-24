@@ -157,6 +157,27 @@ describe("default theme preset contrast", () => {
 				}
 			});
 
+			for (const base of [
+				"--background",
+				"--card",
+				"--accent",
+				"--sidebar",
+			] as const) {
+				it(`primary text reaches 4.5:1 on a 10 per cent primary tint over ${base}`, () => {
+					const ratioOnTint = weakest((rounded) => {
+						const primary = colour(set, "--primary", rounded);
+						const surface = blend(
+							primary,
+							colour(set, base, rounded),
+							0.1,
+							rounded
+						);
+						return [primary, surface];
+					});
+					expect(ratioOnTint).toBeGreaterThan(MINIMUM_RATIO);
+				});
+			}
+
 			it("destructive reaches 4.5:1 on accent", () => {
 				expect(textOn(set, "--destructive", "--accent")).toBeGreaterThan(
 					MINIMUM_RATIO

@@ -18,10 +18,10 @@ export default function AuthErrorPage() {
 					<div className="rounded-md bg-warning/10 p-4">
 						<div className="flex">
 							<div className="ml-3">
-								<h3 className="font-medium text-sm text-warning">
+								<h3 className="font-medium text-sm text-warning-foreground">
 									Session Issue Detected
 								</h3>
-								<div className="mt-2 text-sm text-warning">
+								<div className="mt-2 text-sm text-warning-foreground">
 									<p>
 										Your session appears to be in an invalid state. This can
 										happen when:

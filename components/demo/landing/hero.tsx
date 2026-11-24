@@ -82,9 +82,12 @@ export default function Hero() {
 									<div className="w-full overflow-hidden rounded-lg shadow-xl">
 										<video
 											autoPlay
+											className="aspect-square w-full"
+											height={1080}
 											loop
 											muted
 											src="/images/building-an-assurance-case.mp4"
+											width={1080}
 										/>
 									</div>
 									{/* <div className="ml-auto w-44 flex-none space-y-8 pt-32 sm:ml-0 sm:pt-80 lg:order-last lg:pt-36 xl:order-0 xl:pt-80">

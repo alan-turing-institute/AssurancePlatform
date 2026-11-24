@@ -238,7 +238,7 @@ export function CaseSettingsPopover() {
 									const isActive = preset.id === p.id;
 									const vars = resolvedTheme === "dark" ? p.dark : p.light;
 									const primary =
-										vars["--primary"] ?? "oklch(0.5547 0.2503 297.0156)";
+										vars["--primary"] ?? "oklch(0.51 0.2503 297.0156)";
 									const background =
 										vars["--background"] ?? "oklch(0.9578 0.0058 264.5321)";
 									const sidebar =

@@ -10,7 +10,7 @@ export default function CTA() {
 						<br />
 						Start using TEA today.
 					</h2>
-					<p className="mx-auto mt-6 max-w-xl text-lg text-primary-foreground/70 leading-8 dark:text-primary/70">
+					<p className="mx-auto mt-6 max-w-xl text-lg text-primary-foreground leading-8 dark:text-primary/70">
 						You can sign up and test the TEA platform in action today. If would
 						like to set up the platform in your own, private environment, please
 						get in touch!
