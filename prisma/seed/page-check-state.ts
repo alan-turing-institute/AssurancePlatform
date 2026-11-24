@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "../../lib/prisma";
+import { sectors } from "../../lib/sectors";
 import { softDeleteCase } from "../../lib/services/case-trash-service";
 import { publishAssuranceCase } from "../../lib/services/publish-service";
 
@@ -45,6 +46,16 @@ async function createFixtureCase(userId: string): Promise<string> {
 			name: "G1",
 			description: "The system is safe to use",
 			createdById: userId,
+		},
+	});
+	await prisma.caseInformation.create({
+		data: {
+			caseId: created.id,
+			description: "A small case that is published and then trashed",
+			authors: "Seed author",
+			sector: String(
+				sectors.find((sector) => sector.Name === "Health & Social Care")?.ID
+			),
 		},
 	});
 	return created.id;

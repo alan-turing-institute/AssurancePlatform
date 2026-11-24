@@ -151,8 +151,11 @@ describe("GET /api/public/discover/[slug]/image/[versionId]", () => {
 	it("returns 404 for a published case with no feature image", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
-		// No case-information at all — captureCaseInformationForSnapshot omits
-		// the key entirely, same outcome as an explicit null.
+		// The case information has no feature image, so the snapshot carries none.
+		await prisma.caseInformation.update({
+			where: { caseId: testCase.id },
+			data: { featureImageUrl: null },
+		});
 		const result = await publishAssuranceCase(owner.id, testCase.id);
 		if ("error" in result) {
 			throw new Error(result.error);

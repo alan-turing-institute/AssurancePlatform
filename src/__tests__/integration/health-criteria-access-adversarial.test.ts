@@ -32,7 +32,11 @@ import {
 	itemSettings,
 	saveBody,
 } from "../utils/health-criteria-kit";
-import { createTestElement, createTestUser } from "../utils/prisma-factories";
+import {
+	createTestCaseInformation,
+	createTestElement,
+	createTestUser,
+} from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -618,6 +622,7 @@ describe("nothing is public", () => {
 		await postResult(claim.id, secret, served, {
 			rule: { kind: "identity", version: "r99" },
 		});
+		await createTestCaseInformation(testCase.id);
 		const published = await publishAssuranceCase(owner.id, testCase.id);
 		expect("data" in published || "error" in published).toBe(true);
 		const rows = await prisma.publishedAssuranceCase.findMany({

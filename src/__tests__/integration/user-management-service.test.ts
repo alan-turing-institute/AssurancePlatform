@@ -21,6 +21,7 @@ import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	addTeamMember,
 	createTestCase,
+	createTestCaseInformation,
 	createTestCaseWithGoal,
 	createTestIntegrationWithSystemUser,
 	createTestPermission,
@@ -465,9 +466,7 @@ describe("deleteAccount — kept vs trashed cases (Chris's deletion rule)", () =
 		const filePath = join(UPLOADS_DIR, liveKey);
 		await mkdir(join(filePath, ".."), { recursive: true });
 		await writeFile(filePath, Buffer.from("fake-png-bytes"));
-		await prisma.caseInformation.create({
-			data: { caseId: testCase.id, featureImageUrl: liveKey },
-		});
+		await createTestCaseInformation(testCase.id, { featureImageUrl: liveKey });
 
 		const first = expectSuccess(
 			await publishAssuranceCase(owner.id, testCase.id)

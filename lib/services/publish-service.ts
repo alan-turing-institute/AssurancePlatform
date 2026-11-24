@@ -14,10 +14,16 @@ import {
 } from "@/lib/media-key";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import type { TreeNode } from "@/lib/schemas/case-export";
+import { getMissingCaseInformationFields } from "@/lib/schemas/case-information";
 import { publishedSnapshotMetaSchema } from "@/lib/schemas/publishable-item";
 import { exportCase } from "@/lib/services/case-export-service";
-import { captureCaseInformationForSnapshot } from "@/lib/services/case-information-service";
+import {
+	CASE_INFORMATION_INCOMPLETE,
+	type CaseInformationSnapshot,
+	captureCaseInformationForSnapshot,
+} from "@/lib/services/case-information-service";
 import { detectChanges } from "@/lib/services/change-detection-service";
 import { copyMedia, deleteMedia } from "@/lib/services/file-storage-service";
 import { capturePluginDataForSnapshot } from "@/lib/services/plugin-data-service";
@@ -295,6 +301,8 @@ export async function archivePublishedCopies(
 
 /** A composed snapshot: its content, the typed tree it was composed from, and the kind it records. */
 interface ComposedSnapshot {
+	/** The case information the content carries, judged for completeness before it is written. */
+	caseInformation: CaseInformationSnapshot | undefined;
 	data: Record<string, unknown>;
 	kind: CaseKind;
 	tree: TreeNode;
@@ -346,6 +354,7 @@ async function composeSnapshotContent(
 	const caseInformation = await captureCaseInformationForSnapshot(caseId);
 
 	return {
+		caseInformation,
 		data: {
 			...exportResult.data,
 			...(pluginData && { pluginData }),
@@ -375,6 +384,35 @@ async function throwForUnmatchedCaseWrite(
 		: new CaseTrashedDuringTransactionError();
 }
 
+const SLUG_ATTEMPTS = 3;
+
+/**
+ * Runs a first-publish transaction, starting a fresh one each time it fails
+ * on the unique index over current slugs, up to `SLUG_ATTEMPTS` times. Only
+ * that index can raise a unique-constraint error inside the transaction. When
+ * every attempt collides, the case is reported as changed during the publish,
+ * which the caller answers as "try again".
+ */
+async function publishWithSlugRetry<T>(attempt: () => Promise<T>): Promise<T> {
+	for (let n = 1; n < SLUG_ATTEMPTS; n++) {
+		try {
+			return await attempt();
+		} catch (error) {
+			if (!isUniqueConstraintError(error)) {
+				throw error;
+			}
+		}
+	}
+	try {
+		return await attempt();
+	} catch (error) {
+		if (isUniqueConstraintError(error)) {
+			throw new CaseChangedDuringPublishError();
+		}
+		throw error;
+	}
+}
+
 /**
  * Retires whichever row is currently `isCurrent: true` for `caseId` and
  * inserts its replacement, inside the caller's transaction. Retirement must
@@ -383,11 +421,11 @@ async function throwForUnmatchedCaseWrite(
  * while the old row is still marked current.
  *
  * `updateMany` (not `update` on one known id) so this is correct whether
- * zero or one row is currently marked: first-publish has none (this call is
- * then a defensive no-op guarding the "at most one current row per case"
- * invariant against being called twice on an already-published case — e.g.
- * directly via `POST /api/cases/[id]/publish`, outside `transitionStatus`'s
- * DRAFT-only gate); republish has exactly one.
+ * zero or one row is currently marked: a first publish of a draft has none; a
+ * republish has exactly one, and so does a first publish of an already
+ * published case (a direct `POST /api/cases/[id]/publish`, outside
+ * `transitionStatus`'s DRAFT-only gate), which keeps that row's slug and
+ * replaces it, leaving one current row.
  *
  * The new row's `type` follows the case's kind, read here inside the
  * transaction: `ARGUMENT_PATTERN` for a pattern, `ASSURANCE_CASE` for a case.
@@ -480,6 +518,13 @@ async function publishSnapshot(
 		if (remaining) {
 			return { error: remaining };
 		}
+	}
+	// Case information is judged on the snapshot too: a field cleared after the
+	// route's own check cannot reach the published copy.
+	if (
+		getMissingCaseInformationFields(contentResult.caseInformation).length > 0
+	) {
+		return { error: CASE_INFORMATION_INCOMPLETE };
 	}
 	const { content: preparedContent, copiedKey } =
 		await copyFeatureImageForSnapshot(caseId, contentResult.data);
@@ -621,34 +666,49 @@ export async function publishAssuranceCase(
 			// tells the two causes apart — a case still out of Trash was converted,
 			// and the caller is asked to try again with nothing written.
 			//
-			// Generating the slug and creating the row must share this same
-			// transaction — otherwise a concurrent first-publish of a same-named
-			// case could observe the same "no collision yet" result and both try
-			// to claim the identical slug (the table's unique index would then
-			// reject the second, surfacing as an opaque 500 rather than the
-			// numeric-suffix behaviour ADR 0003 §6 promises).
-			prisma.$transaction(async (tx) => {
-				const updateResult = await tx.assuranceCase.updateMany({
-					where: { id: caseId, deletedAt: null, kind },
-					data: {
-						published: true,
-						publishedAt: now,
-						publishStatus: "PUBLISHED",
-					},
-				});
-				if (updateResult.count === 0) {
-					await throwForUnmatchedCaseWrite(tx, caseId);
-				}
-				const slug = await generateUniqueSlug(assuranceCase.name, tx);
-				return await swapCurrentPublishedVersion(tx, {
-					caseId,
-					title: assuranceCase.name,
-					slug,
-					content,
-					description: description ?? null,
-					createdAt: now,
-				});
-			}),
+			// A case that is already published keeps the slug of its current row,
+			// so a first publish of a published case behaves as an update.
+			// Otherwise the slug is generated in the same transaction as the row.
+			// At the default isolation level (read committed) two first publishes
+			// of same-named cases can still both see no collision and pick the
+			// same slug; the partial unique index then rejects the later insert
+			// with a unique-constraint error. That failure is retried as a whole
+			// new transaction (never inside the aborted one), so the next attempt
+			// sees the other row and takes the next free suffix. When the attempts
+			// run out the caller is asked to try again.
+			publishWithSlugRetry(() =>
+				prisma.$transaction(async (tx) => {
+					const updateResult = await tx.assuranceCase.updateMany({
+						where: { id: caseId, deletedAt: null, kind },
+						data: {
+							published: true,
+							publishedAt: now,
+							publishStatus: "PUBLISHED",
+						},
+					});
+					if (updateResult.count === 0) {
+						await throwForUnmatchedCaseWrite(tx, caseId);
+					}
+					// The case-row write above holds the case row's lock, so a
+					// republish or unpublish of this case cannot change its current
+					// row between this read and the swap.
+					const existing = await tx.publishedAssuranceCase.findFirst({
+						where: { assuranceCaseId: caseId, isCurrent: true },
+						select: { slug: true },
+					});
+					const slug =
+						existing?.slug ??
+						(await generateUniqueSlug(assuranceCase.name, tx));
+					return await swapCurrentPublishedVersion(tx, {
+						caseId,
+						title: assuranceCase.name,
+						slug,
+						content,
+						description: description ?? null,
+						createdAt: now,
+					});
+				})
+			),
 		"Failed to publish case"
 	);
 }

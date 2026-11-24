@@ -31,6 +31,7 @@ import {
 import {
 	addTeamMember,
 	createTestCase,
+	createTestCaseInformation,
 	createTestElement,
 	createTestPermission,
 	createTestTeam,
@@ -1079,6 +1080,7 @@ describe("exports and published copies carry the node as plain evidence", () => 
 		await putClaimUnderGoal(context);
 		const first = await acceptWithNode(context);
 
+		await createTestCaseInformation(context.testCase.id);
 		const published = expectSuccess(
 			await publishAssuranceCase(context.owner.id, context.testCase.id)
 		);

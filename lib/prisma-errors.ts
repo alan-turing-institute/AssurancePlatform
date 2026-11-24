@@ -34,3 +34,11 @@ export function isWriteConflict(error: unknown): boolean {
 		cause?.originalCode === "40P01"
 	);
 }
+
+/** Whether `error` is Prisma's unique-constraint violation (P2002). */
+export function isUniqueConstraintError(error: unknown): boolean {
+	return (
+		error instanceof Prisma.PrismaClientKnownRequestError &&
+		error.code === "P2002"
+	);
+}

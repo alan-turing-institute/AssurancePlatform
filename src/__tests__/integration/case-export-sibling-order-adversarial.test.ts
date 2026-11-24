@@ -29,6 +29,7 @@ import {
 } from "../utils/export-order-kit";
 import {
 	createTestCase,
+	createTestCaseInformation,
 	createTestElement,
 	createTestUser,
 } from "../utils/prisma-factories";
@@ -557,6 +558,7 @@ describe("the readers built on the export", () => {
 	it("freeze the diagram's order into a published snapshot", async () => {
 		const owner = await createTestUser();
 		const fx = await siblingCase(owner);
+		await createTestCaseInformation(fx.caseId);
 
 		const readings = await readUnderEveryRowOrder(async () => {
 			const published = await publishAssuranceCase(owner.id, fx.caseId);

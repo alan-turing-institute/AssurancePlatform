@@ -179,7 +179,9 @@ A person without edit access is refused for permission rather than told what is 
 Publishing creates a `PublishedAssuranceCase` JSON snapshot with a public slug. Republishing retires the current row and creates a new current row with the same slug. The snapshot is separate from the editable source case. It excludes internal collaboration comments. The schema also contains older `Release` and `ReleaseSnapshot` models; they are not the record that the current publishing service creates for Discover.
 The row's `type` is `ARGUMENT_PATTERN` when the case is a pattern and `ASSURANCE_CASE` when it is a case.
 `swapCurrentPublishedVersion` in `lib/services/publish-service.ts` sets it from the case's kind when it creates the row, and a republish keeps it.
-A publish or republish is refused, with "The case changed while it was being published. Try again.", if the case was converted after the snapshot was composed, or, for a republish, unpublished after it.
+Publishing also judges the case information on the copy being written, and refuses with a 400 if a required field was cleared after the route's own check.
+A first publish of a case that is already published keeps the address it has.
+A publish or republish is refused, with "The case changed while it was being published. Try again.", if the case was converted after the snapshot was composed, or, for a republish, unpublished after it; the same answer covers a first publish whose address collides with another case's three times running.
 Every transaction that writes a case and its published rows takes the case row first: publish, republish, unpublish, moving a case to Trash, restoring it, removing an archived copy, a permanent delete and an account deletion.
 No two of them can wait on each other's locks in opposite orders, so none can deadlock with another.
 An unpublish that meets a republish waits for it, then takes the version it wrote down as well, so the case ends as a draft with no published version.

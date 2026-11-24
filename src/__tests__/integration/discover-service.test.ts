@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import prisma from "@/lib/prisma";
 import {
 	getPublishedItemBySlug,
 	getPublishedItems,
@@ -8,6 +9,7 @@ import {
 	unpublishAssuranceCase,
 	updatePublishedCase,
 } from "@/lib/services/publish-service";
+import type { Prisma } from "@/src/generated/prisma";
 import { expectError, expectSuccess } from "../utils/assertion-helpers";
 import {
 	createTestCaseInformation,
@@ -65,6 +67,20 @@ describe("getPublishedItems", () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id, "Bare Case");
 		await publishAssuranceCase(owner.id, testCase.id);
+		// A copy published before snapshots carried case information has none.
+		const row = await prisma.publishedAssuranceCase.findFirstOrThrow({
+			where: { assuranceCaseId: testCase.id },
+		});
+		await prisma.publishedAssuranceCase.update({
+			where: { id: row.id },
+			data: {
+				content: Object.fromEntries(
+					Object.entries(row.content as Record<string, unknown>).filter(
+						([key]) => key !== "caseInformation"
+					)
+				) as Prisma.InputJsonObject,
+			},
+		});
 
 		const items = expectSuccess(await getPublishedItems());
 		const item = items.find((i) => i.title === "Bare Case");

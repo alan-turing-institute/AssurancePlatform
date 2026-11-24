@@ -716,20 +716,22 @@ describe("published_assurance_cases_slug_is_current_key — partial unique index
 // ============================================
 
 describe("publishAssuranceCase — case information snapshot capture", () => {
-	it("omits the caseInformation section when the case has none", async () => {
+	it("refuses to publish a case that has no case information", async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCaseWithGoal(owner.id);
+		await prisma.caseInformation.delete({ where: { caseId: testCase.id } });
 
-		const data = expectSuccess(
-			await publishAssuranceCase(owner.id, testCase.id)
-		);
-		const published = await prisma.publishedAssuranceCase.findUnique({
-			where: { id: data.publishedId },
+		const result = await publishAssuranceCase(owner.id, testCase.id);
+
+		expect(result).toStrictEqual({
+			error:
+				"Case information is incomplete — add the missing fields before publishing",
 		});
-		const content = published?.content as {
-			caseInformation?: Record<string, unknown>;
-		};
-		expect(content.caseInformation).toBeUndefined();
+		expect(
+			await prisma.publishedAssuranceCase.count({
+				where: { assuranceCaseId: testCase.id },
+			})
+		).toBe(0);
 	});
 
 	it("freezes case information present at publish time", async () => {
@@ -1177,6 +1179,7 @@ describe.each(
 	it(`creates a row of type ${expectedType}`, async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id, { kind });
+		await createTestCaseInformation(testCase.id);
 		await createTestElement(testCase.id, owner.id, {
 			elementType: "GOAL",
 			name: "Top-level goal",
@@ -1197,6 +1200,7 @@ describe.each(
 	it(`keeps the type ${expectedType} on every republish`, async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id, { kind });
+		await createTestCaseInformation(testCase.id);
 		await createTestElement(testCase.id, owner.id, {
 			elementType: "GOAL",
 			name: "Top-level goal",
@@ -1222,6 +1226,7 @@ describe.each(
 	it(`keeps the type ${expectedType} on the copy kept when the case is archived`, async () => {
 		const owner = await createTestUser();
 		const testCase = await createTestCase(owner.id, { kind });
+		await createTestCaseInformation(testCase.id);
 		await createTestElement(testCase.id, owner.id, {
 			elementType: "GOAL",
 			name: "Top-level goal",
@@ -1247,6 +1252,7 @@ describe("publishing a pattern — the snapshot", () => {
 	it("carries the case kind, so the public copy is known to be a pattern", async () => {
 		const owner = await createTestUser();
 		const pattern = await createTestCase(owner.id, { kind: "PATTERN" });
+		await createTestCaseInformation(pattern.id);
 		await createTestElement(pattern.id, owner.id, {
 			elementType: "GOAL",
 			name: "Top-level goal",

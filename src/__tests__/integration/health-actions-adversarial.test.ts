@@ -14,6 +14,7 @@ import {
 	setupMachineWriter,
 	wireRecord,
 } from "../utils/health-adversarial-kit";
+import { createTestCaseInformation } from "../utils/prisma-factories";
 
 vi.mock("@/lib/auth/validate-session", () => ({
 	validateSession: vi.fn().mockResolvedValue(null),
@@ -173,6 +174,7 @@ describe("revocation and reinstatement requests", () => {
 			(await prisma.pluginHealthEvidence.findFirstOrThrow()).recordId
 		);
 
+		await createTestCaseInformation(testCase.id);
 		const published = expectSuccess(
 			await publishAssuranceCase(owner.id, testCase.id)
 		);

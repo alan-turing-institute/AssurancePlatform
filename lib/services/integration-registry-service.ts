@@ -8,16 +8,17 @@ import { findUnknownScopes, type Scope } from "@/lib/auth/scopes";
 import { addTimingNoise, isTimestampValid } from "@/lib/auth/timing-safe";
 import { canAccessCase } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { isUniqueConstraintError } from "@/lib/prisma-errors";
 import {
 	checkRateLimit,
 	RATE_LIMIT_CONFIGS,
 	recordAttempt,
 } from "@/lib/services/rate-limit-service";
 import { recordSecurityEvent } from "@/lib/services/security-audit-service";
-import {
-	type ApiToken,
-	type Integration,
-	type PermissionLevel,
+import type {
+	ApiToken,
+	Integration,
+	PermissionLevel,
 	Prisma,
 } from "@/src/generated/prisma";
 import type { ServiceResult } from "@/types/service";
@@ -112,13 +113,6 @@ class RotationRefused extends Error {}
 // ============================================
 // Helpers
 // ============================================
-
-function isUniqueConstraintError(error: unknown): boolean {
-	return (
-		error instanceof Prisma.PrismaClientKnownRequestError &&
-		error.code === "P2002"
-	);
-}
 
 function slugifyIntegrationName(name: string): string {
 	return name

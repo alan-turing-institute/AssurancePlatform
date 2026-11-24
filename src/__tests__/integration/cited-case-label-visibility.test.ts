@@ -13,6 +13,7 @@ import { fetchNodes } from "../utils/counter-goal-kit";
 import {
 	addTeamMember,
 	createTestCase,
+	createTestCaseInformation,
 	createTestElement,
 	createTestPermission,
 	createTestTeam,
@@ -1248,6 +1249,7 @@ describe("exporting and publishing a case that cites a hidden case", () => {
 
 	it("publishes raw ids and no names, on the stored snapshot and the public route", async () => {
 		const { world, hidden } = await worldWithHiddenCitations();
+		await createTestCaseInformation(world.homeCaseId);
 
 		const published = await publishAssuranceCase(
 			world.host.id,
