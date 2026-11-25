@@ -81,14 +81,21 @@ describe("createCaseFromPatternSchema", () => {
 		);
 	});
 
-	it("names the description when it is blank", () => {
+	it.each(["", "  "])("names the description once when it is %j", (blank) => {
 		const result = createCaseFromPatternSchema.safeParse({
 			...base,
-			description: "  ",
+			description: blank,
 		});
-		const messages = result.error?.issues.map((issue) => issue.message);
-		expect(messages?.length).toBeGreaterThan(0);
-		expect(messages?.every((m) => m === "Description is required")).toBe(true);
+		expect(result.error?.issues.map((issue) => issue.message)).toEqual([
+			"Description is required",
+		]);
+	});
+
+	it("still accepts a description and trims it", () => {
+		expect(
+			createCaseFromPatternSchema.parse({ ...base, description: " About it " })
+				.description
+		).toBe("About it");
 	});
 });
 
