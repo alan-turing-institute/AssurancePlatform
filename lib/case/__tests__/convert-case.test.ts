@@ -1232,4 +1232,360 @@ describe("terms in reach on each card's data", () => {
 		expect(termsOf(before, "p1")).toEqual(["window"]);
 		expect(termsOf(after, "p1")).toEqual(["rate"]);
 	});
+
+	it("gives a card with no entry of its own the very list its parent holds", () => {
+		const nodes = createNodesRecursively(
+			[item("g1", "G1", { context: [WINDOW], strategies: [item("s1", "S1")] })],
+			"goal"
+		);
+
+		const parent = nodes.find((node) => node.data.id === "g1");
+		const child = nodes.find((node) => node.data.id === "s1");
+		expect(child?.data.termsInReach).toBe(parent?.data.termsInReach);
+	});
+});
+
+const EMPTY_RESULT = { caseNodes: [], caseEdges: [] };
+
+function element(id: string, extra: Record<string, unknown> = {}) {
+	return { id, name: id, type: "goal", description: id, ...extra };
+}
+
+function caseOfGoal(extra: Record<string, unknown>, caseFields = {}) {
+	return {
+		id: "case-1",
+		...caseFields,
+		goals: [element("g1", extra)],
+	} as unknown as AssuranceCaseWithGoals;
+}
+
+function dataOf(nodes: Node[], elementId: string) {
+	const found = nodes.find((node) => node.data.id === elementId);
+	if (!found) {
+		throw new Error(`no node for ${elementId}`);
+	}
+	return found.data;
+}
+
+describe("convertAssuranceCase — what comes back for input that is not a case", () => {
+	it.each([
+		["no goals", { id: "c" }],
+		["null goals", { id: "c", goals: null }],
+		["goals as text", { id: "c", goals: "abc" }],
+		["goals as an object", { id: "c", goals: { length: 2 } }],
+		["null case", null],
+		["undefined case", undefined],
+	])("returns two empty lists for %s", (_label, input) => {
+		const result = convertAssuranceCase(
+			input as unknown as AssuranceCaseWithGoals
+		);
+
+		expect(result).toStrictEqual(EMPTY_RESULT);
+	});
+});
+
+describe("convertAssuranceCase — demo flag", () => {
+	it("marks every card, however deep, as demo when the case is a demo", () => {
+		const { caseNodes } = convertAssuranceCase(
+			caseOfGoal(
+				{ strategies: [element("s1", { propertyClaims: [element("p1")] })] },
+				{ isDemo: 1 }
+			)
+		);
+
+		expect(caseNodes.map((node) => node.data.isDemo)).toStrictEqual([
+			true,
+			true,
+			true,
+		]);
+	});
+
+	it.each([
+		["absent", {}],
+		["zero", { isDemo: 0 }],
+		["false", { isDemo: false }],
+	])("marks every card as not demo when the flag is %s", (_label, fields) => {
+		const { caseNodes } = convertAssuranceCase(
+			caseOfGoal({ strategies: [element("s1")] }, fields)
+		);
+
+		expect(caseNodes.map((node) => node.data.isDemo)).toStrictEqual([
+			false,
+			false,
+		]);
+	});
+
+	it("marks cards as not demo when createNodesRecursively is not told", () => {
+		const nodes = createNodesRecursively(
+			[element("g1", { strategies: [element("s1")] })],
+			"goal"
+		);
+
+		expect(nodes.map((node) => node.data.isDemo)).toStrictEqual([false, false]);
+	});
+});
+
+describe("createNodesRecursively — limits and unusable input", () => {
+	const CHILD_KEYS = [
+		["goals", "goal"],
+		["strategies", "strategy"],
+		["propertyClaims", "property"],
+		["evidence", "evidence"],
+		["awayGoals", "awayGoal"],
+		["modules", "module"],
+	];
+
+	function chain(key: string, length: number): ConvertibleItem {
+		let inner = element(`n${length - 1}`) as ConvertibleItem;
+		for (let index = length - 2; index >= 0; index--) {
+			inner = element(`n${index}`, { [key]: [inner] }) as ConvertibleItem;
+		}
+		return inner;
+	}
+
+	it.each(
+		CHILD_KEYS
+	)("reaches nested %s as cards of type %s", (key, nodeType) => {
+		const nodes = createNodesRecursively([chain(key, 3)], "goal");
+
+		expect(nodes.map((node) => node.type)).toStrictEqual([
+			"goal",
+			nodeType,
+			nodeType,
+		]);
+	});
+
+	it.each(
+		CHILD_KEYS
+	)("leaves out nested %s when the depth allows less than one level below the top", (key) => {
+		const nodes = createNodesRecursively(
+			[chain(key, 3)],
+			"goal",
+			null,
+			undefined,
+			0.5
+		);
+
+		expect(nodes.map((node) => node.id)).toStrictEqual(["goal-n0"]);
+	});
+
+	it("follows every level of a short chain of nested goals", () => {
+		const nodes = createNodesRecursively([chain("goals", 30)], "goal");
+
+		expect(nodes).toHaveLength(30);
+	});
+
+	it("follows a short chain when the depth is given as zero", () => {
+		const nodes = createNodesRecursively(
+			[chain("strategies", 30)],
+			"goal",
+			null,
+			undefined,
+			0
+		);
+
+		expect(nodes).toHaveLength(30);
+	});
+
+	it("returns nothing for a negative depth", () => {
+		const nodes = createNodesRecursively(
+			[element("g1")] as ConvertibleItem[],
+			"goal",
+			null,
+			undefined,
+			-1
+		);
+
+		expect(nodes).toStrictEqual([]);
+	});
+
+	it("returns nothing, without failing, when the items are an object and not a list", () => {
+		const nodes = createNodesRecursively(
+			{ length: 1 } as unknown as ConvertibleItem[],
+			"goal"
+		);
+
+		expect(nodes).toStrictEqual([]);
+	});
+
+	it("skips items that are not objects and keeps the valid ones in order", () => {
+		const items = [
+			null,
+			undefined,
+			"text",
+			7,
+			element("a"),
+			element("b"),
+		] as unknown as ConvertibleItem[];
+
+		const nodes = createNodesRecursively(items, "goal");
+
+		expect(nodes.map((node) => node.id)).toStrictEqual(["goal-a", "goal-b"]);
+	});
+});
+
+describe("convertAssuranceCase — which elements a defeater attaches to", () => {
+	function convertClaims(claims: Record<string, unknown>[]) {
+		return convertAssuranceCase(
+			caseOfGoal({
+				propertyClaims: claims.map((claim) =>
+					element(String(claim.id), { type: "property_claim", ...claim })
+				),
+			})
+		);
+	}
+
+	it.each([
+		["a defeater flag that is false", { isDefeater: false }],
+		["no defeater flag", {}],
+	])("attaches nothing for %s even when a target is named", (_label, flags) => {
+		const { caseNodes, caseEdges } = convertClaims([
+			{ id: "t1" },
+			{ id: "d1", defeatsElementId: "t1", ...flags },
+		]);
+
+		expect(Object.keys(dataOf(caseNodes, "d1"))).not.toContain("attachedTo");
+		expect(dataOf(caseNodes, "d1").attachSide).toBeUndefined();
+		expect(caseEdges.filter((edge) => edge.type === "challenges")).toHaveLength(
+			0
+		);
+	});
+
+	it.each([
+		["a target that is not in the tree", "missing"],
+		["no target", null],
+		["an empty target", ""],
+	])("leaves a defeater alone when it names %s", (_label, target) => {
+		const { caseNodes } = convertClaims([
+			{ id: "d1", isDefeater: true, defeatsElementId: target },
+		]);
+
+		const data = dataOf(caseNodes, "d1");
+		expect(Object.keys(data)).not.toContain("attachedTo");
+		expect(data.attachSide).toBeUndefined();
+		expect(data.isDefeater).toBe(true);
+	});
+
+	it("does not match an empty target against an element whose id is empty", () => {
+		const { caseNodes } = convertClaims([
+			{ id: "" },
+			{ id: "d1", isDefeater: true, defeatsElementId: "" },
+		]);
+
+		expect(Object.keys(dataOf(caseNodes, "d1"))).not.toContain("attachedTo");
+	});
+
+	it("does not match a target against an element whose id is not text", () => {
+		const { caseNodes } = convertClaims([
+			{ id: 5 },
+			{ id: "d1", isDefeater: true, defeatsElementId: 5 },
+		]);
+
+		expect(Object.keys(dataOf(caseNodes, "d1"))).not.toContain("attachedTo");
+	});
+
+	it("leaves a defeater that names itself in its tree place, with its support edge and no challenge", () => {
+		const { caseNodes, caseEdges } = convertClaims([
+			{ id: "d1", isDefeater: true, defeatsElementId: "d1" },
+		]);
+
+		expect(Object.keys(dataOf(caseNodes, "d1"))).not.toContain("attachedTo");
+		expect(
+			caseEdges.map((edge) => [edge.type, edge.source, edge.target])
+		).toStrictEqual([["support", "goal-g1", "property-d1"]]);
+	});
+
+	it("attaches a defeater on the right of its target and draws the challenge edge", () => {
+		const { caseNodes, caseEdges } = convertClaims([
+			{ id: "t1" },
+			{ id: "d1", isDefeater: true, defeatsElementId: "t1" },
+		]);
+
+		expect(dataOf(caseNodes, "d1").attachedTo).toBe("property-t1");
+		expect(dataOf(caseNodes, "d1").attachSide).toBe("right");
+		expect(caseEdges.filter((edge) => edge.type === "challenges")).toHaveLength(
+			1
+		);
+	});
+});
+
+describe("createEdgesFromNodes — the edges' own properties", () => {
+	function plain(id: string, data: Record<string, unknown>): Node {
+		return { id, type: "property", position: { x: 0, y: 0 }, data };
+	}
+
+	it("builds a support edge with the properties the canvas reads", () => {
+		vi.mocked(generateUuid).mockReturnValueOnce("fixed-1");
+
+		const edges = createEdgesFromNodes([
+			plain("goal-g", { id: "g" }),
+			plain("property-p", { id: "p", parentId: "goal-g" }),
+		]);
+
+		expect(edges).toStrictEqual([
+			{
+				id: "efixed-1",
+				source: "goal-g",
+				target: "property-p",
+				type: "support",
+				animated: false,
+				sourceHandle: "c",
+				hidden: false,
+				data: { sourceElementId: "g", targetElementId: "p" },
+			},
+		]);
+	});
+
+	it("builds a challenges edge with the properties the canvas reads", () => {
+		vi.mocked(generateUuid).mockReturnValueOnce("fixed-2");
+
+		const edges = createEdgesFromNodes([
+			plain("property-t", { id: "t" }),
+			plain("property-d", {
+				id: "d",
+				isDefeater: true,
+				attachedTo: "property-t",
+			}),
+		]);
+
+		expect(edges).toStrictEqual([
+			{
+				id: "efixed-2",
+				source: "property-d",
+				target: "property-t",
+				type: "challenges",
+				animated: false,
+				sourceHandle: "side-source",
+				targetHandle: "side-target",
+				hidden: false,
+			},
+		]);
+	});
+
+	it("leaves the element id out of the support edge's data when a card has none", () => {
+		const edges = createEdgesFromNodes([
+			plain("goal-g", {}),
+			plain("property-p", { id: "p", parentId: "goal-g" }),
+		]);
+
+		expect(edges[0]?.data).toStrictEqual({
+			sourceElementId: undefined,
+			targetElementId: "p",
+		});
+	});
+
+	it.each([
+		["a card that is not a defeater", { attachedTo: "property-t" }],
+		[
+			"a defeater whose target is not among the nodes",
+			{ isDefeater: true, attachedTo: "property-gone" },
+		],
+	])("draws no challenges edge for %s", (_label, fields) => {
+		const edges = createEdgesFromNodes([
+			plain("property-t", { id: "t" }),
+			plain("property-x", { id: "x", parentId: "property-t", ...fields }),
+		]);
+
+		expect(edges.map((edge) => edge.type)).toStrictEqual(["support"]);
+	});
 });
