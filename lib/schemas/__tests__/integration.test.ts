@@ -54,7 +54,7 @@ describe("registerIntegrationSchema — boundary caps", () => {
 	});
 });
 
-describe("updateIntegrationSchema — description cap (shares optionalString(1000))", () => {
+describe("updateIntegrationSchema — description is capped at 1000 characters", () => {
 	it("accepts a description at exactly 1000 characters", () => {
 		const result = updateIntegrationSchema.safeParse({
 			description: "a".repeat(1000),

@@ -56,6 +56,13 @@ async function patchIntegration(id: string, body: unknown) {
 	return PATCH(patch(`/api/integrations/${id}`, body), idParams(id));
 }
 
+async function refusalOf(response: Response) {
+	return {
+		status: response.status,
+		text: JSON.stringify(await response.json()),
+	};
+}
+
 function userRow(id: string) {
 	return prisma.user.findUniqueOrThrow({ where: { id } });
 }
@@ -136,10 +143,11 @@ describe("PATCH /api/users/me: clearing names", () => {
 
 		it("accepts the limit and refuses one over, leaving the value", async () => {
 			const user = await signedInUser();
+			const original = user[field];
 
 			const over = await patchProfile({ [field]: "a".repeat(151) });
 			expect(over.status).toBe(400);
-			expect((await userRow(user.id))[field]).not.toBeNull();
+			expect((await userRow(user.id))[field]).toBe(original);
 
 			const atLimit = await patchProfile({ [field]: "a".repeat(150) });
 			expect(atLimit.status).toBe(200);
@@ -249,9 +257,12 @@ describe("PATCH /api/teams/[id]: clearing the description", () => {
 	it("clearing the description leaves the name", async () => {
 		const { team } = await teamWithAdmin();
 
-		await patchTeam(team.id, { description: null });
+		const response = await patchTeam(team.id, { description: null });
 
-		expect((await teamRow(team.id)).name).toBe("Original name");
+		expect(response.status).toBe(200);
+		const row = await teamRow(team.id);
+		expect(row.description).toBeNull();
+		expect(row.name).toBe("Original name");
 	});
 
 	it("clears the description beside a new name", async () => {
@@ -329,9 +340,12 @@ describe("PATCH /api/teams/[id]: clearing the description", () => {
 		await addTeamMember(team.id, member.id, "MEMBER");
 		await mockAuth(member.id, member.username, member.email);
 
-		const response = await patchTeam(team.id, { description: null });
+		const refusal = await refusalOf(
+			await patchTeam(team.id, { description: null })
+		);
 
-		expect(response.status).toBeGreaterThanOrEqual(400);
+		expect(refusal.status).toBe(403);
+		expect(refusal.text).toContain("Permission denied");
 		expect((await teamRow(team.id)).description).toBe("About the team");
 	});
 
@@ -339,10 +353,24 @@ describe("PATCH /api/teams/[id]: clearing the description", () => {
 		const { team } = await teamWithAdmin();
 		await signedInUser();
 
-		const response = await patchTeam(team.id, { description: "" });
+		const refusal = await refusalOf(
+			await patchTeam(team.id, { description: "" })
+		);
 
-		expect(response.status).toBeGreaterThanOrEqual(400);
+		expect(refusal.status).toBe(403);
+		expect(refusal.text).toContain("Permission denied");
 		expect((await teamRow(team.id)).description).toBe("About the team");
+	});
+
+	it("answers a team that does not exist the same way as one the user may not change", async () => {
+		await signedInUser();
+
+		const refusal = await refusalOf(
+			await patchTeam(crypto.randomUUID(), { description: "" })
+		);
+
+		expect(refusal.status).toBe(403);
+		expect(refusal.text).toContain("Permission denied");
 	});
 
 	it("refuses an unauthenticated caller", async () => {
@@ -409,11 +437,14 @@ describe("PATCH /api/integrations/[id]: clearing the description", () => {
 	it("clearing the description leaves the scopes", async () => {
 		const { integration } = await ownedIntegration();
 
-		await patchIntegration(integration.id, { description: null });
+		const response = await patchIntegration(integration.id, {
+			description: null,
+		});
 
-		expect((await integrationRow(integration.id)).scopes).toEqual([
-			"case:read",
-		]);
+		expect(response.status).toBe(200);
+		const row = await integrationRow(integration.id);
+		expect(row.description).toBeNull();
+		expect(row.scopes).toEqual(["case:read"]);
 	});
 
 	it("clears the description beside new scopes", async () => {
