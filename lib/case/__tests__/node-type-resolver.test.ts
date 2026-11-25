@@ -24,6 +24,24 @@ describe("resolveReactFlowNodeType (ADR 0005 D5)", () => {
 		expect(resolveReactFlowNodeType(input)).toBe(expected);
 	});
 
+	it.each([
+		["away goal", "awayGoal"],
+		["away  goal", "awayGoal"],
+		["away - goal", "awayGoal"],
+		["away-goal", "awayGoal"],
+		["property-claim", "property"],
+	])("treats a run of spaces and hyphens in %j as one separator", (input, expected) => {
+		expect(resolveReactFlowNodeType(input)).toBe(expected);
+	});
+
+	it.each([
+		"go al",
+		"str-ategy",
+		"evi dence",
+	])("does not join the parts of %j into a known type", (input) => {
+		expect(resolveReactFlowNodeType(input)).toBe("property");
+	});
+
 	it("falls back to the property claim renderer for an unrecognised type", () => {
 		expect(resolveReactFlowNodeType("contract")).toBe("property");
 		expect(resolveReactFlowNodeType("something-unknown")).toBe("property");

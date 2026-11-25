@@ -46,6 +46,19 @@ describe("compareIdentifiers", () => {
 			"not-an-identifier".localeCompare("G1")
 		);
 	});
+
+	it.each([
+		["text before the identifier", "x-S2", "x-S10"],
+		["text after the identifier", "S2x", "S10x"],
+	])("does not read an identifier out of a longer name: %s", (_case, a, b) => {
+		expect(compareIdentifiers(a, b)).toBe(a.localeCompare(b));
+	});
+
+	it("treats a missing sub-number as zero, so a longer identifier comes after its parent", () => {
+		expect(compareIdentifiers("P1.2", "P1.2.5")).toBeLessThan(0);
+		expect(compareIdentifiers("P1.2.5", "P1.2")).toBeGreaterThan(0);
+		expect(compareIdentifiers("P1.2", "P1.2.0")).toBe(0);
+	});
 });
 
 describe("compareElementNames", () => {
@@ -84,6 +97,12 @@ describe("compareElementNames", () => {
 	];
 
 	const sign = (value: number) => Math.sign(value);
+
+	it("compares letters outside the basic plane without regard to case", () => {
+		// U+10400 is the capital of U+10428; capital "b" would otherwise decide.
+		expect(compareElementNames("\u{10400}b", "\u{10428}a")).toBeGreaterThan(0);
+		expect(compareElementNames("\u{10428}a", "\u{10400}b")).toBeLessThan(0);
+	});
 
 	it("orders numbers by value, not by their digits as text", () => {
 		expect(compareElementNames("P2", "P10")).toBeLessThan(0);
