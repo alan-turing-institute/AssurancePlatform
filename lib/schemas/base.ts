@@ -133,6 +133,16 @@ const URL_SCHEME_PREFIX = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//;
 const URL_SCHEME_ONLY = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
 
 /**
+ * A host followed by a port ("example.com:8080/report", "localhost:3000"):
+ * letters, digits, dots and hyphens that are either "localhost" or hold a dot,
+ * then a colon, one to five digits, and the end of the text or "/", "?" or
+ * "#". Such a value looks like a scheme to URL_SCHEME_ONLY but is an address
+ * without one.
+ */
+const URL_HOST_AND_PORT =
+	/^(?:localhost|[a-z\d.-]*\.[a-z\d.-]*):\d{1,5}(?:[/?#]|$)/i;
+
+/**
  * Protocol allowlist applied to the final, normalised value. Only http(s)
  * addresses are ever stored — closes the javascript:// stored-XSS surface,
  * since zod's url() check accepts any WHATWG-parseable URL (including
@@ -151,7 +161,8 @@ const URL_ERROR_MESSAGE = "Enter a web address, such as example.com/report.pdf";
  * The normalised value (always carrying a scheme) is what gets stored, so
  * there is no silent divergence between what a user typed and what is
  * saved. A scheme that isn't followed by "//" (mailto:, javascript:,
- * data:, …) is rejected outright rather than mangled.
+ * data:, …) is rejected outright rather than mangled; a host followed by a
+ * port ("example.com:8080/report") is not a scheme and gets "https://".
  *
  * Import paths (DOIs, URNs, file paths) deliberately do NOT use this
  * schema — see element-validation.ts's BaseElementSchema `url` comment for
@@ -162,7 +173,9 @@ export const lenientUrlSchema = z
 	.string()
 	.trim()
 	.refine(
-		(v) => !(URL_SCHEME_ONLY.test(v) && !URL_SCHEME_PREFIX.test(v)),
+		(v) =>
+			URL_HOST_AND_PORT.test(v) ||
+			!(URL_SCHEME_ONLY.test(v) && !URL_SCHEME_PREFIX.test(v)),
 		URL_ERROR_MESSAGE
 	)
 	.transform((v) => {
