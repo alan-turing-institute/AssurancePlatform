@@ -104,6 +104,7 @@ describe("optionalString", () => {
 		["null becomes undefined", null, undefined],
 		["an absent value stays undefined", undefined, undefined],
 	])("%s", (_name, input, expected) => {
+		expect(issuesOf(optionalString(), input)).toEqual([]);
 		expect(outputOf(optionalString(), input)).toBe(expected);
 	});
 
@@ -130,6 +131,7 @@ describe("clearableString", () => {
 		["null clears", null, null],
 		["an absent value stays undefined", undefined, undefined],
 	])("%s", (_name, input, expected) => {
+		expect(issuesOf(clearableString(), input)).toEqual([]);
 		expect(outputOf(clearableString(), input)).toBe(expected);
 	});
 
@@ -158,6 +160,7 @@ describe("optionalStringAllowingEmpty", () => {
 		["null becomes undefined", null, undefined],
 		["an absent value stays undefined", undefined, undefined],
 	])("%s", (_name, input, expected) => {
+		expect(issuesOf(optionalStringAllowingEmpty(), input)).toEqual([]);
 		expect(outputOf(optionalStringAllowingEmpty(), input)).toBe(expected);
 	});
 
@@ -186,6 +189,7 @@ describe("placeholderHintInputSchema", () => {
 		["null clears", null, null],
 		["an absent value stays undefined", undefined, undefined],
 	])("%s", (_name, input, expected) => {
+		expect(issuesOf(placeholderHintInputSchema, input)).toEqual([]);
 		expect(outputOf(placeholderHintInputSchema, input)).toBe(expected);
 	});
 
@@ -282,6 +286,7 @@ describe("lenientUrlSchema scheme detection", () => {
 
 describe("optionalUrlSchema", () => {
 	it("keeps an absent value absent", () => {
+		expect(issuesOf(optionalUrlSchema, undefined)).toEqual([]);
 		expect(outputOf(optionalUrlSchema, undefined)).toBeUndefined();
 	});
 
@@ -302,6 +307,7 @@ describe("nullableUrlSchema", () => {
 	});
 
 	it("keeps an absent value absent", () => {
+		expect(issuesOf(nullableUrlSchema, undefined)).toEqual([]);
 		expect(outputOf(nullableUrlSchema, undefined)).toBeUndefined();
 	});
 

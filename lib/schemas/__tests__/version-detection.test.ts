@@ -81,6 +81,7 @@ describe("detectVersion", () => {
 	});
 });
 
+// The import response includes each issue's code, so the codes in this block are checked.
 describe("detectAndValidate", () => {
 	it("accepts a nested file and returns its data", () => {
 		const result = detectAndValidate(nestedFile());
@@ -106,7 +107,6 @@ describe("detectAndValidate", () => {
 		["text", "text"],
 		["a number", 42],
 		["true", true],
-		// The import response includes each issue's code, so the codes in this block are checked.
 	])("rejects %s as not an object", (_name, input) => {
 		const result = detectAndValidate(input);
 		expect(result.isValid).toBe(false);
