@@ -625,16 +625,16 @@ describe("lenientUrlSchema: whatever is stored is an http or https address", () 
 
 	it("answers a very long value without a long wait", () => {
 		const inputs = [
-			".".repeat(50_000),
-			"a.".repeat(25_000),
-			`${"a.".repeat(25_000)}:`,
-			`${"a".repeat(50_000)}:8080x`,
+			".".repeat(200_000),
+			"a.".repeat(100_000),
+			`${"a.".repeat(100_000)}:`,
+			`${"a".repeat(200_000)}:8080x`,
 		];
-		const started = Date.now();
+		const started = performance.now();
 		for (const input of inputs) {
 			lenientUrlSchema.safeParse(input);
 		}
-		expect(Date.now() - started).toBeLessThan(300);
+		expect(performance.now() - started).toBeLessThan(1000);
 	});
 
 	it("handles a long value: ordinary long host and port is stored whole", () => {
