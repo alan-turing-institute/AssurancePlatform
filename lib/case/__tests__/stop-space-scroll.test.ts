@@ -46,6 +46,40 @@ describe("stopSpaceScrollOnDiagramItem", () => {
 		expect(press(null)).not.toHaveBeenCalled();
 	});
 
+	describe("with real keyboard events", () => {
+		function dispatchKey(init: KeyboardEventInit) {
+			const node = element("react-flow__node");
+			document.body.appendChild(node);
+			node.addEventListener("keydown", (event) =>
+				stopSpaceScrollOnDiagramItem(event as unknown as SpaceEvent)
+			);
+			const event = new KeyboardEvent("keydown", {
+				bubbles: true,
+				cancelable: true,
+				...init,
+			});
+			node.dispatchEvent(event);
+			node.remove();
+			return event.defaultPrevented;
+		}
+
+		it.each([
+			["key and code both say Space", { key: " ", code: "Space" }],
+			["only the key says Space", { key: " ", code: "" }],
+			["only the code says Space", { key: "", code: "Space" }],
+		])("prevents the scroll when %s", (_name, init) => {
+			expect(dispatchKey(init)).toBe(true);
+		});
+
+		it.each([
+			["a letter key", { key: "a", code: "KeyA" }],
+			["a key with no key or code", { key: "", code: "" }],
+			["a letter key with no code", { key: "a", code: "" }],
+		])("leaves %s alone", (_name, init) => {
+			expect(dispatchKey(init)).toBe(false);
+		});
+	});
+
 	it("ignores other keys on a node", () => {
 		const node = element("react-flow__node");
 		expect(press(node, { key: "Enter", code: "Enter" })).not.toHaveBeenCalled();
