@@ -5,6 +5,18 @@ import type { Edge, Node } from "reactflow";
 import { getNodesBounds } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExportFormat, TemplatePreset } from "@/lib/export";
+import {
+	canvasBlock,
+	completed,
+	describeCaptureFilter,
+	describeEdgeLines,
+	layerGap,
+	putCanvasInPage,
+	rejectionOf,
+	settle,
+	sideGap,
+	useExportClock,
+} from "@/src/__tests__/utils/export-canvas-kit";
 import type { PlainCase } from "../defined-terms";
 import {
 	BRANCH_DIAGRAM_THRESHOLD,
@@ -46,14 +58,7 @@ const caseData: PlainCase = {
 };
 
 function canvasNode(id: string, name: string): Node {
-	return {
-		id,
-		type: "property",
-		position: { x: 0, y: 0 },
-		width: 100,
-		height: 100,
-		data: { name },
-	};
+	return canvasBlock(id, { name });
 }
 
 /** G1 with two branches; each branch has one child. */
@@ -83,20 +88,24 @@ function pictureNumber(call: number): string {
 	return `iVBORw0KGgo${"ABCDEFGH"[call]}`;
 }
 
-function putCanvasInPage() {
-	document.body.innerHTML = `<div class="react-flow__viewport"><svg>
-		<path id="styled" class="react-flow__edge-path" stroke="red" stroke-width="5" d="M0"></path>
-		<path id="plain" class="react-flow__edge-path" d="M1"></path>
-	</svg></div>`;
-}
-
 interface Run {
 	applyLayout: ReturnType<typeof vi.fn>;
 	restoreLayout: ReturnType<typeof vi.fn>;
 }
 
+const RUN_DEFAULTS = {
+	caseName: "Flow Case",
+	format: "markdown",
+	template: "full-report",
+	includeDiagram: true,
+	layoutDirection: "TB",
+} as const;
+
+/** Runs the export on the fake clock; rejects with the export's own error when it fails. */
 async function run(
 	overrides: {
+		applyLayout?: Parameters<typeof exportDocument>[0]["applyLayout"];
+		restoreLayout?: Parameters<typeof exportDocument>[0]["restoreLayout"];
 		diagramMode?: DiagramMode;
 		format?: ExportFormat;
 		includeDiagram?: boolean;
@@ -110,24 +119,22 @@ async function run(
 		data?: PlainCase;
 	} = {}
 ): Promise<Run> {
-	const base = diagram();
-	const applyLayout = vi.fn();
-	const restoreLayout = vi.fn();
-	await exportDocument({
-		applyLayout,
-		restoreLayout,
-		caseData: overrides.data ?? caseData,
-		caseName: overrides.caseName ?? "Flow Case",
-		format: overrides.format ?? "markdown",
-		template: overrides.template ?? "full-report",
-		includeDiagram: overrides.includeDiagram ?? true,
-		nodes: overrides.nodes ?? base.nodes,
-		edges: overrides.edges ?? base.edges,
-		layoutDirection: overrides.layoutDirection ?? "TB",
-		diagramMode: overrides.diagramMode,
-		maxDiagramDepth: overrides.maxDiagramDepth,
-		sectionOverrides: overrides.sectionOverrides,
-	});
+	const { data, ...given } = overrides;
+	const applyLayout = vi.fn(overrides.applyLayout);
+	const restoreLayout = vi.fn(overrides.restoreLayout);
+	const outcome = await settle(
+		exportDocument({
+			...RUN_DEFAULTS,
+			...diagram(),
+			caseData: data ?? caseData,
+			...given,
+			applyLayout,
+			restoreLayout,
+		})
+	);
+	if (outcome.status === "rejected") {
+		throw outcome.reason;
+	}
 	return { applyLayout, restoreLayout };
 }
 
@@ -181,6 +188,7 @@ function logoResponse(ok: boolean) {
 }
 
 beforeEach(() => {
+	useExportClock();
 	let call = 0;
 	mockedToPng.mockImplementation(() => {
 		const url = `data:image/png;base64,${pictureNumber(call)}`;
@@ -200,14 +208,13 @@ afterEach(() => {
 });
 
 describe("exported thresholds", () => {
-	it("suggests branch diagrams from fifteen nodes", () => {
+	it("sets the branch-diagram threshold at fifteen nodes", () => {
 		expect(BRANCH_DIAGRAM_THRESHOLD).toBe(15);
 	});
 });
 
 describe("exportDocument without a diagram", () => {
 	it("saves the markdown text with its type and a dated file name", async () => {
-		vi.useFakeTimers({ toFake: ["Date"] });
 		vi.setSystemTime(new Date("2026-03-04T12:00:00Z"));
 
 		const { applyLayout, restoreLayout } = await run({
@@ -367,19 +374,17 @@ describe("exportDocument with a diagram", () => {
 
 	it("lays the diagram out with more room than the compact export layout", async () => {
 		const { nodes, edges } = diagram();
-		const compact = await layoutForExport(nodes, edges, "TB");
+		const compact = await completed(layoutForExport(nodes, edges, "TB"));
 
 		const { applyLayout } = await run({ nodes, edges });
 
 		const used = applyLayout.mock.calls[0]![0] as Node[];
-		const sideGap = (list: Node[]) =>
-			list.find((n) => n.id === "s2")!.position.x -
-			list.find((n) => n.id === "s1")!.position.x;
-		const layerGap = (list: Node[]) =>
-			list.find((n) => n.id === "s1")!.position.y -
-			list.find((n) => n.id === "g")!.position.y;
-		expect(sideGap(used)).toBeGreaterThan(sideGap(compact.nodes));
-		expect(layerGap(used)).toBeGreaterThan(layerGap(compact.nodes));
+		expect(sideGap(used, "s1", "s2")).toBeGreaterThan(
+			sideGap(compact.nodes, "s1", "s2")
+		);
+		expect(layerGap(used, "g", "s1")).toBeGreaterThan(
+			layerGap(compact.nodes, "g", "s1")
+		);
 	});
 
 	it("takes the picture after the layout is applied and restores afterwards", async () => {
@@ -388,21 +393,9 @@ describe("exportDocument with a diagram", () => {
 			order.push("picture");
 			return Promise.resolve(`data:image/png;base64,${pictureNumber(0)}`);
 		});
-		const applyLayout = vi.fn(() => order.push("apply"));
-		const restoreLayout = vi.fn(() => order.push("restore"));
-		const { nodes, edges } = diagram();
-
-		await exportDocument({
-			applyLayout,
-			restoreLayout,
-			caseData,
-			caseName: "Flow Case",
-			format: "markdown",
-			template: "full-report",
-			includeDiagram: true,
-			nodes,
-			edges,
-			layoutDirection: "TB",
+		await run({
+			applyLayout: vi.fn(() => order.push("apply")),
+			restoreLayout: vi.fn(() => order.push("restore")),
 		});
 
 		expect(order).toEqual(["apply", "picture", "restore"]);
@@ -491,97 +484,21 @@ describe("the picture asked of the drawing package", () => {
 			mockedToPng.mock.calls[0]![1]!.width! - overview.width
 		);
 	});
-
-	it("sets edge lines for the picture and puts the originals back afterwards", async () => {
-		const seen: Array<Array<string | null>> = [];
-		mockedToPng.mockImplementationOnce(() => {
-			for (const id of ["styled", "plain"]) {
-				const path = document.getElementById(id)!;
-				seen.push([
-					path.getAttribute("stroke"),
-					path.getAttribute("stroke-width"),
-				]);
-			}
-			return Promise.resolve(`data:image/png;base64,${pictureNumber(0)}`);
-		});
-
-		await run();
-
-		expect(seen).toEqual([
-			["#666666", "2"],
-			["#666666", "2"],
-		]);
-		const styled = document.getElementById("styled")!;
-		expect(styled.getAttribute("stroke")).toBe("red");
-		expect(styled.getAttribute("stroke-width")).toBe("5");
-		const plain = document.getElementById("plain")!;
-		expect(plain.hasAttribute("stroke")).toBe(false);
-		expect(plain.hasAttribute("stroke-width")).toBe(false);
-	});
-
-	it("puts the edge lines back and passes the error on when the picture fails", async () => {
-		mockedToPng.mockReset();
-		mockedToPng.mockRejectedValue(new Error("no picture"));
-
-		await expect(run()).rejects.toThrow("no picture");
-
-		expect(document.getElementById("styled")!.getAttribute("stroke")).toBe(
-			"red"
-		);
-		expect(document.getElementById("plain")!.hasAttribute("stroke")).toBe(
-			false
-		);
-		expect(mockedSaveAs).not.toHaveBeenCalled();
-	});
 });
 
-describe("the filter given to the drawing package", () => {
-	async function captureFilter(): Promise<(node: HTMLElement) => boolean> {
-		await run();
-		return mockedToPng.mock.calls[0]![1]!.filter as (
-			node: HTMLElement
-		) => boolean;
-	}
+describeEdgeLines({
+	toPng: mockedToPng,
+	saveAs: mockedSaveAs,
+	pictureUrl: `data:image/png;base64,${pictureNumber(0)}`,
+	exportPicture: () => run(),
+	exportFailure: () => rejectionOf(run()),
+});
 
-	function withClass(name: string): HTMLElement {
-		const el = document.createElement("div");
-		el.classList.add(name);
-		return el;
-	}
-
-	it.each([
-		"react-flow__minimap",
-		"react-flow__controls",
-		"react-flow__panel",
-		"react-flow__attribution",
-	])("leaves out an element with class %s", async (name) => {
-		const filter = await captureFilter();
-
-		expect(filter(withClass(name))).toBe(false);
-	});
-
-	it.each([
-		["a plain element", () => withClass("react-flow__node")],
-		[
-			"a text node",
-			() => document.createTextNode("x") as unknown as HTMLElement,
-		],
-	])("keeps %s", async (_label, make) => {
-		const filter = await captureFilter();
-
-		expect(filter(make())).toBe(true);
-	});
-
-	it.each([
-		"data-plugin-display",
-		"data-derived-display",
-	])("leaves out an element marked %s", async (attribute) => {
-		const filter = await captureFilter();
-		const el = document.createElement("div");
-		el.setAttribute(attribute, "");
-
-		expect(filter(el)).toBe(false);
-	});
+describeCaptureFilter(async () => {
+	await run();
+	return mockedToPng.mock.calls[0]![1]!.filter as (
+		node: HTMLElement
+	) => boolean;
 });
 
 describe("markdown with a diagram", () => {
@@ -683,15 +600,16 @@ describe("branch diagrams", () => {
 		});
 
 		const branchOne = applyLayout.mock.calls[1]![0] as Node[];
-		const compact = await layoutForExport(
-			nodes.map((n) => ({ ...n, hidden: ["s2", "c2"].includes(n.id) })),
-			edges.map((e) => ({ ...e, hidden: !["e1", "e3"].includes(e.id) })),
-			"TB"
+		const compact = await completed(
+			layoutForExport(
+				nodes.map((n) => ({ ...n, hidden: ["s2", "c2"].includes(n.id) })),
+				edges.map((e) => ({ ...e, hidden: !["e1", "e3"].includes(e.id) })),
+				"TB"
+			)
 		);
-		const layerGap = (list: Node[]) =>
-			list.find((n) => n.id === "s1")!.position.y -
-			list.find((n) => n.id === "g")!.position.y;
-		expect(layerGap(branchOne)).toBeGreaterThan(layerGap(compact.nodes));
+		expect(layerGap(branchOne, "g", "s1")).toBeGreaterThan(
+			layerGap(compact.nodes, "g", "s1")
+		);
 	});
 
 	it("restores the canvas after the overview and after the branches", async () => {
@@ -706,23 +624,9 @@ describe("branch diagrams", () => {
 			.mockResolvedValueOnce(`data:image/png;base64,${pictureNumber(0)}`)
 			.mockRejectedValue(new Error("branch failed"));
 
-		const applyLayout = vi.fn();
 		const restoreLayout = vi.fn();
-		const { nodes, edges } = diagram();
 		await expect(
-			exportDocument({
-				applyLayout,
-				restoreLayout,
-				caseData,
-				caseName: "Flow Case",
-				format: "markdown",
-				template: "full-report",
-				includeDiagram: true,
-				nodes,
-				edges,
-				layoutDirection: "TB",
-				diagramMode: "branches",
-			})
+			run({ diagramMode: "branches", restoreLayout })
 		).rejects.toThrow("branch failed");
 
 		expect(restoreLayout).toHaveBeenCalledTimes(2);
@@ -765,21 +669,8 @@ describe("branch diagrams", () => {
 				document.body.innerHTML = "";
 			}
 		});
-		const { nodes, edges } = diagram();
 
-		await exportDocument({
-			applyLayout,
-			restoreLayout: vi.fn(),
-			caseData,
-			caseName: "Flow Case",
-			format: "markdown",
-			template: "full-report",
-			includeDiagram: true,
-			nodes,
-			edges,
-			layoutDirection: "TB",
-			diagramMode: "branches",
-		});
+		await run({ diagramMode: "branches", applyLayout });
 
 		const zip = await savedZip();
 		expect(Object.keys(zip.files).some((n) => n.startsWith("branch-"))).toBe(

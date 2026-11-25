@@ -4,6 +4,16 @@ import type { Edge, Node } from "reactflow";
 import { getNodesBounds, getViewportForBounds } from "reactflow";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
+import {
+	canvasBlock,
+	completed,
+	describeCaptureFilter,
+	describeEdgeLines,
+	putCanvasInPage,
+	settle,
+	useExportClock,
+	viewportElement,
+} from "@/src/__tests__/utils/export-canvas-kit";
 import { layoutForExport } from "../document-export";
 import {
 	exportDiagramImage,
@@ -40,14 +50,7 @@ function svgUrl(markup: string): string {
 }
 
 function box(id: string, x: number, y: number, w = 100, h = 100): Node {
-	return {
-		id,
-		type: "property",
-		position: { x, y },
-		width: w,
-		height: h,
-		data: {},
-	};
+	return canvasBlock(id, { x, y, width: w, height: h });
 }
 
 function link(id: string, source: string, target: string): Edge {
@@ -71,37 +74,7 @@ function tree(): { nodes: Node[]; edges: Edge[] } {
 	};
 }
 
-function putCanvasInPage() {
-	document.body.innerHTML = `<div class="react-flow__viewport"><svg>
-		<path id="coloured" class="react-flow__edge-path" stroke="teal" stroke-width="7" d="M0"></path>
-		<path id="bare" class="react-flow__edge-path" d="M1"></path>
-	</svg></div>`;
-}
-
-function viewportElement(): Element {
-	return document.querySelector(".react-flow__viewport")!;
-}
-
-/** Lets the export's waits run on the fake clock, then reports how it ended. */
-async function settle(
-	promise: Promise<void>
-): Promise<PromiseSettledResult<void>> {
-	let outcome: PromiseSettledResult<void> | undefined;
-	promise.then(
-		() => {
-			outcome = { status: "fulfilled", value: undefined };
-		},
-		(reason) => {
-			outcome = { status: "rejected", reason };
-		}
-	);
-	for (let i = 0; i < 200 && !outcome; i++) {
-		await vi.advanceTimersByTimeAsync(100);
-		await new Promise((resolve) => setImmediate(resolve));
-	}
-	return outcome!;
-}
-
+/** Runs the export on the fake clock and returns the error it ends with. */
 async function failureOf(promise: Promise<void>): Promise<Error> {
 	const outcome = await settle(promise);
 	if (outcome.status !== "rejected") {
@@ -151,15 +124,7 @@ function at(year: number, month: number, day: number, h: number, m: number) {
 }
 
 beforeEach(() => {
-	vi.useFakeTimers({
-		toFake: [
-			"Date",
-			"setTimeout",
-			"clearTimeout",
-			"requestAnimationFrame",
-			"cancelAnimationFrame",
-		],
-	});
+	useExportClock();
 	vi.setSystemTime(new Date(2026, 2, 4, 5, 7));
 	mockedToPng.mockReset().mockResolvedValue(PNG_URL);
 	mockedToSvg.mockReset().mockResolvedValue(svgUrl("<svg></svg>"));
@@ -320,54 +285,9 @@ describe("the options given to the drawing package", () => {
 	});
 });
 
-describe("the filter given to the drawing package", () => {
-	async function captureFilter(): Promise<(node: HTMLElement) => boolean> {
-		await exportDiagramImage(plain());
-		return pictureOptions().filter as (node: HTMLElement) => boolean;
-	}
-
-	function withClass(name: string): HTMLElement {
-		const el = document.createElement("div");
-		el.classList.add(name);
-		return el;
-	}
-
-	it.each([
-		"react-flow__minimap",
-		"react-flow__controls",
-		"react-flow__panel",
-		"react-flow__attribution",
-	])("leaves out an element with class %s", async (name) => {
-		const filter = await captureFilter();
-
-		expect(filter(withClass(name))).toBe(false);
-	});
-
-	it("keeps nodes, edges and other elements", async () => {
-		const filter = await captureFilter();
-
-		expect(filter(withClass("react-flow__node"))).toBe(true);
-		expect(filter(withClass("react-flow__edge"))).toBe(true);
-	});
-
-	it("keeps a text node", async () => {
-		const filter = await captureFilter();
-
-		expect(filter(document.createTextNode("x") as unknown as HTMLElement)).toBe(
-			true
-		);
-	});
-
-	it.each([
-		"data-plugin-display",
-		"data-derived-display",
-	])("leaves out an element marked %s", async (attribute) => {
-		const filter = await captureFilter();
-		const el = document.createElement("div");
-		el.setAttribute(attribute, "");
-
-		expect(filter(el)).toBe(false);
-	});
+describeCaptureFilter(async () => {
+	await exportDiagramImage(plain());
+	return pictureOptions().filter as (node: HTMLElement) => boolean;
 });
 
 describe("refusals", () => {
@@ -403,40 +323,15 @@ describe("refusals", () => {
 	});
 });
 
+describeEdgeLines({
+	toPng: mockedToPng,
+	saveAs: mockedSaveAs,
+	pictureUrl: PNG_URL,
+	exportPicture: () => completed(exportDiagramImage(plain())),
+	exportFailure: () => failureOf(exportDiagramImage(plain())),
+});
+
 describe("the edge lines while the picture is taken", () => {
-	function lineOf(id: string): Array<string | null> {
-		const path = document.getElementById(id)!;
-		return [path.getAttribute("stroke"), path.getAttribute("stroke-width")];
-	}
-
-	it("sets the export lines for the picture and puts the originals back", async () => {
-		const seen: Array<Array<string | null>> = [];
-		mockedToPng.mockImplementationOnce(() => {
-			seen.push(lineOf("coloured"), lineOf("bare"));
-			return Promise.resolve(PNG_URL);
-		});
-
-		await exportDiagramImage(plain());
-
-		expect(seen).toStrictEqual([
-			["#666666", "2"],
-			["#666666", "2"],
-		]);
-		expect(lineOf("coloured")).toStrictEqual(["teal", "7"]);
-		expect(lineOf("bare")).toStrictEqual([null, null]);
-	});
-
-	it("puts the originals back and passes the error on when the picture fails", async () => {
-		mockedToPng.mockRejectedValue(new Error("no picture"));
-
-		const failure = await failureOf(exportDiagramImage(plain()));
-
-		expect(failure.message).toBe("no picture");
-		expect(lineOf("coloured")).toStrictEqual(["teal", "7"]);
-		expect(lineOf("bare")).toStrictEqual([null, null]);
-		expect(mockedSaveAs).not.toHaveBeenCalled();
-	});
-
 	it("takes the plugin colour off an edge for the picture and gives it back", async () => {
 		const path = document.getElementById("coloured")!;
 		path.setAttribute("data-appearance", "warm");
@@ -481,7 +376,7 @@ describe("exportFilteredDiagramImage without a depth", () => {
 	])("captures the canvas as it is when the depth is %s", async (_label, maxDepth) => {
 		const options = filtered({ maxDepth, scale: 3 });
 
-		await settle(exportFilteredDiagramImage(options));
+		await completed(exportFilteredDiagramImage(options));
 
 		expect(options.applyLayout).not.toHaveBeenCalled();
 		expect(options.restoreLayout).not.toHaveBeenCalled();
@@ -507,9 +402,8 @@ describe("exportFilteredDiagramImage with a depth", () => {
 	])("keeps what is within depth %i", async (maxDepth, nodeIds, edgeIds) => {
 		const options = filtered({ maxDepth });
 
-		const outcome = await settle(exportFilteredDiagramImage(options));
+		await completed(exportFilteredDiagramImage(options));
 
-		expect(outcome.status).toBe("fulfilled");
 		const used = applied(options);
 		expect(used.nodes.map((n: Node) => n.id).sort()).toStrictEqual(nodeIds);
 		expect(used.edges.map((e: Edge) => e.id).sort()).toStrictEqual(edgeIds);
@@ -519,7 +413,7 @@ describe("exportFilteredDiagramImage with a depth", () => {
 		const options = filtered({ maxDepth: 1 });
 		const before = JSON.stringify([options.nodes, options.edges]);
 
-		await settle(exportFilteredDiagramImage(options));
+		await completed(exportFilteredDiagramImage(options));
 
 		expect(JSON.stringify([options.nodes, options.edges])).toBe(before);
 	});
@@ -528,15 +422,16 @@ describe("exportFilteredDiagramImage with a depth", () => {
 		const options = filtered({ maxDepth: 5, layoutDirection: "LR" });
 		const { nodes, edges } = tree();
 
-		await settle(exportFilteredDiagramImage(options));
+		await completed(exportFilteredDiagramImage(options));
 
 		const used = applied(options);
-		vi.useRealTimers();
-		const expected = await layoutForExport(nodes, edges, "LR", {
-			nodeSpacing: 40,
-			layerSpacing: 60,
-		});
-		const compact = await layoutForExport(nodes, edges, "LR");
+		const expected = await completed(
+			layoutForExport(nodes, edges, "LR", {
+				nodeSpacing: 40,
+				layerSpacing: 60,
+			})
+		);
+		const compact = await completed(layoutForExport(nodes, edges, "LR"));
 		const positions = (list: Node[]) =>
 			list.map((n) => [n.id, n.position.x, n.position.y]).sort();
 		expect(used.direction).toBe(expected.direction);
@@ -556,7 +451,7 @@ describe("exportFilteredDiagramImage with a depth", () => {
 			return Promise.resolve(PNG_URL);
 		});
 
-		await settle(exportFilteredDiagramImage(options));
+		await completed(exportFilteredDiagramImage(options));
 
 		expect(order).toStrictEqual(["apply", "picture", "restore"]);
 		const bounds = getNodesBounds(applied(options).nodes);
@@ -566,13 +461,13 @@ describe("exportFilteredDiagramImage with a depth", () => {
 	});
 
 	it("uses a pixel ratio of two when no scale is given", async () => {
-		await settle(exportFilteredDiagramImage(filtered()));
+		await completed(exportFilteredDiagramImage(filtered()));
 
 		expect(pictureOptions().pixelRatio).toBe(2);
 	});
 
 	it("saves an SVG when asked for one", async () => {
-		await settle(exportFilteredDiagramImage(filtered({ format: "svg" })));
+		await completed(exportFilteredDiagramImage(filtered({ format: "svg" })));
 
 		expect(mockedToSvg).toHaveBeenCalledTimes(1);
 		expect(mockedToPng).not.toHaveBeenCalled();
@@ -593,7 +488,7 @@ describe("exportFilteredDiagramImage with a depth", () => {
 	it("restores the canvas once after a successful picture", async () => {
 		const options = filtered();
 
-		await settle(exportFilteredDiagramImage(options));
+		await completed(exportFilteredDiagramImage(options));
 
 		expect(options.restoreLayout).toHaveBeenCalledTimes(1);
 		expect(options.applyLayout).toHaveBeenCalledTimes(1);

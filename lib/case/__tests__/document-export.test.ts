@@ -1,5 +1,6 @@
 import type { Edge, Node } from "reactflow";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { layerGap, sideGap } from "@/src/__tests__/utils/export-canvas-kit";
 import {
 	layoutForExport,
 	pruneByDepth,
@@ -151,13 +152,18 @@ describe("waitForRender", () => {
 		vi.restoreAllMocks();
 	});
 
+	/** An edge path that answers only for its shape, as a real one answers only for its own attributes. */
+	function pathAttribute(d: string | null) {
+		return (name: string) => (name === "d" ? d : null);
+	}
+
 	/** Make each read of the page's edge paths return the next list of path shapes. */
 	function readPaths(reads: Array<Array<string | null>>) {
 		let call = 0;
 		vi.spyOn(document, "querySelectorAll").mockImplementation((() => {
 			const paths = reads[Math.min(call, reads.length - 1)] ?? [];
 			call++;
-			return paths.map((d) => ({ getAttribute: () => d }));
+			return paths.map((d) => ({ getAttribute: pathAttribute(d) }));
 		}) as unknown as typeof document.querySelectorAll);
 	}
 
@@ -217,7 +223,7 @@ describe("waitForRender", () => {
 		fakeTimers();
 		let call = 0;
 		vi.spyOn(document, "querySelectorAll").mockImplementation((() => [
-			{ getAttribute: () => String(call++) },
+			{ getAttribute: pathAttribute(String(call++)) },
 		]) as unknown as typeof document.querySelectorAll);
 
 		expect(await finishedAfter(1900, 2100)).toEqual([false, true]);
@@ -328,12 +334,12 @@ describe("layoutForExport", () => {
 			layerSpacing: 60,
 		});
 
-		const sideGap = (r: { nodes: Node[] }) =>
-			positionOf(r.nodes, "B").x - positionOf(r.nodes, "A").x;
-		const layerGap = (r: { nodes: Node[] }) =>
-			positionOf(r.nodes, "A").y - positionOf(r.nodes, "R").y;
-		expect(sideGap(roomy)).toBeGreaterThan(sideGap(compact));
-		expect(layerGap(roomy)).toBeGreaterThan(layerGap(compact));
+		expect(sideGap(roomy.nodes, "A", "B")).toBeGreaterThan(
+			sideGap(compact.nodes, "A", "B")
+		);
+		expect(layerGap(roomy.nodes, "R", "A")).toBeGreaterThan(
+			layerGap(compact.nodes, "R", "A")
+		);
 	});
 
 	it("uses a given node spacing and keeps the default layer spacing", async () => {
@@ -344,12 +350,12 @@ describe("layoutForExport", () => {
 			nodeSpacing: 200,
 		});
 
-		const sideGap = (r: { nodes: Node[] }) =>
-			positionOf(r.nodes, "B").x - positionOf(r.nodes, "A").x;
-		const layerGap = (r: { nodes: Node[] }) =>
-			positionOf(r.nodes, "A").y - positionOf(r.nodes, "R").y;
-		expect(sideGap(wide)).toBeGreaterThan(sideGap(standard));
-		expect(layerGap(wide)).toBe(layerGap(standard));
+		expect(sideGap(wide.nodes, "A", "B")).toBeGreaterThan(
+			sideGap(standard.nodes, "A", "B")
+		);
+		expect(layerGap(wide.nodes, "R", "A")).toBe(
+			layerGap(standard.nodes, "R", "A")
+		);
 	});
 
 	it("uses a given layer spacing and keeps the default node spacing", async () => {
@@ -360,11 +366,11 @@ describe("layoutForExport", () => {
 			layerSpacing: 300,
 		});
 
-		const sideGap = (r: { nodes: Node[] }) =>
-			positionOf(r.nodes, "B").x - positionOf(r.nodes, "A").x;
-		const layerGap = (r: { nodes: Node[] }) =>
-			positionOf(r.nodes, "A").y - positionOf(r.nodes, "R").y;
-		expect(layerGap(tall)).toBeGreaterThan(layerGap(standard));
-		expect(sideGap(tall)).toBe(sideGap(standard));
+		expect(layerGap(tall.nodes, "R", "A")).toBeGreaterThan(
+			layerGap(standard.nodes, "R", "A")
+		);
+		expect(sideGap(tall.nodes, "A", "B")).toBe(
+			sideGap(standard.nodes, "A", "B")
+		);
 	});
 });
