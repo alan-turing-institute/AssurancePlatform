@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SCOPES } from "@/lib/auth/scopes";
+import { issuesOf } from "@/src/__tests__/utils/schema-issues-kit";
 import {
+	grantCaseAccessSchema,
 	integrationScopesSchema,
+	issueTokenSchema,
 	registerIntegrationSchema,
 	updateIntegrationSchema,
 } from "../integration";
@@ -101,5 +104,107 @@ describe("integrationScopesSchema — MAX_SCOPES=20 cap (padded with duplicates)
 	it("rejects an empty array", () => {
 		const result = integrationScopesSchema.safeParse([]);
 		expect(result.success).toBe(false);
+	});
+});
+
+describe("registering an integration: messages", () => {
+	const register = (fields: Record<string, unknown>) => ({
+		name: "Tool",
+		scopes: ["case:read"],
+		...fields,
+	});
+
+	it("asks for a name", () => {
+		expect(
+			issuesOf(registerIntegrationSchema, register({ name: " " }))
+		).toEqual(["name: Name is required"]);
+	});
+
+	it("asks for at least one scope", () => {
+		expect(
+			issuesOf(registerIntegrationSchema, register({ scopes: [] }))
+		).toEqual(["scopes: At least one scope is required"]);
+	});
+
+	it("refuses more than 20 scopes with a message", () => {
+		const scopes = Array.from({ length: 21 }, () => SCOPES[0]);
+		expect(issuesOf(registerIntegrationSchema, register({ scopes }))).toEqual([
+			"scopes: At most 20 scopes are allowed",
+		]);
+	});
+});
+
+describe("updateIntegrationSchema: something to update", () => {
+	it("refuses a body with nothing to update, with a message", () => {
+		expect(issuesOf(updateIntegrationSchema, {})).toEqual([
+			": At least one field to update must be provided",
+		]);
+	});
+
+	it.each([
+		["a description alone", { description: "New text" }],
+		["scopes alone", { scopes: ["case:read"] }],
+		["a description and scopes", { description: "x", scopes: ["case:read"] }],
+	])("accepts %s", (_name, body) => {
+		expect(issuesOf(updateIntegrationSchema, body)).toEqual([]);
+	});
+});
+
+describe("issueTokenSchema: expiry", () => {
+	const NOW = new Date("2030-01-01T00:00:00.000Z");
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("accepts a body with no expiry", () => {
+		expect(issuesOf(issueTokenSchema, {})).toEqual([]);
+	});
+
+	it("accepts an expiry one millisecond ahead and refuses the present moment", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(NOW);
+		expect(
+			issuesOf(issueTokenSchema, { expiresAt: new Date(NOW.getTime() + 1) })
+		).toEqual([]);
+		expect(issuesOf(issueTokenSchema, { expiresAt: NOW })).toEqual([
+			"expiresAt: expiresAt must be in the future",
+		]);
+	});
+
+	it("refuses a past expiry given as text", () => {
+		expect(issuesOf(issueTokenSchema, { expiresAt: "2001-01-01" })).toEqual([
+			"expiresAt: expiresAt must be in the future",
+		]);
+	});
+
+	it("accepts a future expiry given as text", () => {
+		expect(issuesOf(issueTokenSchema, { expiresAt: "2999-01-01" })).toEqual([]);
+	});
+});
+
+describe("grantCaseAccessSchema", () => {
+	const CASE_ID = "3f2b8c1e-5d4a-4b6f-8a7c-9e0d1f2a3b4c";
+
+	it.each(["VIEW", "COMMENT", "EDIT"])("accepts the level %s", (permission) => {
+		expect(
+			issuesOf(grantCaseAccessSchema, { caseId: CASE_ID, permission })
+		).toEqual([]);
+	});
+
+	it.each([
+		"ADMIN",
+		"",
+		"view",
+	])("refuses the level %j with a message", (permission) => {
+		expect(
+			issuesOf(grantCaseAccessSchema, { caseId: CASE_ID, permission })
+		).toEqual(["permission: Invalid permission level"]);
+	});
+
+	it("refuses a case id that is not an identifier", () => {
+		expect(
+			issuesOf(grantCaseAccessSchema, { caseId: "nope", permission: "VIEW" })
+		).toEqual(["caseId: Invalid ID format"]);
 	});
 });
