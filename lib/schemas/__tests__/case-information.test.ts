@@ -89,4 +89,48 @@ describe("upsertCaseInformationSchema — unaffected by the publish gate", () =>
 		});
 		expect(result.success).toBe(true);
 	});
+
+	it("refuses a save that gives no field, saying so", () => {
+		const result = upsertCaseInformationSchema.safeParse({});
+		expect(result.success).toBe(false);
+		expect(result.error?.issues[0]?.message).toBe(
+			"At least one field must be provided"
+		);
+	});
+
+	it("refuses a save whose only fields are blank", () => {
+		expect(
+			upsertCaseInformationSchema.safeParse({ description: "", authors: " " })
+				.success
+		).toBe(false);
+	});
+
+	it("accepts a save where one field has a value and another is blank", () => {
+		const result = upsertCaseInformationSchema.safeParse({
+			authors: "Ada",
+			description: "",
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("accepts a save that only clears the feature image", () => {
+		expect(
+			upsertCaseInformationSchema.safeParse({ featureImageUrl: null }).success
+		).toBe(true);
+	});
+
+	it.each([
+		[2000, true],
+		[2001, false],
+	])("accepts a feature image address of %i characters: %s", (length, ok) => {
+		const result = upsertCaseInformationSchema.safeParse({
+			featureImageUrl: "x".repeat(length),
+		});
+		expect(result.success).toBe(ok);
+		if (!ok) {
+			expect(result.error?.issues[0]?.message).toBe(
+				"Must be less than 2000 characters"
+			);
+		}
+	});
 });
