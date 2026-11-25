@@ -6,6 +6,7 @@ import {
 	PIPELINE_FORM_CHECK_NAME,
 } from "../../../src/__tests__/fixtures/health-checks";
 import {
+	CHECK_LIST_MAX_BYTES,
 	healthCheckListSchema,
 	MAX_PUBLISHED_CHECKS,
 	normaliseRecommendation,
@@ -298,6 +299,244 @@ describe("a check list in a pipeline's own form", () => {
 			kind: "mean",
 			rule: { kind: "identity" },
 		});
+	});
+});
+
+function issuesOf(list: unknown) {
+	const parsed = healthCheckListSchema.safeParse(list);
+	return parsed.success ? [] : parsed.error.issues;
+}
+
+function messageAt(list: unknown, path: string): string | undefined {
+	return issuesOf(list).find((issue) => issue.path.join(".") === path)?.message;
+}
+
+const listWith = (check: Record<string, unknown>) => ({
+	pipeline: "p",
+	checks: [{ ...minimalCheck("a"), ...check }],
+});
+
+const settingWith = (param: Record<string, unknown>) =>
+	listWith({ params: [{ key: "k", label: "K", type: "string", ...param }] });
+
+const entryFieldCases: [string, unknown, string, string][] = [
+	[
+		"an empty pipeline",
+		{ pipeline: "", checks: [] },
+		"pipeline",
+		"pipeline is required",
+	],
+	[
+		"an empty check name",
+		listWith({ name: "" }),
+		"checks.0.name",
+		"name is required",
+	],
+	[
+		"an empty check version",
+		listWith({ version: "" }),
+		"checks.0.version",
+		"version is required",
+	],
+	[
+		"an empty check scope",
+		listWith({ scope: "" }),
+		"checks.0.scope",
+		"scope is required",
+	],
+	[
+		"a scope with edge whitespace",
+		listWith({ scope: " item" }),
+		"checks.0.scope",
+		"scope must not start or end with whitespace",
+	],
+	[
+		"a description over 2000 characters",
+		listWith({ description: "a".repeat(2001) }),
+		"checks.0.description",
+		"must be at most 2000 characters",
+	],
+	[
+		"an empty singular scope label",
+		listWith({ scope_label: { one: "", many: "x" } }),
+		"checks.0.scope_label.one",
+		"one is required",
+	],
+	[
+		"an empty plural scope label",
+		listWith({ scope_label: { one: "x", many: "" } }),
+		"checks.0.scope_label.many",
+		"many is required",
+	],
+	[
+		"a value type that is not offered",
+		listWith({ value: { type: "other" } }),
+		"checks.0.value.type",
+		"type must be one of boolean, number, string, datetime",
+	],
+];
+
+describe("check list schema — messages for a check", () => {
+	it.each(entryFieldCases)("reports %s", (_label, list, path, message) => {
+		expect(messageAt(list, path)).toBe(message);
+	});
+
+	it("reports more than 200 checks", () => {
+		const list = {
+			pipeline: "p",
+			checks: Array.from({ length: 201 }, (_, i) => minimalCheck(`c${i}`)),
+		};
+		expect(messageAt(list, "checks")).toBe("must have at most 200 checks");
+	});
+
+	it("reports a repeated check name and a repeated setting key as custom issues", () => {
+		const repeated = issuesOf({
+			pipeline: "p",
+			checks: [minimalCheck("a"), minimalCheck("a")],
+		});
+		expect(repeated.map((issue) => [issue.code, issue.message])).toEqual([
+			["custom", "is listed more than once"],
+		]);
+		const setting = { key: "k", label: "K", type: "string" };
+		const keys = issuesOf(listWith({ params: [setting, setting] }));
+		expect(keys.map((issue) => [issue.path.join("."), issue.code])).toEqual([
+			["checks.0.params.1.key", "custom"],
+		]);
+		expect(keys[0]?.message).toBe("is listed more than once");
+	});
+
+	it("allows a published check list of 256 KiB", () => {
+		expect(CHECK_LIST_MAX_BYTES).toBe(262_144);
+	});
+});
+
+const settingCases: [string, Record<string, unknown>, string, string][] = [
+	["an empty label", { label: "" }, "label", "label is required"],
+	[
+		"a label over 200 characters",
+		{ label: "a".repeat(201) },
+		"label",
+		"label must be at most 200 characters",
+	],
+	["an empty key", { key: "" }, "key", "key is required"],
+	[
+		"a key with edge whitespace",
+		{ key: "k " },
+		"key",
+		"key must not start or end with whitespace",
+	],
+	[
+		"the prototype key",
+		{ key: "__proto__" },
+		"key",
+		"__proto__ is not an allowed name",
+	],
+	[
+		"a type that is not offered",
+		{ type: "colour" },
+		"type",
+		"must be one of string, number, boolean, duration, enum",
+	],
+	[
+		"an enum with no options",
+		{ type: "enum" },
+		"options",
+		"is required for an enum setting",
+	],
+	[
+		"options on a setting that is not an enum",
+		{ options: ["x"] },
+		"options",
+		"is only used by an enum setting",
+	],
+	[
+		"a default of the wrong type",
+		{ type: "number", default: "x" },
+		"default",
+		"must be a value of type number",
+	],
+];
+
+describe("check list schema — messages for a setting", () => {
+	it.each(settingCases)("reports %s", (_label, param, field, message) => {
+		expect(messageAt(settingWith(param), `checks.0.params.0.${field}`)).toBe(
+			message
+		);
+	});
+
+	it("reports a setting problem as a custom issue", () => {
+		expect(
+			issuesOf(settingWith({ type: "enum" })).map((issue) => issue.code)
+		).toEqual(["custom"]);
+	});
+
+	it("accepts a unit of 100 characters and refuses 101", () => {
+		expect(
+			issuesOf(settingWith({ type: "number", unit: "a".repeat(100) }))
+		).toEqual([]);
+		expect(
+			fieldsOf(settingWith({ type: "number", unit: "a".repeat(101) }))
+		).toEqual(["checks.0.params.0.unit"]);
+		expect(issuesOf(settingWith({ type: "number", unit: "ms" }))).toEqual([]);
+	});
+
+	it("reports both problems of an enum with a default and no options, without failing", () => {
+		expect(fieldsOf(settingWith({ type: "enum", default: "x" }))).toEqual([
+			"checks.0.params.0.options",
+			"checks.0.params.0.default",
+		]);
+	});
+
+	it("does not run the default check for a setting type that is not offered", () => {
+		expect(fieldsOf(settingWith({ type: "colour", default: 5 }))).toEqual([
+			"checks.0.params.0.type",
+		]);
+	});
+
+	it("accepts 50 settings and refuses 51, naming the limit", () => {
+		const settings = (count: number) =>
+			listWith({
+				params: Array.from({ length: count }, (_, i) => ({
+					key: `k${i}`,
+					label: "K",
+					type: "string",
+				})),
+			});
+		expect(issuesOf(settings(50))).toEqual([]);
+		expect(messageAt(settings(51), "checks.0.params")).toBe(
+			"must have at most 50 entries"
+		);
+	});
+});
+
+describe("check list schema — messages for plain settings", () => {
+	const plain = (params: unknown) => listWith({ params });
+
+	it("explains a value that cannot be a default and a value that is not a list or object", () => {
+		expect(messageAt(plain({ gap: null }), "checks.0.params.gap")).toBe(
+			"must have a default that is text, a number or true or false; use the list form for a setting with no default or with a fixed set of choices"
+		);
+		expect(messageAt(plain("x"), "checks.0.params")).toBe(
+			"must be a list of settings or an object of setting names to default values"
+		);
+	});
+
+	it("explains an empty setting name and a label that would be too long", () => {
+		const empty = issuesOf(plain({ "": 1 }));
+		expect(empty.map((issue) => [issue.code, issue.message])).toEqual([
+			["custom", "must not have a setting with an empty name"],
+		]);
+		const longKey = `ﬃ${"a".repeat(199)}`;
+		const long = issuesOf(plain({ [longKey]: 1 }));
+		expect(long.map((issue) => [issue.code, issue.message])).toEqual([
+			["custom", "is too long: its label would exceed 200 characters"],
+		]);
+	});
+
+	it("reports a setting with no usable default as a custom issue", () => {
+		expect(issuesOf(plain({ gap: null })).map((issue) => issue.code)).toEqual([
+			"custom",
+		]);
 	});
 });
 
