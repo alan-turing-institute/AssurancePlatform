@@ -4,7 +4,12 @@ import {
 	buildTreeFromElements,
 	type ElementWithLinks,
 } from "@/lib/transforms/build-tree";
-import { computeTreeDiff } from "../tree-diff";
+import {
+	computeTreeDiff,
+	contextEqual,
+	type ElementChange,
+	validateTreeStructure,
+} from "../tree-diff";
 
 const GOAL_ID = "00000000-0000-4000-8000-000000000001";
 const NAMED_ENTRY = {
@@ -517,5 +522,389 @@ describe("computeTreeDiff on an exported case with shared evidence", () => {
 				.sort();
 		expect(idsOf("delete")).toEqual(deleted);
 		expect(idsOf("create")).toEqual(created);
+	});
+});
+
+type Kind = TreeNode["type"];
+const leafOrBranch = (
+	id: string,
+	type: Kind,
+	children: TreeNode[] = [],
+	extra: Partial<TreeNode> = {}
+): TreeNode => ({
+	id,
+	type,
+	name: id,
+	description: id,
+	inSandbox: false,
+	children,
+	...extra,
+});
+const claimNode = (id: string, children: TreeNode[] = []) =>
+	leafOrBranch(id, "PROPERTY_CLAIM", children);
+const evidenceNode = (id: string, children: TreeNode[] = []) =>
+	leafOrBranch(id, "EVIDENCE", children);
+const caseOfTree = (tree: TreeNode): CaseExportNested => ({
+	version: "1.1",
+	exportedAt: "2026-11-25T00:00:00.000Z",
+	case: { name: "Case", description: "" },
+	tree,
+});
+const goalWith = (...children: TreeNode[]) =>
+	caseOfTree(leafOrBranch("G1", "GOAL", children));
+const counterGoalOf = (id: string, children: TreeNode[] = []) =>
+	leafOrBranch(id, "GOAL", children, { isDefeater: true });
+const changeTypes = (changes: ElementChange[]) => changes.map((c) => c.type);
+const deletedIds = (changes: ElementChange[]) =>
+	changes
+		.filter((c) => c.type === "delete")
+		.map((c) => c.elementId)
+		.sort();
+
+describe("computeTreeDiff and evidence under a goal", () => {
+	it("unlinks and deletes evidence taken off the goal", () => {
+		const { changes } = computeTreeDiff(
+			goalWith(evidenceNode("E")),
+			goalWith()
+		);
+
+		expect(changes).toStrictEqual([
+			{ type: "delete", elementId: "E" },
+			{ type: "unlink_evidence", evidenceId: "E", claimId: "G1" },
+		]);
+	});
+
+	it("creates evidence added to the goal without a parent and links it", () => {
+		const { changes } = computeTreeDiff(
+			goalWith(),
+			goalWith(evidenceNode("E"))
+		);
+
+		expect(changeTypes(changes)).toStrictEqual(["create", "link_evidence"]);
+		expect(changes[0]).toMatchObject({ elementId: "E", parentId: null });
+		expect(changes[1]).toStrictEqual({
+			type: "link_evidence",
+			evidenceId: "E",
+			claimId: "G1",
+		});
+	});
+
+	it("sends no change for evidence links that stayed", () => {
+		const tree = () => goalWith(claimNode("A", [evidenceNode("E")]));
+
+		expect(computeTreeDiff(tree(), tree()).changes).toStrictEqual([]);
+	});
+
+	it("links existing evidence to a claim it was not under before", () => {
+		const { changes } = computeTreeDiff(
+			goalWith(claimNode("A", [evidenceNode("E")]), claimNode("B")),
+			goalWith(
+				claimNode("A", [evidenceNode("E")]),
+				claimNode("B", [evidenceNode("E")])
+			)
+		);
+
+		expect(changes).toStrictEqual([
+			{ type: "link_evidence", evidenceId: "E", claimId: "B" },
+		]);
+	});
+});
+
+describe("computeTreeDiff and the change summary", () => {
+	const current = () =>
+		goalWith(
+			claimNode("A"),
+			claimNode("B"),
+			claimNode("C"),
+			claimNode("D"),
+			claimNode("X")
+		);
+	const renamed = (id: string, children: TreeNode[] = []) =>
+		leafOrBranch(id, "PROPERTY_CLAIM", children, { name: `${id} renamed` });
+
+	it("reports a move on its own as a move, not as an update", () => {
+		const { changes, summary } = computeTreeDiff(
+			goalWith(claimNode("A", [claimNode("C")]), claimNode("B")),
+			goalWith(claimNode("A"), claimNode("B", [claimNode("C")]))
+		);
+
+		expect(changes).toStrictEqual([
+			{ type: "update", elementId: "C", data: { parentId: "B" } },
+		]);
+		expect(summary).toStrictEqual({
+			created: 0,
+			updated: 0,
+			deleted: 0,
+			moved: 1,
+		});
+	});
+
+	it("reports a move together with another change as an update", () => {
+		const { changes, summary } = computeTreeDiff(
+			goalWith(claimNode("A"), claimNode("B", [claimNode("C")])),
+			goalWith(claimNode("A", [renamed("C")]), claimNode("B"))
+		);
+
+		expect(changes).toStrictEqual([
+			{
+				type: "update",
+				elementId: "C",
+				data: { name: "C renamed", parentId: "A" },
+			},
+		]);
+		expect(summary).toStrictEqual({
+			created: 0,
+			updated: 1,
+			deleted: 0,
+			moved: 0,
+		});
+	});
+
+	it("counts created, updated, deleted and moved elements separately", () => {
+		const edited = goalWith(
+			renamed("A", [claimNode("D")]),
+			renamed("B"),
+			renamed("C"),
+			claimNode("N1"),
+			claimNode("N2")
+		);
+
+		const { summary } = computeTreeDiff(current(), edited);
+
+		expect(summary).toStrictEqual({
+			created: 2,
+			updated: 3,
+			deleted: 1,
+			moved: 1,
+		});
+	});
+
+	it("counts only a created element as created", () => {
+		const { summary } = computeTreeDiff(goalWith(), goalWith(claimNode("N1")));
+
+		expect(summary).toStrictEqual({
+			created: 1,
+			updated: 0,
+			deleted: 0,
+			moved: 0,
+		});
+	});
+});
+
+describe("contextEqual", () => {
+	const named = { id: "k3f9x2m7qa", name: "w", text: "t", value: "v" };
+
+	it.each([
+		{ label: "both missing", a: undefined, b: undefined, equal: true },
+		{ label: "missing, then a list", a: undefined, b: ["x"], equal: false },
+		{ label: "a list, then missing", a: ["x"], b: undefined, equal: false },
+		{
+			label: "the same plain entries",
+			a: ["x", "y"],
+			b: ["x", "y"],
+			equal: true,
+		},
+		{ label: "different plain entries", a: ["x"], b: ["y"], equal: false },
+		{ label: "different lengths", a: ["x"], b: ["x", "y"], equal: false },
+		{
+			label: "the same named entry",
+			a: [named],
+			b: [{ ...named }],
+			equal: true,
+		},
+		{
+			label: "a plain entry, then a named one",
+			a: ["w"],
+			b: [named],
+			equal: false,
+		},
+		{
+			label: "a named entry, then a plain one",
+			a: [named],
+			b: ["w"],
+			equal: false,
+		},
+	])("compares $label", ({ a, b, equal }) => {
+		expect(contextEqual(a, b)).toBe(equal);
+	});
+
+	it("sends the new list when a goal gains context, and when a plain entry changes", () => {
+		const base = (context?: string[]) =>
+			caseOfTree(leafOrBranch("G1", "GOAL", [], { context }));
+
+		const gained = computeTreeDiff(base(), base(["x"])).changes;
+		const changed = computeTreeDiff(base(["x"]), base(["y"])).changes;
+
+		expect(gained).toStrictEqual([
+			{ type: "update", elementId: "G1", data: { context: ["x"] } },
+		]);
+		expect(changed).toStrictEqual([
+			{ type: "update", elementId: "G1", data: { context: ["y"] } },
+		]);
+	});
+});
+
+describe("computeTreeDiff and what hangs from evidence shown under several claims", () => {
+	const shownCopy = () => evidenceNode("E", [leafOrBranch("CG", "GOAL")]);
+
+	it.each([
+		{
+			label: "one of the claims that show it is deleted and the other keeps it",
+			edited: goalWith(claimNode("A", [evidenceNode("E")])),
+			deleted: ["B", "CG"],
+		},
+		{
+			label: "the other claim that shows it is deleted",
+			edited: goalWith(claimNode("B", [evidenceNode("E")])),
+			deleted: ["A", "CG"],
+		},
+	])("deletes what hangs from the evidence when $label", ({
+		edited,
+		deleted,
+	}) => {
+		const current = goalWith(
+			claimNode("A", [shownCopy()]),
+			claimNode("B", [shownCopy()])
+		);
+
+		expect(deletedIds(computeTreeDiff(current, edited).changes)).toStrictEqual(
+			deleted
+		);
+	});
+});
+
+describe("computeTreeDiff and evidence taken off the claim that showed it", () => {
+	const counterGoal = (id: string, children: TreeNode[] = []) =>
+		leafOrBranch(id, "GOAL", children, { isDefeater: true });
+	const shownIn = (children: TreeNode[]) =>
+		goalWith(
+			claimNode("A", [evidenceNode("E", children), evidenceNode("F")]),
+			claimNode("B", [evidenceNode("E")])
+		);
+
+	it("keeps what hangs from the evidence when other evidence stays on that claim", () => {
+		const { changes } = computeTreeDiff(
+			shownIn([counterGoal("CG")]),
+			goalWith(
+				claimNode("A", [evidenceNode("F")]),
+				claimNode("B", [evidenceNode("E")])
+			)
+		);
+
+		expect(deletedIds(changes)).toStrictEqual([]);
+		expect(changes).toContainEqual({
+			type: "unlink_evidence",
+			evidenceId: "E",
+			claimId: "A",
+		});
+	});
+
+	it("keeps every counter-goal that hung from the evidence", () => {
+		const { changes } = computeTreeDiff(
+			shownIn([counterGoal("CG"), counterGoal("CG2")]),
+			goalWith(claimNode("B", [evidenceNode("E")]))
+		);
+
+		expect(deletedIds(changes)).toStrictEqual(["A", "F"]);
+	});
+
+	it("deletes what the person removed from the copy they edited, and no more", () => {
+		const current = shownIn([
+			counterGoal("CG"),
+			counterGoal("CG2", [claimNode("P2")]),
+		]);
+		const edited = goalWith(
+			claimNode("B", [evidenceNode("E", [counterGoal("CG")])])
+		);
+
+		expect(deletedIds(computeTreeDiff(current, edited).changes)).toStrictEqual([
+			"A",
+			"CG2",
+			"F",
+			"P2",
+		]);
+	});
+
+	it("keeps the person's edit to an element that is also carried over", () => {
+		const evidenceBeneath = () =>
+			counterGoal("CG", [claimNode("CGP", [evidenceNode("E3")])]);
+		const current = goalWith(
+			claimNode("A", [evidenceNode("E", [evidenceBeneath()])]),
+			claimNode("B", [evidenceNode("E")]),
+			claimNode("C", [evidenceNode("E3")])
+		);
+		const edited = goalWith(
+			claimNode("B", [evidenceNode("E")]),
+			claimNode("C", [leafOrBranch("E3", "EVIDENCE", [], { name: "kept" })])
+		);
+
+		const { changes } = computeTreeDiff(current, edited);
+
+		expect(deletedIds(changes)).toStrictEqual(["A"]);
+		expect(changes.filter((c) => c.type === "update")).toStrictEqual([
+			{ type: "update", elementId: "E3", data: { name: "kept" } },
+		]);
+	});
+
+	it("finishes where evidence shows itself again beneath itself", () => {
+		const inner = evidenceNode("E1", [leafOrBranch("CG1", "GOAL")]);
+		const e1 = evidenceNode("E1", [
+			counterGoalOf("CG1", [claimNode("P1", [inner])]),
+		]);
+		const e0 = evidenceNode("E0", [
+			counterGoalOf("CG0", [claimNode("P0", [e1])]),
+		]);
+		const current = goalWith(
+			claimNode("A", [e0]),
+			claimNode("B", [evidenceNode("E0")])
+		);
+		const edited = goalWith(claimNode("B", [evidenceNode("E0")]));
+
+		expect(deletedIds(computeTreeDiff(current, edited).changes)).toStrictEqual([
+			"A",
+		]);
+	});
+
+	it("keeps the part of evidence that an earlier-listed piece of evidence brought back", () => {
+		const e2 = () =>
+			evidenceNode("E2", [counterGoalOf("CG2", [claimNode("P2")])]);
+		const e1 = evidenceNode("E1", [
+			counterGoalOf("CG1", [claimNode("P1", [evidenceNode("E2")])]),
+		]);
+		const current = goalWith(
+			claimNode("M", [e2(), e1]),
+			claimNode("B", [evidenceNode("E1")])
+		);
+		const edited = goalWith(claimNode("B", [evidenceNode("E1")]));
+
+		expect(deletedIds(computeTreeDiff(current, edited).changes)).toStrictEqual([
+			"M",
+		]);
+	});
+});
+
+describe("validateTreeStructure", () => {
+	it("accepts a tree with one root, evidence included", () => {
+		const tree = goalWith(claimNode("A", [evidenceNode("E")]));
+
+		expect(validateTreeStructure(tree)).toStrictEqual([]);
+	});
+
+	it("reports a tree whose root is evidence as having no root", () => {
+		expect(validateTreeStructure(caseOfTree(evidenceNode("E")))).toStrictEqual([
+			"Tree must have a root element",
+		]);
+	});
+
+	it("reports every element in a loop of parents", () => {
+		const looped = caseOfTree(
+			leafOrBranch("G1", "GOAL", [claimNode("A", [leafOrBranch("G1", "GOAL")])])
+		);
+
+		expect(validateTreeStructure(looped)).toStrictEqual([
+			"Tree must have a root element",
+			'Circular reference detected involving element "G1"',
+			'Circular reference detected involving element "A"',
+		]);
 	});
 });
