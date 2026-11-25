@@ -247,6 +247,19 @@ describe("stringIdSchema", () => {
 		expect(issuesOf(stringIdSchema, "")).toEqual([": ID is required"]);
 	});
 
+	it.each([
+		"   ",
+		"\t\n",
+	])("rejects %j, which is empty once trimmed", (blank) => {
+		expect(issuesOf(stringIdSchema, blank)).toEqual([": ID is required"]);
+	});
+
+	it("counts the length after trimming", () => {
+		expect(outputOf(stringIdSchema, ` ${"a".repeat(100)} `)).toBe(
+			"a".repeat(100)
+		);
+	});
+
 	it("rejects 101 characters with the length message", () => {
 		expect(issuesOf(stringIdSchema, "a".repeat(101))).toEqual([
 			": ID must be less than 100 characters",
