@@ -70,6 +70,32 @@ describe("createElementCommentSchema", () => {
 		).toEqual({ content: "first", parentId: null });
 	});
 
+	it("uses the older field when content is only spaces", () => {
+		expect(
+			outputOf(createElementCommentSchema, { content: "   ", comment: " hi " })
+		).toEqual({ content: "hi", parentId: null });
+	});
+
+	it("accepts 5000 characters and refuses 5001", () => {
+		expect(
+			issuesOf(createElementCommentSchema, { content: "c".repeat(5000) })
+		).toEqual([]);
+		expect(
+			issuesOf(createElementCommentSchema, { content: "c".repeat(5001) })
+		).toEqual(["content: Comment content must be less than 5000 characters"]);
+		expect(
+			issuesOf(createElementCommentSchema, { comment: "c".repeat(5001) })
+		).toEqual(["content: Comment content must be less than 5000 characters"]);
+	});
+
+	it("counts the length after trimming", () => {
+		expect(
+			issuesOf(createElementCommentSchema, {
+				content: ` ${"c".repeat(5000)} `,
+			})
+		).toEqual([]);
+	});
+
 	it("keeps a parent that is given", () => {
 		expect(
 			outputOf(createElementCommentSchema, { content: "a", parentId: PARENT })
