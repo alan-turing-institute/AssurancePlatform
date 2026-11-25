@@ -155,16 +155,22 @@ describe("new connection: messages and limits", () => {
 		expect(issuesOf(createConnectionSchema, newConnection(fields))).toEqual([]);
 	});
 
-	it("refuses a key with a control character, naming that rule", () => {
+	it("refuses a key with a control character, naming only that rule", () => {
 		expect(
 			issuesOf(createConnectionSchema, newConnection({ apiKey: "a\u0001b" }))
-		).toContain("apiKey: apiKey must not contain control characters");
+		).toEqual(["apiKey: apiKey must not contain control characters"]);
 	});
 
-	it("asks for a key that is not blank", () => {
+	it.each(["", " ", "  "])("asks for a key that is %j, once", (apiKey) => {
+		expect(issuesOf(createConnectionSchema, newConnection({ apiKey }))).toEqual(
+			["apiKey: apiKey must not be empty"]
+		);
+	});
+
+	it("still names the printable ASCII rule for a letter outside ASCII", () => {
 		expect(
-			issuesOf(createConnectionSchema, newConnection({ apiKey: " " }))
-		).toContain("apiKey: apiKey must not be empty");
+			issuesOf(createConnectionSchema, newConnection({ apiKey: "kéy" }))
+		).toEqual(["apiKey: apiKey must contain only printable ASCII characters"]);
 	});
 
 	it("trims the base address and the key", () => {
