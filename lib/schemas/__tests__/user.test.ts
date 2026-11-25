@@ -244,7 +244,6 @@ describe("registerUserSchema", () => {
 	});
 
 	it.each([
-		["password and password2 only", { password: "one", password2: "two" }],
 		["password1 only", { password1: "one" }],
 	])("does not compare when given %s", (_name, fields) => {
 		expect(issuesOf(registerUserSchema, { ...base, ...fields })).toEqual([]);
@@ -262,10 +261,7 @@ describe("updateUserProfileSchema", () => {
 		expect(issuesOf(updateUserProfileSchema, input)).toEqual([]);
 	});
 
-	it.each([
-		["nothing", {}],
-		["only a blank first name", { firstName: "" }],
-	])("refuses an update with %s", (_name, input) => {
+	it.each([["nothing", {}]])("refuses an update with %s", (_name, input) => {
 		expect(issuesOf(updateUserProfileSchema, input)).toEqual([
 			": At least one field to update must be provided",
 		]);

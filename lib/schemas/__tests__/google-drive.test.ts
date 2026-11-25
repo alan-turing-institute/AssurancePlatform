@@ -23,8 +23,8 @@ describe("backupToDriveSchema", () => {
 });
 
 describe("importFromDriveSchema", () => {
-	it("accepts a file id of any length from 1", () => {
-		expect(issuesOf(importFromDriveSchema, { fileId: "abc123" })).toEqual([]);
+	it("accepts a file id of one character", () => {
+		expect(issuesOf(importFromDriveSchema, { fileId: "a" })).toEqual([]);
 	});
 
 	it("asks for a file id", () => {

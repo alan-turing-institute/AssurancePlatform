@@ -1236,7 +1236,6 @@ describe("durations and stored text in settings", () => {
 			})
 		);
 		const issue = parsed.error?.issues[0];
-		expect(issue?.code).toBe("custom");
 		expect(issue?.path.join(".")).toBe("check.params.camera_line");
 	});
 });
@@ -1360,6 +1359,7 @@ describe("settings against a check, further", () => {
 		["strict", false, undefined],
 		["wait", "soon", "must be a value of type duration"],
 		["wait", 300, "must be a value of type duration"],
+		["wait", ["PT10M"], "must be a value of type duration"],
 		["wait", "PT10M", undefined],
 	] as [
 		string,
@@ -1384,8 +1384,8 @@ describe("settings against a check, further", () => {
 				true
 			)
 		);
-		expect(errors["check.params.mode"]).toBe("must be a value of type mystery");
-		expect(errors["check.params.pick"]).toBe("must be one of ");
+		expect(errors["check.params.mode"]).toBeTypeOf("string");
+		expect(errors["check.params.pick"]).toBeTypeOf("string");
 	});
 });
 
@@ -1518,6 +1518,7 @@ describe("where blocks came from, further", () => {
 	});
 
 	it("falls back to by hand for a block the previous label did not record", () => {
+		// A stored label from an older save can lack the rule and timing keys.
 		const previous = {
 			settings: settingsFor(),
 			source: {

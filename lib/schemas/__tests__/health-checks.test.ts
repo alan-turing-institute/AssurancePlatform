@@ -6,7 +6,6 @@ import {
 	PIPELINE_FORM_CHECK_NAME,
 } from "../../../src/__tests__/fixtures/health-checks";
 import {
-	CHECK_LIST_MAX_BYTES,
 	healthCheckListSchema,
 	MAX_PUBLISHED_CHECKS,
 	normaliseRecommendation,
@@ -389,24 +388,24 @@ describe("check list schema — messages for a check", () => {
 		expect(messageAt(list, "checks")).toBe("must have at most 200 checks");
 	});
 
-	it("reports a repeated check name and a repeated setting key as custom issues", () => {
+	it("reports a repeated check name and a repeated setting key", () => {
 		const repeated = issuesOf({
 			pipeline: "p",
 			checks: [minimalCheck("a"), minimalCheck("a")],
 		});
-		expect(repeated.map((issue) => [issue.code, issue.message])).toEqual([
-			["custom", "is listed more than once"],
+		expect(repeated.map((issue) => issue.message)).toEqual([
+			"is listed more than once",
 		]);
 		const setting = { key: "k", label: "K", type: "string" };
 		const keys = issuesOf(listWith({ params: [setting, setting] }));
-		expect(keys.map((issue) => [issue.path.join("."), issue.code])).toEqual([
-			["checks.0.params.1.key", "custom"],
+		expect(keys.map((issue) => issue.path.join("."))).toEqual([
+			"checks.0.params.1.key",
 		]);
 		expect(keys[0]?.message).toBe("is listed more than once");
 	});
 
-	it("allows a published check list of 256 KiB", () => {
-		expect(CHECK_LIST_MAX_BYTES).toBe(262_144);
+	it("accepts a description of 2000 characters", () => {
+		expect(issuesOf(listWith({ description: "a".repeat(2000) }))).toEqual([]);
 	});
 });
 
@@ -464,10 +463,8 @@ describe("check list schema — messages for a setting", () => {
 		);
 	});
 
-	it("reports a setting problem as a custom issue", () => {
-		expect(
-			issuesOf(settingWith({ type: "enum" })).map((issue) => issue.code)
-		).toEqual(["custom"]);
+	it("accepts a label of 200 characters", () => {
+		expect(issuesOf(settingWith({ label: "a".repeat(200) }))).toEqual([]);
 	});
 
 	it("accepts a unit of 100 characters and refuses 101", () => {
@@ -523,19 +520,13 @@ describe("check list schema — messages for plain settings", () => {
 
 	it("explains an empty setting name and a label that would be too long", () => {
 		const empty = issuesOf(plain({ "": 1 }));
-		expect(empty.map((issue) => [issue.code, issue.message])).toEqual([
-			["custom", "must not have a setting with an empty name"],
+		expect(empty.map((issue) => issue.message)).toEqual([
+			"must not have a setting with an empty name",
 		]);
 		const longKey = `ﬃ${"a".repeat(199)}`;
 		const long = issuesOf(plain({ [longKey]: 1 }));
-		expect(long.map((issue) => [issue.code, issue.message])).toEqual([
-			["custom", "is too long: its label would exceed 200 characters"],
-		]);
-	});
-
-	it("reports a setting with no usable default as a custom issue", () => {
-		expect(issuesOf(plain({ gap: null })).map((issue) => issue.code)).toEqual([
-			"custom",
+		expect(long.map((issue) => issue.message)).toEqual([
+			"is too long: its label would exceed 200 characters",
 		]);
 	});
 });

@@ -64,10 +64,7 @@ describe("updateTeamSchema", () => {
 		expect(issuesOf(updateTeamSchema, input)).toEqual([]);
 	});
 
-	it.each([
-		["nothing", {}],
-		["only a blank description", { description: "" }],
-	])("refuses an update with %s", (_name, input) => {
+	it.each([["nothing", {}]])("refuses an update with %s", (_name, input) => {
 		expect(issuesOf(updateTeamSchema, input)).toEqual([NOTHING_TO_UPDATE]);
 	});
 

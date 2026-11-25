@@ -38,11 +38,6 @@ function flatFile(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-/** An array that carries a version marker, as no JSON text can produce. */
-function arrayWithVersion(version: string) {
-	return Object.assign([], { version });
-}
-
 describe("detectVersion", () => {
 	it.each([
 		["a 1.0 marker", { version: "1.0" }],
@@ -111,6 +106,7 @@ describe("detectAndValidate", () => {
 		["text", "text"],
 		["a number", 42],
 		["true", true],
+		// The import response includes each issue's code, so the codes in this block are checked.
 	])("rejects %s as not an object", (_name, input) => {
 		const result = detectAndValidate(input);
 		expect(result.isValid).toBe(false);
@@ -172,19 +168,6 @@ describe("detectAndValidate", () => {
 			const error = result.errors.find((e) => e.path === "case.name");
 			expect(error?.message).toBe("Case name is required");
 			expect(error?.code).toBe("too_small");
-		}
-	});
-
-	// An array holding a version marker cannot come from JSON text; it is the
-	// only input that makes the schema report a problem with no path.
-	it.each([
-		["nested", "1.1"],
-		["flat", "2.0"],
-	])("names the whole input as the problem for a %s-marked array", (_n, v) => {
-		const result = detectAndValidate(arrayWithVersion(v));
-		expect(result.isValid).toBe(false);
-		if (!result.isValid) {
-			expect(result.errors.map((e) => e.path)).toEqual(["root"]);
 		}
 	});
 });

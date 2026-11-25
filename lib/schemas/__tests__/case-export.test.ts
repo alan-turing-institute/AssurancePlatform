@@ -129,6 +129,7 @@ describe("case name in an export document", () => {
 describe("CaseExportNestedSchema — version 1.0 files", () => {
 	const named = { id: "abcde12345", name: "Dog", text: "A dog" };
 
+	// The import response includes each issue's code, so the codes below are checked.
 	it("points to a named context entry in a nested child, with a custom issue code", () => {
 		const tree = node(ID_A, {
 			children: [

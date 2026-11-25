@@ -99,9 +99,10 @@ describe("batchUpdateRequestSchema — each kind of change", () => {
 		});
 		const change = result.data?.changes[0];
 		expect(result.success).toBe(true);
-		expect(
-			change?.type === "create" && change.data.fromPattern
-		).toBeUndefined();
+		const data = change?.type === "create" ? change.data : undefined;
+		expect(data).toBeDefined();
+		expect(data?.fromPattern).toBeUndefined();
+		expect(data?.modifiedFromPattern).toBeUndefined();
 	});
 
 	it("accepts pattern markers on an update and drops them", () => {
@@ -116,8 +117,9 @@ describe("batchUpdateRequestSchema — each kind of change", () => {
 		});
 		const change = result.data?.changes[0];
 		expect(result.success).toBe(true);
-		expect(
-			change?.type === "update" && change.data.modifiedFromPattern
-		).toBeUndefined();
+		const data = change?.type === "update" ? change.data : undefined;
+		expect(data).toBeDefined();
+		expect(data?.fromPattern).toBeUndefined();
+		expect(data?.modifiedFromPattern).toBeUndefined();
 	});
 });

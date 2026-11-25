@@ -86,7 +86,7 @@ describe("createElementCommentSchema", () => {
 		]);
 	});
 
-	it("accepts a longer comment", () => {
+	it("accepts a comment of more than one character", () => {
 		expect(
 			issuesOf(createElementCommentSchema, { content: "long text" })
 		).toEqual([]);

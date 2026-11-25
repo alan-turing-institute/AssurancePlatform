@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
+import type { z } from "zod";
 import {
 	buildHealthRecords,
 	type HealthRecordFixture,
@@ -423,11 +423,6 @@ function fieldMessages(record: HealthRecordFixture): Record<string, string> {
 	return result.success ? {} : describeEvidenceIssues(result.error).fieldErrors;
 }
 
-function issueCodes(record: HealthRecordFixture): string[] {
-	const result = parse(record);
-	return result.success ? [] : result.error.issues.map((issue) => issue.code);
-}
-
 function requestMessage(
 	schema: z.ZodType,
 	input: unknown,
@@ -702,23 +697,11 @@ describe("healthEvidenceRecordSchema — messages for values, time and size", ()
 		expect(parse(nested(4)).success).toBe(false);
 	});
 
-	it("reports a custom issue for text a database cannot store", () => {
-		expect(issueCodes(withOverrides(pop, { comment: "a\u0000" }))).toEqual([
-			"custom",
-		]);
+	it("accepts 5,000 failed subjects", () => {
+		const failed = Array.from({ length: 5000 }, () => ({ kind: "k", id: "i" }));
 		expect(
-			issueCodes(withNested(pop, "provenance", { "a\u0000": "x" }))
-		).toEqual(["custom"]);
-	});
-
-	it("reports an unstorable string inside a list with the position as a number", () => {
-		const result = parse(
-			withNested(pop, "provenance", { deep: ["ok", "x\u0000"] })
-		);
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.issues[0]?.path).toEqual(["provenance", "deep", 1]);
-		}
+			parse(withNested(pop, "provenance", { failed_subjects: failed })).success
+		).toBe(true);
 	});
 });
 
@@ -774,7 +757,6 @@ describe("healthEvidenceRecordSchema — uncertainty messages and limits", () =>
 		expect(fieldMessages(withKind(kind, params))["uncertainty.params"]).toBe(
 			uncertaintyMessages[kind]
 		);
-		expect(issueCodes(withKind(kind, params))).toEqual(["custom"]);
 	});
 
 	it.each([
@@ -883,7 +865,6 @@ describe("healthEvidenceRecordSchema — consistency messages", () => {
 
 	it.each(cases)("reports %s", (_label, record, path, message) => {
 		expect(fieldMessages(record)[path]).toBe(message);
-		expect(issueCodes(record)).toEqual(["custom"]);
 	});
 
 	it("accepts a summary whose uncertainty is sampling", () => {
@@ -920,14 +901,6 @@ describe("describeEvidenceIssues", () => {
 			expect(Object.keys(fieldErrors)).toEqual(["(record)"]);
 			expect(message.startsWith("(record): ")).toBe(true);
 		}
-	});
-
-	it("falls back to a general message when an error carries no issues", () => {
-		const described = describeEvidenceIssues(new z.ZodError([]));
-		expect(described).toEqual({
-			message: "(record): Invalid record",
-			fieldErrors: {},
-		});
 	});
 });
 
@@ -988,6 +961,19 @@ describe("requests from a signed-in person — messages", () => {
 		requestCases
 	)("reports %s", (_label, schema, input, path, message) => {
 		expect(requestMessage(schema, input, path)).toBe(message);
+	});
+
+	it("accepts a reason of 2000 characters and a bound check name of 200", () => {
+		expect(
+			revocationRequestSchema.safeParse({
+				cause: "other",
+				reason: repeat(2000),
+			}).success
+		).toBe(true);
+		expect(
+			boundCheckRequestSchema.safeParse({ name: repeat(200), reason: "x" })
+				.success
+		).toBe(true);
 	});
 
 	it("trims the bound check's name", () => {

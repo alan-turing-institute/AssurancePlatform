@@ -5,32 +5,11 @@ import {
 	ElementValidationSchema,
 	fieldAppliesTo,
 	fieldRequiredFor,
-	getValidFieldsForType,
-	isAttributeType,
 	validateElementData,
 	validateElementName,
 } from "../element-validation";
 
 const UUID = "3f2b8c1e-9a4d-4e6b-8c7a-1d2e3f4a5b6c";
-
-/** Fields every element type carries, in the order they are listed. */
-const BASE_FIELDS = [
-	"id",
-	"caseId",
-	"elementType",
-	"parentId",
-	"name",
-	"description",
-	"inSandbox",
-	"fromPattern",
-	"modifiedFromPattern",
-	"isDefeater",
-	"defeatsElementId",
-	"assertionStatus",
-	"createdAt",
-	"updatedAt",
-	"createdById",
-];
 
 /** The type-specific fields each element type may carry. */
 const SPECIFIC_FIELDS: Record<string, string[]> = {
@@ -105,32 +84,6 @@ describe("fieldRequiredFor", () => {
 	});
 });
 
-describe("isAttributeType", () => {
-	it.each([
-		["JUSTIFICATION", true],
-		["ASSUMPTION", true],
-		["GOAL", false],
-		["EVIDENCE", false],
-	])("reports %s as attribute-like: %s", (type, expected) => {
-		expect(isAttributeType(type)).toBe(expected);
-	});
-});
-
-describe("getValidFieldsForType", () => {
-	it.each(
-		ELEMENT_TYPE_ROWS
-	)("lists the base fields then the fields specific to %s", (type) => {
-		expect(getValidFieldsForType(type as string)).toEqual([
-			...BASE_FIELDS,
-			...(SPECIFIC_FIELDS[type as string] ?? []),
-		]);
-	});
-
-	it("lists only the base fields for an unknown type", () => {
-		expect(getValidFieldsForType("NOPE")).toEqual(BASE_FIELDS);
-	});
-});
-
 describe("cleanElementDataForType", () => {
 	it.each(
 		ELEMENT_TYPE_ROWS
@@ -158,7 +111,7 @@ describe("cleanElementDataForType", () => {
 				assumption: undefined,
 				justification: null,
 			})
-		).toEqual({ description: null, justification: null });
+		).toStrictEqual({ description: null, justification: null });
 	});
 
 	it("keeps the dialogical fields and unrecognised keys for every type", () => {

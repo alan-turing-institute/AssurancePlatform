@@ -72,6 +72,15 @@ describe("pluginToggleSchema: settings", () => {
 		]);
 	});
 
+	it("refuses a nested object of 21 keys with a message", () => {
+		const inner = Object.fromEntries(
+			Array.from({ length: 21 }, (_, i) => [`k${i}`, 1])
+		);
+		expect(issuesOf(pluginToggleSchema, withSettings({ a: inner }))).toEqual([
+			"settings.a: Must have at most 20 keys",
+		]);
+	});
+
 	it("accepts 4096 serialised bytes and refuses 4097 with a message", () => {
 		expect(
 			issuesOf(pluginToggleSchema, withSettings(settingsOfBytes(4096)))

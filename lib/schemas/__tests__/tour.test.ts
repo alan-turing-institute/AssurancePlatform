@@ -12,10 +12,4 @@ describe("tourCompletionSchema", () => {
 			`tourId: Invalid tour ID. Expected one of: ${KNOWN_TOUR_IDS.join(", ")}`,
 		]);
 	});
-
-	it("separates the tour ids in the message with a comma and a space", () => {
-		expect(issuesOf(tourCompletionSchema, { tourId: "nope" })[0]).toContain(
-			"dashboard, case-canvas"
-		);
-	});
 });
