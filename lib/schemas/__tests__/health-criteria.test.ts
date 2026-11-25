@@ -5,20 +5,24 @@ import {
 	NUMERIC_CHECK_NAME,
 	SYSTEM_CHECK_NAME,
 } from "../../../src/__tests__/fixtures/health-checks";
-import { healthCheckListSchema } from "../health-checks";
+import { type HealthCheck, healthCheckListSchema } from "../health-checks";
 import {
+	blockIssues,
 	checkListIssues,
 	compareEcho,
 	computeSource,
 	criteriaRetirementRequestSchema,
 	criteriaSaveRequestSchema,
+	echoAgainst,
 	type HealthCriteriaSettings,
 	healthCriteriaSettingsSchema,
 	issuesToFieldErrors,
 	nextCounters,
 	normaliseSettings,
+	type SettingsSource,
 	servedFromStored,
 	servedSettings,
+	timingIssues,
 } from "../health-criteria";
 
 const checks = healthCheckListSchema.parse(buildHealthCheckList()).checks;
@@ -767,6 +771,73 @@ describe("echo check", () => {
 			{ field: "check.params", declared: {}, used: { camera_line: "ALL" } },
 		]);
 	});
+
+	it("treats two unreadable lengths as the same only when their text is the same", () => {
+		const open = servedSettings(
+			parsedSettings(itemSettings({ valid_for: "indefinite" })),
+			{ rule: 3, reduction: 2, aggregation: 1 }
+		);
+		expect(compareEcho(echoed({ valid_for: "indefinite" }), open)).toEqual([]);
+		expect(
+			compareEcho(echoed({ valid_for: "forever" }), open).map(
+				(difference) => difference.field
+			)
+		).toEqual(["valid_for"]);
+	});
+
+	it("reports nothing about a reduction or aggregation that neither side uses", () => {
+		const wholeSystem = servedSettings(
+			parsedSettings({
+				check: { name: systemCheck.name, version: systemCheck.version },
+				...systemCheck.recommended,
+			}),
+			{ rule: 3, reduction: 0, aggregation: 0 }
+		);
+		const record = {
+			check: { version: systemCheck.version },
+			rule: { version: "r3" },
+			window: "PT10M",
+			valid_for: "PT1H",
+		};
+		expect(compareEcho(record, wholeSystem)).toEqual([]);
+	});
+
+	const storedRow = (state: "SUGGESTED" | "ACCEPTED" | "INACTIVE") => ({
+		settings: itemSettings(),
+		ruleVersion: 3,
+		reductionVersion: 2,
+		aggregationVersion: 1,
+		revision: 7,
+		state,
+	});
+
+	it.each([
+		["no stored row", null],
+		["a suggested row", storedRow("SUGGESTED")],
+		["an inactive row", storedRow("INACTIVE")],
+	])("declares nothing for %s", (_name, row) => {
+		expect(echoAgainst(echoed(), row)).toEqual({
+			state: "UNDECLARED",
+			differences: null,
+			revision: null,
+		});
+	});
+
+	it("matches or mismatches a record against an accepted row, with the row's revision", () => {
+		const matched = echoAgainst(echoed(), storedRow("ACCEPTED"));
+		expect(matched.state).toBe("MATCH");
+		expect(matched.differences).toBeNull();
+		expect(matched.revision).toBe(7);
+		const mismatched = echoAgainst(
+			echoed({ window: "PT2M" }),
+			storedRow("ACCEPTED")
+		);
+		expect(mismatched.state).toBe("MISMATCH");
+		expect(
+			mismatched.differences?.map((difference) => difference.field)
+		).toEqual(["window"]);
+		expect(mismatched.revision).toBe(7);
+	});
 });
 
 describe("settings in an older form", () => {
@@ -880,6 +951,584 @@ describe("settings in an older form", () => {
 			accept: true,
 		}).settings;
 		expect(nextCounters(previous, resaved)).toEqual(previous.counters);
+	});
+});
+
+const PAIR_ORDER = "must be a [low, high] pair with low not above high";
+const CONTAIN = "must contain the pass_values band";
+const FRACTION = "must be a number from 0 to 1";
+const NOT_AVAILABLE = "is not available in evidence settings";
+
+/** The messages the settings schema reports at one dotted path. */
+function issuesAt(settings: Record<string, unknown>, path: string): string[] {
+	const parsed = parse(settings);
+	if (parsed.success) {
+		return [];
+	}
+	return parsed.error.issues
+		.filter((issue) => issue.path.join(".") === path)
+		.map((issue) => issue.message);
+}
+
+/** A check with the given extra fields, as a pipeline would publish it. */
+function customCheck(extra: Record<string, unknown>): HealthCheck {
+	const found = healthCheckListSchema.parse({
+		pipeline: "p",
+		checks: [
+			{
+				name: "Probe Check",
+				version: "1",
+				scope: "item",
+				value: { type: "boolean" },
+				...extra,
+			},
+		],
+	}).checks[0];
+	if (!found) {
+		throw new Error("no probe check");
+	}
+	return found;
+}
+
+const probeBlock = { name: "Probe Check", version: "1" };
+
+describe("check block text", () => {
+	it.each([
+		"name",
+		"version",
+		"scope",
+	])("names the %s field when it is empty", (field) => {
+		const check = { ...probeBlock, scope: "item", [field]: "" };
+		expect(issuesAt(itemSettings({ check }), `check.${field}`)).toContain(
+			`${field} is required`
+		);
+	});
+});
+
+describe("rule limits", () => {
+	const thresholdLimit = (
+		direction: string | undefined,
+		pass: unknown,
+		marginal: unknown
+	) =>
+		issuesAt(
+			itemSettings({
+				rule: {
+					kind: "threshold",
+					...(direction && { direction }),
+					params: { pass_values: pass, marginal_values: marginal },
+				},
+			}),
+			"rule.params.marginal_values"
+		);
+	const above = "must lie on the failing side of pass_values (above it)";
+	const below = "must lie on the failing side of pass_values (below it)";
+
+	it.each([
+		["minimize", 0.5, 0.5, [above]],
+		["maximize", 0.5, 0.5, [below]],
+		["minimize", 0.5, 0.2, [above]],
+		["maximize", 0.5, 0.8, [below]],
+		["minimize", 0.5, 1, []],
+		["maximize", 0.5, 0.2, []],
+		[undefined, 0.5, 1, []],
+		["minimize", "5", "1", ["must be a number"]],
+		["minimize", 5, "1", ["must be a number"]],
+		["maximize", "0", 1, []],
+	] as [
+		string | undefined,
+		unknown,
+		unknown,
+		string[],
+	][])("threshold %s with pass %s and marginal %s reports %j", (direction, pass, marginal, expected) => {
+		expect(thresholdLimit(direction, pass, marginal)).toEqual(expected);
+	});
+
+	it("does not judge a pass limit that is not a finite number", () => {
+		const issues = blockIssues({
+			rule: {
+				kind: "threshold",
+				direction: "minimize",
+				params: { pass_values: Number.POSITIVE_INFINITY, marginal_values: 5 },
+			},
+		});
+		expect(
+			issues.filter(
+				(issue) => issue.path.join(".") === "rule.params.marginal_values"
+			)
+		).toEqual([]);
+	});
+
+	const bandLimit = (
+		pass: number[],
+		marginal: number[] | undefined,
+		path: string
+	) =>
+		issuesAt(
+			itemSettings({
+				rule: {
+					kind: "band",
+					params: {
+						pass_values: pass,
+						...(marginal && { marginal_values: marginal }),
+					},
+				},
+			}),
+			path
+		);
+
+	it.each([
+		[[3, 2], undefined, "rule.params.pass_values", [PAIR_ORDER]],
+		[[2, 2], [2, 2], "rule.params.pass_values", []],
+		[[2, 2], [2, 2], "rule.params.marginal_values", []],
+		[[1, 2], [3, 2], "rule.params.marginal_values", [PAIR_ORDER]],
+		[[1, 2], [1, 3], "rule.params.marginal_values", []],
+		[[1, 2], [0, 1], "rule.params.marginal_values", [CONTAIN]],
+		[[1, 2], [0, 2], "rule.params.marginal_values", []],
+		[[2, 2], [3, 5], "rule.params.marginal_values", [CONTAIN]],
+		[[3, 2], [4, 6], "rule.params.marginal_values", []],
+		[
+			[3, 2, 1],
+			undefined,
+			"rule.params.pass_values",
+			["must be a [low, high] pair of numbers"],
+		],
+	] as [
+		number[],
+		number[] | undefined,
+		string,
+		string[],
+	][])("band pass %j with marginal %j reports %j at %s", (pass, marginal, path, expected) => {
+		expect(bandLimit(pass, marginal, path)).toEqual(expected);
+	});
+
+	it("uses a direction only on a threshold rule, and judges limits only for their own kind", () => {
+		const identity = (params: Record<string, unknown>) =>
+			itemSettings({
+				rule: { kind: "identity", direction: "maximize", params },
+			});
+		const withLimits = identity({ pass_values: 0.5, marginal_values: 0.8 });
+		expect(issuesAt(withLimits, "rule.direction")).toEqual([
+			"is only used by a threshold rule",
+		]);
+		expect(issuesAt(withLimits, "rule.params.marginal_values")).toEqual([]);
+		expect(
+			issuesAt(identity({ pass_values: [3, 2] }), "rule.params.pass_values")
+		).toEqual([]);
+	});
+});
+
+describe("reduction parameters", () => {
+	const reduction = (reductionBlock: Record<string, unknown>) =>
+		itemSettings({ reduction: reductionBlock });
+
+	it("leaves a p that stands alone for the older-form conversion", () => {
+		expect(
+			issuesAt(
+				reduction({ kind: "percentile", params: { p: 90 } }),
+				"reduction.params.p"
+			)
+		).toEqual([]);
+	});
+
+	it.each([
+		[-0.1, [FRACTION]],
+		[1.1, [FRACTION]],
+		["0.5", [FRACTION]],
+		[0, []],
+		[0.5, []],
+		[1, []],
+	] as [
+		unknown,
+		string[],
+	][])("availability floor %j reports %j", (floor, expected) => {
+		expect(
+			issuesAt(
+				reduction({ kind: "last", params: { avail_floor: floor } }),
+				"reduction.params.avail_floor"
+			)
+		).toEqual(expected);
+	});
+
+	it("accepts a band rule for the reduction and refuses an identity rule", () => {
+		const withRule = (rule: unknown) =>
+			issuesAt(reduction({ kind: "mean", rule }), "reduction.rule.kind");
+		expect(withRule({ kind: "band", params: { pass_values: [1, 2] } })).toEqual(
+			[]
+		);
+		expect(withRule({ kind: "identity" })).toEqual([
+			"must be threshold or band",
+		]);
+	});
+});
+
+describe("share aggregation reports", () => {
+	const noRule = { kind: "proportion", params: { use_verdict: true } };
+
+	it.each([
+		[
+			shareAggregation(0.9, { use_verdict: true, threshold: 2 }),
+			"params.threshold",
+			[NOT_AVAILABLE],
+		],
+		[
+			shareAggregation(0.9, { use_verdict: true, marginal_threshold: 2 }),
+			"params.marginal_threshold",
+			[NOT_AVAILABLE],
+		],
+		[noRule, "rule", ["is required"]],
+		[
+			shareAggregation(0.9, { use_verdict: true, avail_floor: 2 }),
+			"params.avail_floor",
+			[FRACTION],
+		],
+		[
+			shareAggregation(0.9, { use_verdict: "yes" }),
+			"params.use_verdict",
+			["must be true or false"],
+		],
+		[
+			shareAggregation(0.9, {}),
+			"params.use_verdict",
+			["is required and must be true"],
+		],
+		[
+			{ ...noRule, rule: { kind: "threshold", params: { pass_values: 0.9 } } },
+			"rule.direction",
+			["is required"],
+		],
+	] as [
+		unknown,
+		string,
+		string[],
+	][])("aggregation %j at %s", (aggregation, path, expected) => {
+		expect(
+			issuesAt(itemSettings({ aggregation }), `aggregation.${path}`)
+		).toEqual(expected);
+	});
+});
+
+describe("durations and stored text in settings", () => {
+	const lines = (blocks: Parameters<typeof timingIssues>[0]) =>
+		timingIssues(blocks).map(
+			(issue) => `${issue.path.join(".")}: ${issue.message}`
+		);
+
+	it("checks only the durations that are present", () => {
+		expect(lines({ valid_for: "PT5M" })).toEqual([]);
+		expect(lines({ window: "PT1M" })).toEqual([]);
+		expect(lines({ window: "soon" })).toEqual([
+			"window: is not a valid duration",
+		]);
+		expect(lines({ valid_for: "soon" })).toEqual([
+			'valid_for: must be "indefinite" or a valid duration',
+		]);
+	});
+
+	it("reports text a database cannot store at its own path", () => {
+		const parsed = parse(
+			itemSettings({
+				check: {
+					name: itemCheck.name,
+					version: itemCheck.version,
+					params: { camera_line: "bad\u0000text" },
+				},
+			})
+		);
+		const issue = parsed.error?.issues[0];
+		expect(issue?.path.join(".")).toBe("check.params.camera_line");
+	});
+});
+
+describe("request fields", () => {
+	const saveBody = {
+		integration_id: "7acd824e-0000-4000-8000-000000000001",
+		settings: itemSettings(),
+		accept: true,
+	};
+
+	it.each([
+		"accept",
+		"add_evidence_node",
+		"update_evidence_node_text",
+	])("says %s must be true or false", (field) => {
+		const result = criteriaSaveRequestSchema.safeParse({
+			...saveBody,
+			[field]: "yes",
+		});
+		const issue = result.error?.issues.find(
+			(item) => item.path.join(".") === field
+		);
+		expect(issue?.message).toBe("must be true or false");
+	});
+
+	it("accepts keep or remove for the live node and refuses anything else", () => {
+		for (const choice of ["keep", "remove"]) {
+			const parsed = criteriaRetirementRequestSchema.safeParse({
+				reason: "no longer needed",
+				evidence_node: choice,
+			});
+			expect(parsed.data?.evidence_node).toBe(choice);
+			expect(parsed.data?.reason).toBe("no longer needed");
+		}
+		const refused = criteriaRetirementRequestSchema.safeParse({
+			evidence_node: "delete",
+		});
+		const issue = refused.error?.issues[0];
+		expect(issue?.path.join(".")).toBe("evidence_node");
+		expect(issue?.message).toBe("must be keep or remove");
+	});
+});
+
+describe("settings against a check, further", () => {
+	const reductionError = (reduction: Record<string, unknown>, rule?: unknown) =>
+		fieldErrorsFor(itemSettings({ reduction, ...(rule ? { rule } : {}) }))[
+			"reduction.rule"
+		];
+
+	it.each([
+		["sum", {}],
+		["median", {}],
+		["percentile", { percentile: 90 }],
+	] as [
+		string,
+		Record<string, unknown>,
+	][])("requires the reduction's own rule for a %s of several readings", (kind, params) => {
+		expect(reductionError({ kind, params })).toBe(
+			`is required: an identity rule cannot judge the ${kind} of several readings`
+		);
+	});
+
+	it("also requires it when a membership rule meets an averaging reduction", () => {
+		const errors = fieldErrorsFor(
+			itemSettings({
+				rule: { kind: "membership", params: { pass_values: ["a"] } },
+				reduction: { kind: "mean" },
+			}),
+			numericCheck
+		);
+		expect(errors["reduction.rule"]).toBe(
+			"is required: a membership rule cannot judge the mean of several readings"
+		);
+	});
+
+	it("names a text check's rule kind in words", () => {
+		const textCheck = customCheck({ value: { type: "string" } });
+		const errors = fieldErrorsFor(
+			{
+				check: probeBlock,
+				rule: { kind: "identity" },
+				aggregation: shareAggregation(0.9),
+				window: "PT1M",
+				valid_for: "PT5M",
+			},
+			textCheck
+		);
+		expect(errors["rule.kind"]).toBe(
+			"a text check is judged by a membership rule, not identity"
+		);
+	});
+
+	it("does not fail on settings that name no rule when a recommendation is judged in part", () => {
+		expect(checkListIssues({}, itemCheck, true)).toEqual([]);
+	});
+
+	it("keys an issue with no path under the settings as a whole", () => {
+		expect(issuesToFieldErrors([{ path: [], message: "is bad" }])).toEqual({
+			"(settings)": "is bad",
+		});
+	});
+
+	const probe = customCheck({
+		params: { strict: true, wait: "PT5M", label: "x" },
+	});
+	const paramError = (key: string, value: unknown) =>
+		fieldErrorsFor(
+			{
+				check: { ...probeBlock, params: { [key]: value } },
+				rule: { kind: "identity" },
+				aggregation: shareAggregation(0.9),
+				window: "PT1M",
+				valid_for: "PT5M",
+			},
+			probe
+		)[`check.params.${key}`];
+
+	it.each([
+		["strict", "yes", "must be a value of type boolean"],
+		["strict", false, undefined],
+		["wait", "soon", "must be a value of type duration"],
+		["wait", 300, "must be a value of type duration"],
+		["wait", ["PT10M"], "must be a value of type duration"],
+		["wait", "PT10M", undefined],
+	] as [
+		string,
+		unknown,
+		string | undefined,
+	][])("setting %s given %j reports %s", (key, value, expected) => {
+		expect(paramError(key, value)).toBe(expected);
+	});
+
+	it("reports a setting of an unknown type or an enum without choices rather than failing", () => {
+		const odd = {
+			...itemCheck,
+			params: [
+				{ key: "mode", label: "Mode", type: "mystery" },
+				{ key: "pick", label: "Pick", type: "enum" },
+			],
+		} as unknown as HealthCheck;
+		const errors = issuesToFieldErrors(
+			checkListIssues(
+				{ check: { ...probeBlock, params: { mode: "x", pick: "a" } } },
+				odd,
+				true
+			)
+		);
+		expect(errors["check.params.mode"]).toBeTypeOf("string");
+		expect(errors["check.params.pick"]).toBeTypeOf("string");
+	});
+});
+
+describe("where blocks came from, further", () => {
+	const settingsFor = (overrides: Record<string, unknown> = {}) =>
+		parsedSettings(itemSettings(overrides));
+	const labels = (over: Partial<SettingsSource> = {}): SettingsSource => ({
+		kind: "edited",
+		check_version: "0.3",
+		check_params: "recommended",
+		rule: "recommended",
+		reduction: "recommended",
+		aggregation: "recommended",
+		timing: "recommended",
+		...over,
+	});
+	const changedRule = { kind: "identity", params: { x: 1 } };
+
+	it("marks a block that differs from the recommendation as edited", () => {
+		const source = computeSource(
+			settingsFor({ rule: changedRule }),
+			itemCheck,
+			null
+		);
+		expect(source.rule).toBe("edited");
+		expect(source.reduction).toBe("recommended");
+	});
+
+	it("marks a recommended block that the settings leave out as edited", () => {
+		const { reduction: _reduction, ...rest } = itemSettings();
+		const source = computeSource(parsedSettings(rest), itemCheck, null);
+		expect(source.reduction).toBe("edited");
+		expect(source.kind).toBe("edited");
+	});
+
+	it.each([[{ window: "PT1M" }], [{ valid_for: "PT5M" }]] as [
+		Record<string, string>,
+	][])("treats timing as edited when the check recommends only %j", (timing) => {
+		const check = customCheck({
+			recommended: { rule: { kind: "identity" }, ...timing },
+		});
+		const source = computeSource(
+			settingsFor({ check: probeBlock }),
+			check,
+			null
+		);
+		expect(source.timing).toBe("edited");
+	});
+
+	it("is edited overall when some blocks follow the recommendation and others are by hand", () => {
+		const check = customCheck({
+			recommended: {
+				rule: { kind: "identity" },
+				window: "PT1M",
+				valid_for: "PT5M",
+			},
+		});
+		const source = computeSource(
+			settingsFor({ check: probeBlock }),
+			check,
+			null
+		);
+		expect(source.reduction).toBe("hand");
+		expect(source.rule).toBe("recommended");
+		expect(source.kind).toBe("edited");
+	});
+
+	it("leaves out check settings that are empty or absent when the check names none", () => {
+		const check = customCheck({
+			recommended: { rule: { kind: "identity" } },
+		});
+		for (const params of [undefined, {}]) {
+			const source = computeSource(
+				settingsFor({ check: { ...probeBlock, params } }),
+				check,
+				null
+			);
+			expect(source).not.toHaveProperty("check_params");
+		}
+	});
+
+	it("calls every block by hand when there is neither a check nor a previous save", () => {
+		expect(computeSource(settingsFor(), null, null)).toEqual(
+			labels({
+				kind: "hand",
+				check_params: "hand",
+				rule: "hand",
+				reduction: "hand",
+				aggregation: "hand",
+				timing: "hand",
+			})
+		);
+	});
+
+	it("keeps the earlier label of a block that has not changed since the previous save", () => {
+		const previous = {
+			settings: settingsFor(),
+			source: labels({ rule: "edited", aggregation: "hand" }),
+		};
+		expect(computeSource(settingsFor(), null, previous)).toMatchObject({
+			rule: "edited",
+			reduction: "recommended",
+			aggregation: "hand",
+			timing: "recommended",
+		});
+	});
+
+	it.each([
+		["recommended", "edited"],
+		["edited", "edited"],
+		["hand", "hand"],
+	] as const)("labels a changed block that was %s as %s", (earlier, expected) => {
+		const previous = {
+			settings: settingsFor(),
+			source: labels({ rule: earlier }),
+		};
+		const source = computeSource(
+			settingsFor({ rule: changedRule }),
+			null,
+			previous
+		);
+		expect(source.rule).toBe(expected);
+	});
+
+	it("leaves out a block the new save no longer has", () => {
+		const { reduction: _reduction, ...rest } = itemSettings();
+		const previous = { settings: settingsFor(), source: labels() };
+		const source = computeSource(parsedSettings(rest), null, previous);
+		expect(source).not.toHaveProperty("reduction");
+	});
+
+	it("falls back to by hand for a block the previous label did not record", () => {
+		// A stored label from an older save can lack the rule and timing keys.
+		const previous = {
+			settings: settingsFor(),
+			source: {
+				kind: "edited",
+				check_version: "0.3",
+			} as unknown as SettingsSource,
+		};
+		const source = computeSource(settingsFor(), null, previous);
+		expect(source.rule).toBe("hand");
+		expect(source.timing).toBe("hand");
 	});
 });
 
