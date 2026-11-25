@@ -273,6 +273,30 @@ describe("updateUserProfileSchema", () => {
 		]);
 	});
 
+	it.each([
+		["absent", {}, undefined],
+		["null", { firstName: null, lastName: null }, null],
+		["empty", { firstName: "", lastName: "" }, null],
+		["only spaces", { firstName: "  ", lastName: "  " }, null],
+		["text", { firstName: " Ada ", lastName: " Lovelace " }, "text"],
+	])("reads a %s first and last name", (_name, body, expected) => {
+		const out = outputOf(updateUserProfileSchema, {
+			username: "demo",
+			...body,
+		}) as { firstName?: string | null; lastName?: string | null };
+		expect(out.firstName).toBe(
+			expected === "text" ? "Ada" : (expected as null | undefined)
+		);
+		expect(out.lastName).toBe(
+			expected === "text" ? "Lovelace" : (expected as null | undefined)
+		);
+	});
+
+	it("accepts an update that only clears a name", () => {
+		expect(issuesOf(updateUserProfileSchema, { firstName: null })).toEqual([]);
+		expect(issuesOf(updateUserProfileSchema, { lastName: "" })).toEqual([]);
+	});
+
 	it("lowercases the email", () => {
 		expect(outputOf(updateUserProfileSchema, { email: "A@B.co" })).toEqual({
 			email: "a@b.co",

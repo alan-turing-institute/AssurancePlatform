@@ -260,6 +260,50 @@ describe("PATCH /api/teams/[id]", () => {
 		expect(inDb?.name).toBe("Renamed Team");
 	});
 
+	it.each([
+		["null", null],
+		["an empty string", ""],
+		["only spaces", "   "],
+	])("removes the description when it is sent as %s, with nothing else in the request", async (_name, blank) => {
+		const user = await createTestUser();
+		const team = await createTestTeam(user.id, { description: "About us" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/teams/[id]/route");
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`, {
+			method: "PATCH",
+			body: JSON.stringify({ description: blank }),
+			headers: { "Content-Type": "application/json" },
+		});
+		const response = await PATCH(req, {
+			params: Promise.resolve({ id: team.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.team.findUnique({ where: { id: team.id } });
+		expect(inDb?.description).toBeNull();
+	});
+
+	it("leaves the description as it was when the request leaves it out", async () => {
+		const user = await createTestUser();
+		const team = await createTestTeam(user.id, { description: "About us" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/teams/[id]/route");
+		const req = new NextRequest(`http://localhost:3000/api/teams/${team.id}`, {
+			method: "PATCH",
+			body: JSON.stringify({ name: "Renamed Team" }),
+			headers: { "Content-Type": "application/json" },
+		});
+		const response = await PATCH(req, {
+			params: Promise.resolve({ id: team.id }),
+		});
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.team.findUnique({ where: { id: team.id } });
+		expect(inDb?.description).toBe("About us");
+	});
+
 	it("returns 403 when a non-admin member attempts to update", async () => {
 		const admin = await createTestUser();
 		const member = await createTestUser();

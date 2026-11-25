@@ -53,6 +53,28 @@ describe("updateTeamBaseSchema", () => {
 			"name: Team name is required",
 		]);
 	});
+
+	it.each([
+		["absent", {}, undefined],
+		["null", { description: null }, null],
+		["empty", { description: "" }, null],
+		["only spaces", { description: "   " }, null],
+		["text", { description: " About " }, "About"],
+	])("reads a %s description", (_name, input, expected) => {
+		const out = outputOf(updateTeamBaseSchema, input) as {
+			description?: string | null;
+		};
+		expect(out.description).toBe(expected);
+	});
+
+	it("accepts a description of 500 characters and refuses 501", () => {
+		expect(
+			issuesOf(updateTeamBaseSchema, { description: "d".repeat(500) })
+		).toEqual([]);
+		expect(
+			issuesOf(updateTeamBaseSchema, { description: "d".repeat(501) })
+		).toEqual(["description: Must be less than 500 characters"]);
+	});
 });
 
 describe("updateTeamSchema", () => {
@@ -66,6 +88,14 @@ describe("updateTeamSchema", () => {
 
 	it.each([["nothing", {}]])("refuses an update with %s", (_name, input) => {
 		expect(issuesOf(updateTeamSchema, input)).toEqual([NOTHING_TO_UPDATE]);
+	});
+
+	it.each([
+		["null", { description: null }],
+		["an empty string", { description: "" }],
+		["only spaces", { description: "  " }],
+	])("accepts an update that only clears the description with %s", (_name, input) => {
+		expect(issuesOf(updateTeamSchema, input)).toEqual([]);
 	});
 
 	it("asks for a name when one is given blank", () => {

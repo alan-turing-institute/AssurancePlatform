@@ -317,6 +317,56 @@ describe("PATCH /api/integrations/[id] — permission matrix", () => {
 		]);
 	});
 
+	it.each([
+		["null", null],
+		["an empty string", ""],
+		["only spaces", "   "],
+	])("removes the description when it is sent as %s, with nothing else in the request", async (_name, blank) => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ description: "old text" }
+		);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PATCH } = await import("@/app/api/integrations/[id]/route");
+		const response = await PATCH(
+			jsonRequest(`/api/integrations/${integration.id}`, "PATCH", {
+				description: blank,
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.integration.findUnique({
+			where: { id: integration.id },
+		});
+		expect(inDb?.description).toBeNull();
+	});
+
+	it("leaves the description as it was when the request leaves it out", async () => {
+		const owner = await createTestUser();
+		const { integration } = await createTestIntegrationWithSystemUser(
+			owner.id,
+			{ description: "old text", scopes: ["case:read"] }
+		);
+		await mockAuth(owner.id, owner.username, owner.email);
+
+		const { PATCH } = await import("@/app/api/integrations/[id]/route");
+		const response = await PATCH(
+			jsonRequest(`/api/integrations/${integration.id}`, "PATCH", {
+				scopes: ["case:read", "health:evidence:read"],
+			}),
+			idParams(integration.id)
+		);
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.integration.findUnique({
+			where: { id: integration.id },
+		});
+		expect(inDb?.description).toBe("old text");
+	});
+
 	it("returns 404 'Integration not found' for a nonexistent id", async () => {
 		const user = await createTestUser();
 		await mockAuth(user.id, user.username, user.email);
