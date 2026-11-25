@@ -703,6 +703,11 @@ describe("healthEvidenceRecordSchema — messages for values, time and size", ()
 			parse(withNested(pop, "provenance", { failed_subjects: failed })).success
 		).toBe(true);
 	});
+
+	it("reports unstorable text inside a list at its position", () => {
+		const record = withNested(pop, "provenance", { deep: ["ok", "x\u0000"] });
+		expect(fieldMessages(record)["provenance.deep.1"]).toBe(UNSTORABLE);
+	});
 });
 
 describe("healthEvidenceRecordSchema — the five-minute allowance", () => {
