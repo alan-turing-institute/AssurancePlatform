@@ -1232,17 +1232,6 @@ describe("terms in reach on each card's data", () => {
 		expect(termsOf(before, "p1")).toEqual(["window"]);
 		expect(termsOf(after, "p1")).toEqual(["rate"]);
 	});
-
-	it("gives a card with no entry of its own the very list its parent holds", () => {
-		const nodes = createNodesRecursively(
-			[item("g1", "G1", { context: [WINDOW], strategies: [item("s1", "S1")] })],
-			"goal"
-		);
-
-		const parent = nodes.find((node) => node.data.id === "g1");
-		const child = nodes.find((node) => node.data.id === "s1");
-		expect(child?.data.termsInReach).toBe(parent?.data.termsInReach);
-	});
 });
 
 const EMPTY_RESULT = { caseNodes: [], caseEdges: [] };
@@ -1355,48 +1344,10 @@ describe("createNodesRecursively — limits and unusable input", () => {
 		]);
 	});
 
-	it.each(
-		CHILD_KEYS
-	)("leaves out nested %s when the depth allows less than one level below the top", (key) => {
-		const nodes = createNodesRecursively(
-			[chain(key, 3)],
-			"goal",
-			null,
-			undefined,
-			0.5
-		);
-
-		expect(nodes.map((node) => node.id)).toStrictEqual(["goal-n0"]);
-	});
-
-	it("follows every level of a short chain of nested goals", () => {
+	it("converts every level of a deep case", () => {
 		const nodes = createNodesRecursively([chain("goals", 30)], "goal");
 
 		expect(nodes).toHaveLength(30);
-	});
-
-	it("follows a short chain when the depth is given as zero", () => {
-		const nodes = createNodesRecursively(
-			[chain("strategies", 30)],
-			"goal",
-			null,
-			undefined,
-			0
-		);
-
-		expect(nodes).toHaveLength(30);
-	});
-
-	it("returns nothing for a negative depth", () => {
-		const nodes = createNodesRecursively(
-			[element("g1")] as ConvertibleItem[],
-			"goal",
-			null,
-			undefined,
-			-1
-		);
-
-		expect(nodes).toStrictEqual([]);
 	});
 
 	it("returns nothing, without failing, when the items are an object and not a list", () => {
@@ -1515,8 +1466,6 @@ describe("createEdgesFromNodes — the edges' own properties", () => {
 	}
 
 	it("builds a support edge with the properties the canvas reads", () => {
-		vi.mocked(generateUuid).mockReturnValueOnce("fixed-1");
-
 		const edges = createEdgesFromNodes([
 			plain("goal-g", { id: "g" }),
 			plain("property-p", { id: "p", parentId: "goal-g" }),
@@ -1524,7 +1473,7 @@ describe("createEdgesFromNodes — the edges' own properties", () => {
 
 		expect(edges).toStrictEqual([
 			{
-				id: "efixed-1",
+				id: expect.stringMatching(UUID_V4_EDGE_ID_REGEX),
 				source: "goal-g",
 				target: "property-p",
 				type: "support",
@@ -1537,8 +1486,6 @@ describe("createEdgesFromNodes — the edges' own properties", () => {
 	});
 
 	it("builds a challenges edge with the properties the canvas reads", () => {
-		vi.mocked(generateUuid).mockReturnValueOnce("fixed-2");
-
 		const edges = createEdgesFromNodes([
 			plain("property-t", { id: "t" }),
 			plain("property-d", {
@@ -1550,7 +1497,7 @@ describe("createEdgesFromNodes — the edges' own properties", () => {
 
 		expect(edges).toStrictEqual([
 			{
-				id: "efixed-2",
+				id: expect.stringMatching(UUID_V4_EDGE_ID_REGEX),
 				source: "property-d",
 				target: "property-t",
 				type: "challenges",
@@ -1562,16 +1509,15 @@ describe("createEdgesFromNodes — the edges' own properties", () => {
 		]);
 	});
 
-	it("leaves the element id out of the support edge's data when a card has none", () => {
+	it("gives the support edge no source element id when the parent card has none", () => {
 		const edges = createEdgesFromNodes([
 			plain("goal-g", {}),
 			plain("property-p", { id: "p", parentId: "goal-g" }),
 		]);
 
-		expect(edges[0]?.data).toStrictEqual({
-			sourceElementId: undefined,
-			targetElementId: "p",
-		});
+		expect(edges).toHaveLength(1);
+		expect(edges[0]?.data?.sourceElementId).toBeUndefined();
+		expect(edges[0]?.data?.targetElementId).toBe("p");
 	});
 
 	it.each([

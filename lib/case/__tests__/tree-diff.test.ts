@@ -799,6 +799,33 @@ describe("computeTreeDiff and evidence taken off the claim that showed it", () =
 		});
 	});
 
+	it("moves the counter-goal to its new claim and unlinks the evidence from the claim that showed it", () => {
+		const { changes } = computeTreeDiff(
+			goalWith(
+				claimNode("A", [evidenceNode("E", [counterGoal("CG")])]),
+				claimNode("B", [evidenceNode("E")]),
+				claimNode("C")
+			),
+			goalWith(
+				claimNode("A"),
+				claimNode("B", [evidenceNode("E")]),
+				claimNode("C", [counterGoal("CG")])
+			)
+		);
+
+		expect(changes).toHaveLength(2);
+		expect(changes).toContainEqual({
+			type: "update",
+			elementId: "CG",
+			data: { parentId: "C" },
+		});
+		expect(changes).toContainEqual({
+			type: "unlink_evidence",
+			evidenceId: "E",
+			claimId: "A",
+		});
+	});
+
 	it("keeps every counter-goal that hung from the evidence", () => {
 		const { changes } = computeTreeDiff(
 			shownIn([counterGoal("CG"), counterGoal("CG2")]),

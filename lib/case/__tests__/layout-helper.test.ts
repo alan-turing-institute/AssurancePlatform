@@ -1275,18 +1275,60 @@ describe("attachment resolution", () => {
 });
 
 describe("order of children around attached elements", () => {
-	it("puts the owner's children before the children of its attached elements whatever their names", async () => {
+	it.each([
+		["owner's child first", ["s9", "s1"]],
+		["attached element's child first", ["s1", "s9"]],
+	])("puts the owner's children before the children of its attached elements whatever their names (%s in the input)", async (_label, childOrder) => {
+		const byId: Record<string, Node> = {
+			s9: mk({ id: "s9", type: "strategy" }),
+			s1: mk({ id: "s1", type: "strategy" }),
+		};
 		const nodes = [
 			mk({ id: "z1", type: "goal" }),
 			mk({ id: "a1", type: "goal", attachedTo: "z1" }),
-			mk({ id: "s9", type: "strategy" }),
-			mk({ id: "s1", type: "strategy" }),
+			...childOrder.map((id) => byId[id] as Node),
 		];
 		const result = await layout(nodes, [link("z1", "s9"), link("a1", "s1")], {
 			direction: "TB",
 		});
 		const pos = posMap(result);
 		expect(at(pos, "s9").x).toBeLessThan(at(pos, "s1").x);
+	});
+
+	it.each([
+		[
+			"a strategy after evidence",
+			{ id: "e", type: "evidence", name: "A1" },
+			{ id: "s", type: "strategy", name: "Z1" },
+		],
+		[
+			"evidence after an away goal",
+			{ id: "ag", type: "awayGoal", name: "A1" },
+			{ id: "e", type: "evidence", name: "Z1" },
+		],
+		[
+			"S1 after S2",
+			{ id: "s2", type: "strategy", name: "S2" },
+			{ id: "s1", type: "strategy", name: "S1" },
+		],
+		[
+			"S2 after S10",
+			{ id: "s10", type: "strategy", name: "S10" },
+			{ id: "s2", type: "strategy", name: "S2" },
+		],
+	])("puts the earlier-ranked child on the left when the input lists %s", async (_label, first, second) => {
+		const nodes = [
+			mk({ id: "p", type: "goal" }),
+			mk(first as NodeSpec),
+			mk(second as NodeSpec),
+		];
+		const result = await layout(
+			nodes,
+			[link("p", first.id), link("p", second.id)],
+			{ direction: "TB" }
+		);
+		const pos = posMap(result);
+		expect(at(pos, second.id).x).toBeLessThan(at(pos, first.id).x);
 	});
 
 	it("orders the children of a chain of attached elements by the chain, not by name", async () => {
@@ -1558,6 +1600,6 @@ describe("when the layout engine fails", () => {
 			nodeCount: 3,
 			edgeCount: 1,
 		});
-		expect(entry?.error).toBeDefined();
+		expect(entry?.error).toMatchObject({ message: "engine failed" });
 	});
 });

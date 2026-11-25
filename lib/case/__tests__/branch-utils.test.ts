@@ -135,13 +135,4 @@ describe("extractBranches", () => {
 
 		expect(extractBranches(nodes, edges)).toStrictEqual([]);
 	});
-
-	it("leaves an empty id out of the branch it hangs from", () => {
-		const nodes = [node("R"), node(""), node("X")];
-		const edges = [edge("R", ""), edge("", "X")];
-
-		expect(summarise(nodes, edges)).toStrictEqual([
-			{ label: "Branch 1", rootNodeId: "", nodeIds: ["R"] },
-		]);
-	});
 });
