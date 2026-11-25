@@ -138,9 +138,22 @@ const URL_SCHEME_ONLY = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
  * then a colon, one to five digits, and the end of the text or "/", "?" or
  * "#". Such a value looks like a scheme to URL_SCHEME_ONLY but is an address
  * without one.
+ *
+ * The pattern captures the host with a single repeated class, which cannot
+ * match the colon, so there is one way to match and the time taken grows
+ * with the length of the text. The "localhost or holds a dot" rule is
+ * checked in code by startsWithHostAndPort.
  */
-const URL_HOST_AND_PORT =
-	/^(?:localhost|[a-z\d.-]*\.[a-z\d.-]*):\d{1,5}(?:[/?#]|$)/i;
+const URL_HOST_AND_PORT = /^([a-z\d.-]+):\d{1,5}(?:[/?#]|$)/i;
+
+function startsWithHostAndPort(value: string): boolean {
+	const match = URL_HOST_AND_PORT.exec(value);
+	const host = match?.[1];
+	if (host === undefined) {
+		return false;
+	}
+	return host.toLowerCase() === "localhost" || host.includes(".");
+}
 
 /**
  * Protocol allowlist applied to the final, normalised value. Only http(s)
@@ -174,7 +187,7 @@ export const lenientUrlSchema = z
 	.trim()
 	.refine(
 		(v) =>
-			URL_HOST_AND_PORT.test(v) ||
+			startsWithHostAndPort(v) ||
 			!(URL_SCHEME_ONLY.test(v) && !URL_SCHEME_PREFIX.test(v)),
 		URL_ERROR_MESSAGE
 	)
