@@ -285,4 +285,63 @@ describe("planNewElement — the names it accepts for a type", () => {
 			childType: expected,
 		});
 	});
+
+	it.each([
+		["property", "property_claim"],
+		[" Property_Claim ", "property_claim"],
+		["property claim", "property_claim"],
+		["evidence", "evidence"],
+	])("also reads %j as %s", (name, expected) => {
+		expect(planNewElement(node(), name.trim(), "text")).toMatchObject({
+			suggested: true,
+			childType: expected,
+		});
+	});
+});
+
+describe("how a refusal names the element and the types", () => {
+	it("names an element by its label without the spaces around it", () => {
+		const parent = node({ isDefeater: true, name: "  P7 " });
+
+		const reason = reasonOf(planNewElement(parent, "evidence", "text"));
+
+		expect(reason.indexOf("P7 is a counter-argument")).toBe(0);
+	});
+
+	it.each([
+		"",
+		"   ",
+	])("names an element with the label %j by its kind", (name) => {
+		const parent = node({ isDefeater: true, name });
+
+		const reason = reasonOf(planNewElement(parent, "evidence", "text"));
+
+		expect(reason.indexOf("this claim is a counter-argument")).toBe(0);
+	});
+
+	it("names evidence in the plural as evidence when it is the type that is not allowed", () => {
+		const reason = reasonOf(
+			planNewElement(node({ type: "GOAL", name: "G1" }), "evidence", "text")
+		);
+
+		expect(reason).toContain("allow evidence directly beneath G1");
+	});
+
+	it("treats a request whose fields are all undefined as no new text", () => {
+		expect(
+			reasonOf(
+				planEdit(node(), {
+					description: undefined,
+					assumption: undefined,
+					context: undefined,
+				})
+			)
+		).toContain("No new text");
+	});
+
+	it("does not take a request with one field given for one with no new text", () => {
+		expect(
+			planEdit(node(), { description: undefined, assumption: "Assumed" })
+		).toMatchObject({ suggested: true });
+	});
 });

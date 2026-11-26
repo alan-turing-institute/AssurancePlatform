@@ -334,3 +334,147 @@ describe("applying a new element", () => {
 		expect(useHistoryStore.getState().undoStack).toEqual([]);
 	});
 });
+
+interface RecordedCommand {
+	after: Record<string, unknown>;
+	before: Record<string, unknown>;
+}
+
+/** Applies an edit to the element and returns what the first Undo entry recorded. */
+async function applyAndRecord(
+	overrides: Record<string, unknown>,
+	changes: EditSuggestion["changes"]
+): Promise<RecordedCommand> {
+	serve({
+		"GET /api/elements/p1": () => json(element(overrides)),
+		"PUT /api/elements/p1": () => json(element()),
+		[`GET /api/cases/${CASE_ID}`]: () => json(FRESH_CASE),
+	});
+	await applySuggestion(CASE_ID, { ...EDIT, changes });
+	await vi.waitFor(() => {
+		if (useStore.getState().assuranceCase?.name !== "Fresh") {
+			throw new Error("The case has not been redrawn yet");
+		}
+	});
+	return useHistoryStore.getState().undoStack[0]
+		?.commands[0] as unknown as RecordedCommand;
+}
+
+describe("what the Undo entry records for text the element has not got", () => {
+	it.each([
+		["assumption", "missing", {}, ""],
+		["assumption", "null", { assumption: null }, ""],
+		[
+			"assumption",
+			"filled",
+			{ assumption: "Old assumption" },
+			"Old assumption",
+		],
+		["justification", "missing", {}, ""],
+		["justification", "null", { justification: null }, ""],
+		["justification", "filled", { justification: "Old reason" }, "Old reason"],
+	] as const)("spells the %s out when it is %s", async (field, _state, overrides, stored) => {
+		const recorded = await applyAndRecord(overrides, {
+			[field]: { before: stored, after: "New text" },
+		});
+
+		expect(recorded.before[field]).toBe(stored);
+		expect(recorded.after[field]).toBe("New text");
+	});
+
+	it("leaves out the fields the suggestion does not change", async () => {
+		const recorded = await applyAndRecord(
+			{},
+			{ description: EDIT.changes.description }
+		);
+
+		expect(recorded.before.assumption).toBeUndefined();
+		expect(recorded.before.justification).toBeUndefined();
+		expect(recorded.before.context).toBeUndefined();
+	});
+});
+
+describe("when the read or the save does not go through", () => {
+	it("treats an answer that is not OK as unreadable even when its body is an element, and saves nothing", async () => {
+		const server = serve({
+			"GET /api/elements/p1": () => json(element(), 500),
+		});
+
+		expect(await applySuggestion(CASE_ID, EDIT)).toMatchObject({
+			status: "failed",
+			message: expect.stringContaining("could not be read"),
+		});
+		expect(server.requests).toEqual(["GET /api/elements/p1"]);
+	});
+
+	it("treats a read that cannot be made as unreadable", async () => {
+		serve({
+			"GET /api/elements/p1": () => {
+				throw new Error("offline");
+			},
+		});
+
+		expect(await applySuggestion(CASE_ID, NEW_EVIDENCE)).toMatchObject({
+			status: "failed",
+			message: expect.stringContaining("could not be read"),
+		});
+	});
+
+	it.each([
+		["an error object", new Error("offline")],
+		["nothing at all", undefined],
+	])("reports a new element whose creation could not be sent, when the cause is %s", async (_name, cause) => {
+		serve({
+			"GET /api/elements/p1": () => json(element()),
+			[`POST /api/cases/${CASE_ID}/elements`]: () => {
+				throw cause;
+			},
+		});
+
+		const result = await applySuggestion(CASE_ID, NEW_EVIDENCE);
+
+		expect(result).toMatchObject({ status: "failed" });
+		const message = "message" in result ? result.message : undefined;
+		expect(typeof message).toBe("string");
+		expect(message).not.toBe("");
+		expect(useHistoryStore.getState().undoStack).toEqual([]);
+	});
+});
+
+describe("redrawing the case after a save", () => {
+	it("does not report a failure to read the case when the canvas shows no case", async () => {
+		const logging = await import("@/lib/logger");
+		const entries: { level: string }[] = [];
+		vi.stubEnv("LOG_LEVEL", "debug");
+		logging.setLogSink((entry) => entries.push(entry));
+		let caseRead = false;
+		serve({
+			"GET /api/elements/p1": () => json(element()),
+			"PUT /api/elements/p1": () => json(element()),
+			[`GET /api/cases/${CASE_ID}`]: () => {
+				caseRead = true;
+				return json(FRESH_CASE);
+			},
+		});
+		useStore.setState({ assuranceCase: null });
+
+		try {
+			expect(await applySuggestion(CASE_ID, EDIT)).toEqual({
+				status: "applied",
+			});
+			await vi.waitFor(() => expect(caseRead).toBe(true));
+			await vi.waitFor(() =>
+				expect(useStore.getState().assuranceCase).toBeNull()
+			);
+			for (let turn = 0; turn < 50; turn += 1) {
+				await Promise.resolve();
+			}
+
+			expect(entries.filter((entry) => entry.level === "warn")).toEqual([]);
+			expect(useStore.getState().assuranceCase).toBeNull();
+		} finally {
+			logging.resetLogSink();
+			vi.unstubAllEnvs();
+		}
+	});
+});
