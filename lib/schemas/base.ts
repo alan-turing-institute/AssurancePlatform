@@ -111,9 +111,9 @@ export const usernameSchema = z
  */
 export const stringIdSchema = z
 	.string()
+	.trim()
 	.min(1, "ID is required")
 	.max(100, "ID must be less than 100 characters")
-	.transform((v) => v.trim())
 	.describe("Non-empty string identifier");
 
 /**
@@ -131,6 +131,29 @@ const URL_SCHEME_PREFIX = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//;
  * silently rewritten into "https://mailto:..." nonsense.
  */
 const URL_SCHEME_ONLY = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
+
+/**
+ * A host followed by a port ("example.com:8080/report", "localhost:3000"):
+ * letters, digits, dots and hyphens that are either "localhost" or hold a dot,
+ * then a colon, one to five digits, and the end of the text or "/", "?" or
+ * "#". Such a value looks like a scheme to URL_SCHEME_ONLY but is an address
+ * without one.
+ *
+ * The pattern captures the host with a single repeated class, which cannot
+ * match the colon, so there is one way to match and the time taken grows
+ * with the length of the text. The "localhost or holds a dot" rule is
+ * checked in code by startsWithHostAndPort.
+ */
+const URL_HOST_AND_PORT = /^([a-z\d.-]+):\d{1,5}(?:[/?#]|$)/i;
+
+function startsWithHostAndPort(value: string): boolean {
+	const match = URL_HOST_AND_PORT.exec(value);
+	const host = match?.[1];
+	if (host === undefined) {
+		return false;
+	}
+	return host.toLowerCase() === "localhost" || host.includes(".");
+}
 
 /**
  * Protocol allowlist applied to the final, normalised value. Only http(s)
@@ -151,7 +174,8 @@ const URL_ERROR_MESSAGE = "Enter a web address, such as example.com/report.pdf";
  * The normalised value (always carrying a scheme) is what gets stored, so
  * there is no silent divergence between what a user typed and what is
  * saved. A scheme that isn't followed by "//" (mailto:, javascript:,
- * data:, …) is rejected outright rather than mangled.
+ * data:, …) is rejected outright rather than mangled; a host followed by a
+ * port ("example.com:8080/report") is not a scheme and gets "https://".
  *
  * Import paths (DOIs, URNs, file paths) deliberately do NOT use this
  * schema — see element-validation.ts's BaseElementSchema `url` comment for
@@ -162,7 +186,9 @@ export const lenientUrlSchema = z
 	.string()
 	.trim()
 	.refine(
-		(v) => !(URL_SCHEME_ONLY.test(v) && !URL_SCHEME_PREFIX.test(v)),
+		(v) =>
+			startsWithHostAndPort(v) ||
+			!(URL_SCHEME_ONLY.test(v) && !URL_SCHEME_PREFIX.test(v)),
 		URL_ERROR_MESSAGE
 	)
 	.transform((v) => {

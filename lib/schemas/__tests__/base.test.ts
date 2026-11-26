@@ -247,6 +247,19 @@ describe("stringIdSchema", () => {
 		expect(issuesOf(stringIdSchema, "")).toEqual([": ID is required"]);
 	});
 
+	it.each([
+		"   ",
+		"\t\n",
+	])("rejects %j, which is empty once trimmed", (blank) => {
+		expect(issuesOf(stringIdSchema, blank)).toEqual([": ID is required"]);
+	});
+
+	it("counts the length after trimming", () => {
+		expect(outputOf(stringIdSchema, ` ${"a".repeat(100)} `)).toBe(
+			"a".repeat(100)
+		);
+	});
+
 	it("rejects 101 characters with the length message", () => {
 		expect(issuesOf(stringIdSchema, "a".repeat(101))).toEqual([
 			": ID must be less than 100 characters",
@@ -265,6 +278,31 @@ describe("lenientUrlSchema scheme detection", () => {
 		expect(outputOf(lenientUrlSchema, "example.com/a:b")).toBe(
 			"https://example.com/a:b"
 		);
+	});
+
+	it.each([
+		["example.com:8080/report", "https://example.com:8080/report"],
+		["10.0.0.5:8443", "https://10.0.0.5:8443"],
+		["localhost:3000", "https://localhost:3000"],
+		["Example.com:80?q=1", "https://Example.com:80?q=1"],
+		["example.com:443#top", "https://example.com:443#top"],
+		[" my-host.example.com:65535 ", "https://my-host.example.com:65535"],
+	])("adds https:// to the host and port %j", (input, stored) => {
+		expect(outputOf(lenientUrlSchema, input)).toBe(stored);
+	});
+
+	it.each([
+		["mailto:someone@example.com"],
+		["tel:12345"],
+		["javascript:alert(1)"],
+		["data:text/plain,x"],
+		["foo:bar"],
+		["example.com:123456"],
+		["example.com:80x"],
+		["example.com:"],
+		["intranet:8080"],
+	])("still rejects %j", (input) => {
+		expect(issuesOf(lenientUrlSchema, input)).toEqual([URL_MESSAGE]);
 	});
 
 	it("rejects a scheme that holds a digit and is not http(s)", () => {

@@ -46,14 +46,22 @@ const apiKeySchema = z
 		MODEL_FIELD_LIMITS.apiKey,
 		`apiKey must be at most ${MODEL_FIELD_LIMITS.apiKey} characters`
 	)
-	.refine(
-		(key) => !hasControlCharacter(key),
-		"apiKey must not contain control characters"
-	)
-	.refine(
-		isPrintableAscii,
-		"apiKey must contain only printable ASCII characters"
-	);
+	.superRefine((key, ctx) => {
+		if (key.length === 0) {
+			return;
+		}
+		if (hasControlCharacter(key)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "apiKey must not contain control characters",
+			});
+		} else if (!isPrintableAscii(key)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "apiKey must contain only printable ASCII characters",
+			});
+		}
+	});
 
 const modelSchema = z
 	.string({ message: "model must be a string" })

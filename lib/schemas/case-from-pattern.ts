@@ -26,15 +26,12 @@ export type PatternSource = z.infer<typeof patternSourceSchema>;
 
 /**
  * The name and description of a case started from a pattern. They follow the
- * rules for creating any other case and must also be non-empty once trimmed:
- * the import takes them as given, so a blank value would name the new case
- * with nothing.
+ * rules for creating any other case, which trim the value and refuse a blank
+ * one: the import takes them as given, so a blank value would name the new
+ * case with nothing.
  */
 export const startedCaseNameSchema = newCaseNameSchema;
-export const startedCaseDescriptionSchema = newCaseDescriptionSchema.refine(
-	(description) => description.length > 0,
-	"Description is required"
-);
+export const startedCaseDescriptionSchema = newCaseDescriptionSchema;
 
 /**
  * What is said to someone who gives a value to something that is not one of

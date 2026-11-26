@@ -25,12 +25,18 @@ export const createElementCommentSchema = z
 		parentId: uuidSchema.optional().nullable(),
 	})
 	.transform((val) => ({
-		content: (val.content || val.comment || "").trim(),
+		content:
+			[val.content, val.comment]
+				.map((text) => (text ?? "").trim())
+				.find((text) => text.length > 0) ?? "",
 		parentId: val.parentId ?? null,
 	}))
 	.pipe(
 		z.strictObject({
-			content: z.string().min(1, "Comment content is required"),
+			content: z
+				.string()
+				.min(1, "Comment content is required")
+				.max(5000, "Comment content must be less than 5000 characters"),
 			parentId: z.string().uuid().nullable(),
 		})
 	);
