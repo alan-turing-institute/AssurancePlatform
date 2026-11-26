@@ -67,12 +67,6 @@ export const FIELD_APPLICABILITY: Record<string, Set<string>> = {
 };
 
 /**
- * Element types that are "attribute-like" - they attach to other elements
- * but cannot have children of their own.
- */
-export const ATTRIBUTE_ELEMENT_TYPES = new Set(["JUSTIFICATION", "ASSUMPTION"]);
-
-/**
  * Fields that require non-null values for specific element types.
  */
 export const REQUIRED_FIELDS: Record<string, Set<string>> = {
@@ -120,13 +114,6 @@ export function fieldRequiredFor(field: string, elementType: string): boolean {
 		return false;
 	}
 	return requiredTypes.has(elementType);
-}
-
-/**
- * Checks if an element type is "attribute-like" (cannot have children).
- */
-export function isAttributeType(elementType: string): boolean {
-	return ATTRIBUTE_ELEMENT_TYPES.has(elementType);
 }
 
 // ============================================
@@ -355,45 +342,6 @@ export function cleanElementDataForType(
 	}
 
 	return cleaned;
-}
-
-/**
- * Gets the list of fields that are valid for a given element type.
- *
- * @param elementType - The element type
- * @returns Array of field names that are valid for this type
- */
-export function getValidFieldsForType(elementType: string): string[] {
-	const baseFields = [
-		"id",
-		"caseId",
-		"elementType",
-		"parentId",
-		"name",
-		"description",
-		"inSandbox",
-		"fromPattern",
-		"modifiedFromPattern",
-		"isDefeater",
-		"defeatsElementId",
-		// Per-assertion status (ADR 0004 D3) — applies to every element type,
-		// same as isDefeater/defeatsElementId above, so it belongs with the
-		// base fields rather than FIELD_APPLICABILITY.
-		"assertionStatus",
-		"createdAt",
-		"updatedAt",
-		"createdById",
-	];
-
-	const typeSpecificFields: string[] = [];
-
-	for (const [field, types] of Object.entries(FIELD_APPLICABILITY)) {
-		if (types.has(elementType)) {
-			typeSpecificFields.push(field);
-		}
-	}
-
-	return [...baseFields, ...typeSpecificFields];
 }
 
 // ============================================
