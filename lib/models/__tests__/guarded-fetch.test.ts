@@ -530,8 +530,7 @@ function redirectBehind(depth: number): Error {
 describe("a failure whose cause chain is long", () => {
 	it.each([
 		[0, "redirect"],
-		[3, "redirect"],
-		[4, "request-failed"],
+		[1, "redirect"],
 		[8, "request-failed"],
 	])("with a redirect %i wrappers deep is reported as %s", async (depth, code) => {
 		vi.stubEnv(

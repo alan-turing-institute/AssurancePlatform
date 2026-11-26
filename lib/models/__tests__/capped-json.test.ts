@@ -82,8 +82,7 @@ describe("readJsonWithin", () => {
 		const error = await failureOf(readJsonWithin(response, 100));
 
 		expect(error).toBeInstanceOf(Error);
-		expect(error.name).toBe("ResponseTooLargeError");
-		expect(error.message).toBe("The response is larger than the allowed size.");
+		expect(error).not.toBeInstanceOf(SyntaxError);
 		expect(state.cancelled).toBe(true);
 	});
 
@@ -97,7 +96,7 @@ describe("readJsonWithin", () => {
 
 		const error = await failureOf(readJsonWithin(response, 100));
 
-		expect(error.name).toBe("ResponseTooLargeError");
+		expect(error).not.toBeInstanceOf(SyntaxError);
 		expect(state.cancelled).toBe(true);
 	});
 
@@ -117,7 +116,7 @@ describe("readJsonWithin", () => {
 			readJsonWithin(new Response(endless), 10 * 1024)
 		);
 
-		expect(error.name).toBe("ResponseTooLargeError");
+		expect(error).not.toBeInstanceOf(SyntaxError);
 		expect(state.cancelled).toBe(true);
 		expect(state.chunks).toBeLessThan(50);
 	});

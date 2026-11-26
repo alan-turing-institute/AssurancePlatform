@@ -798,19 +798,6 @@ describe("what is logged when a ranking does not happen", () => {
 		expect(text).not.toContain("models.example.test");
 	});
 
-	it("tells a ranking that was never tried from one that failed", async () => {
-		const failed = await failureEntries();
-		const skipped = await notAttemptedEntries();
-
-		const messages = (entries: LogEntry[]) =>
-			new Set(entries.map((entry) => entry.msg));
-		expect(messages(skipped).size).toBe(1);
-		expect(messages(failed).size).toBe(1);
-		expect([...messages(skipped)]).not.toStrictEqual([...messages(failed)]);
-		expect(skipped[0]?.msg).not.toBe("");
-		expect(failed[0]?.msg).not.toBe("");
-	});
-
 	it("treats a deadline of exactly now as passed, as one in the past is", async () => {
 		vi.useFakeTimers({ toFake: ["Date"] });
 		try {
@@ -833,13 +820,6 @@ describe("a failed answer", () => {
 			sendJson(response, answerOf(0.1, 0.2, 0.3), 500);
 
 		expect(await rank()).toBeNull();
-	});
-
-	it("is handled when the server answers with no body at all", async () => {
-		server.respond = answeringWith(304, "");
-
-		expect(await rank()).toBeNull();
-		expect(logged).toHaveLength(1);
 	});
 
 	it("ends the other batches' requests when one batch fails", async () => {

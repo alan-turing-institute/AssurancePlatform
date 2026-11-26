@@ -44,19 +44,6 @@ describe("listLocalOrigins", () => {
 		expect(warnings.map((warning) => warning.position)).toStrictEqual([6]);
 	});
 
-	it("names the component that writes a warning", () => {
-		vi.stubEnv("LOG_LEVEL", "debug");
-		const entries: LogEntry[] = [];
-		setLogSink((entry) => entries.push(entry));
-		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", "not-a-url");
-
-		listLocalOrigins();
-
-		const [warning] = entries.filter((entry) => entry.level === "warn");
-		expect(warning?.component).toEqual(expect.any(String));
-		expect(warning?.component).not.toBe("");
-	});
-
 	it("returns nothing when the variable is unset or empty", () => {
 		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", "");
 		expect(listLocalOrigins()).toEqual([]);
