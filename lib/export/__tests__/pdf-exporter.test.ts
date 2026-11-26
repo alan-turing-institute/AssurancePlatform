@@ -114,6 +114,29 @@ describe("PDFExporter", () => {
 			}
 		});
 
+		it("should trim separators from both ends of the file name", async () => {
+			const result = await exporter.export(createSampleDocument(), {
+				caseName: "!!Edge Case!!",
+				timestamp: new Date("2024-06-15T12:00:00Z"),
+			});
+
+			expect(result.success && "filename" in result && result.filename).toBe(
+				"edge-case-2024-06-15.pdf"
+			);
+		});
+
+		it("should return a failure naming the reason when the file cannot be built", async () => {
+			const result = await exporter.export(createSampleDocument(), {
+				caseName: "Test Case",
+				timestamp: new Date(Number.NaN),
+			});
+
+			expect(result).toStrictEqual({
+				success: false,
+				error: "PDF export failed: Invalid time value",
+			});
+		});
+
 		it("should export document with sections", async () => {
 			const document = createSampleDocument();
 			document.sections = [createSampleSection()];
