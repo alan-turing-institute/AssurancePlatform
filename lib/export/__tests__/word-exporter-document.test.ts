@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { paragraph } from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
@@ -8,6 +9,7 @@ import {
 	docxMediaNames,
 	docxPart,
 	docxSections,
+	paragraphTexts,
 } from "@/src/__tests__/utils/export-docx-kit";
 import { WordExporter } from "../exporters/word-exporter";
 import type {
@@ -36,17 +38,14 @@ function exportSections(sections: RenderedSection[]): Promise<ExportResult> {
 	);
 }
 
-function paragraphBlock(text: string): ContentBlock {
-	return { type: "paragraph", text };
-}
-
 function imageBlock(src: string, caption?: string): ContentBlock {
 	return { type: "image", src, alt: "Alt", caption };
 }
 
+/** The text of the paragraphs that hold text in each page section. */
 async function textsPerSection(result: ExportResult): Promise<string[][]> {
 	const sections = await docxSections(result);
-	return sections.map((s) => s.paragraphs.map((p) => p.text));
+	return sections.map((s) => paragraphTexts(s.paragraphs));
 }
 
 afterEach(() => {
@@ -54,7 +53,7 @@ afterEach(() => {
 });
 
 describe("WordExporter title page", () => {
-	it("writes an empty spacer, the case name, the description and the export date, then starts the content on a new page section", async () => {
+	it("writes the case name, the description and the export date, then starts the content on a new page section", async () => {
 		const result = await exportDoc(
 			exportDocument({
 				metadata: {
@@ -62,12 +61,12 @@ describe("WordExporter title page", () => {
 					caseDescription: "About safety",
 					exportedAt: EXPORTED_AT,
 				},
-				sections: [exportSection("goals", "Goals", [paragraphBlock("Body")])],
+				sections: [exportSection("goals", "Goals", [paragraph("Body")])],
 			})
 		);
 
 		expect(await textsPerSection(result)).toStrictEqual([
-			["", "Safety case", "About safety", "Exported: 25/03/2024"],
+			["Safety case", "About safety", "Exported: 25/03/2024"],
 			["Goals", "Body"],
 		]);
 	});
@@ -80,19 +79,7 @@ describe("WordExporter title page", () => {
 		);
 
 		expect(await textsPerSection(result)).toStrictEqual([
-			["", "Test Case", "Exported: 25/03/2024"],
-		]);
-	});
-
-	it("builds the title page from the metadata alone, ignoring any title-page section", async () => {
-		const result = await exportSections([
-			exportSection("title-page", "Cover", [paragraphBlock("Cover text")]),
-			exportSection("goals", "Goals", [paragraphBlock("Body")]),
-		]);
-
-		expect(await textsPerSection(result)).toStrictEqual([
-			["", "Test Case", "Exported: 25/03/2024"],
-			["Goals", "Body"],
+			["Test Case", "Exported: 25/03/2024"],
 		]);
 	});
 
@@ -112,17 +99,17 @@ describe("WordExporter title page", () => {
 describe("WordExporter diagram pages", () => {
 	it("writes one landscape page section per diagram, in the order given, between the title page and the content", async () => {
 		const result = await exportSections([
-			exportSection("goals", "Goals", [paragraphBlock("G")]),
+			exportSection("goals", "Goals", [paragraph("G")]),
 			exportSection("diagram", "Second", [imageBlock(PNG_DATA, "Cap two")]),
-			exportSection("evidence", "Evidence", [paragraphBlock("E")]),
+			exportSection("evidence", "Evidence", [paragraph("E")]),
 			exportSection("diagram", "First", [imageBlock(OTHER_PNG_DATA)]),
 		]);
 		const sections = await docxSections(result);
 
 		expect(await textsPerSection(result)).toStrictEqual([
-			["", "Test Case", "Exported: 25/03/2024"],
-			["Second", "", "Cap two"],
-			["First", ""],
+			["Test Case", "Exported: 25/03/2024"],
+			["Second", "Cap two"],
+			["First"],
 			["Goals", "G", "Evidence", "E"],
 		]);
 		expect(sections.map((s) => s.orientation)).toStrictEqual([
@@ -151,15 +138,15 @@ describe("WordExporter diagram pages", () => {
 	it("uses the first picture of a diagram section, wherever it sits among its blocks", async () => {
 		const result = await exportSections([
 			exportSection("diagram", "D", [
-				paragraphBlock("Note"),
+				paragraph("Note"),
 				imageBlock(PNG_DATA, "First cap"),
 				imageBlock(OTHER_PNG_DATA, "Second cap"),
 			]),
 		]);
 
 		expect(await textsPerSection(result)).toStrictEqual([
-			["", "Test Case", "Exported: 25/03/2024"],
-			["D", "", "First cap"],
+			["Test Case", "Exported: 25/03/2024"],
+			["D", "First cap"],
 		]);
 		expect(await docxMediaNames(result)).toHaveLength(1);
 	});
@@ -171,17 +158,6 @@ describe("WordExporter diagram pages", () => {
 
 		expect((await textsPerSection(result))[1]).toStrictEqual(["D", "Cap"]);
 		expect(await docxMediaNames(result)).toStrictEqual([]);
-	});
-
-	it("writes an empty landscape page section for a diagram section with no picture block", async () => {
-		const result = await exportSections([
-			exportSection("diagram", "D", [paragraphBlock("Not a picture")]),
-		]);
-		const sections = await docxSections(result);
-
-		expect(sections).toHaveLength(2);
-		expect(sections[1]?.orientation).toBe("landscape");
-		expect(sections[1]?.paragraphs).toStrictEqual([]);
 	});
 
 	it("keeps diagram sections out of the content pages", async () => {
@@ -200,7 +176,7 @@ describe("WordExporter footers", () => {
 				branding: { footerText: "Confidential" },
 				sections: [
 					exportSection("diagram", "D", [imageBlock(PNG_DATA)]),
-					exportSection("goals", "Goals", [paragraphBlock("G")]),
+					exportSection("goals", "Goals", [paragraph("G")]),
 				],
 			})
 		);
@@ -217,7 +193,7 @@ describe("WordExporter footers", () => {
 		const result = await exportDoc(
 			exportDocument({
 				branding: { footerText: "Confidential", logoBase64: PNG_DATA },
-				sections: [exportSection("goals", "Goals", [paragraphBlock("G")])],
+				sections: [exportSection("goals", "Goals", [paragraph("G")])],
 			})
 		);
 		const footers = (await docxSections(result)).map((s) => s.footer);

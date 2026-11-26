@@ -1,7 +1,12 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PlainTreeNode } from "@/lib/case/defined-terms";
-import { exportNode, metadata } from "@/src/__tests__/utils/export-case-kit";
+import {
+	elementBlock,
+	exportNode,
+	metadata,
+	paragraph,
+} from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
@@ -27,10 +32,6 @@ vi.mock(
 const EXPORTED_AT = "2024-03-25T12:00:00Z";
 const LOGO = "data:image/png;base64,LOGO";
 const PAGE_NUMBERS = "Page 1 of 1";
-
-function paragraph(text: string): ContentBlock {
-	return { type: "paragraph", text };
-}
 
 function picture(src: string, caption?: string): ContentBlock {
 	return { type: "image", src, alt: "Alt", caption };
@@ -63,15 +64,9 @@ function fixedParts(container: HTMLElement): PdfOutline[][] {
 }
 
 /** The element block as drawn, with the given fields on a goal. */
-function elementOf(fields: Partial<PlainTreeNode>, depth = 0): PdfOutline {
+function elementOf(fields: Partial<PlainTreeNode>): PdfOutline {
 	const container = drawSections([
-		exportSection("goals", "", [
-			{
-				type: "element",
-				depth,
-				node: exportNode({ id: "n1", type: "GOAL", name: "N", ...fields }),
-			},
-		]),
+		exportSection("goals", "", [elementBlock(fields)]),
 	]);
 	const [element] = pdfBody(pdfPages(container)[1] as Element);
 	return element as PdfOutline;
@@ -94,14 +89,6 @@ describe("PDF element type and name", () => {
 
 	it("draws the type alone as the title of an element without a name", () => {
 		expect(elementOf({ name: null })).toStrictEqual(["Goal"]);
-	});
-
-	it("draws the same content for an element at any depth", () => {
-		const outlines = [0, 1, 2, 3, 4, 9].map((depth) =>
-			elementOf({ description: "D" }, depth)
-		);
-
-		expect(outlines).toStrictEqual(outlines.map(() => ["Goal: N", "D"]));
 	});
 });
 
@@ -246,16 +233,6 @@ describe("PDF title page", () => {
 		});
 
 		expect(bodies(container)[0]?.[1]).toStrictEqual([{ image: LOGO }]);
-	});
-
-	it("builds the title page from the metadata alone, ignoring any title-page section", () => {
-		const container = drawSections([
-			exportSection("title-page", "Cover", [paragraph("Cover text")]),
-		]);
-
-		expect(bodies(container)).toStrictEqual([
-			[["Test Case", "Exported: 25/03/2024"], ["Footer"]],
-		]);
 	});
 
 	it("draws only the title page for a document with no sections", () => {

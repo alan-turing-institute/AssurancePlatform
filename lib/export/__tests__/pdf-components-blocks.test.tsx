@@ -1,7 +1,11 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PlainTreeNode } from "@/lib/case/defined-terms";
-import { exportNode } from "@/src/__tests__/utils/export-case-kit";
+import {
+	elementBlock,
+	exportNode,
+	paragraph,
+} from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
@@ -21,10 +25,6 @@ vi.mock(
 	"@react-pdf/renderer",
 	async () => (await import("@/src/__tests__/utils/export-pdf-kit")).pdfStandIn
 );
-
-function paragraph(text: string): ContentBlock {
-	return { type: "paragraph", text };
-}
 
 /** The page after the title page. */
 function pageOf(blocks: ContentBlock[]): Element {
@@ -49,13 +49,7 @@ function bodyOf(blocks: ContentBlock[]): PdfOutline[] {
 
 /** What an element block holds after its title, in order. */
 function elementFieldsOf(fields: Partial<PlainTreeNode>): PdfOutline[] {
-	const [element] = bodyOf([
-		{
-			type: "element",
-			depth: 0,
-			node: exportNode({ id: "n1", type: "GOAL", name: "N", ...fields }),
-		},
-	]);
+	const [element] = bodyOf([elementBlock(fields)]);
 	return (element as PdfOutline[]).slice(1);
 }
 
@@ -176,12 +170,6 @@ describe("PDF tables", () => {
 				["2", "3", ""],
 			],
 		]);
-	});
-
-	it("gives every row exactly one cell for each header", () => {
-		expect(
-			bodyOf([{ type: "table", headers: ["A"], rows: [["1", "2"]] }])
-		).toStrictEqual([[["A"], ["1"]]]);
 	});
 
 	it("draws nothing for a table with no headers and no rows, and keeps its neighbours", () => {

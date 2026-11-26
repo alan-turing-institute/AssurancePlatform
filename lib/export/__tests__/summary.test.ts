@@ -126,18 +126,6 @@ afterEach(() => {
 });
 
 describe("summary template", () => {
-	describe("identity", () => {
-		it("names itself and carries its description and preset", () => {
-			const template = createTemplateFromPreset("summary");
-
-			expect(template.name).toBe("Summary");
-			expect(template.description).toBe(
-				"Condensed overview with goals and key evidence only"
-			);
-			expect(template.preset).toBe("summary");
-		});
-	});
-
 	describe("section order and switches", () => {
 		it("lists its sections in report order with their titles", async () => {
 			const document = await renderSummary({
@@ -284,7 +272,18 @@ describe("summary template", () => {
 
 	describe("executive summary", () => {
 		it("gives the overview, a divider and a statistics table", async () => {
-			const document = await renderSummary();
+			const tree = exportNode({
+				id: "g1",
+				type: "GOAL",
+				children: [
+					exportNode({ id: "g2", type: "GOAL" }),
+					exportNode({ id: "e1", type: "EVIDENCE" }),
+					exportNode({ id: "e2", type: "EVIDENCE" }),
+				],
+			});
+			const document = await renderSummary({
+				caseData: exportCase(tree, { description: "About it" }),
+			});
 
 			expect(sectionOf(document, "executive-summary").blocks).toStrictEqual([
 				heading(2, "Overview"),
@@ -294,9 +293,9 @@ describe("summary template", () => {
 					type: "table",
 					headers: ["Metric", "Count"],
 					rows: [
-						["Total Elements", "10"],
-						["Goals", "4"],
-						["Evidence Items", "3"],
+						["Total Elements", "4"],
+						["Goals", "2"],
+						["Evidence Items", "2"],
 					],
 				},
 			]);

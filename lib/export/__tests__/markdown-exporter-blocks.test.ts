@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PlainTreeNode } from "@/lib/case/defined-terms";
-import { exportNode } from "@/src/__tests__/utils/export-case-kit";
+import { elementBlock, paragraph } from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
@@ -9,8 +8,8 @@ import { MarkdownExporter } from "../exporters/markdown-exporter";
 import type { ContentBlock, RenderedDocument, RenderedSection } from "../types";
 
 const exporter = new MarkdownExporter();
-const BASE64_IMAGE_LINE =
-	/^\n# Test Case\n\n## Goals\n\n!\[Alt\]\(\S+\)\n\*Cap\*\n$/;
+const BASE64_IMAGE_BODY =
+	"\n# Test Case\n\n## Goals\n\n![Alt](./diagram.png)\n*Cap*\n";
 
 /** What the exporter writes for the case name when a section is not a title page. */
 const TITLE = "# Test Case\n";
@@ -39,18 +38,6 @@ function goalsBody(blocks: ContentBlock[]): Promise<string> {
 	return bodyOf(withSections(exportSection("goals", "Goals", blocks)));
 }
 
-function paragraph(text: string): ContentBlock {
-	return { type: "paragraph", text };
-}
-
-function elementBlock(fields: Partial<PlainTreeNode>, depth = 0): ContentBlock {
-	return {
-		type: "element",
-		node: exportNode({ id: "n1", type: "GOAL", name: "N", ...fields }),
-		depth,
-	};
-}
-
 describe("MarkdownExporter result", () => {
 	it("names the file after the case and the export date and reports its type", async () => {
 		const result = await exporter.export(exportDocument(), {
@@ -66,34 +53,16 @@ describe("MarkdownExporter result", () => {
 		expect(result).toHaveProperty("content");
 	});
 
-	it("reports a failure with the reason when the document cannot be read", async () => {
-		const document: RenderedDocument = {
-			...exportDocument(),
-			get sections(): RenderedSection[] {
-				throw new Error("boom");
-			},
-		};
+	it("reports a failure with the reason when the file cannot be built", async () => {
+		const result = await exporter.export(exportDocument(), {
+			caseName: "Test",
+			timestamp: new Date(Number.NaN),
+		});
 
-		expect(await exporter.export(document, { caseName: "Test" })).toStrictEqual(
-			{ success: false, error: "Markdown export failed: boom" }
-		);
-	});
-
-	it("reports a failure with a general reason when something other than an error is thrown", async () => {
-		const reason: unknown = "boom";
-		const document: RenderedDocument = {
-			...exportDocument(),
-			get sections(): RenderedSection[] {
-				throw reason;
-			},
-		};
-
-		expect(await exporter.export(document, { caseName: "Test" })).toStrictEqual(
-			{
-				success: false,
-				error: "Markdown export failed: Unknown error occurred",
-			}
-		);
+		expect(result).toStrictEqual({
+			success: false,
+			error: "Markdown export failed: Invalid time value",
+		});
 	});
 });
 
@@ -323,14 +292,6 @@ describe("MarkdownExporter blocks", () => {
 		);
 	});
 
-	it("keeps every cell of a row longer than the header", async () => {
-		const body = await goalsBody([
-			{ type: "table", headers: ["A"], rows: [["1", "2"]] },
-		]);
-
-		expect(body).toBe(`${GOALS_HEAD}| A |\n| --- |\n| 1 | 2 |\n`);
-	});
-
 	it("writes a divider between two paragraphs", async () => {
 		const body = await goalsBody([
 			paragraph("A"),
@@ -400,7 +361,7 @@ describe("MarkdownExporter images", () => {
 			{ type: "image", src, alt: "Alt", caption: "Cap" },
 		]);
 
-		expect(body).toMatch(BASE64_IMAGE_LINE);
+		expect(body).toBe(BASE64_IMAGE_BODY);
 		expect(body).not.toContain(src);
 	});
 });

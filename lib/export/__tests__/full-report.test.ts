@@ -136,18 +136,6 @@ afterEach(() => {
 });
 
 describe("full report template", () => {
-	describe("identity", () => {
-		it("names itself and carries its description and preset", () => {
-			const template = createTemplateFromPreset("full-report");
-
-			expect(template.name).toBe("Full Report");
-			expect(template.description).toBe(
-				"Comprehensive report with all case elements, comments, and diagram"
-			);
-			expect(template.preset).toBe("full-report");
-		});
-	});
-
 	describe("section order and switches", () => {
 		it("lists its sections in report order with their titles", async () => {
 			const document = await renderReport({

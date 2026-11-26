@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { PlainCase } from "@/lib/case/defined-terms";
-import { exportCase, exportNode } from "@/src/__tests__/utils/export-case-kit";
+import {
+	exportCase,
+	exportNode,
+	sectionOf,
+} from "@/src/__tests__/utils/export-case-kit";
 import { DEFAULT_BRANDING } from "../schemas/branding-config";
 import type { TemplatePreset } from "../schemas/template-config";
 import { createTemplateFromPreset } from "../templates";
-import type { ContentBlock, RenderedDocument } from "../types";
+import type { RenderedDocument } from "../types";
 
 /**
  * G1 -> S1 -> [P1 -> E1, P2 -> G-deep, G-edge]: seven elements, and goals at
@@ -50,14 +54,6 @@ function render(
 	return createTemplateFromPreset(preset, branding).render({
 		caseData: sampleCase(),
 	});
-}
-
-function blocksOf(document: RenderedDocument, type: string): ContentBlock[] {
-	const section = document.sections.find((s) => s.type === type);
-	if (!section) {
-		throw new Error(`no ${type} section`);
-	}
-	return section.blocks;
 }
 
 describe("base template", () => {
@@ -122,8 +118,8 @@ describe("base template", () => {
 		it("lists only goals within the summary's depth limit", async () => {
 			const document = await render("summary");
 
-			const headings = blocksOf(document, "goals")
-				.filter((b) => b.type === "heading")
+			const headings = sectionOf(document, "goals")
+				.blocks.filter((b) => b.type === "heading")
 				.map((b) => b.text);
 
 			expect(headings).toStrictEqual(["Goals", "Goal: G1", "Goal: G-edge"]);
@@ -134,7 +130,10 @@ describe("base template", () => {
 		it("builds the title page from a heading, a paragraph and a divider", async () => {
 			const document = await render("full-report");
 
-			const [heading, paragraph, divider] = blocksOf(document, "title-page");
+			const [heading, paragraph, divider] = sectionOf(
+				document,
+				"title-page"
+			).blocks;
 
 			expect(heading).toStrictEqual({
 				type: "heading",
@@ -148,7 +147,7 @@ describe("base template", () => {
 		it("builds the statistics as a table with its header row and counts", async () => {
 			const document = await render("full-report");
 
-			const table = blocksOf(document, "executive-summary").find(
+			const table = sectionOf(document, "executive-summary").blocks.find(
 				(b) => b.type === "table"
 			);
 
@@ -174,7 +173,7 @@ describe("base template", () => {
 				},
 			});
 
-			expect(blocksOf(document, "diagram")).toStrictEqual([
+			expect(sectionOf(document, "diagram").blocks).toStrictEqual([
 				{
 					type: "image",
 					src: "data:image/png;base64,AAAA",

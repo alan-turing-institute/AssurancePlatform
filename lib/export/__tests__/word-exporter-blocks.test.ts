@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { paragraph } from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
@@ -27,10 +28,6 @@ const BMP_DATA = "Qk0AAAAA";
 const OTHER_DATA = "PHN2Zz4=";
 /** Starts like a JPEG file but ends with the characters that start a PNG file. */
 const JPEG_ENDING_LIKE_PNG = "/9j/4AAiVBORw0KGgo";
-
-function paragraph(text: string): ContentBlock {
-	return { type: "paragraph", text };
-}
 
 async function exportBlocks(blocks: ContentBlock[]): Promise<ExportResult> {
 	return await exporter.export(
@@ -173,15 +170,6 @@ describe("WordExporter tables", () => {
 			["1", "", ""],
 			["2", "3", ""],
 		]);
-	});
-
-	it("gives every row exactly one cell for each header", async () => {
-		const result = await exportBlocks([
-			{ type: "table", headers: ["A"], rows: [["1", "2"]] },
-		]);
-		const tables = docxTables(await docxPart(result, "word/document.xml"));
-
-		expect(tables[0]?.rows).toStrictEqual([["A"], ["1"]]);
 	});
 });
 

@@ -13,6 +13,11 @@ export interface DocxParagraph {
 	text: string;
 }
 
+/** The paragraphs that hold text, in order; empty spacing paragraphs are left out. */
+export function paragraphTexts(paragraphs: DocxParagraph[]): string[] {
+	return paragraphs.map((p) => p.text).filter((text) => text !== "");
+}
+
 /** A table of the Word body: the text of each cell, row by row. */
 export interface DocxTable {
 	rows: string[][];
@@ -27,7 +32,7 @@ const BODY_ITEM =
 	/<w:tbl>[\s\S]*?<\/w:tbl>|<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>|<w:p\/>/g;
 const TABLE_ROW = /<w:tr(?:\s[^>]*)?>[\s\S]*?<\/w:tr>/g;
 const TABLE_CELL = /<w:tc>[\s\S]*?<\/w:tc>/g;
-const TEXT_RUN = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:t\/>/g;
+const TEXT_RUN = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:t\/>|<w:br\/>/g;
 const STYLE = /<w:pStyle w:val="([^"]*)"/;
 const BOTTOM_BORDER = /<w:pBdr>\s*<w:bottom[^>]*?w:val="([^"]*)"/;
 
@@ -91,10 +96,13 @@ function decode(text: string): string {
 		.replace(/&amp;/g, "&");
 }
 
+/** The text of a run, or a newline for a line break element. */
+function runText(match: RegExpMatchArray): string {
+	return match[0] === "<w:br/>" ? "\n" : decode(match[1] ?? "");
+}
+
 function textOf(xml: string): string {
-	return Array.from(xml.matchAll(TEXT_RUN), (match) =>
-		decode(match[1] ?? "")
-	).join("");
+	return Array.from(xml.matchAll(TEXT_RUN), runText).join("");
 }
 
 function paragraphOf(xml: string): DocxParagraph {

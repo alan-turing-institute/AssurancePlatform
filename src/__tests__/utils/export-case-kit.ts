@@ -39,6 +39,18 @@ export function paragraph(text: string): ContentBlock {
 	return { type: "paragraph", text };
 }
 
+/** An element block for a goal named "N", with the given fields overriding it. */
+export function elementBlock(
+	fields: Partial<PlainTreeNode>,
+	depth = 0
+): ContentBlock {
+	return {
+		type: "element",
+		node: exportNode({ id: "n1", type: "GOAL", name: "N", ...fields }),
+		depth,
+	};
+}
+
 export function metadata(key: string, value: string): ContentBlock {
 	return { type: "metadata", key, value };
 }

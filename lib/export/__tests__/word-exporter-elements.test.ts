@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PlainTreeNode } from "@/lib/case/defined-terms";
-import { exportNode } from "@/src/__tests__/utils/export-case-kit";
+import { elementBlock } from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
@@ -10,6 +9,7 @@ import {
 	docxContent,
 	docxLinks,
 	docxParagraphs,
+	paragraphTexts,
 } from "@/src/__tests__/utils/export-docx-kit";
 import { WordExporter } from "../exporters/word-exporter";
 import type { ContentBlock, ExportResult, RenderedSection } from "../types";
@@ -17,14 +17,6 @@ import type { ContentBlock, ExportResult, RenderedSection } from "../types";
 const exporter = new WordExporter();
 
 const PNG_DATA = "iVBORw0KGgo=";
-
-function elementBlock(fields: Partial<PlainTreeNode>, depth = 0): ContentBlock {
-	return {
-		type: "element",
-		node: exportNode({ id: "n1", type: "GOAL", name: "N", ...fields }),
-		depth,
-	};
-}
 
 function exportSections(sections: RenderedSection[]): Promise<ExportResult> {
 	return exporter.export(exportDocument({ sections }), { caseName: "Test" });
@@ -34,13 +26,25 @@ function exportBlocks(blocks: ContentBlock[]): Promise<ExportResult> {
 	return exportSections([exportSection("goals", "", blocks)]);
 }
 
+/** The text of the paragraphs that hold text, in order. */
 async function textsOfSections(sections: RenderedSection[]): Promise<string[]> {
 	const items = await docxContent(await exportSections(sections));
-	return docxParagraphs(items).map((p) => p.text);
+	return paragraphTexts(docxParagraphs(items));
 }
 
 async function textsOf(blocks: ContentBlock[]): Promise<string[]> {
 	return await textsOfSections([exportSection("goals", "", blocks)]);
+}
+
+/** The items without the empty paragraphs that only space the content. */
+function withoutSpacers(items: DocxBodyItem[]): DocxBodyItem[] {
+	return items.filter(
+		(item) =>
+			item.kind === "table" ||
+			item.paragraph.text !== "" ||
+			item.paragraph.hasImage ||
+			item.paragraph.bottomBorder !== undefined
+	);
 }
 
 /** One entry for each item: a table as its rows, a paragraph as what it holds. */
@@ -62,22 +66,21 @@ describe("WordExporter element type and name", () => {
 	] as const)("writes an element of type %s with the label %s and its name", async (type, label) => {
 		const texts = await textsOf([elementBlock({ type })]);
 
-		expect(texts).toStrictEqual([`${label}: N`, ""]);
+		expect(texts).toStrictEqual([`${label}: N`]);
 	});
 
 	it("writes the type alone as the title of an element without a name", async () => {
 		expect(await textsOf([elementBlock({ name: null })])).toStrictEqual([
 			"Goal",
-			"",
 		]);
 	});
 
-	it("writes only the title and a closing empty paragraph for an element with no optional fields", async () => {
+	it("writes only the title for an element with no optional fields", async () => {
 		const texts = await textsOf([
 			elementBlock({ context: [], comments: [], inSandbox: false }),
 		]);
 
-		expect(texts).toStrictEqual(["Goal: N", ""]);
+		expect(texts).toStrictEqual(["Goal: N"]);
 	});
 
 	it("writes the title of an element as a paragraph that is not a heading", async () => {
@@ -86,13 +89,13 @@ describe("WordExporter element type and name", () => {
 		expect(docxParagraphs(items)[0]?.style).toBeUndefined();
 	});
 
-	it("separates elements with an empty paragraph, in the order given", async () => {
+	it("writes elements in the order given", async () => {
 		const texts = await textsOf([
 			elementBlock({ name: "Second" }),
 			elementBlock({ name: "First" }),
 		]);
 
-		expect(texts).toStrictEqual(["Goal: Second", "", "Goal: First", ""]);
+		expect(texts).toStrictEqual(["Goal: Second", "Goal: First"]);
 	});
 });
 
@@ -124,7 +127,6 @@ describe("WordExporter element fields", () => {
 			"[Draft]",
 			"Comments:",
 			"me (15/01/2024)\nhi",
-			"",
 		]);
 	});
 
@@ -135,7 +137,7 @@ describe("WordExporter element fields", () => {
 	] as const)("writes %s on its own when it is the only field", async (_label, fields, written) => {
 		const texts = await textsOf([elementBlock(fields)]);
 
-		expect(texts).toStrictEqual(["Goal: N", written, ""]);
+		expect(texts).toStrictEqual(["Goal: N", written]);
 	});
 
 	it("leaves out empty descriptions, assumptions, justifications and addresses", async () => {
@@ -148,7 +150,7 @@ describe("WordExporter element fields", () => {
 			}),
 		]);
 
-		expect(texts).toStrictEqual(["Goal: N", ""]);
+		expect(texts).toStrictEqual(["Goal: N"]);
 	});
 
 	it("writes the address of an element as a link that points to it", async () => {
@@ -172,13 +174,13 @@ describe("WordExporter element context", () => {
 	it("writes each context item as its own line, in the order given", async () => {
 		const texts = await textsOf([elementBlock({ context: ["b", "a"] })]);
 
-		expect(texts).toStrictEqual(["Goal: N", "Context:", "• b", "• a", ""]);
+		expect(texts).toStrictEqual(["Goal: N", "Context:", "• b", "• a"]);
 	});
 
 	it("writes no context heading for an empty context", async () => {
 		const texts = await textsOf([elementBlock({ context: [] })]);
 
-		expect(texts).toStrictEqual(["Goal: N", ""]);
+		expect(texts).toStrictEqual(["Goal: N"]);
 	});
 });
 
@@ -196,7 +198,6 @@ describe("WordExporter element comments", () => {
 			"Goal: N",
 			"Comments:",
 			"me (15/01/2024)\nhi",
-			"",
 		]);
 	});
 
@@ -207,7 +208,7 @@ describe("WordExporter element comments", () => {
 			}),
 		]);
 
-		expect(texts).toStrictEqual(["Goal: N", "Comments:", "me\nhi", ""]);
+		expect(texts).toStrictEqual(["Goal: N", "Comments:", "me\nhi"]);
 	});
 
 	it("writes one paragraph for each comment, in the order given", async () => {
@@ -225,21 +226,20 @@ describe("WordExporter element comments", () => {
 			"Comments:",
 			"b\nsecond",
 			"a\nfirst",
-			"",
 		]);
 	});
 
 	it("writes no comments heading for an empty list of comments", async () => {
 		const texts = await textsOf([elementBlock({ comments: [] })]);
 
-		expect(texts).toStrictEqual(["Goal: N", ""]);
+		expect(texts).toStrictEqual(["Goal: N"]);
 	});
 });
 
 describe("WordExporter element sandbox marker", () => {
 	it.each([
-		[true, ["Goal: N", "[Draft]", ""]],
-		[false, ["Goal: N", ""]],
+		[true, ["Goal: N", "[Draft]"]],
+		[false, ["Goal: N"]],
 	])("writes the draft marker only when in the sandbox is %s", async (inSandbox, written) => {
 		const texts = await textsOf([elementBlock({ inSandbox })]);
 
@@ -262,7 +262,7 @@ describe("WordExporter content blocks of a section", () => {
 			])
 		);
 
-		expect(items.map(describeItem)).toStrictEqual([
+		expect(withoutSpacers(items).map(describeItem)).toStrictEqual([
 			{
 				text: "K: V",
 				style: undefined,
@@ -275,7 +275,6 @@ describe("WordExporter content blocks of a section", () => {
 				hasImage: false,
 				bottomBorder: undefined,
 			},
-			{ text: "", style: undefined, hasImage: false, bottomBorder: undefined },
 			{ text: "", style: undefined, hasImage: false, bottomBorder: "single" },
 			{ text: "", style: undefined, hasImage: true, bottomBorder: undefined },
 			[["H"], ["c"]],
