@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/src/__tests__/mocks/server";
 import { type HygieneFigures, useHygiene } from "../use-hygiene";
 
@@ -22,7 +22,62 @@ function deferred() {
 	return { gate, release };
 }
 
+/**
+ * Watches the reads the hook makes. The nth entry settles once the hook has
+ * received the nth answer: its body read, or at once for a refusal.
+ */
+function watchAnswers(): Promise<void>[] {
+	const answers: Promise<void>[] = [];
+	const original = globalThis.fetch;
+	vi.spyOn(globalThis, "fetch").mockImplementation(async (...args) => {
+		let arrived: () => void = () => undefined;
+		answers.push(
+			new Promise<void>((resolve) => {
+				arrived = resolve;
+			})
+		);
+		const response = await original(...args);
+		const readBody = response.json.bind(response);
+		response.json = async () => {
+			const body = await readBody();
+			arrived();
+			return body;
+		};
+		if (!response.ok) {
+			arrived();
+		}
+		return response;
+	});
+	return answers;
+}
+
+/** Lets the hook act on an answer it has received. */
+async function settled(answer: Promise<void> | undefined) {
+	await act(async () => {
+		await answer;
+	});
+	await act(async () => undefined);
+}
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
 describe("a case's evidence health figures", () => {
+	it("starts as loading, never as anything else", async () => {
+		server.use(http.get(url("c1"), () => HttpResponse.json(figures(3))));
+		const seen: string[] = [];
+
+		const { result } = renderHook(() => {
+			const state = useHygiene("c1");
+			seen.push(state.status);
+			return state;
+		});
+
+		expect(seen[0]).toBe("loading");
+		await waitFor(() => expect(result.current.status).toBe("ready"));
+	});
+
 	it("are loading with none shown, then ready with the figures", async () => {
 		server.use(http.get(url("c1"), () => HttpResponse.json(figures(3))));
 
@@ -89,6 +144,7 @@ describe("a case's evidence health figures", () => {
 	});
 
 	it("ignore an earlier read that finishes after a later one", async () => {
+		const answers = watchAnswers();
 		const held = deferred();
 		let reads = 0;
 		server.use(
@@ -107,15 +163,14 @@ describe("a case's evidence health figures", () => {
 		await waitFor(() => expect(result.current.figures).toEqual(figures(2)));
 
 		held.release();
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		});
+		await settled(answers[0]);
 
 		expect(result.current.figures).toEqual(figures(2));
 		expect(result.current.status).toBe("ready");
 	});
 
 	it("ignore an earlier read that fails after a later one succeeded", async () => {
+		const answers = watchAnswers();
 		const held = deferred();
 		let reads = 0;
 		server.use(
@@ -134,15 +189,14 @@ describe("a case's evidence health figures", () => {
 		await waitFor(() => expect(result.current.status).toBe("ready"));
 
 		held.release();
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		});
+		await settled(answers[0]);
 
 		expect(result.current.status).toBe("ready");
 		expect(result.current.figures).toEqual(figures(2));
 	});
 
 	it("are read for the new case, and not from the old one, when the case changes", async () => {
+		const answers = watchAnswers();
 		const held = deferred();
 		server.use(
 			http.get(url("old"), async () => {
@@ -158,9 +212,7 @@ describe("a case's evidence health figures", () => {
 		rerender({ id: "new" });
 		await waitFor(() => expect(result.current.figures).toEqual(figures(9)));
 		held.release();
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 20));
-		});
+		await settled(answers[0]);
 
 		expect(result.current.figures).toEqual(figures(9));
 	});

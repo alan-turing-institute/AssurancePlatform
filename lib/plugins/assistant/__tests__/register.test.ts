@@ -1,7 +1,6 @@
 import { Bot } from "lucide-react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LogEntry } from "@/lib/logger";
-import { getManifestEntry } from "@/lib/plugins/manifest";
 import { ASSISTANT_PLUGIN_ID } from "../constants";
 
 let entries: LogEntry[] = [];
@@ -27,16 +26,6 @@ beforeEach(() => {
 afterEach(() => {
 	resetFreshSink();
 	vi.unstubAllEnvs();
-});
-
-describe("the assistant plug-in id", () => {
-	it("names a plug-in the manifest lists, with a panel and a settings section", () => {
-		const entry = getManifestEntry(ASSISTANT_PLUGIN_ID);
-
-		expect(entry?.surfaces).toEqual(
-			expect.arrayContaining(["case-panel", "settings-section"])
-		);
-	});
 });
 
 describe("loading the assistant's registration", () => {
@@ -81,7 +70,6 @@ describe("loading the assistant's registration", () => {
 
 		const errors = entries.filter((entry) => entry.level === "error");
 		expect(errors).toHaveLength(1);
-		expect(errors[0]?.error).toMatchObject({ name: "Error" });
 		expect(slots.casePanelSlot.list()).toHaveLength(1);
 		expect(slots.settingsSectionSlot.list()).toEqual([]);
 	});

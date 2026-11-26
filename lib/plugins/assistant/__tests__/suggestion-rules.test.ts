@@ -292,7 +292,7 @@ describe("planNewElement — the names it accepts for a type", () => {
 		["property claim", "property_claim"],
 		["evidence", "evidence"],
 	])("also reads %j as %s", (name, expected) => {
-		expect(planNewElement(node(), name.trim(), "text")).toMatchObject({
+		expect(planNewElement(node(), name, "text")).toMatchObject({
 			suggested: true,
 			childType: expected,
 		});
@@ -300,43 +300,54 @@ describe("planNewElement — the names it accepts for a type", () => {
 });
 
 describe("how a refusal names the element and the types", () => {
+	const defeaterReason = (overrides: Partial<TreeNode>) =>
+		reasonOf(
+			planNewElement(node({ isDefeater: true, ...overrides }), "evidence", "x")
+		);
+
 	it("names an element by its label without the spaces around it", () => {
-		const parent = node({ isDefeater: true, name: "  P7 " });
+		const reason = defeaterReason({ name: "  P7 " });
 
-		const reason = reasonOf(planNewElement(parent, "evidence", "text"));
-
-		expect(reason.indexOf("P7 is a counter-argument")).toBe(0);
+		expect(reason).toBe(defeaterReason({ name: "P7" }));
+		expect(reason.startsWith("P7 ")).toBe(true);
 	});
 
 	it.each([
 		"",
 		"   ",
 	])("names an element with the label %j by its kind", (name) => {
-		const parent = node({ isDefeater: true, name });
+		const reason = defeaterReason({ name });
 
-		const reason = reasonOf(planNewElement(parent, "evidence", "text"));
-
-		expect(reason.indexOf("this claim is a counter-argument")).toBe(0);
+		expect(reason).not.toBe("");
+		expect(reason).not.toContain("P1");
+		expect(reason).toBe(defeaterReason({ name: "" }));
+		expect(reason).not.toBe(defeaterReason({ name: "", type: "GOAL" }));
 	});
 
-	it("names evidence in the plural as evidence when it is the type that is not allowed", () => {
+	it("names the type that is not allowed beneath a parent, and the parent", () => {
 		const reason = reasonOf(
 			planNewElement(node({ type: "GOAL", name: "G1" }), "evidence", "text")
 		);
 
-		expect(reason).toContain("allow evidence directly beneath G1");
+		expect(reason).toContain("G1");
+		expect(reason).toContain("evidence");
+		expect(reason).not.toBe(
+			reasonOf(
+				planNewElement(node({ type: "GOAL", name: "G2" }), "evidence", "text")
+			)
+		);
 	});
 
 	it("treats a request whose fields are all undefined as no new text", () => {
-		expect(
-			reasonOf(
-				planEdit(node(), {
-					description: undefined,
-					assumption: undefined,
-					context: undefined,
-				})
-			)
-		).toContain("No new text");
+		const plan = planEdit(node(), {
+			description: undefined,
+			assumption: undefined,
+			context: undefined,
+		});
+
+		expect(plan).toMatchObject({ suggested: false });
+		expect(reasonOf(plan)).not.toBe("");
+		expect(plan).toStrictEqual(planEdit(node(), {}));
 	});
 
 	it("does not take a request with one field given for one with no new text", () => {

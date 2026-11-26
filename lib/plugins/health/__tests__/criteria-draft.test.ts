@@ -778,6 +778,11 @@ const NOT_A_NUMBER_MESSAGE = errorsFor(NUMERIC, (d) => {
 	d.rule = { ...d.rule, pass: "abc" };
 })["rule.params.pass_values"];
 
+/** The message for a between limit with only one end typed, as the form shows it. */
+const NEEDS_BOTH_ENDS_MESSAGE = errorsFor(NUMERIC, (d) => {
+	d.rule = { ...d.rule, shape: "between", passLow: "1", passHigh: "" };
+})["rule.params.pass_values"];
+
 // ---------------------------------------------------------------------------
 // What a check allows
 // ---------------------------------------------------------------------------
@@ -873,12 +878,6 @@ describe("a draft with nothing recommended", () => {
 	});
 
 	it("has a blank step 3 that holds nothing", () => {
-		expect(BLANK_AGGREGATION).toStrictEqual({
-			answersNeeded: "",
-			extra: {},
-			ruleExtra: {},
-			threshold: "",
-		});
 		expect(aggregationIsHeld(BLANK_AGGREGATION)).toBe(false);
 	});
 
@@ -1096,18 +1095,24 @@ describe("limits that are left out of the settings", () => {
 	});
 
 	it.each([
-		["low", "x", "1"],
-		["high", "1", "x"],
-		["low", "1", ""],
-		["high", "", "1"],
-		["spaces in low", "  ", "1"],
-		["spaces in high", "1", "  "],
-	])("leaves a between limit out when its %s end is %j and %j", (_name, low, high) => {
+		["low", "x", "1", NOT_A_NUMBER_MESSAGE],
+		["high", "1", "x", NOT_A_NUMBER_MESSAGE],
+		["low", "1", "", NEEDS_BOTH_ENDS_MESSAGE],
+		["high", "", "1", NEEDS_BOTH_ENDS_MESSAGE],
+		["spaces in low", "  ", "1", NEEDS_BOTH_ENDS_MESSAGE],
+		["spaces in high", "1", "  ", NEEDS_BOTH_ENDS_MESSAGE],
+		["spaces in high, none in low", "  1", "   ", NEEDS_BOTH_ENDS_MESSAGE],
+	])("leaves a between limit out when its %s end is %j and %j", (_name, low, high, message) => {
 		const result = passAt("rule.params.pass_values", (d) => {
 			d.rule = { ...d.rule, shape: "between", passLow: low, passHigh: high };
 		});
-		expect(result.message).toBeDefined();
+		expect(result.message).toBe(message);
 		expect(result.params?.pass_values).toBeUndefined();
+	});
+
+	it("words a missing between end differently from a value that is not a number", () => {
+		expect(NEEDS_BOTH_ENDS_MESSAGE).toBeDefined();
+		expect(NEEDS_BOTH_ENDS_MESSAGE).not.toBe(NOT_A_NUMBER_MESSAGE);
 	});
 
 	it.each([

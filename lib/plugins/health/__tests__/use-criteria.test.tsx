@@ -119,23 +119,40 @@ describe("useCaseChecks while reads come and go", () => {
 
 	const OTHER_LISTS = [{ ...checkLists()[0], pipeline: "other" }];
 
-	it("holds no deadline timer once the answer is in", async () => {
-		renderHook(() => useCaseChecks("case-1", true));
+	async function advance(ms: number) {
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(ms);
+		});
+	}
+
+	it("keeps an answered read, and does not abandon it, when the time limit passes", async () => {
+		const { result } = renderHook(() => useCaseChecks("case-1", true));
 
 		calls[0]?.answer(checkLists());
 		await flush();
+		await advance(15_000);
 
-		expect(vi.getTimerCount()).toBe(0);
+		expect(calls[0]?.signal.aborted).toBe(false);
+		expect(result.current).toEqual({ lists: checkLists(), status: "ready" });
 	});
 
-	it("abandons the read, and its deadline, when the caller goes away", () => {
+	it("abandons an unanswered read at the time limit and not before", async () => {
+		renderHook(() => useCaseChecks("case-1", true));
+
+		await advance(14_999);
+		expect(calls[0]?.signal.aborted).toBe(false);
+
+		await advance(1);
+		expect(calls[0]?.signal.aborted).toBe(true);
+	});
+
+	it("abandons the read when the caller goes away", () => {
 		const { unmount } = renderHook(() => useCaseChecks("case-1", true));
-		expect(vi.getTimerCount()).toBe(1);
+		expect(calls[0]?.signal.aborted).toBe(false);
 
 		unmount();
 
 		expect(calls[0]?.signal.aborted).toBe(true);
-		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it("keeps the lists of the case now shown when an earlier case's answer comes late", async () => {

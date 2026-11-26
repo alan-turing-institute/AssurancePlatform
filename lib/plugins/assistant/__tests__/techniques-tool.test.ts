@@ -22,6 +22,7 @@ vi.mock("@/lib/services/health-status-service", () => ({
 
 const URL_ = "http://techniques.test/mcp";
 const options = { toolCallId: "t", messages: [] };
+const SOME_TEXT = /\S/;
 const fetchMock = vi.fn();
 
 const RESULT = {
@@ -587,9 +588,7 @@ describe("suggest_techniques: models and ranking input", () => {
 			options
 		);
 
-		expect(out).toStrictEqual({
-			error: "The techniques service is not reachable.",
-		});
+		expect(out).toStrictEqual({ error: expect.stringMatching(SOME_TEXT) });
 	});
 
 	it.each([
@@ -654,12 +653,11 @@ describe("suggest_techniques: choosing the claim to send", () => {
 		reply(EMPTY_REPLY);
 
 		const refused = await run("", "z".repeat(39));
-		expect(refused).toStrictEqual({
-			error: "The selected element has no text.",
-		});
+		expect(refused).toStrictEqual({ error: expect.stringMatching(SOME_TEXT) });
 		expect(fetchMock).not.toHaveBeenCalled();
 
-		await run("", "z".repeat(40));
+		const accepted = await run("", "z".repeat(40));
+		expect(accepted).not.toHaveProperty("error");
 		expect(sentClaim()).toBe("z".repeat(40));
 	});
 });

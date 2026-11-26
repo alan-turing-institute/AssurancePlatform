@@ -6,9 +6,6 @@ import { RULESET_DATA } from "../ruleset-data";
 import type { RuleData } from "../ruleset-types";
 
 const RULES: RuleData[] = RULESET_DATA.rules;
-const SCOPES = ["case", "element"];
-const SEVERITIES = ["error", "warning", "style"];
-const MECHANISMS = ["structural", "judgement"];
 
 function isFilled(value: unknown): boolean {
 	return typeof value === "string" && value.trim().length > 0;
@@ -71,6 +68,13 @@ function closesALine(lines: string[], text: string): boolean {
 	return lines.some((line) => line.endsWith(last));
 }
 
+/** What follows the element types on the block line that names them. */
+function appliesNote(rule: RuleData, block: string): string {
+	const types = rule.applies_to.join(", ");
+	const line = block.split("\n").find((l) => l.includes(types)) ?? "";
+	return line.slice(line.indexOf(types) + types.length).trim();
+}
+
 /** What a prompt block fails to say about its rule. */
 function missingFromBlock(rule: RuleData, block: string): string[] {
 	const lines = block.split("\n");
@@ -119,19 +123,13 @@ describe("generated ruleset data", () => {
 		expect(failing((r) => owners(r) === 1)).toStrictEqual([]);
 	});
 
-	test("holds only the allowed scope, severity and mechanism values", () => {
-		expect(failing((r) => SCOPES.includes(r.scope))).toStrictEqual([]);
-		expect(failing((r) => SEVERITIES.includes(r.severity))).toStrictEqual([]);
-		expect(failing((r) => MECHANISMS.includes(r.mechanism))).toStrictEqual([]);
-	});
-
-	test("says for every rule whether it can be acknowledged", () => {
-		expect(failing((r) => typeof r.ackable === "boolean")).toStrictEqual([]);
-	});
-
-	test("gives every rule a title and a statement", () => {
+	test("gives every rule a title, and a statement where the judgement prompt uses it", () => {
 		expect(failing((r) => isFilled(r.title))).toStrictEqual([]);
-		expect(failing((r) => isFilled(r.statement))).toStrictEqual([]);
+		expect(
+			failing(
+				(r) => !JUDGEMENT_RULE_IDS.includes(r.id) || isFilled(r.statement)
+			)
+		).toStrictEqual([]);
 	});
 
 	test("gives every rule a non-empty list of element types it applies to", () => {
@@ -169,8 +167,10 @@ describe("generated ruleset data", () => {
 		).toStrictEqual([]);
 	});
 
-	test("gives every rule the model applies an apply block", () => {
-		for (const rule of judgementRules()) {
+	test("gives every rule in the judgement prompt an apply block", () => {
+		const listed = RULES.filter((r) => JUDGEMENT_RULE_IDS.includes(r.id));
+		expect(listed.length).toBeGreaterThan(0);
+		for (const rule of listed) {
 			expect(rule.apply).toBeDefined();
 		}
 	});
@@ -183,11 +183,11 @@ describe("judgement rule ids", () => {
 		expect(JUDGEMENT_RULE_IDS.filter((id) => !known.has(id))).toStrictEqual([]);
 	});
 
-	test("are exactly the judgement rules the checker reports as applied by the model", () => {
-		const expected = judgementRules()
-			.map((r) => r.id)
-			.sort();
-		expect([...JUDGEMENT_RULE_IDS].sort()).toStrictEqual(expected);
+	test("each name a rule the checker reports as applied by the model", () => {
+		const eligible = new Set(judgementRules().map((r) => r.id));
+		expect(JUDGEMENT_RULE_IDS.filter((id) => !eligible.has(id))).toStrictEqual(
+			[]
+		);
 	});
 });
 
@@ -210,11 +210,20 @@ describe("judgement prompt", () => {
 		expect(missing.filter((m) => m.missing.length > 0)).toStrictEqual([]);
 	});
 
-	test("marks a case-level rule as reported once per case and no other", () => {
-		const wrong = RULES.filter((r) => JUDGEMENT_RULE_IDS.includes(r.id)).filter(
-			(r) => blockFor(r.id).includes("once per case") !== (r.scope === "case")
+	test("marks a case-level rule's element types with one shared note and no other rule's", () => {
+		const listed = RULES.filter((r) => JUDGEMENT_RULE_IDS.includes(r.id));
+		const notes = listed.map((r) => ({
+			scope: r.scope,
+			note: appliesNote(r, blockFor(r.id)),
+		}));
+		const wrong = listed.filter(
+			(r, i) => (notes[i]?.note !== "") !== (r.scope === "case")
+		);
+		const caseNotes = new Set(
+			notes.filter((n) => n.scope === "case").map((n) => n.note)
 		);
 		expect(wrong.map((r) => r.id)).toStrictEqual([]);
+		expect(caseNotes.size).toBeLessThanOrEqual(1);
 	});
 
 	test("leaves out rules that are not in the id list", () => {

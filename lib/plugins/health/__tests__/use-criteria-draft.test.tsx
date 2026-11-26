@@ -127,6 +127,20 @@ describe("when the stored settings move under the form", () => {
 		expect(result.current.changedElsewhere).toBe(false);
 		expect(result.current.dirty).toBe(false);
 	});
+
+	it("takes the new revision on a reload even when the form started out unsaved", () => {
+		const { result, rerender } = render(options({ unsaved: true }));
+
+		rerender(MOVED_ON);
+		expect(result.current.changedElsewhere).toBe(true);
+		expect(result.current.baseRevision).toBe(1);
+
+		act(() => result.current.reload());
+
+		expect(result.current.baseRevision).toBe(2);
+		expect(result.current.changedElsewhere).toBe(false);
+		expect(result.current.draft).toEqual(NUMERIC_DRAFT);
+	});
 });
 
 describe("which check the draft is for", () => {

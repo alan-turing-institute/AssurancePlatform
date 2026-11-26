@@ -16,8 +16,14 @@ import {
 } from "@/lib/plugins/assistant/techniques-models";
 import type { ConnectionForUse } from "@/lib/services/model-connection-service";
 
-vi.mock("@/lib/models/adapters", () => ({ embeddingModelFor: vi.fn() }));
-vi.mock("@/lib/models/clef", () => ({ rankCandidates: vi.fn() }));
+vi.mock("@/lib/models/adapters", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/models/adapters")>()),
+	embeddingModelFor: vi.fn(),
+}));
+vi.mock("@/lib/models/clef", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/models/clef")>()),
+	rankCandidates: vi.fn(),
+}));
 vi.mock("@/lib/models/embedding-check", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/lib/models/embedding-check")>()),
 	fetchEmbeddingSpec: vi.fn(),

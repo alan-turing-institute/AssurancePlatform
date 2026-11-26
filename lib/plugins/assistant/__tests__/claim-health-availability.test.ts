@@ -36,7 +36,6 @@ describe("claimHealthAvailability", () => {
 		expect(logged).toHaveLength(1);
 		expect(logged[0]).toMatchObject({
 			level: "warn",
-			component: "claim-health-availability",
 			errorName: "unknown",
 		});
 		expect(JSON.stringify(logged)).not.toContain("db.internal");

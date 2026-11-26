@@ -90,8 +90,9 @@ describe("registerHealthPlugin — appearance", () => {
 		elementBadgeSlot.resetForTests();
 		elementPanelSlot.resetForTests();
 		const logs = captureLogs();
+		const failure = new Error("simulated appearance failure");
 		vi.spyOn(elementAppearanceSlot, "register").mockImplementation(() => {
-			throw new Error("simulated appearance failure");
+			throw failure;
 		});
 
 		try {
@@ -104,9 +105,8 @@ describe("registerHealthPlugin — appearance", () => {
 				)
 			).toBe(true);
 			expect(
-				logs.entries.find((entry) => entry.msg.includes("plain evidence"))
-					?.error
-			).toMatchObject({ message: "simulated appearance failure" });
+				logs.entries.find((entry) => entry.level === "error")?.error
+			).toMatchObject({ message: failure.message });
 			expect(elementAppearanceSlot.list()).toEqual([]);
 			expect(elementBadgeSlot.list()).toHaveLength(1);
 			expect(elementPanelSlot.list()).toHaveLength(1);

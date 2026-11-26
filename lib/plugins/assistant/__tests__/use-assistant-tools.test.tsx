@@ -1,10 +1,14 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useAssistantTools } from "@/lib/plugins/assistant/use-assistant-tools";
 import { server } from "@/src/__tests__/mocks/server";
 
 const urlFor = (caseId: string) => `/api/cases/${caseId}/assistant`;
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 describe("useAssistantTools", () => {
 	it("gives null while the request runs, then the names of the tools", async () => {
@@ -48,18 +52,29 @@ describe("useAssistantTools", () => {
 	});
 
 	it("stays null when the request is refused", async () => {
-		let asked = false;
+		let answered: () => void = () => undefined;
+		const refusal = new Promise<void>((resolve) => {
+			answered = resolve;
+		});
+		const original = globalThis.fetch;
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (...args) => {
+			const response = await original(...args);
+			answered();
+			return response;
+		});
 		server.use(
-			http.get(urlFor("case-1"), () => {
-				asked = true;
-				return HttpResponse.json({ error: "Forbidden" }, { status: 403 });
-			})
+			http.get(urlFor("case-1"), () =>
+				HttpResponse.json({ error: "Forbidden" }, { status: 403 })
+			)
 		);
 
 		const { result } = renderHook(() => useAssistantTools("case-1"));
+		await act(async () => {
+			await refusal;
+		});
+		await act(async () => undefined);
 
-		await waitFor(() => expect(asked).toBe(true));
-		await waitFor(() => expect(result.current).toBeNull());
+		expect(result.current).toBeNull();
 	});
 
 	it("asks again for the new case when the case changes", async () => {

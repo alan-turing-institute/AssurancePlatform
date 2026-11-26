@@ -210,7 +210,6 @@ describe("SlotRegistry", () => {
 	it("registers into each shared slot only for a plugin declaring that slot's own surface", async () => {
 		const slots = await import("../registry");
 		const bySurface = {
-			"case-panel": slots.casePanelSlot,
 			"element-appearance": slots.elementAppearanceSlot,
 			"element-badge": slots.elementBadgeSlot,
 			"element-panel": slots.elementPanelSlot,

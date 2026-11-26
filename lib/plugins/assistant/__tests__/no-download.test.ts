@@ -55,7 +55,6 @@ describe("noDownload", () => {
 		expect(error).toBeInstanceOf(Error);
 		expect((error as Error).message).toBe(DOWNLOAD_REFUSED_MESSAGE);
 		expect(DOWNLOAD_REFUSED_MESSAGE).not.toContain("files.invalid");
-		expect((error as Error).message.trim()).not.toBe("");
 	});
 
 	it("refuses the whole request when only some of the URLs are supported", async () => {

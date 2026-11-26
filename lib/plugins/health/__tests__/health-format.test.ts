@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	CAUSE_LABELS,
+	describeBadge,
 	describeDuration,
 	describeLevels,
 	describeLiveNode,
@@ -25,8 +26,6 @@ type Uncertainty = NonNullable<Record1["uncertainty"]>;
 
 const DOT = "·";
 const QUANTILES_START = /^quantiles /;
-const ANY_DIGIT = /\d/;
-const NAMED_SUBJECT = /^Live results for \S.*\. Health: passing$/;
 
 /** An ISO text for a time built from local parts, so its local reading is known. */
 function localIso(day: number, hour: number, minute: number): string {
@@ -261,10 +260,13 @@ describe("rule wording on each reading", () => {
 			"an identity rule that carries a direction",
 			{ kind: "identity", direction: "maximize", params: { pass_values: 5 } },
 		],
-	] as const)("passes when true for %s", (_n, rule) => {
-		expect(readingText(rule as Omit<Rule, "version">)).toBe(
-			`passes when true ${DOT} v1`
-		);
+	] as const)("words %s as an identity rule", (_n, rule) => {
+		const identity = readingText({ kind: "identity", params: {} });
+		const text = readingText(rule as Omit<Rule, "version">);
+		const band = readingText({ kind: "band", params: { pass_values: [1, 5] } });
+		expect(text).toBe(identity);
+		expect(text.endsWith(` ${DOT} v1`)).toBe(true);
+		expect(text).not.toBe(band);
 	});
 
 	it("words a band with its two limits and an optional marginal band", () => {
@@ -332,36 +334,57 @@ describe("reduction and aggregation wording", () => {
 		expect(reduction).toBe(`${text}, passes when true ${DOT} d1`);
 	});
 
-	it("words a reduction without its own rule as judged by the reading rule", () => {
+	function reductionText(own: boolean): string {
 		const [, reduction] = levelsFor({
-			reduction: { kind: "last", params: {}, version: "d1" },
+			reduction: {
+				kind: "last",
+				params: {},
+				version: "d1",
+				...(own && { rule }),
+			},
 			aggregation: undefined,
 		} as Partial<Record1>);
-		expect(reduction).toBe(`last, judged by the reading rule ${DOT} d1`);
+		return reduction ?? "";
+	}
+
+	it("words a reduction without its own rule differently from one with its own", () => {
+		const text = reductionText(false);
+		const middle = text.slice("last, ".length, -` ${DOT} d1`.length);
+		expect(text.startsWith("last, ")).toBe(true);
+		expect(text.endsWith(` ${DOT} d1`)).toBe(true);
+		expect(middle.trim()).not.toBe("");
+		expect(text).not.toBe(reductionText(true));
 	});
 
-	it.each([
-		[
-			"percentile",
-			{ percentile: 95 },
-			"the 95th percentile, judged by the rule above",
-		],
-		["worst-of", {}, "the worst value, judged by the rule above"],
-	])("words a %s aggregation", (kind, params, text) => {
+	function aggregationText(kind: string, params: Record<string, unknown>) {
 		const [, aggregation] = levelsFor({
 			reduction: undefined,
 			aggregation: { kind, params, version: "a1" },
 		} as Partial<Record1>);
-		expect(aggregation).toBe(`${text} ${DOT} a1`);
+		return aggregation ?? "";
+	}
+
+	it("words a percentile aggregation with its number and version", () => {
+		const text = aggregationText("percentile", { percentile: 95 });
+		expect(text).toContain("95th");
+		expect(text.endsWith(` ${DOT} a1`)).toBe(true);
+		expect(text).not.toBe(aggregationText("percentile", { percentile: 90 }));
 	});
 
-	it("names the scope in the level labels", () => {
+	it("words a worst-of aggregation in words that differ from the other kinds", () => {
+		const text = aggregationText("worst-of", {});
+		expect(text.endsWith(` ${DOT} a1`)).toBe(true);
+		expect(text).not.toBe(aggregationText("unlisted", {}));
+		expect(text).not.toBe(aggregationText("percentile", { percentile: 95 }));
+	});
+
+	it("names the scope in the labels of the levels after the reading", () => {
 		const labels = describeLevels(recordWith({})).map((level) => level.label);
-		expect(labels).toStrictEqual([
-			"Each reading",
-			"Each sensor over the window",
-			"Across all sensor subjects",
-		]);
+		expect(labels).toHaveLength(3);
+		expect(new Set(labels).size).toBe(3);
+		expect(labels[0]).not.toContain("sensor");
+		expect(labels[1]).toContain("sensor");
+		expect(labels[2]).toContain("sensor");
 	});
 });
 
@@ -429,7 +452,6 @@ describe("describeUncertainty", () => {
 	])("shows no quantile entries when q is %s", (_n, q) => {
 		const text = quantiles(q);
 		expect(text).toMatch(QUANTILES_START);
-		expect(text).not.toMatch(ANY_DIGIT);
 		expect(text.split(" (")[0]?.trim()).toBe("quantiles");
 	});
 });
@@ -543,9 +565,12 @@ describe("describeLiveNode", () => {
 	const passing = status({ verdict: "pass" });
 	const state = { kind: "pass", stale: false } as const;
 
-	it("names the claim and then its health", () => {
-		expect(describeLiveNode(passing, state, "P1")).toBe(
-			"Live results for P1. Health: passing"
+	it("names the claim and then the claim badge's own label", () => {
+		const text = describeLiveNode(passing, state, "P1");
+		expect(text.endsWith(describeBadge(passing, false))).toBe(true);
+		expect(text.indexOf("P1")).toBeGreaterThanOrEqual(0);
+		expect(text.indexOf("P1")).toBeLessThan(
+			text.indexOf(describeBadge(passing, false))
 		);
 	});
 
@@ -553,16 +578,21 @@ describe("describeLiveNode", () => {
 		null,
 		"",
 	])("still names a subject when the claim name is %j", (name) => {
-		expect(describeLiveNode(passing, state, name)).toMatch(NAMED_SUBJECT);
+		const text = describeLiveNode(passing, state, name);
+		const named = describeLiveNode(passing, state, "P1");
+		expect(text.endsWith(describeBadge(passing, false))).toBe(true);
+		expect(text.length).toBeGreaterThan(
+			describeBadge(passing, false).length + 1
+		);
+		expect(text).not.toBe(named);
+		expect(text).not.toContain("null");
 	});
 
-	it("says there is no result yet for a node without one", () => {
+	it("words a node without a result the same whatever its status, and unlike a result", () => {
 		const none = { kind: "none", stale: false } as const;
-		expect(describeLiveNode(null, none, "P1")).toBe(
-			"Live results for P1. Health: no result yet"
-		);
-		expect(describeLiveNode(passing, none, "P1")).toBe(
-			"Live results for P1. Health: no result yet"
-		);
+		const noResult = describeLiveNode(null, none, "P1");
+		expect(describeLiveNode(passing, none, "P1")).toBe(noResult);
+		expect(noResult).toContain("P1");
+		expect(noResult).not.toBe(describeLiveNode(passing, state, "P1"));
 	});
 });

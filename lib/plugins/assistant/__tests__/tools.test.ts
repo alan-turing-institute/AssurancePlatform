@@ -337,14 +337,13 @@ describe("assistant tools: what each tool accepts", () => {
 	interface Schema {
 		safeParse: (input: unknown) => { data?: unknown; success: boolean };
 	}
-	const tools = createCaseTools("u", "c", { suggestions: true });
 	const schemaOf = (tool: { inputSchema?: unknown } | undefined) =>
 		tool?.inputSchema as Schema;
+	const buildTools = () => createCaseTools("u", "c", { suggestions: true });
 
 	it.each([
 		[
 			"suggest_edit",
-			tools.suggest_edit,
 			{
 				elementId: "p1",
 				description: "d",
@@ -356,13 +355,12 @@ describe("assistant tools: what each tool accepts", () => {
 		],
 		[
 			"suggest_new_element",
-			tools.suggest_new_element,
 			{ parentId: "g1", type: "strategy", description: "d" },
 			{ type: "strategy", description: "d" },
 		],
-		["read_element", tools.read_element, { elementId: "p1" }, {}],
-	] as const)("%s keeps every field it is given and needs its element", (_name, tool, input, withoutElement) => {
-		const schema = schemaOf(tool);
+		["read_element", { elementId: "p1" }, {}],
+	] as const)("%s keeps every field it is given and needs its element", (name, input, withoutElement) => {
+		const schema = schemaOf(buildTools()[name]);
 
 		expect(schema.safeParse(input)).toStrictEqual({
 			success: true,
@@ -372,6 +370,7 @@ describe("assistant tools: what each tool accepts", () => {
 	});
 
 	it("takes no input to read the case or lint it", () => {
+		const tools = buildTools();
 		expect(schemaOf(tools.read_case).safeParse({}).success).toBe(true);
 		expect(schemaOf(tools.lint_case).safeParse({}).success).toBe(true);
 	});
