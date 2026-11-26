@@ -11,6 +11,7 @@ import {
 	vi,
 } from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
+import { until } from "@/src/__tests__/utils/model-adversarial-kit";
 import {
 	MAX_STATE_TOKENS,
 	type RankableCandidate,
@@ -625,5 +626,246 @@ describe("what it reveals", () => {
 		expect(text).not.toContain(server.origin);
 		expect(text).not.toContain("models.example.test");
 		expect(text).not.toContain(CLAIM);
+	});
+});
+
+describe("the address of the ranking server", () => {
+	it.each([
+		["OPENROUTER", "/api/alpha/decisions"],
+		["OLLAMA", "/v1/systemone"],
+	] as const)("drops every trailing slash of a %s address and nothing else", async (type, path) => {
+		for (const slashes of ["", "/", "//", "///"]) {
+			server.requests.length = 0;
+			await rank({
+				connection: connection(type, { baseUrl: `${server.origin}${slashes}` }),
+			});
+
+			expect(server.requests.map((request) => request.url)).toStrictEqual([
+				path,
+			]);
+		}
+	});
+});
+
+describe("the summary sent for a candidate", () => {
+	const LONG = "a".repeat(SUMMARY_MAX_CHARS + 1);
+
+	async function sentSummary(summary: string): Promise<string | undefined> {
+		server.requests.length = 0;
+		await rank({
+			candidates: [{ ...(candidates(1)[0] as RankableCandidate), summary }],
+		});
+		return bodyOf(0).state.candidates[0]?.summary;
+	}
+
+	it.each([
+		[
+			"trims both ends and joins runs of whitespace",
+			"  one   two \n\n three\t",
+			"one two three",
+		],
+		[
+			"keeps a summary of exactly the limit",
+			"a".repeat(SUMMARY_MAX_CHARS),
+			"a".repeat(SUMMARY_MAX_CHARS),
+		],
+		[
+			"cuts a summary one over the limit to the limit, ending in an ellipsis",
+			LONG,
+			`${"a".repeat(SUMMARY_MAX_CHARS - 1)}…`,
+		],
+		[
+			"does not leave a space before the ellipsis",
+			`${"a".repeat(SUMMARY_MAX_CHARS - 2)} ${"b".repeat(10)}`,
+			`${"a".repeat(SUMMARY_MAX_CHARS - 2)}…`,
+		],
+		[
+			"counts the length after whitespace is joined",
+			`${"a".repeat(SUMMARY_MAX_CHARS - 1)}  \n  `,
+			"a".repeat(SUMMARY_MAX_CHARS - 1),
+		],
+	])("%s", async (_label, summary, expected) => {
+		expect(await sentSummary(summary)).toBe(expected);
+	});
+});
+
+describe("when there is nothing to rank", () => {
+	it.each([
+		[
+			"a connection type that cannot rank",
+			() => ({ connection: connection("ANTHROPIC") }),
+		],
+		["a deadline that has passed", () => ({ deadline: Date.now() - 1 })],
+	])("returns an empty ranking for no candidates, whatever the %s", async (_label, overrides) => {
+		expect(await rank({ ...overrides(), candidates: [] })).toStrictEqual([]);
+		expect(logged).toStrictEqual([]);
+		expect(server.requests).toStrictEqual([]);
+	});
+});
+
+/** A responder that answers with a status and a text body. */
+const answeringWith =
+	(status: number, text: string): Responder =>
+	(_request, response) => {
+		response.writeHead(status);
+		response.end(text);
+	};
+
+/** Runs a ranking that is expected to give up, and returns the one entry it logged. */
+async function entryFor(run: () => Promise<unknown>): Promise<LogEntry> {
+	logged = [];
+	const result = await run();
+	if (result !== null || logged.length !== 1) {
+		throw new Error(
+			`Expected no ranking and one log entry, got ${result === null ? "no ranking" : "a ranking"} and ${logged.length} entries`
+		);
+	}
+	return logged[0] as LogEntry;
+}
+
+/** A ranking that a guard refuses, because the address is not on the operator's list. */
+function refusedAddress(baseUrl: string) {
+	vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", "");
+	return rank({ connection: connection("OPENROUTER", { baseUrl }) });
+}
+
+function answerOf(...scores: number[]) {
+	return {
+		answers: Object.fromEntries(
+			scores.map((noul, index) => [`c${index + 1}`, { type: "noul", noul }])
+		),
+	};
+}
+
+describe("what is logged when a ranking does not happen", () => {
+	const SECRET_REASON = `secret ${KEY}`;
+
+	async function failureEntries(): Promise<LogEntry[]> {
+		const entries: LogEntry[] = [];
+		const via = async (responder: Responder) => {
+			server.respond = responder;
+			entries.push(await entryFor(() => rank()));
+		};
+		await via((_request, response) => sendJson(response, {}, 500));
+		await via(answeringWith(304, ""));
+		await via(answeringWith(200, "<html>not json</html>"));
+		await via((_request, response) => sendJson(response, {}));
+		await via((_request, response) => sendJson(response, answerOf(0.5)));
+		await via((_request, response) =>
+			sendJson(response, {
+				...answerOf(0.5, 0.5, 0.5),
+				pad: "x".repeat(300_000),
+			})
+		);
+		entries.push(
+			await entryFor(() => refusedAddress("http://models.example.test"))
+		);
+		entries.push(await entryFor(() => refusedAddress("https://10.0.0.5")));
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", server.origin);
+		entries.push(
+			await entryFor(() =>
+				rank({
+					signal: AbortSignal.abort(
+						new Error(`${SECRET_REASON} ${server.origin}`)
+					),
+				})
+			)
+		);
+		return entries;
+	}
+
+	async function notAttemptedEntries(): Promise<LogEntry[]> {
+		return [
+			await entryFor(() => rank({ connection: connection("ANTHROPIC") })),
+			await entryFor(() => rank({ deadline: Date.now() - 1 })),
+		];
+	}
+
+	it("writes one warning for each way a ranking can fail, each with its own reason, and none with the key or address", async () => {
+		const failed = await failureEntries();
+		const skipped = await notAttemptedEntries();
+
+		const all = [...failed, ...skipped];
+		expect(all.every((entry) => entry.level === "warn")).toBe(true);
+		const reasons = all.map((entry) => entry.reason);
+		expect(
+			reasons.every((reason) => typeof reason === "string" && reason !== "")
+		).toBe(true);
+		expect(new Set(reasons).size).toBe(reasons.length);
+		const text = JSON.stringify(all);
+		expect(text).not.toContain(KEY);
+		expect(text).not.toContain(server.origin);
+		expect(text).not.toContain("models.example.test");
+	});
+
+	it("tells a ranking that was never tried from one that failed", async () => {
+		const failed = await failureEntries();
+		const skipped = await notAttemptedEntries();
+
+		const messages = (entries: LogEntry[]) =>
+			new Set(entries.map((entry) => entry.msg));
+		expect(messages(skipped).size).toBe(1);
+		expect(messages(failed).size).toBe(1);
+		expect([...messages(skipped)]).not.toStrictEqual([...messages(failed)]);
+		expect(skipped[0]?.msg).not.toBe("");
+		expect(failed[0]?.msg).not.toBe("");
+	});
+
+	it("treats a deadline of exactly now as passed, as one in the past is", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		try {
+			vi.setSystemTime(new Date("2030-01-01T00:00:00Z"));
+			const before = await entryFor(() => rank({ deadline: Date.now() - 1 }));
+			const exactly = await entryFor(() => rank({ deadline: Date.now() }));
+
+			expect(exactly.msg).toBe(before.msg);
+			expect(exactly.reason).toBe(before.reason);
+			expect(server.requests).toStrictEqual([]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe("a failed answer", () => {
+	it("is not used even when its body is a full ranking", async () => {
+		server.respond = (_request, response) =>
+			sendJson(response, answerOf(0.1, 0.2, 0.3), 500);
+
+		expect(await rank()).toBeNull();
+	});
+
+	it("is handled when the server answers with no body at all", async () => {
+		server.respond = answeringWith(304, "");
+
+		expect(await rank()).toBeNull();
+		expect(logged).toHaveLength(1);
+	});
+
+	it("ends the other batches' requests when one batch fails", async () => {
+		const input = candidates(3);
+		let arrived = 0;
+		let closed = 0;
+		server.respond = (request, response) => {
+			const body = JSON.parse(request.body) as RequestBody;
+			arrived += 1;
+			if (body.state.candidates.some((entry) => entry.id === "t3")) {
+				until(() => arrived === 3)
+					.then(() => sendJson(response, {}, 500))
+					.catch(() => undefined);
+				return;
+			}
+			response.on("close", () => {
+				closed += 1;
+			});
+		};
+
+		const ranked = await rank({
+			candidates: input,
+			claim: "x".repeat(MAX_STATE_TOKENS * 4),
+		});
+
+		expect(ranked).toBeNull();
+		await vi.waitFor(() => expect(closed).toBe(2));
 	});
 });

@@ -229,6 +229,59 @@ describe("embeddingModelFor", () => {
 	});
 });
 
+describe("the address the user entered", () => {
+	it.each([
+		["OPENROUTER", "/api/v1"],
+		["OLLAMA", "/v1"],
+		["OPENAI_COMPATIBLE", ""],
+	] as const)("loses every trailing slash of a %s address for chat and embeddings", async (type, path) => {
+		const baseUrl = `${server.origin}//`;
+
+		await generateText({
+			model: chatModelFor(connection(type, { baseUrl }), "m"),
+			prompt: "hi",
+			maxRetries: 0,
+		});
+		expect(lastRequest().url).toBe(`${path}/chat/completions`);
+
+		await embed({
+			model: embeddingModelFor(connection(type, { baseUrl }), "m"),
+			value: "a claim",
+			maxRetries: 0,
+		});
+		expect(lastRequest().url).toBe(`${path}/embeddings`);
+	});
+
+	it("loses every trailing slash of an Anthropic address", async () => {
+		await generateText({
+			model: chatModelFor(
+				connection("ANTHROPIC", { baseUrl: `${server.origin}//` }),
+				"m"
+			),
+			prompt: "hi",
+			maxRetries: 0,
+		});
+
+		expect(lastRequest().url).toBe("/v1/messages");
+	});
+});
+
+describe("the provider's name in the SDK's metadata", () => {
+	it.each([
+		["OPENROUTER", "openrouter"],
+		["OLLAMA", "ollama"],
+		["OPENAI_COMPATIBLE", "openai-compatible"],
+	] as const)("names a %s connection %s", (type, name) => {
+		const chat = chatModelFor(connection(type), "m") as { provider: string };
+		const search = embeddingModelFor(connection(type), "m") as {
+			provider: string;
+		};
+
+		expect(chat.provider).toBe(`${name}.chat`);
+		expect(search.provider).toBe(`${name}.embedding`);
+	});
+});
+
 describe("a job the type cannot do", () => {
 	it("throws for embeddings on an Anthropic connection, without the key in the message", () => {
 		let message = "";
