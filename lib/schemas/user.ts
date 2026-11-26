@@ -142,8 +142,8 @@ export const registerUserSchema = z
 	})
 	.refine(
 		(data) => {
-			if (data.password1 && data.password2) {
-				return data.password1 === data.password2;
+			if (data.password && data.password2 !== undefined) {
+				return data.password === data.password2;
 			}
 			return true;
 		},

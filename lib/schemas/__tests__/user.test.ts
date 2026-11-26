@@ -245,8 +245,53 @@ describe("registerUserSchema", () => {
 
 	it.each([
 		["password1 only", { password1: "one" }],
+		["password only", { password: "one" }],
 	])("does not compare when given %s", (_name, fields) => {
 		expect(issuesOf(registerUserSchema, { ...base, ...fields })).toEqual([]);
+	});
+
+	it.each([
+		"password",
+		"password1",
+	])("accepts %s with an equal password2", (field) => {
+		const input = { ...base, [field]: "same", password2: "same" };
+		expect(issuesOf(registerUserSchema, input)).toEqual([]);
+	});
+
+	it.each([
+		["password", "two"],
+		["password", ""],
+		["password1", "two"],
+		["password1", ""],
+	])("reports a mismatch for %s with password2 %j", (field, password2) => {
+		const input = { ...base, [field]: "one", password2 };
+		expect(issuesOf(registerUserSchema, input)).toEqual([
+			`password2: ${MISMATCH}`,
+		]);
+	});
+
+	it.each([
+		"",
+		"two",
+	])("asks only for a password when none is given and password2 is %j", (password2) => {
+		expect(issuesOf(registerUserSchema, { ...base, password2 })).toEqual([
+			"password: Password is required",
+		]);
+	});
+
+	it.each([
+		["password", "first"],
+		["password1", "second"],
+	])("compares password2 with password when both fields differ (password2 equals %s)", (field, password2) => {
+		const input = {
+			...base,
+			password: "first",
+			password1: "second",
+			password2,
+		};
+		expect(issuesOf(registerUserSchema, input)).toEqual(
+			field === "password" ? [] : [`password2: ${MISMATCH}`]
+		);
 	});
 });
 

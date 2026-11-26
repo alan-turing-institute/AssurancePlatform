@@ -143,4 +143,47 @@ describe("POST /api/users/register", () => {
 			await prisma.user.count({ where: { email: "weakpass@example.com" } })
 		).toBe(0);
 	});
+
+	it("answers 400 for a confirmation that differs from password and creates no user", async () => {
+		const { POST } = await import("@/app/api/users/register/route");
+
+		const response = await POST(
+			new Request("http://localhost:3000/api/users/register", {
+				method: "POST",
+				body: JSON.stringify({
+					username: "mismatch_user",
+					email: "mismatch@example.com",
+					password: STRONG,
+					password2: "OtherP@ss1",
+				}),
+			})
+		);
+
+		expect(response.status).toBe(400);
+		expect((await response.json()).error).toContain("Passwords do not match");
+		expect(
+			await prisma.user.count({ where: { email: "mismatch@example.com" } })
+		).toBe(0);
+	});
+
+	it("creates the user when password2 matches password", async () => {
+		const { POST } = await import("@/app/api/users/register/route");
+
+		const response = await POST(
+			new Request("http://localhost:3000/api/users/register", {
+				method: "POST",
+				body: JSON.stringify({
+					username: "matching_user",
+					email: "matching@example.com",
+					password: STRONG,
+					password2: STRONG,
+				}),
+			})
+		);
+
+		expect(response.status).toBe(201);
+		expect(
+			await prisma.user.count({ where: { email: "matching@example.com" } })
+		).toBe(1);
+	});
 });
