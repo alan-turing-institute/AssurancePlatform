@@ -145,6 +145,27 @@ export function pdfBody(page: Element): PdfOutline[] {
 		.map(pdfOutline);
 }
 
+/** What a page repeats on every page it spreads over (the fixed parts). */
+export function pdfFixed(page: Element): PdfOutline[] {
+	return Array.from(page.children).filter(isFixed).map(pdfOutline);
+}
+
+/** The orientation each page was given, in order; none was given for portrait. */
+export function pdfOrientations(root: ParentNode): (string | null)[] {
+	return pdfPages(root).map((page) => page.getAttribute("data-orientation"));
+}
+
+/** The title, author, subject and creator the document was given. */
+export function pdfProperties(root: ParentNode) {
+	const document = root.querySelector('[data-pdf="document"]');
+	return {
+		title: document?.getAttribute("data-title"),
+		author: document?.getAttribute("data-author"),
+		subject: document?.getAttribute("data-subject"),
+		creator: document?.getAttribute("data-creator"),
+	};
+}
+
 /** The text blocks under an element, in order. A text inside another text counts once. */
 export function pdfTexts(root: ParentNode): string[] {
 	return Array.from(root.querySelectorAll('[data-pdf="text"]'))
