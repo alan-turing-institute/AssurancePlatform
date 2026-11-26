@@ -25,6 +25,7 @@ type Rule = Record1["rule"];
 type Uncertainty = NonNullable<Record1["uncertainty"]>;
 
 const DOT = "·";
+const SUBJECT_WORD = /[A-Za-z]+/g;
 const QUANTILES_START = /^quantiles /;
 
 /** An ISO text for a time built from local parts, so its local reading is known. */
@@ -331,7 +332,11 @@ describe("reduction and aggregation wording", () => {
 			reduction: { kind, params, rule, version: "d1" },
 			aggregation: undefined,
 		} as Partial<Record1>);
-		expect(reduction).toBe(`${text}, passes when true ${DOT} d1`);
+		const identity = readingText({ kind: "identity" }).replace(
+			` ${DOT} v1`,
+			""
+		);
+		expect(reduction).toBe(`${text}, ${identity} ${DOT} d1`);
 	});
 
 	function reductionText(own: boolean): string {
@@ -581,9 +586,8 @@ describe("describeLiveNode", () => {
 		const text = describeLiveNode(passing, state, name);
 		const named = describeLiveNode(passing, state, "P1");
 		expect(text.endsWith(describeBadge(passing, false))).toBe(true);
-		expect(text.length).toBeGreaterThan(
-			describeBadge(passing, false).length + 1
-		);
+		const subject = text.slice(0, -describeBadge(passing, false).length);
+		expect(subject.match(SUBJECT_WORD)?.length ?? 0).toBeGreaterThanOrEqual(2);
 		expect(text).not.toBe(named);
 		expect(text).not.toContain("null");
 	});
