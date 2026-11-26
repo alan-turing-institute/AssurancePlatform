@@ -147,10 +147,9 @@ const RELATIONSHIP = /<Relationship\s[^>]*>/g;
 const RELATIONSHIP_ID = /\sId="([^"]*)"/;
 const RELATIONSHIP_TARGET = /\sTarget="([^"]*)"/;
 
-/** The links of the document body, in order, with the address each one points to. */
-export async function docxLinks(result: ExportResult): Promise<DocxLink[]> {
+/** The address each relationship id points to, from a `.rels` part. */
+function relationshipTargets(rels: string): Map<string, string> {
 	const targets = new Map<string, string>();
-	const rels = await docxPart(result, "word/_rels/document.xml.rels");
 	for (const [tag] of rels.matchAll(RELATIONSHIP)) {
 		const id = RELATIONSHIP_ID.exec(tag)?.[1];
 		const target = RELATIONSHIP_TARGET.exec(tag)?.[1];
@@ -158,6 +157,14 @@ export async function docxLinks(result: ExportResult): Promise<DocxLink[]> {
 			targets.set(id, decode(target));
 		}
 	}
+	return targets;
+}
+
+/** The links of the document body, in order, with the address each one points to. */
+export async function docxLinks(result: ExportResult): Promise<DocxLink[]> {
+	const targets = relationshipTargets(
+		await docxPart(result, "word/_rels/document.xml.rels")
+	);
 	const xml = await docxPart(result, "word/document.xml");
 	return Array.from(xml.matchAll(LINK), ([link]) => ({
 		text: textOf(link),
@@ -170,6 +177,71 @@ export function docxParagraphs(items: DocxBodyItem[]): DocxParagraph[] {
 	return items.flatMap((item) =>
 		item.kind === "paragraph" ? [item.paragraph] : []
 	);
+}
+
+/**
+ * The footer of a page section: its text, with each page-number field written
+ * as its name in braces, and whether it holds a picture.
+ */
+export interface DocxFooter {
+	hasImage: boolean;
+	text: string;
+}
+
+/** A page section of the Word file: its paragraphs, page orientation and footer. */
+export interface DocxSection {
+	footer: DocxFooter | undefined;
+	orientation: string | undefined;
+	paragraphs: DocxParagraph[];
+}
+
+const SECTION_SPLIT = /(<w:sectPr>[\s\S]*?<\/w:sectPr>)/;
+const ORIENTATION = /<w:pgSz[^>]*w:orient="([^"]*)"/;
+const FOOTER_REFERENCE = /<w:footerReference[^>]*r:id="([^"]*)"/;
+const FOOTER_PART =
+	/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:instrText[^>]*>([\s\S]*?)<\/w:instrText>/g;
+
+function footerOf(xml: string): DocxFooter {
+	const text = Array.from(xml.matchAll(FOOTER_PART), ([, shown, field]) =>
+		field === undefined ? decode(shown ?? "") : `{${field.trim()}}`
+	).join("");
+	return { text, hasImage: xml.includes("<w:drawing>") };
+}
+
+async function sectionFooter(
+	result: ExportResult,
+	targets: Map<string, string>,
+	properties: string
+): Promise<DocxFooter | undefined> {
+	const target = targets.get(FOOTER_REFERENCE.exec(properties)?.[1] ?? "");
+	return target === undefined
+		? undefined
+		: footerOf(await docxPart(result, `word/${target}`));
+}
+
+/** The page sections of the Word file, in order, from the title page on. */
+export async function docxSections(
+	result: ExportResult
+): Promise<DocxSection[]> {
+	const targets = relationshipTargets(
+		await docxPart(result, "word/_rels/document.xml.rels")
+	);
+	const parts = (await docxPart(result, "word/document.xml")).split(
+		SECTION_SPLIT
+	);
+	const sections: Promise<DocxSection>[] = [];
+	for (let i = 0; i + 1 < parts.length; i += 2) {
+		const body = parts[i] ?? "";
+		const properties = parts[i + 1] ?? "";
+		sections.push(
+			sectionFooter(result, targets, properties).then((footer) => ({
+				footer,
+				orientation: ORIENTATION.exec(properties)?.[1],
+				paragraphs: docxParagraphs(docxBody(body)),
+			}))
+		);
+	}
+	return await Promise.all(sections);
 }
 
 /** The tables of the body, in order. */
