@@ -6,7 +6,7 @@ import {
 import {
 	type DocxBodyItem,
 	type DocxParagraph,
-	docxBody,
+	docxContent,
 	docxMediaBytes,
 	docxMediaNames,
 	docxParagraphs,
@@ -41,12 +41,7 @@ async function exportBlocks(blocks: ContentBlock[]): Promise<ExportResult> {
 
 /** What the document holds after the title page, in order. */
 async function contentOf(blocks: ContentBlock[]): Promise<DocxBodyItem[]> {
-	const result = await exportBlocks(blocks);
-	const items = docxBody(await docxPart(result, "word/document.xml"));
-	const titlePageEnd = items.findIndex(
-		(item) => item.kind === "paragraph" && item.paragraph.endsSection
-	);
-	return titlePageEnd < 0 ? [] : items.slice(titlePageEnd + 1);
+	return await docxContent(await exportBlocks(blocks));
 }
 
 async function paragraphsOf(blocks: ContentBlock[]): Promise<DocxParagraph[]> {

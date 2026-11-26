@@ -115,13 +115,54 @@ function tableOf(xml: string): DocxTable {
 }
 
 /** The paragraphs and tables of the document body, in order. */
-export function docxBody(documentXml: string): DocxBodyItem[] {
+function docxBody(documentXml: string): DocxBodyItem[] {
 	return Array.from(documentXml.matchAll(BODY_ITEM), (match): DocxBodyItem => {
 		if (match[0].startsWith("<w:tbl>")) {
 			return { kind: "table", table: tableOf(match[0]) };
 		}
 		return { kind: "paragraph", paragraph: paragraphOf(match[0]) };
 	});
+}
+
+/** What the document holds after the title page, in order. */
+export async function docxContent(
+	result: ExportResult
+): Promise<DocxBodyItem[]> {
+	const items = docxBody(await docxPart(result, "word/document.xml"));
+	const titlePageEnd = items.findIndex(
+		(item) => item.kind === "paragraph" && item.paragraph.endsSection
+	);
+	return titlePageEnd < 0 ? [] : items.slice(titlePageEnd + 1);
+}
+
+/** A link of the Word body: the text shown and the address it points to. */
+export interface DocxLink {
+	target: string;
+	text: string;
+}
+
+const LINK = /<w:hyperlink\s[^>]*>[\s\S]*?<\/w:hyperlink>/g;
+const LINK_ID = /r:id="([^"]*)"/;
+const RELATIONSHIP = /<Relationship\s[^>]*>/g;
+const RELATIONSHIP_ID = /\sId="([^"]*)"/;
+const RELATIONSHIP_TARGET = /\sTarget="([^"]*)"/;
+
+/** The links of the document body, in order, with the address each one points to. */
+export async function docxLinks(result: ExportResult): Promise<DocxLink[]> {
+	const targets = new Map<string, string>();
+	const rels = await docxPart(result, "word/_rels/document.xml.rels");
+	for (const [tag] of rels.matchAll(RELATIONSHIP)) {
+		const id = RELATIONSHIP_ID.exec(tag)?.[1];
+		const target = RELATIONSHIP_TARGET.exec(tag)?.[1];
+		if (id && target !== undefined) {
+			targets.set(id, decode(target));
+		}
+	}
+	const xml = await docxPart(result, "word/document.xml");
+	return Array.from(xml.matchAll(LINK), ([link]) => ({
+		text: textOf(link),
+		target: targets.get(LINK_ID.exec(link)?.[1] ?? "") ?? "",
+	}));
 }
 
 /** The paragraphs among body items that are not inside a table, in order. */
