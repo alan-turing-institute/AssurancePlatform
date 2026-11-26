@@ -96,6 +96,15 @@ describe("describeDifference", () => {
 			difference("threshold", "identity")
 		);
 		expect(difference(null, "identity")).toContain("rule");
+		expect(difference("threshold", null)).toBe(difference(null, "identity"));
+		const unknownField = describeDifference({
+			field: "unlisted",
+			declared: null,
+			used: "identity",
+		});
+		expect(difference(null, "identity")).toBe(
+			unknownField.replace("unlisted", "rule")
+		);
 	});
 
 	it("falls back to a plain sentence for a field it does not know", () => {

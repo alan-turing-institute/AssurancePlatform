@@ -73,4 +73,21 @@ describe("loading the assistant's registration", () => {
 		expect(slots.casePanelSlot.list()).toHaveLength(1);
 		expect(slots.settingsSectionSlot.list()).toEqual([]);
 	});
+
+	it("carries the error that stopped the registration in the log entry", async () => {
+		const { slots } = await loadFresh();
+		const failure = new Error("simulated panel failure");
+		vi.spyOn(slots.casePanelSlot, "register").mockImplementation(() => {
+			throw failure;
+		});
+
+		await import("../register");
+
+		const errors = entries.filter((entry) => entry.level === "error");
+		expect(errors).toHaveLength(1);
+		expect(errors[0]?.error).toMatchObject({
+			name: failure.name,
+			message: failure.message,
+		});
+	});
 });
