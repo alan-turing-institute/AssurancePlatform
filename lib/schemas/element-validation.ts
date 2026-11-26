@@ -245,19 +245,17 @@ const ContractSchema = BaseElementSchema.extend({
 /**
  * Discriminated union of all element type schemas.
  */
-export const ElementValidationSchema = z
-	.discriminatedUnion("elementType", [
-		GoalSchema,
-		StrategySchema,
-		PropertyClaimSchema,
-		EvidenceSchema,
-		JustificationSchema,
-		AssumptionSchema,
-		ModuleSchema,
-		AwayGoalSchema,
-		ContractSchema,
-	])
-	.describe("Validation schema for assurance case elements by type");
+export const ElementValidationSchema = z.discriminatedUnion("elementType", [
+	GoalSchema,
+	StrategySchema,
+	PropertyClaimSchema,
+	EvidenceSchema,
+	JustificationSchema,
+	AssumptionSchema,
+	ModuleSchema,
+	AwayGoalSchema,
+	ContractSchema,
+]);
 
 // ============================================
 // VALIDATION FUNCTIONS
