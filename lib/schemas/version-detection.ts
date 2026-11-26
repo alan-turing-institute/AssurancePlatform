@@ -148,15 +148,7 @@ export function detectAndValidate(data: unknown): VersionDetectionResult {
 		return validateVersion(data, detectedVersion);
 	}
 
-	// Unknown format - try each schema in order (nested -> flat)
-	for (const version of ["nested", "flat"] as CaseFormatVersion[]) {
-		const result = validateVersion(data, version);
-		if (result.isValid) {
-			return result;
-		}
-	}
-
-	// All failed - return helpful error
+	// Unknown format - return a helpful error
 	return {
 		version: null,
 		isValid: false,
