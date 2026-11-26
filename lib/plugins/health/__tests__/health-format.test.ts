@@ -379,6 +379,10 @@ describe("reduction and aggregation wording", () => {
 	it("words a worst-of aggregation in words that differ from the other kinds", () => {
 		const text = aggregationText("worst-of", {});
 		expect(text.endsWith(` ${DOT} a1`)).toBe(true);
+		expect(aggregationText("unlisted", {}).split(` ${DOT} `)[0]).toBe(
+			"unlisted"
+		);
+		expect(text.split(` ${DOT} `)[0]).not.toBe("worst-of");
 		const unknownKind = aggregationText("unlisted", {}).replace(
 			"unlisted",
 			"worst-of"
