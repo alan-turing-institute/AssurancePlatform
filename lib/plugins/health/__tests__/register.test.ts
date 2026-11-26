@@ -103,6 +103,10 @@ describe("registerHealthPlugin — appearance", () => {
 						entry.level === "error" && entry.msg.includes("plain evidence")
 				)
 			).toBe(true);
+			expect(
+				logs.entries.find((entry) => entry.msg.includes("plain evidence"))
+					?.error
+			).toMatchObject({ message: "simulated appearance failure" });
 			expect(elementAppearanceSlot.list()).toEqual([]);
 			expect(elementBadgeSlot.list()).toHaveLength(1);
 			expect(elementPanelSlot.list()).toHaveLength(1);

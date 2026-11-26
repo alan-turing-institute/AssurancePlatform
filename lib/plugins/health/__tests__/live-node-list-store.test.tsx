@@ -456,6 +456,20 @@ describe("the case's live evidence nodes: the retry after a failed read", () => 
 
 		expect(requests).toHaveLength(2);
 	});
+
+	it("does not run a departed store's retry against the store that replaced it", async () => {
+		const { unmount } = await showThenFail(() => listResponse([], 500));
+		unmount();
+		answers = () => listResponse([liveNode({ id: "n2" })]);
+		const again = renderHook(() => useLiveEvidenceNodes("case-1", true));
+		await wait(0);
+		expect(requests).toHaveLength(3);
+
+		await wait(10 * RETRY_AFTER);
+
+		expect(requests).toHaveLength(3);
+		expect(again.result.current.byNodeId.has("n2")).toBe(true);
+	});
 });
 
 describe("the case's live evidence nodes: when nobody is listening", () => {
