@@ -86,11 +86,6 @@ export const REQUIRED_FIELDS: Record<string, Set<string>> = {
  * @returns true if the field is applicable to this element type
  */
 export function fieldAppliesTo(field: string, elementType: string): boolean {
-	// Dialogical reasoning fields apply to all types
-	if (field === "defeatsElementId" || field === "isDefeater") {
-		return true;
-	}
-
 	// Check if field is in the applicability map
 	const applicableTypes = FIELD_APPLICABILITY[field];
 	if (!applicableTypes) {
