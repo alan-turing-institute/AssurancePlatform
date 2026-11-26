@@ -287,8 +287,7 @@ export const nullableUrlSchema = z
 export const positiveIntSchema = z
 	.number()
 	.int("Must be a whole number")
-	.positive("Must be a positive number")
-	.describe("Positive integer identifier");
+	.positive("Must be a positive number");
 
 /**
  * Coerce string to positive integer (for query params and FormData)

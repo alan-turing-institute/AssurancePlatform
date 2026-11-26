@@ -195,13 +195,15 @@ function toParamList(value: unknown, ctx: z.RefinementCtx): unknown {
 	const specs: ParamSpecInput[] = [];
 	for (const [key, given] of Object.entries(value)) {
 		const plain = plainDefault(given);
-		const label = labelOfKey(key);
 		if (key === "") {
 			ctx.addIssue({
 				code: "custom",
 				message: "must not have a setting with an empty name",
 			});
-		} else if (plain === null) {
+			continue;
+		}
+		const label = labelOfKey(key);
+		if (plain === null) {
 			ctx.addIssue({
 				code: "custom",
 				path: [key],

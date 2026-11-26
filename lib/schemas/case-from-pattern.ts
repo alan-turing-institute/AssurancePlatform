@@ -77,14 +77,12 @@ export function protoKeyProblem(values: unknown): string | undefined {
 /**
  * Schema for starting a new case from a pattern.
  */
-export const createCaseFromPatternSchema = z
-	.strictObject({
-		source: patternSourceSchema,
-		name: startedCaseNameSchema,
-		description: startedCaseDescriptionSchema,
-		variableValues: variableValuesSchema.default({}),
-	})
-	.describe("Input schema for starting a new assurance case from a pattern");
+export const createCaseFromPatternSchema = z.strictObject({
+	source: patternSourceSchema,
+	name: startedCaseNameSchema,
+	description: startedCaseDescriptionSchema,
+	variableValues: variableValuesSchema.default({}),
+});
 
 export type CreateCaseFromPatternInput = z.input<
 	typeof createCaseFromPatternSchema

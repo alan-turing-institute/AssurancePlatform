@@ -23,8 +23,7 @@ export const passwordSchema = z
 	.regex(
 		/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/,
 		"Password must contain at least one special character"
-	)
-	.describe("Strong password with uppercase, digit, and special character");
+	);
 
 // ============================================
 // Auth Form Schemas
