@@ -401,6 +401,14 @@ describe("describeUncertainty", () => {
 		).toBe(`probability 0.9 ${notes}`);
 	});
 
+	it("writes a value that is not text as JSON", () => {
+		expect(
+			describeUncertainty(
+				uncertainty({ kind: "probability", params: { p: { a: 1 } } })
+			)
+		).toBe(`probability {"a":1} ${notes}`);
+	});
+
 	it.each([
 		[{ "0.05": 1 }, "quantiles 5%: 1"],
 		[{ "0.025": 1 }, "quantiles 2.5%: 1"],
@@ -422,6 +430,7 @@ describe("describeUncertainty", () => {
 		const text = quantiles(q);
 		expect(text).toMatch(QUANTILES_START);
 		expect(text).not.toMatch(ANY_DIGIT);
+		expect(text.split(" (")[0]?.trim()).toBe("quantiles");
 	});
 });
 
