@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { rankCandidates } from "@/lib/models/clef";
+import type { TechniquesModelAccess } from "@/lib/plugins/assistant/techniques-models";
 import {
 	createTechniquesTool,
+	techniquesConfigured,
 	techniquesPrompt,
 } from "@/lib/plugins/assistant/techniques-tool";
 import {
@@ -8,6 +11,10 @@ import {
 	createCaseTools,
 } from "@/lib/plugins/assistant/tools";
 
+vi.mock("@/lib/models/clef", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/models/clef")>()),
+	rankCandidates: vi.fn(),
+}));
 vi.mock("@/lib/services/case-export-service", () => ({ exportCase: vi.fn() }));
 vi.mock("@/lib/services/health-status-service", () => ({
 	readHealthStatusesForCase: vi.fn(),
@@ -35,6 +42,7 @@ beforeEach(() => {
 	vi.stubEnv("TECHNIQUES_MCP_URL", URL_);
 	vi.stubGlobal("fetch", fetchMock);
 	fetchMock.mockReset();
+	vi.mocked(rankCandidates).mockReset();
 });
 
 afterEach(() => {
@@ -500,6 +508,159 @@ describe("suggest_techniques cancellation", () => {
 		expect(await pending).toEqual({
 			error: "The techniques service is not reachable.",
 		});
+	});
+});
+
+describe("suggest_techniques: which addresses count", () => {
+	it.each([
+		["http", "http://techniques.test:8080/mcp", true],
+		["https", "https://techniques.test/mcp", true],
+		[
+			"a scheme that only starts with http",
+			"httpx://techniques.test/mcp",
+			false,
+		],
+		["a scheme that only ends with http", "xhttp://techniques.test/mcp", false],
+	])("judges a service address by its scheme: %s", (_label, address, configured) => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", address);
+
+		expect(techniquesConfigured()).toBe(configured);
+	});
+
+	it.each([
+		["https", "https://example.org/a", "https://example.org/a"],
+		["http", "http://example.org/a", undefined],
+		[
+			"a scheme that only starts with https",
+			"httpsx://example.org/a",
+			undefined,
+		],
+		["a scheme that only ends with https", "xhttps://example.org/a", undefined],
+	])("a technique link with %s is kept only when it is https", async (_label, link, kept) => {
+		reply({
+			result: {
+				structuredContent: { results: [{ ...RESULT, url: link }] },
+			},
+		});
+
+		const out = (await createTechniquesTool(null).execute?.(
+			{ claimText: "robust" },
+			options
+		)) as { results: { url?: string }[] };
+
+		expect(out.results[0]?.url).toBe(kept);
+	});
+});
+
+describe("suggest_techniques: models and ranking input", () => {
+	const CONNECTION = {
+		id: "c1",
+		label: "c1",
+		type: "OLLAMA" as const,
+		baseUrl: "http://models.test",
+		apiKey: null,
+	};
+	const RANKING_JOB = { connectionId: "c1", model: "ranker" };
+
+	function rankingModels(): TechniquesModelAccess {
+		return {
+			roles: () =>
+				Promise.resolve({
+					chat: null,
+					ranking: RANKING_JOB,
+					search: null,
+					searchCheck: null,
+				}),
+			connection: () => Promise.resolve(CONNECTION),
+		};
+	}
+
+	it("answers that the service is not reachable when the user's jobs cannot even be asked for", async () => {
+		reply(EMPTY_REPLY);
+		const models: TechniquesModelAccess = {
+			roles: () => Promise.reject(new Error("db down")),
+			connection: () => Promise.resolve(null),
+		};
+
+		const out = await createTechniquesTool(null, undefined, models).execute?.(
+			{ claimText: "robust" },
+			options
+		);
+
+		expect(out).toStrictEqual({
+			error: "The techniques service is not reachable.",
+		});
+	});
+
+	it.each([
+		["gives its summary", "A summary.", "A summary."],
+		["has no summary and so gives an empty one", undefined, ""],
+	])("sends a technique that %s to the ranking model", async (_label, summary, sent) => {
+		vi.mocked(rankCandidates).mockResolvedValue(null);
+		reply({
+			result: { structuredContent: { results: [{ ...RESULT, summary }] } },
+		});
+
+		await createTechniquesTool(null, undefined, rankingModels()).execute?.(
+			{ claimText: "robust" },
+			options
+		);
+
+		expect(
+			vi.mocked(rankCandidates).mock.calls[0]?.[0].candidates
+		).toMatchObject([{ id: "shap", summary: sent }]);
+	});
+});
+
+describe("suggest_techniques: the time left at the edge", () => {
+	it.each([
+		["a second", 16_000, true],
+		["a millisecond under a second", 15_999, false],
+	])("asks the service with %s left once the answer margin is kept back", async (_label, left, asked) => {
+		vi.useFakeTimers();
+		reply(EMPTY_REPLY);
+
+		await createTechniquesTool(null, Date.now() + left).execute?.(
+			{ claimText: "robust" },
+			options
+		);
+
+		expect(fetchMock.mock.calls.length > 0).toBe(asked);
+	});
+});
+
+describe("suggest_techniques: choosing the claim to send", () => {
+	const element = (text: string) => ({ label: "P1", type: "CLAIM", text });
+	const run = (text: string, claimText: string) =>
+		createTechniquesTool(element(text)).execute?.({ claimText }, options);
+
+	it("measures a supplied claim without the spaces around it", async () => {
+		reply(EMPTY_REPLY);
+
+		await run("selected text", `  ${"y".repeat(38)}  `);
+
+		expect(sentClaim()).toBe("selected text");
+	});
+
+	it("sends a supplied claim without the spaces around it", async () => {
+		reply(EMPTY_REPLY);
+
+		await run("selected text", `  ${"y".repeat(40)}  `);
+
+		expect(sentClaim()).toBe("y".repeat(40));
+	});
+
+	it("keeps a supplied claim of 40 characters, but not 39, when the selected element has no text", async () => {
+		reply(EMPTY_REPLY);
+
+		const refused = await run("", "z".repeat(39));
+		expect(refused).toStrictEqual({
+			error: "The selected element has no text.",
+		});
+		expect(fetchMock).not.toHaveBeenCalled();
+
+		await run("", "z".repeat(40));
+		expect(sentClaim()).toBe("z".repeat(40));
 	});
 });
 

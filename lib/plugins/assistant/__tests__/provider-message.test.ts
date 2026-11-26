@@ -271,3 +271,129 @@ describe("cleanProviderMessage", () => {
 		).toBe("a key was invalid");
 	});
 });
+
+describe("cleanProviderMessage — edges of each rule", () => {
+	const OPAQUE = "opaque-7f3a9c2e51d8";
+	const withKey = (apiKey: string | null, baseUrl = "x") => ({
+		apiKey,
+		baseUrl,
+	});
+
+	it("removes a bearer token however much space follows the word", () => {
+		expect(
+			cleanProviderMessage("Header Bearer \n  abc123tok was refused", SECRETS)
+		).toBe("Header Bearer [key removed] was refused");
+	});
+
+	it("removes a masked key made of nothing but the mask", () => {
+		expect(cleanProviderMessage("Key **** rejected", SECRETS)).toBe(
+			"Key [key removed] rejected"
+		);
+	});
+
+	it.each([
+		["a delete character", at(0x7f)],
+		["the first C1 control", at(0x80)],
+		["a next-line control", at(0x85)],
+		["the last C1 control", at(0x9f)],
+	])("turns %s into a space", (_label, control) => {
+		expect(cleanProviderMessage(`one${control}two`, SECRETS)).toBe("one two");
+	});
+
+	it("keeps the character just before the delete character", () => {
+		expect(cleanProviderMessage("one~two", SECRETS)).toBe("one~two");
+	});
+
+	it("removes the key everywhere and whatever its case, even without sk-", () => {
+		expect(
+			cleanProviderMessage(
+				`bad ${OPAQUE.toUpperCase()} and ${OPAQUE} again`,
+				withKey(OPAQUE)
+			)
+		).toBe("bad [key removed] and [key removed] again");
+	});
+
+	it("removes the key when letters touch it", () => {
+		expect(cleanProviderMessage(`AA${OPAQUE}BB`, withKey(OPAQUE))).toBe(
+			"AA[key removed]BB"
+		);
+	});
+
+	it.each([
+		["is exactly four characters long", "abcd", "token abcd bad"],
+		[
+			"has spaces inside it, written without them",
+			"ab cd ef",
+			"token abcdef bad",
+		],
+	])("removes a key that %s", (_label, apiKey, message) => {
+		expect(cleanProviderMessage(message, withKey(apiKey))).toBe(
+			"token [key removed] bad"
+		);
+	});
+
+	it("leaves the message alone when the key is only whitespace", () => {
+		expect(cleanProviderMessage("null value here", withKey("    "))).toBe(
+			"null value here"
+		);
+	});
+
+	it("removes an address wherever it appears and whatever its case", () => {
+		expect(
+			cleanProviderMessage(
+				"Down: MODELS.example and models.EXAMPLE",
+				withKey(null, "https://models.example/v1")
+			)
+		).toBe("Down: [address removed] and [address removed]");
+	});
+
+	it.each([
+		["a letter before it", "unmodels.example"],
+		["a digit after it", "models.example2"],
+	])("keeps text that has %s the address", (_label, text) => {
+		expect(
+			cleanProviderMessage(
+				`see ${text} now`,
+				withKey(null, "https://models.example")
+			)
+		).toBe(`see ${text} now`);
+	});
+
+	it("removes the address up to its port when only that part is given", () => {
+		expect(
+			cleanProviderMessage(
+				"Cannot reach https://models.example:8443 now",
+				withKey(null, "https://models.example:8443/v1")
+			)
+		).toBe("Cannot reach [address removed] now");
+	});
+
+	it.each([
+		["three characters long", "go to a.b now", "go to [address removed] now"],
+		["two characters long", "ai is great", "ai is great"],
+	])("treats a host that is %s", (_label, message, expected) => {
+		const url = message.includes("a.b") ? "http://a.b/v1" : "http://ai/v1";
+
+		expect(cleanProviderMessage(message, withKey(null, url))).toBe(expected);
+	});
+
+	it("keeps a message of exactly 300 characters whole", () => {
+		const text = "a".repeat(MAX_PROVIDER_MESSAGE_CHARS);
+
+		expect(cleanProviderMessage(text, SECRETS)).toBe(text);
+	});
+
+	it("cuts a message of 301 characters to 299 and an ellipsis", () => {
+		expect(
+			cleanProviderMessage("a".repeat(MAX_PROVIDER_MESSAGE_CHARS + 1), SECRETS)
+		).toBe(`${"a".repeat(MAX_PROVIDER_MESSAGE_CHARS - 1)}…`);
+	});
+
+	it("drops a space left at the cut before the ellipsis", () => {
+		const message = `${"x".repeat(MAX_PROVIDER_MESSAGE_CHARS - 2)} ${"y".repeat(10)}`;
+
+		expect(cleanProviderMessage(message, SECRETS)).toBe(
+			`${"x".repeat(MAX_PROVIDER_MESSAGE_CHARS - 2)}…`
+		);
+	});
+});
