@@ -20,6 +20,7 @@ import {
 	GuardedFetchError,
 	guardedFetch,
 } from "../guarded-fetch";
+import { type ModelServer, startModelServer } from "./model-server";
 
 const KEY = "sk-test-secret-key";
 const NAMES_THE_DNS_ANSWER = /public|resolve/i;
@@ -453,5 +454,164 @@ describe("limits", () => {
 		const error = await pending;
 		expect(error).toBeInstanceOf(Error);
 		expect(error).not.toBeInstanceOf(GuardedFetchError);
+	});
+});
+
+describe("the error a caller receives", () => {
+	it("is named GuardedFetchError", () => {
+		const error = new GuardedFetchError("redirect");
+		expect(error.name).toBe("GuardedFetchError");
+		expect(String(error).startsWith("GuardedFetchError: ")).toBe(true);
+	});
+});
+
+describe("an address given as a URL object", () => {
+	it("is fetched like the same address as a string", async () => {
+		listLocalServer();
+		const response = await guardedFetch(new URL(`http://127.0.0.1:${port}/ok`));
+		expect(await response.json()).toStrictEqual({ ok: true });
+		expect(hits).toStrictEqual(["/ok"]);
+	});
+
+	it.each([
+		["https://user:pass-secret@models.example.test/v1", "credentials-in-url"],
+		["http://models.example.test/v1", "insecure-url"],
+		["https://127.0.0.1/v1", "blocked-address"],
+	])("is refused for %s", async (address, code) => {
+		await expect(guardedFetch(new URL(address))).rejects.toMatchObject({
+			code,
+		});
+	});
+});
+
+/** A resolver that ignores `all` and answers with one address, the older callback form. */
+function singleAnswer(address: string, family: number): LookupFunction {
+	const lookup = (
+		_hostname: string,
+		_options: unknown,
+		callback: (...args: unknown[]) => void
+	) => callback(null, address, family);
+	return lookup as unknown as LookupFunction;
+}
+
+describe("a resolver that answers with one address", () => {
+	it("connects to that address", async () => {
+		vi.stubEnv(
+			"TEA_MODELS_LOCAL_ADDRESSES",
+			`http://ollama.example.test:${port}`
+		);
+		const response = await guardedFetch(
+			`http://ollama.example.test:${port}/ok`,
+			undefined,
+			{ lookup: singleAnswer("127.0.0.1", 4) }
+		);
+		expect(response.status).toBe(200);
+		expect(hits).toStrictEqual(["/ok"]);
+	});
+
+	it("is refused when that address is blocked", async () => {
+		await expect(
+			guardedFetch("https://models.example.test/v1", undefined, {
+				lookup: singleAnswer("10.0.0.5", 4),
+			})
+		).rejects.toMatchObject({ code: "blocked-address" });
+	});
+});
+
+/** An error with `depth` wrappers around a cause that the guard recognises as a redirect. */
+function redirectBehind(depth: number): Error {
+	let error = new Error("unexpected redirect");
+	for (let level = 0; level < depth; level += 1) {
+		error = new Error("wrapper", { cause: error });
+	}
+	return error;
+}
+
+describe("a failure whose cause chain is long", () => {
+	it.each([
+		[0, "redirect"],
+		[3, "redirect"],
+		[4, "request-failed"],
+		[8, "request-failed"],
+	])("with a redirect %i wrappers deep is reported as %s", async (depth, code) => {
+		vi.stubEnv(
+			"TEA_MODELS_LOCAL_ADDRESSES",
+			`http://ollama.example.test:${port}`
+		);
+		const failing = redirectBehind(depth);
+		const lookup = vi.fn<LookupFunction>((_hostname, _options, callback) => {
+			callback(failing, []);
+		});
+		await expect(
+			guardedFetch(`http://ollama.example.test:${port}/ok`, undefined, {
+				lookup,
+			})
+		).rejects.toMatchObject({ code });
+		expect(hits).toStrictEqual([]);
+	});
+});
+
+describe("the size cap on a response", () => {
+	let sizes: ModelServer;
+
+	beforeAll(async () => {
+		sizes = await startModelServer((request, response) => {
+			const [, kind, count] = request.url.split("/");
+			const body = "x".repeat(Number(count));
+			if (kind === "declared") {
+				response.writeHead(200, { "content-length": String(body.length) });
+				response.end(body);
+				return;
+			}
+			response.writeHead(200);
+			response.write(body.slice(0, 1));
+			response.end(body.slice(1));
+		});
+	});
+
+	afterAll(() => sizes.close());
+
+	beforeEach(() => {
+		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", sizes.origin);
+	});
+
+	it.each([
+		[999, true],
+		[1000, true],
+		[1001, false],
+	])("treats a declared length of %i bytes against a cap of 1000 (fits: %s)", async (count, fits) => {
+		const pending = guardedFetch(
+			`${sizes.origin}/declared/${count}`,
+			undefined,
+			{
+				maxBytes: 1000,
+			}
+		);
+		if (fits) {
+			expect((await (await pending).text()).length).toBe(count);
+		} else {
+			await expect(pending).rejects.toMatchObject({
+				code: "response-too-large",
+			});
+		}
+	});
+
+	it.each([
+		[999, true],
+		[1000, true],
+		[1001, false],
+	])("treats a streamed body of %i bytes against a cap of 1000 (fits: %s)", async (count, fits) => {
+		const response = await guardedFetch(
+			`${sizes.origin}/streamed/${count}`,
+			undefined,
+			{ maxBytes: 1000 }
+		);
+		if (fits) {
+			expect((await response.text()).length).toBe(count);
+		} else {
+			await expect(response.text()).rejects.toMatchObject({
+				code: "response-too-large",
+			});
+		}
 	});
 });

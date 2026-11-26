@@ -108,4 +108,44 @@ describe("isBlockedAddress", () => {
 	])("blocks %j because it is not an address", (text) => {
 		expect(isBlockedAddress(text)).toBe(true);
 	});
+
+	it.each([
+		["1.2.3.4:5::", "an IPv4 tail that is not the last group"],
+		["::1.2.3.4:5", "an IPv4 tail that is not the last group, after ::"],
+		["2606:4700::1.2.3", "an IPv4 tail with three parts"],
+		["2606:4700::256.1.1.1", "an IPv4 tail with an octet out of range"],
+		["1:2:3:4:5::6:7:8:9", "more groups than fit around ::"],
+		["1:2:3:4:5:6:7", "seven groups without ::"],
+		["2606:4700:4700::1111]", "a closing bracket only"],
+		["[2606:4700:4700::1111", "an opening bracket only"],
+	])("blocks the malformed IPv6 text %s (%s)", (address) => {
+		expect(isBlockedAddress(address)).toBe(true);
+	});
+
+	it.each([
+		["2606:4700:4700:0:0:0:0:1111", "eight groups written in full"],
+		["2606:4700:4700::1111%eth0", "a zone suffix"],
+		["[2606:4700:4700::1111]", "URL brackets"],
+		["1:2:3:4:5:6:7:1", "no leading zero groups"],
+		["1:ff9b::7f00:1", "the NAT64 second group under another first group"],
+		["64:1::7f00:1", "the NAT64 first group under another second group"],
+		["64:ff9b:2::7f00:1", "a NAT64 prefix with a third group of 2"],
+		["64:ff9b:0:1::7f00:1", "a NAT64 prefix with a non-zero fourth group"],
+		["64:ff9b::1:0:7f00:1", "a NAT64 prefix with a non-zero fifth group"],
+		["64:ff9b::1:7f00:1", "a NAT64 prefix with a non-zero sixth group"],
+		["2606:4700:1::7f00:1", "a third group of 1 outside NAT64"],
+		[
+			"2606:4700:0:0:0:ffff:7f00:1",
+			"a sixth group of ffff outside ::ffff:0:0/96",
+		],
+		["::1:7f00:1", "five zero groups followed by a sixth group of 1"],
+		[
+			"2606:4700:0:0:ffff:0:7f00:1",
+			"a fifth group of ffff outside ::ffff:0:0/96",
+		],
+		["::1:0:7f00:1", "four zero groups followed by a fifth group of 1"],
+		["::ffff:1:7f00:1", "a fifth group of ffff with a non-zero sixth group"],
+	])("allows the public IPv6 address %s (%s)", (address) => {
+		expect(isBlockedAddress(address)).toBe(false);
+	});
 });
