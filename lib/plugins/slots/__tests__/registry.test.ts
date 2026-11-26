@@ -183,6 +183,63 @@ describe("SlotRegistry", () => {
 		expect(panelRegistry.list()).toEqual([{ pluginId: "tea.fake" }]);
 	});
 
+	it.each([
+		[
+			"a key the first lacks",
+			{ pluginId: "tea.fake" },
+			{ pluginId: "tea.fake", tabId: undefined },
+		],
+		[
+			"a key the first has",
+			{ pluginId: "tea.fake", tabId: undefined },
+			{ pluginId: "tea.fake" },
+		],
+	])("treats a second registration with %s as a conflict", (_label, first, second) => {
+		mockGetManifestEntry.mockReturnValue(FAKE_PLUGIN);
+		const registry = new SlotRegistry<{ pluginId: string; tabId?: string }>(
+			"element-badge"
+		);
+		registry.register(first);
+
+		expect(() => registry.register(second)).toThrow(
+			CONFLICTING_REGISTRATION_MESSAGE
+		);
+		expect(registry.list()).toEqual([first]);
+	});
+
+	it("registers into each shared slot only for a plugin declaring that slot's own surface", async () => {
+		const slots = await import("../registry");
+		const bySurface = {
+			"case-panel": slots.casePanelSlot,
+			"element-appearance": slots.elementAppearanceSlot,
+			"element-badge": slots.elementBadgeSlot,
+			"element-panel": slots.elementPanelSlot,
+			"settings-section": slots.settingsSectionSlot,
+		} as const;
+		const surfaces = Object.keys(bySurface) as (keyof typeof bySurface)[];
+
+		for (const surface of surfaces) {
+			const slot = bySurface[surface];
+			slot.resetForTests();
+			mockGetManifestEntry.mockReturnValue({
+				...FAKE_PLUGIN,
+				surfaces: surfaces.filter((s) => s !== surface),
+			});
+			expect(() => slot.register({ pluginId: "tea.fake" } as never)).toThrow(
+				UNDECLARED_SURFACE_MESSAGE
+			);
+
+			mockGetManifestEntry.mockReturnValue({
+				...FAKE_PLUGIN,
+				surfaces: [surface],
+			});
+			expect(() =>
+				slot.register({ pluginId: "tea.fake" } as never)
+			).not.toThrow();
+			slot.resetForTests();
+		}
+	});
+
 	it("has a case-panel slot that admits only plugins declaring that surface", async () => {
 		const { casePanelSlot } = await import("../registry");
 		casePanelSlot.resetForTests();

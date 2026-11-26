@@ -230,3 +230,85 @@ describe("lintCase bounds", () => {
 		expect(result.acknowledgedGaps).toEqual([]);
 	});
 });
+
+const MAX_REASON = 500;
+const MAX_LABEL = 200;
+
+/** The reason on the top-level-role finding when a second goal named `secondName` also carries it. */
+function twoRootsReason(secondName: string): string {
+	const result = lintCase(
+		caseDoc(
+			"Two roots",
+			goal("G1", "Top.", {
+				context: ["Scope."],
+				children: [goal(secondName, "Second top-level.")],
+			})
+		)
+	);
+	return result.findings.find((f) => f.ruleId === "TREE01")?.reason ?? "";
+}
+
+/** The label on the unsupported-claim finding for a claim called `name`. */
+function unsupportedClaimLabel(name: string): string | undefined {
+	const result = lintCase(
+		caseDoc(
+			"Label",
+			goal("G1", "Top.", {
+				context: ["Scope."],
+				children: [
+					strategy("S1", "Argue.", { children: [claim(name, "Open.")] }),
+				],
+			})
+		)
+	);
+	return result.findings.find((f) => f.ruleId === "EVID01")?.elementLabel;
+}
+
+describe("lintCase text and label limits", () => {
+	it("leaves a reason of exactly 500 characters whole and cuts one of 501", () => {
+		const baseLength = twoRootsReason("a").length;
+		const padding = "x".repeat(MAX_REASON - baseLength);
+
+		const exact = twoRootsReason(`a${padding}`);
+		const over = twoRootsReason(`a${padding}x`);
+
+		expect(exact).toHaveLength(MAX_REASON);
+		expect(exact.endsWith("…")).toBe(false);
+		expect(over).toHaveLength(MAX_REASON + 1);
+		expect(over.endsWith("…")).toBe(true);
+	});
+
+	it("leaves a label of exactly 200 characters whole and cuts one of 201", () => {
+		const exact = "x".repeat(MAX_LABEL);
+
+		expect(unsupportedClaimLabel(exact)).toBe(exact);
+		expect(unsupportedClaimLabel(`${exact}x`)).toBe(`${exact}…`);
+	});
+
+	it("joins the labels of every element a case-wide finding names with a comma and a space, in tree order", () => {
+		const result = lintCase(
+			caseDoc(
+				"Two roots",
+				goal("First", "Top.", {
+					context: ["Scope."],
+					children: [goal("Second", "Second top-level.")],
+				})
+			)
+		);
+
+		const tree01 = result.findings.find((f) => f.ruleId === "TREE01");
+		expect(tree01?.elementLabel).toBe("First, Second");
+	});
+
+	it("labels a case-wide question 'case' even when an element has the id 'case'", () => {
+		const result = lintCase(
+			caseDoc(
+				"Id clash",
+				goal("Named", "Top.", { id: "case", context: ["Scope."] })
+			)
+		);
+
+		const question = result.questions.find((q) => q.ruleId === "CONF04");
+		expect(question?.elementLabel).toBe("case");
+	});
+});
