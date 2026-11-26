@@ -414,20 +414,15 @@ function findPathInTree(
 	path: TreePath,
 	findIn: (node: Record<string, unknown>) => TreePath | null
 ): TreePath | null {
-	if (typeof node !== "object" || node === null) {
-		return null;
-	}
 	const inside = findIn(node as Record<string, unknown>);
 	if (inside) {
 		return [...path, ...inside];
 	}
-	const { children } = node as { children?: unknown };
-	if (Array.isArray(children)) {
-		for (const [index, child] of children.entries()) {
-			const found = findPathInTree(child, [...path, "children", index], findIn);
-			if (found) {
-				return found;
-			}
+	const { children } = node as { children: unknown[] };
+	for (const [index, child] of children.entries()) {
+		const found = findPathInTree(child, [...path, "children", index], findIn);
+		if (found) {
+			return found;
 		}
 	}
 	return null;
