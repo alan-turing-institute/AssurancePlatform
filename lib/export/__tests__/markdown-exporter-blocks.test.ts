@@ -10,6 +10,8 @@ import type { ContentBlock, RenderedDocument, RenderedSection } from "../types";
 const exporter = new MarkdownExporter();
 const BASE64_IMAGE_BODY =
 	"\n# Test Case\n\n## Goals\n\n![Alt](./diagram.png)\n*Cap*\n";
+/** An image reference with the alt text "Alt" and any file name, then the caption "Cap". */
+const IMAGE_REFERENCE_WITH_CAPTION = /!\[Alt\]\([^)\s]+\)\n\*Cap\*\n$/;
 
 /** What the exporter writes for the case name when a section is not a title page. */
 const TITLE = "# Test Case\n";
@@ -351,17 +353,26 @@ describe("MarkdownExporter images", () => {
 		expect(body).toBe(`${GOALS_HEAD}${written}`);
 	});
 
-	it.each([
-		["a PNG", "iVBORw0KGgoAAAANSUhEUg"],
-		["an SVG", "PHN2ZyB4bWxucz0iaHR0cDovL3d3"],
-		["an SVG with an XML declaration", "PD94bWwgdmVyc2lvbj0iMS4wIj8+"],
-		["a JPEG", "/9j/4AAQSkZJRgABAQ"],
-	])("refers to %s given as base64 without writing the data out", async (_label, src) => {
+	it("refers to a PNG given as base64 by a file name, without writing the data out", async () => {
+		const src = "iVBORw0KGgoAAAANSUhEUg";
 		const body = await goalsBody([
 			{ type: "image", src, alt: "Alt", caption: "Cap" },
 		]);
 
 		expect(body).toBe(BASE64_IMAGE_BODY);
+		expect(body).not.toContain(src);
+	});
+
+	it.each([
+		["an SVG", "PHN2ZyB4bWxucz0iaHR0cDovL3d3"],
+		["an SVG with an XML declaration", "PD94bWwgdmVyc2lvbj0iMS4wIj8+"],
+		["a JPEG", "/9j/4AAQSkZJRgABAQ"],
+	])("refers to %s given as base64 by an image reference with its alt text, without writing the data out", async (_label, src) => {
+		const body = await goalsBody([
+			{ type: "image", src, alt: "Alt", caption: "Cap" },
+		]);
+
+		expect(body).toMatch(IMAGE_REFERENCE_WITH_CAPTION);
 		expect(body).not.toContain(src);
 	});
 });

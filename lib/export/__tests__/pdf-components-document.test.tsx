@@ -19,6 +19,7 @@ import {
 	pdfOrientations,
 	pdfPages,
 	pdfProperties,
+	pdfStyle,
 } from "@/src/__tests__/utils/export-pdf-kit";
 import type { PDFDocumentProps } from "../exporters/pdf-components";
 import { PDFDocumentComponent } from "../exporters/pdf-components";
@@ -175,6 +176,91 @@ describe("PDF element fields", () => {
 		[false, ["Goal: N"]],
 	])("draws the draft marker only when in the sandbox is %s", (inSandbox, drawn) => {
 		expect(elementOf({ inSandbox })).toStrictEqual(drawn);
+	});
+});
+
+/** The depth at which the indent of an element stops growing. */
+const LAST_INDENTED_DEPTH = 3;
+
+/** The left indent, as the style gives it, of elements drawn at depths 0 to 5 in one section. */
+function indentsByDepth(): number[] {
+	const blocks = [0, 1, 2, 3, 4, 5].map((depth) =>
+		elementBlock({ id: `n${depth}` }, depth)
+	);
+	const container = drawSections([exportSection("goals", "", blocks)]);
+	const page = pdfPages(container)[1] as Element;
+	return Array.from(page.children)
+		.filter((part) => part.getAttribute("data-fixed") !== "true")
+		.map((part) => Number(pdfStyle(part).paddingLeft));
+}
+
+describe("PDF element depth", () => {
+	it("indents an element further for each level of depth, up to the deepest indented level", () => {
+		const indents = indentsByDepth();
+
+		for (let depth = 0; depth < LAST_INDENTED_DEPTH; depth++) {
+			expect(indents[depth + 1]).toBeGreaterThan(indents[depth] as number);
+		}
+	});
+
+	it("keeps the indent of an element the same beyond the deepest indented level", () => {
+		const indents = indentsByDepth();
+
+		expect(indents[4]).toBe(indents[LAST_INDENTED_DEPTH]);
+		expect(indents[5]).toBe(indents[LAST_INDENTED_DEPTH]);
+	});
+});
+
+const HEADING_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+
+/** The font size each heading level and a paragraph are drawn with. */
+function sizesDrawn(): { headings: unknown[]; paragraph: unknown } {
+	const container = drawSections([
+		exportSection("goals", "", [
+			...HEADING_LEVELS.map(
+				(level): ContentBlock => ({ type: "heading", level, text: `H${level}` })
+			),
+			paragraph("Body"),
+		]),
+	]);
+	const texts = Array.from(container.querySelectorAll('[data-pdf="text"]'));
+	const partOf = (text: string) =>
+		texts.find((candidate) => candidate.textContent === text) as Element;
+	const page = pdfPages(container)[1] as Element;
+	return {
+		headings: HEADING_LEVELS.map(
+			(level) => pdfStyle(partOf(`H${level}`)).fontSize
+		),
+		// A paragraph takes the size of its page unless its own style gives one.
+		paragraph: pdfStyle(partOf("Body")).fontSize ?? pdfStyle(page).fontSize,
+	};
+}
+
+describe("PDF heading sizes", () => {
+	it("gives every heading level a size", () => {
+		const { headings } = sizesDrawn();
+
+		for (const size of headings) {
+			expect(typeof size).toBe("number");
+		}
+	});
+
+	it("draws no heading level larger than the level above it", () => {
+		const { headings } = sizesDrawn();
+
+		for (let i = 1; i < headings.length; i++) {
+			expect(headings[i - 1] as number).toBeGreaterThanOrEqual(
+				headings[i] as number
+			);
+		}
+	});
+
+	it.each([
+		1, 2, 3, 4,
+	] as const)("draws a level %i heading larger than a paragraph", (level) => {
+		const { headings, paragraph: body } = sizesDrawn();
+
+		expect(headings[level - 1] as number).toBeGreaterThan(body as number);
 	});
 });
 

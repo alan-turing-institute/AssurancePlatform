@@ -3,12 +3,14 @@ import type { ExportResult } from "@/lib/export/types";
 
 /**
  * A paragraph of the Word body: its text, its paragraph style, whether it holds
- * a picture, the line style of its bottom border and whether it ends a page section.
+ * a picture, the line style of its bottom border, whether it ends a page section
+ * and its left indent (zero when it has none).
  */
 export interface DocxParagraph {
 	bottomBorder: string | undefined;
 	endsSection: boolean;
 	hasImage: boolean;
+	indent: number;
 	style: string | undefined;
 	text: string;
 }
@@ -35,6 +37,10 @@ const TABLE_CELL = /<w:tc>[\s\S]*?<\/w:tc>/g;
 const TEXT_RUN = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:t\/>|<w:br\/>/g;
 const STYLE = /<w:pStyle w:val="([^"]*)"/;
 const BOTTOM_BORDER = /<w:pBdr>\s*<w:bottom[^>]*?w:val="([^"]*)"/;
+const LEFT_INDENT = /<w:ind\s[^>]*?w:left="([^"]*)"/;
+const RUN_TEXT = /<(w:t|w:instrText|w:delText)(?:\s[^>]*)?>[\s\S]*?<\/\1>/g;
+const BARE_TEXT = />([^<>]*[^<>\s][^<>]*)</g;
+const CHECKED_PART = /^word\/(document|header\d*|footer\d*)\.xml$/;
 
 function readFile(blob: Blob): Promise<ArrayBuffer> {
 	return new Promise((resolve, reject) => {
@@ -55,6 +61,25 @@ async function docxZip(result: ExportResult): Promise<JSZip> {
 	return await JSZip.loadAsync(await readFile(result.blob));
 }
 
+/**
+ * Refuses a body, header or footer part that holds text outside a run, as a
+ * parser refuses bad markup: the reader sees only text inside runs.
+ */
+function assertNoBareText(name: string, xml: string): void {
+	if (!CHECKED_PART.test(name)) {
+		return;
+	}
+	const [stray] = Array.from(
+		xml.replace(RUN_TEXT, "").matchAll(BARE_TEXT),
+		(match) => match[1]
+	);
+	if (stray !== undefined) {
+		throw new Error(
+			`the Word part ${name} holds text outside a run: ${JSON.stringify(stray)}`
+		);
+	}
+}
+
 /** The text of one part of the Word file, such as `word/document.xml`. */
 export async function docxPart(
 	result: ExportResult,
@@ -64,7 +89,34 @@ export async function docxPart(
 	if (!file) {
 		throw new Error(`the Word file has no part ${name}`);
 	}
-	return await file.async("string");
+	const xml = await file.async("string");
+	assertNoBareText(name, xml);
+	return xml;
+}
+
+/** The width and height written for a picture, as the file gives them. */
+export interface DocxPictureSize {
+	height: number;
+	width: number;
+}
+
+const PICTURE_EXTENT = /<wp:extent\s+cx="([^"]*)"\s+cy="([^"]*)"\s*\/>/g;
+
+/** The size of every picture placed in the body, the headers and the footers. */
+export async function docxPictureSizes(
+	result: ExportResult
+): Promise<DocxPictureSize[]> {
+	const zip = await docxZip(result);
+	const names = Object.keys(zip.files).filter((name) =>
+		CHECKED_PART.test(name)
+	);
+	const parts = await Promise.all(names.map((name) => docxPart(result, name)));
+	return parts.flatMap((xml) =>
+		Array.from(xml.matchAll(PICTURE_EXTENT), ([, cx, cy]) => ({
+			width: Number(cx),
+			height: Number(cy),
+		}))
+	);
 }
 
 /** The names of the media files stored in the Word file. */
@@ -112,6 +164,7 @@ function paragraphOf(xml: string): DocxParagraph {
 		hasImage: xml.includes("<w:drawing>"),
 		endsSection: xml.includes("<w:sectPr>"),
 		bottomBorder: BOTTOM_BORDER.exec(xml)?.[1],
+		indent: Number(LEFT_INDENT.exec(xml)?.[1] ?? 0),
 	};
 }
 

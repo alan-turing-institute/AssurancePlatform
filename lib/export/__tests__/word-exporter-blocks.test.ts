@@ -12,6 +12,7 @@ import {
 	docxMediaNames,
 	docxParagraphs,
 	docxPart,
+	docxPictureSizes,
 	docxTables,
 } from "@/src/__tests__/utils/export-docx-kit";
 import { WordExporter } from "../exporters/word-exporter";
@@ -201,6 +202,24 @@ describe("WordExporter images", () => {
 		expect(await docxMediaBytes(result, names[0] ?? "")).toStrictEqual(
 			Array.from(Buffer.from(payload, "base64"))
 		);
+	});
+
+	it("gives every picture a width and a height that are positive whole numbers", async () => {
+		const sizes = await docxPictureSizes(
+			await exportBlocks(
+				[PNG_DATA, JPEG_DATA, GIF_DATA, BMP_DATA].map((src) => ({
+					type: "image",
+					src,
+					alt: "Alt",
+				}))
+			)
+		);
+
+		expect(sizes).toHaveLength(4);
+		for (const { width, height } of sizes) {
+			expect(Number.isInteger(width) && width > 0).toBe(true);
+			expect(Number.isInteger(height) && height > 0).toBe(true);
+		}
 	});
 
 	it("writes the picture, then its caption, in the place of the block", async () => {

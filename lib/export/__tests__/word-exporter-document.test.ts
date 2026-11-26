@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { paragraph } from "@/src/__tests__/utils/export-case-kit";
+import { elementBlock, paragraph } from "@/src/__tests__/utils/export-case-kit";
 import {
 	exportDocument,
 	exportSection,
 } from "@/src/__tests__/utils/export-document-kit";
 import {
+	docxContent,
 	docxMediaBytes,
 	docxMediaNames,
 	docxPart,
+	docxPictureSizes,
 	docxSections,
 	paragraphTexts,
 } from "@/src/__tests__/utils/export-docx-kit";
@@ -166,6 +168,53 @@ describe("WordExporter diagram pages", () => {
 		]);
 
 		expect(await docxSections(result)).toHaveLength(2);
+	});
+});
+
+/** One block of each kind. */
+function everyKindOfBlock(): ContentBlock[] {
+	return [
+		{ type: "heading", level: 2, text: "Heading" },
+		paragraph("Paragraph"),
+		{ type: "list", ordered: true, items: ["one"] },
+		{ type: "table", headers: ["H"], rows: [["c"]] },
+		imageBlock(PNG_DATA, "Cap"),
+		{ type: "divider" },
+		{ type: "metadata", key: "K", value: "V" },
+		elementBlock({ description: "D", url: "https://u.test/x" }),
+	];
+}
+
+describe("WordExporter well-formed parts", () => {
+	it("holds no text outside a run in a document of every kind of block, a diagram page and both footers", async () => {
+		const result = await exportDoc(
+			exportDocument({
+				branding: { footerText: "Confidential" },
+				sections: [
+					exportSection("diagram", "D", [imageBlock(PNG_DATA, "Cap")]),
+					exportSection("goals", "Goals", everyKindOfBlock()),
+				],
+			})
+		);
+
+		await expect(docxSections(result)).resolves.toHaveLength(3);
+		await expect(docxContent(result)).resolves.not.toHaveLength(0);
+	});
+
+	it("gives the picture of a diagram and the logo a width and a height that are positive whole numbers", async () => {
+		const result = await exportDoc(
+			exportDocument({
+				branding: { logoBase64: PNG_DATA },
+				sections: [exportSection("diagram", "D", [imageBlock(PNG_DATA)])],
+			})
+		);
+		const sizes = await docxPictureSizes(result);
+
+		expect(sizes).toHaveLength(2);
+		for (const { width, height } of sizes) {
+			expect(Number.isInteger(width) && width > 0).toBe(true);
+			expect(Number.isInteger(height) && height > 0).toBe(true);
+		}
 	});
 });
 

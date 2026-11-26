@@ -247,6 +247,100 @@ describe("WordExporter element sandbox marker", () => {
 	});
 });
 
+/** The depth at which the indent of an element stops growing. */
+const LAST_INDENTED_DEPTH = 3;
+
+/** The left indent of the title line of elements drawn at depths 0 to 5 in one document. */
+async function titleIndentsByDepth(): Promise<number[]> {
+	const depths = [0, 1, 2, 3, 4, 5];
+	const items = await docxContent(
+		await exportBlocks(
+			depths.map((depth) =>
+				elementBlock({ id: `n${depth}`, name: `D${depth}` }, depth)
+			)
+		)
+	);
+	const paragraphs = docxParagraphs(items);
+	return depths.map(
+		(depth) =>
+			paragraphs.find((p) => p.text === `Goal: D${depth}`)?.indent ?? Number.NaN
+	);
+}
+
+describe("WordExporter element depth", () => {
+	it("indents an element further for each level of depth, up to the deepest indented level", async () => {
+		const indents = await titleIndentsByDepth();
+
+		for (let depth = 0; depth < LAST_INDENTED_DEPTH; depth++) {
+			expect(indents[depth + 1]).toBeGreaterThan(indents[depth] as number);
+		}
+	});
+
+	it("keeps the indent of an element the same beyond the deepest indented level", async () => {
+		const indents = await titleIndentsByDepth();
+
+		expect(indents[4]).toBe(indents[LAST_INDENTED_DEPTH]);
+		expect(indents[5]).toBe(indents[LAST_INDENTED_DEPTH]);
+	});
+});
+
+const COMMENT_LINE = "me (15/01/2024)\nhi";
+
+/** The left indent of each line of one fully written element, by its text. */
+async function indentsOfLines(depth: number): Promise<Map<string, number>> {
+	const items = await docxContent(
+		await exportBlocks([
+			elementBlock(
+				{
+					description: "D",
+					context: ["c1"],
+					assumption: "A",
+					justification: "J",
+					url: "https://u.test/x",
+					inSandbox: true,
+					comments: [
+						{ author: "me", content: "hi", createdAt: "2024-01-15T12:00:00Z" },
+					],
+				},
+				depth
+			),
+		])
+	);
+	return new Map(
+		docxParagraphs(items)
+			.filter((p) => p.text !== "")
+			.map((p) => [p.text, p.indent])
+	);
+}
+
+describe("WordExporter element line indentation", () => {
+	it.each([
+		0, 2, 5,
+	])("indents the context lines and the comment lines of an element at depth %i further than its title", async (depth) => {
+		const indents = await indentsOfLines(depth);
+		const title = indents.get("Goal: N") as number;
+
+		expect(indents.get("• c1") as number).toBeGreaterThan(title);
+		expect(indents.get(COMMENT_LINE) as number).toBeGreaterThan(title);
+	});
+
+	it.each([
+		"D",
+		"Context:",
+		"Assumption: A",
+		"Justification: J",
+		"URL: https://u.test/x",
+		"[Draft]",
+		"Comments:",
+	])("indents the line %j of an element at least as far as its title", async (line) => {
+		const indents = await indentsOfLines(2);
+
+		expect(indents.get(line) as number).toBeGreaterThanOrEqual(
+			indents.get("Goal: N") as number
+		);
+	});
+});
+
 describe("WordExporter content blocks of a section", () => {
 	it("turns each kind of block into its own kind of content, in the order given", async () => {
 		const items = await docxContent(

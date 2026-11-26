@@ -3,15 +3,40 @@ import type { ReactNode } from "react";
 /**
  * A stand-in for `@react-pdf/renderer` that draws each part as a plain element
  * marked with `data-pdf`, plus readers over what the app's components hand to
- * it. Styles are dropped; only content and structure are kept.
+ * it. Each part's style is kept, flattened, as JSON in `data-pdf-style`.
  *
  * In a test file the mock is one line, because mocks are hoisted above imports:
  * `vi.mock("@react-pdf/renderer", async () => (await import("@/src/__tests__/utils/export-pdf-kit")).pdfStandIn);`
  */
 
+/** A style as the drawing package takes it: an object, or a list of them with empty entries. */
+type PdfStyleInput =
+	| Record<string, unknown>
+	| false
+	| null
+	| undefined
+	| PdfStyleInput[];
+
 interface WithChildren {
 	children?: ReactNode;
 	fixed?: boolean;
+	style?: PdfStyleInput;
+}
+
+/** A list of styles merged from left to right; empty entries are skipped. */
+function flattenStyle(style: PdfStyleInput): Record<string, unknown> {
+	if (!style) {
+		return {};
+	}
+	if (Array.isArray(style)) {
+		return Object.assign({}, ...style.map(flattenStyle));
+	}
+	return style;
+}
+
+function styleMark(style: PdfStyleInput): string | undefined {
+	const flat = flattenStyle(style);
+	return Object.keys(flat).length === 0 ? undefined : JSON.stringify(flat);
 }
 
 interface DocumentProps extends WithChildren {
@@ -40,12 +65,14 @@ function Document({
 	author,
 	subject,
 	creator,
+	style,
 }: DocumentProps) {
 	return (
 		<div
 			data-author={author}
 			data-creator={creator}
 			data-pdf="document"
+			data-pdf-style={styleMark(style)}
 			data-subject={subject}
 			data-title={title}
 		>
@@ -54,38 +81,53 @@ function Document({
 	);
 }
 
-function Page({ children, orientation, size }: PageProps) {
+function Page({ children, orientation, size, style }: PageProps) {
 	return (
-		<div data-orientation={orientation} data-pdf="page" data-size={size}>
+		<div
+			data-orientation={orientation}
+			data-pdf="page"
+			data-pdf-style={styleMark(style)}
+			data-size={size}
+		>
 			{children}
 		</div>
 	);
 }
 
-function View({ children, fixed }: WithChildren) {
+function View({ children, fixed, style }: WithChildren) {
 	return (
-		<div data-fixed={fixedMark(fixed)} data-pdf="view">
+		<div
+			data-fixed={fixedMark(fixed)}
+			data-pdf="view"
+			data-pdf-style={styleMark(style)}
+		>
 			{children}
 		</div>
 	);
 }
 
 /** A text drawn with a page-number function shows page 1 of 1. */
-function Text({ children, render, fixed }: TextProps) {
+function Text({ children, render, fixed, style }: TextProps) {
 	return (
-		<span data-fixed={fixedMark(fixed)} data-pdf="text">
+		<span
+			data-fixed={fixedMark(fixed)}
+			data-pdf="text"
+			data-pdf-style={styleMark(style)}
+		>
 			{render ? render({ pageNumber: 1, totalPages: 1 }) : children}
 		</span>
 	);
 }
 
-function Image({ src }: { src?: string }) {
-	return <span data-pdf="image" data-src={src} />;
+function Image({ src, style }: { src?: string; style?: PdfStyleInput }) {
+	return (
+		<span data-pdf="image" data-pdf-style={styleMark(style)} data-src={src} />
+	);
 }
 
-function Link({ children, src }: WithChildren & { src?: string }) {
+function Link({ children, src, style }: WithChildren & { src?: string }) {
 	return (
-		<a data-pdf="link" href={src}>
+		<a data-pdf="link" data-pdf-style={styleMark(style)} href={src}>
 			{children}
 		</a>
 	);
@@ -131,6 +173,11 @@ function pdfOutline(element: Element): PdfOutline {
 		return { link: element.getAttribute("href") ?? "", content };
 	}
 	return content;
+}
+
+/** The style a part was given, with a list of styles merged from left to right. */
+export function pdfStyle(element: Element): Record<string, unknown> {
+	return JSON.parse(element.getAttribute("data-pdf-style") ?? "{}");
 }
 
 /** The pages, in order. */
