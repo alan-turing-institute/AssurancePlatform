@@ -1,4 +1,47 @@
 import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
+import type {
+	ContentBlock,
+	DiagramImage,
+	HeadingBlock,
+	RenderedDocument,
+	RenderedSection,
+	SectionType,
+} from "@/lib/export/types";
+
+export const OVERVIEW: DiagramImage = {
+	data: "data:image/png;base64,AAAA",
+	format: "png",
+};
+
+export function typesOf(document: RenderedDocument): SectionType[] {
+	return document.sections.map((section) => section.type);
+}
+
+export function sectionOf(
+	document: RenderedDocument,
+	type: SectionType
+): RenderedSection {
+	const section = document.sections.find((s) => s.type === type);
+	if (!section) {
+		throw new Error(`no ${type} section`);
+	}
+	return section;
+}
+
+export function heading(
+	level: HeadingBlock["level"],
+	text: string
+): ContentBlock {
+	return { type: "heading", level, text };
+}
+
+export function paragraph(text: string): ContentBlock {
+	return { type: "paragraph", text };
+}
+
+export function metadata(key: string, value: string): ContentBlock {
+	return { type: "metadata", key, value };
+}
 
 /**
  * Builders for small cases handed to the export templates. A node has an empty

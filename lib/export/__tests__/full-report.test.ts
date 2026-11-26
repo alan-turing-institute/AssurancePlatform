@@ -1,13 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlainCase, PlainTreeNode } from "@/lib/case/defined-terms";
-import { exportCase, exportNode } from "@/src/__tests__/utils/export-case-kit";
+import {
+	exportCase,
+	exportNode,
+	heading,
+	metadata,
+	OVERVIEW,
+	paragraph,
+	sectionOf,
+	typesOf,
+} from "@/src/__tests__/utils/export-case-kit";
 import { createTemplateFromPreset } from "../templates";
 import type {
 	ContentBlock,
-	DiagramImage,
 	HeadingBlock,
 	RenderedDocument,
-	RenderedSection,
 	SectionType,
 	TemplateInput,
 } from "../types";
@@ -105,37 +112,10 @@ function renderReport(
 	});
 }
 
-function typesOf(document: RenderedDocument): SectionType[] {
-	return document.sections.map((section) => section.type);
-}
-
-function sectionOf(
-	document: RenderedDocument,
-	type: SectionType
-): RenderedSection {
-	const section = document.sections.find((s) => s.type === type);
-	if (!section) {
-		throw new Error(`no ${type} section`);
-	}
-	return section;
-}
-
 function headingsOf(blocks: ContentBlock[]): [number, string][] {
 	return blocks
 		.filter((b): b is HeadingBlock => b.type === "heading")
 		.map((b) => [b.level, b.text]);
-}
-
-function heading(level: HeadingBlock["level"], text: string): ContentBlock {
-	return { type: "heading", level, text };
-}
-
-function paragraph(text: string): ContentBlock {
-	return { type: "paragraph", text };
-}
-
-function metadata(key: string, value: string): ContentBlock {
-	return { type: "metadata", key, value };
 }
 
 const DEFAULT_TYPES: SectionType[] = [
@@ -146,11 +126,6 @@ const DEFAULT_TYPES: SectionType[] = [
 	"comments",
 	"metadata",
 ];
-
-const OVERVIEW: DiagramImage = {
-	data: "data:image/png;base64,AAAA",
-	format: "png",
-};
 
 beforeEach(() => {
 	vi.useFakeTimers({ now: new Date("2025-03-04T10:30:00Z") });
