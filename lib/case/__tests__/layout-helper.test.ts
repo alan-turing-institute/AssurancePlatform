@@ -1,5 +1,7 @@
+import type { Edge, Node } from "reactflow";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type LogEntry, resetLogSink, setLogSink } from "@/lib/logger";
+import type { LayoutOptions } from "../layout-helper";
 
 describe("layout-helper utilities", () => {
 	describe("module structure", () => {
@@ -914,5 +916,690 @@ describe("layout-helper utilities", () => {
 			// Sanity: heights aren't otherwise unused above.
 			expect(HEIGHTS.goal).toBeGreaterThan(0);
 		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Placement rules checked through relations between the returned positions.
+// ---------------------------------------------------------------------------
+
+interface Pos {
+	x: number;
+	y: number;
+}
+type Direction = "TB" | "LR" | "RL" | "BT";
+
+interface NodeSpec {
+	attachedTo?: string;
+	hidden?: boolean;
+	id: string;
+	measured?: { height?: number; width?: number };
+	name?: string;
+	noData?: boolean;
+	position?: Pos;
+	type?: string;
+}
+
+/** The fixed width every node kind shares. */
+const NODE_WIDTH = 320;
+/** A layer gap that differs from the default, so the option is visible. */
+const LAYER = 50;
+
+function dataOf(spec: NodeSpec) {
+	if (spec.noData) {
+		return undefined;
+	}
+	const attached = spec.attachedTo ? { attachedTo: spec.attachedTo } : {};
+	return { name: spec.name ?? spec.id, ...attached };
+}
+
+function mk(spec: NodeSpec): Node {
+	const measured = spec.measured ? { measured: spec.measured } : {};
+	return {
+		id: spec.id,
+		type: spec.type,
+		position: spec.position ?? { x: 0, y: 0 },
+		hidden: spec.hidden ?? false,
+		data: dataOf(spec),
+		...measured,
+	} as Node;
+}
+
+function link(source: string, target: string, extra: Partial<Edge> = {}): Edge {
+	return { id: `${source}-${target}`, source, target, hidden: false, ...extra };
+}
+
+async function layout(
+	nodes: Node[],
+	edges: Edge[],
+	options: Partial<LayoutOptions> & { direction: Direction }
+) {
+	const { getLayoutedElements } = await import("../layout-helper");
+	return getLayoutedElements(nodes, edges, options as LayoutOptions);
+}
+
+function posMap(result: { nodes: Node[] }): Map<string, Pos> {
+	return new Map(result.nodes.map((n) => [n.id, n.position]));
+}
+
+function at(pos: Map<string, Pos>, id: string): Pos {
+	const found = pos.get(id);
+	if (!found) {
+		throw new Error(`no position for ${id}`);
+	}
+	return found;
+}
+
+/** The distance a child sits beyond its parent's own size, along the tree axis. */
+async function sizeAlongTree(
+	parent: NodeSpec,
+	direction: "TB" | "LR"
+): Promise<number> {
+	const result = await layout(
+		[mk(parent), mk({ id: "child", type: "goal" })],
+		[link(parent.id, "child")],
+		{ direction, layerSpacing: LAYER }
+	);
+	const pos = posMap(result);
+	const from = at(pos, parent.id);
+	const to = at(pos, "child");
+	return direction === "TB" ? to.y - from.y - LAYER : to.x - from.x - LAYER;
+}
+
+const KIND_HEIGHTS: [string | undefined, number][] = [
+	["goal", 120],
+	["strategy", 110],
+	["property", 100],
+	["propertyClaim", 100],
+	["evidence", 90],
+	["awayGoal", 100],
+	["module", 90],
+	["default", 110],
+	["unlisted-kind", 110],
+	[undefined, 110],
+];
+
+describe("layout sizes of nodes with no measurement", () => {
+	it.each(
+		KIND_HEIGHTS
+	)("separates the child of a %s node by that kind's height (top-down)", async (type, height) => {
+		expect(await sizeAlongTree({ id: "p", type }, "TB")).toBe(height);
+	});
+
+	it.each(
+		KIND_HEIGHTS
+	)("separates the child of a %s node by the shared node width (left-right)", async (type) => {
+		expect(await sizeAlongTree({ id: "p", type }, "LR")).toBe(NODE_WIDTH);
+	});
+
+	it.each([
+		["both sizes", { width: 200, height: 70 }, 200, 70],
+		["only a width", { width: 200 }, NODE_WIDTH, 120],
+		["only a height", { height: 70 }, NODE_WIDTH, 120],
+		["zero sizes", { width: 0, height: 0 }, NODE_WIDTH, 120],
+	])("uses the measured size when it is complete (%s)", async (_label, measured, width, height) => {
+		const spec = { id: "p", type: "goal", measured };
+		expect(await sizeAlongTree(spec, "TB")).toBe(height);
+		expect(await sizeAlongTree(spec, "LR")).toBe(width);
+	});
+});
+
+describe("layout sizes read from the rendered page", () => {
+	function mountMeasured(id: string, width: number, height: number) {
+		const element = document.createElement("div");
+		element.setAttribute("data-id", id);
+		Object.defineProperty(element, "offsetWidth", { value: width });
+		Object.defineProperty(element, "offsetHeight", { value: height });
+		document.body.appendChild(element);
+	}
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		document.body.replaceChildren();
+	});
+
+	it.each([
+		["both positive", 300, 80, 300, 80],
+		["a zero width", 0, 80, 200, 70],
+		["a zero height", 300, 0, 200, 70],
+	])("prefers the rendered size over the measured one only when both are positive (%s)", async (_label, domWidth, domHeight, width, height) => {
+		mountMeasured("p", domWidth, domHeight);
+		const spec = {
+			id: "p",
+			type: "goal",
+			measured: { width: 200, height: 70 },
+		};
+		expect(await sizeAlongTree(spec, "TB")).toBe(height);
+		expect(await sizeAlongTree(spec, "LR")).toBe(width);
+	});
+
+	it("lays out from the default sizes when there is no page to read", async () => {
+		vi.stubGlobal("document", undefined);
+		const nodes = [
+			mk({ id: "p", type: "goal", position: { x: 500, y: 500 } }),
+			mk({ id: "c", type: "goal", position: { x: 500, y: 500 } }),
+		];
+		const result = await layout(nodes, [link("p", "c")], {
+			direction: "TB",
+			layerSpacing: LAYER,
+		});
+		const pos = posMap(result);
+		expect(at(pos, "c").y - at(pos, "p").y).toBe(120 + LAYER);
+		expect(at(pos, "p")).not.toStrictEqual({ x: 500, y: 500 });
+	});
+});
+
+describe("layout direction", () => {
+	const SIGNS: [Direction, "x" | "y", 1 | -1][] = [
+		["TB", "y", 1],
+		["BT", "y", -1],
+		["LR", "x", 1],
+		["RL", "x", -1],
+	];
+
+	async function childOffset(direction: string | undefined) {
+		const result = await layout(
+			[mk({ id: "p", type: "goal" }), mk({ id: "c", type: "goal" })],
+			[link("p", "c")],
+			{ direction } as never
+		);
+		const pos = posMap(result);
+		return {
+			x: at(pos, "c").x - at(pos, "p").x,
+			y: at(pos, "c").y - at(pos, "p").y,
+		};
+	}
+
+	it.each(
+		SIGNS
+	)("%s places the child along the %s axis, on the side of sign %i", async (direction, axis, sign) => {
+		const offset = await childOffset(direction);
+		const across = axis === "x" ? "y" : "x";
+		expect(Math.sign(offset[axis])).toBe(sign);
+		expect(offset[across]).toBe(0);
+	});
+
+	it.each([
+		["diagonal"],
+		[undefined],
+	])("places children below their parent for an unrecognised direction (%s)", async (direction) => {
+		const offset = await childOffset(direction);
+		expect(offset.y).toBeGreaterThan(0);
+		expect(offset.x).toBe(0);
+	});
+});
+
+describe("which side attached elements sit on", () => {
+	function ownerAndAttached() {
+		return [
+			mk({ id: "g", type: "goal" }),
+			mk({ id: "d", type: "goal", attachedTo: "g" }),
+		];
+	}
+
+	it.each([
+		"TB",
+		"BT",
+	] as const)("puts an attached element to the right of its owner in a %s tree", async (direction) => {
+		const result = await layout(ownerAndAttached(), [], { direction });
+		const pos = posMap(result);
+		expect(at(pos, "d").y).toBe(at(pos, "g").y);
+		expect(at(pos, "d").x).toBeGreaterThanOrEqual(at(pos, "g").x + NODE_WIDTH);
+	});
+
+	it.each([
+		"LR",
+		"RL",
+	] as const)("puts an attached element below its owner in a %s tree", async (direction) => {
+		const result = await layout(ownerAndAttached(), [], { direction });
+		const pos = posMap(result);
+		expect(at(pos, "d").x).toBe(at(pos, "g").x);
+		expect(at(pos, "d").y).toBeGreaterThanOrEqual(at(pos, "g").y + 120);
+	});
+});
+
+describe("spacing options", () => {
+	async function siblingGap(nodeSpacing?: number) {
+		const result = await layout(
+			[
+				mk({ id: "p", type: "goal" }),
+				mk({ id: "a", type: "goal" }),
+				mk({ id: "b", type: "goal" }),
+			],
+			[link("p", "a"), link("p", "b")],
+			{ direction: "TB", nodeSpacing }
+		);
+		const pos = posMap(result);
+		return at(pos, "b").x - at(pos, "a").x - NODE_WIDTH;
+	}
+
+	async function layerGap(layerSpacing?: number) {
+		const result = await layout(
+			[mk({ id: "p", type: "goal" }), mk({ id: "c", type: "goal" })],
+			[link("p", "c")],
+			{ direction: "TB", layerSpacing }
+		);
+		const pos = posMap(result);
+		return at(pos, "c").y - at(pos, "p").y - 120;
+	}
+
+	it.each([
+		["the requested", 70, 70],
+		["the default", undefined, 40],
+	])("leaves %s gap between siblings", async (_label, option, expected) => {
+		expect(await siblingGap(option)).toBe(expected);
+	});
+
+	it.each([
+		["the requested", 80, 80],
+		["the default", undefined, 60],
+	])("leaves %s gap between layers", async (_label, option, expected) => {
+		expect(await layerGap(option)).toBe(expected);
+	});
+});
+
+describe("parent placement over its children", () => {
+	it.each([
+		2, 3, 4,
+	])("centres a parent over its outermost children when it has %i of them", async (count) => {
+		const kids = Array.from({ length: count }, (_, i) => `k${i + 1}`);
+		const nodes = [
+			mk({ id: "p", type: "goal" }),
+			...kids.map((id) => mk({ id, type: "goal" })),
+		];
+		const result = await layout(
+			nodes,
+			kids.map((id) => link("p", id)),
+			{ direction: "TB" }
+		);
+		const pos = posMap(result);
+		const first = at(pos, "k1").x;
+		const last = at(pos, `k${count}`).x;
+		expect(at(pos, "p").x).toBeCloseTo((first + last) / 2, 5);
+	});
+});
+
+describe("attachment resolution", () => {
+	it("lays out nodes that have no data at all", async () => {
+		const nodes = [
+			mk({ id: "p", noData: true, position: { x: 500, y: 500 } }),
+			mk({ id: "c", noData: true, position: { x: 500, y: 500 } }),
+		];
+		const result = await layout(nodes, [link("p", "c")], { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "c").y).toBeGreaterThan(at(pos, "p").y);
+	});
+
+	it("moves a node whose attachment target is missing, as an ordinary node", async () => {
+		const nodes = [
+			mk({ id: "g", type: "goal", position: { x: 500, y: 500 } }),
+			mk({
+				id: "p",
+				type: "property",
+				attachedTo: "absent",
+				position: { x: 500, y: 500 },
+			}),
+		];
+		const result = await layout(nodes, [], { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "g")).not.toStrictEqual({ x: 500, y: 500 });
+		expect(at(pos, "p")).not.toStrictEqual({ x: 500, y: 500 });
+	});
+
+	it("keeps an element beside the one it is attached to when that one is attached to a hidden node", async () => {
+		const nodes = [
+			mk({ id: "hid", type: "goal", hidden: true }),
+			mk({ id: "p1", type: "goal", attachedTo: "hid" }),
+			mk({ id: "q1", type: "goal", attachedTo: "p1" }),
+		];
+		const result = await layout(nodes, [], { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "q1").y).toBe(at(pos, "p1").y);
+		expect(at(pos, "q1").x).toBeGreaterThanOrEqual(
+			at(pos, "p1").x + NODE_WIDTH
+		);
+	});
+
+	it("treats a node attached to itself as an ordinary node that others can attach to", async () => {
+		const nodes = [
+			mk({ id: "a1", type: "goal", attachedTo: "a1" }),
+			mk({ id: "b1", type: "goal", attachedTo: "a1" }),
+		];
+		const result = await layout(nodes, [], { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "b1").y).toBe(at(pos, "a1").y);
+		expect(at(pos, "b1").x).toBeGreaterThanOrEqual(
+			at(pos, "a1").x + NODE_WIDTH
+		);
+	});
+});
+
+describe("order of children around attached elements", () => {
+	it.each([
+		["owner's child first", ["s9", "s1"]],
+		["attached element's child first", ["s1", "s9"]],
+	])("puts the owner's children before the children of its attached elements whatever their names (%s in the input)", async (_label, childOrder) => {
+		const byId: Record<string, Node> = {
+			s9: mk({ id: "s9", type: "strategy" }),
+			s1: mk({ id: "s1", type: "strategy" }),
+		};
+		const nodes = [
+			mk({ id: "z1", type: "goal" }),
+			mk({ id: "a1", type: "goal", attachedTo: "z1" }),
+			...childOrder.map((id) => byId[id] as Node),
+		];
+		const result = await layout(nodes, [link("z1", "s9"), link("a1", "s1")], {
+			direction: "TB",
+		});
+		const pos = posMap(result);
+		expect(at(pos, "s9").x).toBeLessThan(at(pos, "s1").x);
+	});
+
+	it.each([
+		[
+			"a strategy after evidence",
+			{ id: "e", type: "evidence", name: "A1" },
+			{ id: "s", type: "strategy", name: "Z1" },
+		],
+		[
+			"evidence after an away goal",
+			{ id: "ag", type: "awayGoal", name: "A1" },
+			{ id: "e", type: "evidence", name: "Z1" },
+		],
+		[
+			"S1 after S2",
+			{ id: "s2", type: "strategy", name: "S2" },
+			{ id: "s1", type: "strategy", name: "S1" },
+		],
+		[
+			"S2 after S10",
+			{ id: "s10", type: "strategy", name: "S10" },
+			{ id: "s2", type: "strategy", name: "S2" },
+		],
+	])("puts the earlier-ranked child on the left when the input lists %s", async (_label, first, second) => {
+		const nodes = [
+			mk({ id: "p", type: "goal" }),
+			mk(first as NodeSpec),
+			mk(second as NodeSpec),
+		];
+		const result = await layout(
+			nodes,
+			[link("p", first.id), link("p", second.id)],
+			{ direction: "TB" }
+		);
+		const pos = posMap(result);
+		expect(at(pos, second.id).x).toBeLessThan(at(pos, first.id).x);
+	});
+
+	it("orders the children of a chain of attached elements by the chain, not by name", async () => {
+		const nodes = [
+			mk({ id: "r1", type: "goal" }),
+			mk({ id: "b1", type: "goal", attachedTo: "r1" }),
+			mk({ id: "z1", type: "goal", attachedTo: "r1" }),
+			mk({ id: "a1", type: "goal", attachedTo: "z1" }),
+			mk({ id: "cz", type: "strategy" }),
+			mk({ id: "ca", type: "strategy" }),
+		];
+		const result = await layout(nodes, [link("z1", "cz"), link("a1", "ca")], {
+			direction: "TB",
+		});
+		const pos = posMap(result);
+		expect(at(pos, "cz").x).toBeLessThan(at(pos, "ca").x);
+	});
+
+	it.each([
+		["named first", ["named", "anon"]],
+		["unnamed first", ["anon", "named"]],
+	])("puts an unnamed child before its named siblings (%s in the input)", async (_label, order) => {
+		const byId: Record<string, Node> = {
+			named: mk({ id: "named", type: "strategy", name: "S1" }),
+			anon: mk({ id: "anon", type: "strategy", name: "" }),
+		};
+		const nodes = [
+			mk({ id: "p", type: "goal" }),
+			...order.map((id) => byId[id] as Node),
+		];
+		const edges = order.map((id) => link("p", id));
+		const result = await layout(nodes, edges, { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "anon").x).toBeLessThan(at(pos, "named").x);
+	});
+
+	it.each([
+		["named first", ["named", "anon"]],
+		["unnamed first", ["anon", "named"]],
+	])("puts an unnamed attached element before its named sibling (%s in the input)", async (_label, order) => {
+		const byId: Record<string, Node> = {
+			named: mk({ id: "named", type: "goal", name: "A1", attachedTo: "g" }),
+			anon: mk({ id: "anon", type: "goal", name: "", attachedTo: "g" }),
+		};
+		const nodes = [
+			mk({ id: "g", type: "goal" }),
+			...order.map((id) => byId[id] as Node),
+		];
+		const result = await layout(nodes, [], { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "anon").y).toBeLessThan(at(pos, "named").y);
+	});
+
+	it("keeps unnamed attached elements in the order given", async () => {
+		const nodes = [
+			mk({ id: "g", type: "goal" }),
+			mk({ id: "anon1", type: "goal", name: "", attachedTo: "g" }),
+			mk({ id: "anon2", type: "goal", name: "", attachedTo: "g" }),
+		];
+		const result = await layout(nodes, [], { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "anon1").y).toBeLessThan(at(pos, "anon2").y);
+	});
+
+	it("ignores the edge between an element and its owner when ordering", async () => {
+		const nodes = [
+			mk({ id: "g1", type: "goal" }),
+			mk({ id: "s1", type: "strategy" }),
+			mk({ id: "g2", type: "goal" }),
+			mk({ id: "g3", type: "goal" }),
+			mk({ id: "cg1", type: "goal", attachedTo: "g2" }),
+		];
+		const edges = [
+			link("g1", "s1"),
+			link("s1", "g2"),
+			link("s1", "g3"),
+			link("cg1", "g2"),
+		];
+		const result = await layout(nodes, edges, { direction: "TB" });
+		const pos = posMap(result);
+		expect(at(pos, "g2").x).toBeLessThan(at(pos, "g3").x);
+	});
+});
+
+describe("where a support edge bends around a cell", () => {
+	const GAP = 80;
+	type Sized = Pos & { height: number; width: number };
+	const SIZES: Record<string, { height: number; width: number }> = {
+		r: { width: NODE_WIDTH, height: 120 },
+		d1: { width: NODE_WIDTH, height: 100 },
+		d2: { width: NODE_WIDTH, height: 60 },
+	};
+
+	async function laidOutCell(direction: Direction) {
+		const nodes = [
+			mk({ id: "top", type: "goal" }),
+			...Object.entries(SIZES).map(([id, measured]) =>
+				mk({
+					id,
+					type: "goal",
+					measured,
+					attachedTo: id === "r" ? undefined : "r",
+				})
+			),
+			mk({ id: "below", type: "goal" }),
+		];
+		const edges = [link("top", "r"), link("r", "below", { data: { tag: 1 } })];
+		const result = await layout(nodes, edges, {
+			direction,
+			layerSpacing: GAP,
+		});
+		const pos = posMap(result);
+		const members: Sized[] = Object.entries(SIZES).map(([id, size]) => ({
+			...at(pos, id),
+			...size,
+		}));
+		return { result, members };
+	}
+
+	const EXPECTED: Record<Direction, [string, (m: Sized[]) => number]> = {
+		TB: ["centerY", (m) => Math.max(...m.map((n) => n.y + n.height)) + GAP / 2],
+		BT: ["centerY", (m) => Math.min(...m.map((n) => n.y)) - GAP / 2],
+		LR: ["centerX", (m) => Math.max(...m.map((n) => n.x + n.width)) + GAP / 2],
+		RL: ["centerX", (m) => Math.min(...m.map((n) => n.x)) - GAP / 2],
+	};
+
+	it.each([
+		"TB",
+		"BT",
+		"LR",
+		"RL",
+	] as const)("bends half a layer gap past the far side of the whole cell in a %s tree", async (direction) => {
+		const { result, members } = await laidOutCell(direction);
+		const [key, expected] = EXPECTED[direction];
+		const edge = result.edges.find((e) => e.id === "r-below");
+		expect(edge?.data?.[key]).toBe(expected(members));
+		const otherKey = key === "centerX" ? "centerY" : "centerX";
+		expect(edge?.data?.[otherKey]).toBeUndefined();
+		expect(edge?.data?.tag).toBe(1);
+	});
+
+	it("leaves an edge between a cell's own members and an edge into the cell unchanged", async () => {
+		const nodes = [
+			mk({ id: "top", type: "goal" }),
+			mk({ id: "r", type: "goal" }),
+			mk({ id: "d", type: "goal", attachedTo: "r" }),
+		];
+		const edges = [link("top", "r"), link("d", "r")];
+		const result = await layout(nodes, edges, { direction: "TB" });
+		expect(result.edges).toStrictEqual(edges);
+	});
+});
+
+describe("nodes and edges that are left out of the layout", () => {
+	const TREE = [
+		mk({ id: "p", type: "goal" }),
+		mk({ id: "a", type: "goal" }),
+		mk({ id: "b", type: "goal" }),
+	];
+	const TREE_EDGES = [link("p", "a"), link("p", "b")];
+
+	async function baseline() {
+		return posMap(await layout(TREE, TREE_EDGES, { direction: "TB" }));
+	}
+
+	function expectSamePositions(
+		result: { nodes: Node[] },
+		base: Map<string, Pos>
+	) {
+		const pos = posMap(result);
+		for (const id of ["p", "a", "b"]) {
+			// biome-ignore lint/suspicious/noMisplacedAssertion: called from within it() blocks below
+			expect(at(pos, id)).toStrictEqual(at(base, id));
+		}
+	}
+
+	it("returns hidden nodes untouched and gives visible nodes an absolute position", async () => {
+		const hidden = mk({
+			id: "h",
+			type: "goal",
+			hidden: true,
+			position: { x: 7, y: 9 },
+		});
+		const result = await layout([...TREE, hidden], TREE_EDGES, {
+			direction: "TB",
+		});
+		expect(result.nodes.find((n) => n.id === "h")).toStrictEqual(hidden);
+		for (const node of result.nodes.filter((n) => n.id !== "h")) {
+			const absolute = (node as Node & { positionAbsolute?: Pos })
+				.positionAbsolute;
+			expect(absolute).toStrictEqual(node.position);
+		}
+	});
+
+	it("reserves no room for a hidden node", async () => {
+		const hidden = mk({ id: "h", type: "goal", hidden: true });
+		const result = await layout(
+			[...TREE, hidden],
+			[...TREE_EDGES, link("p", "h")],
+			{ direction: "TB" }
+		);
+		expectSamePositions(result, await baseline());
+	});
+
+	it("ignores a hidden edge", async () => {
+		const result = await layout(
+			TREE,
+			[...TREE_EDGES, link("a", "b", { hidden: true })],
+			{ direction: "TB" }
+		);
+		expectSamePositions(result, await baseline());
+	});
+
+	it.each([
+		["from a visible node to a hidden one", link("a", "h")],
+		["from a hidden node to a visible one", link("h", "a")],
+		["to a node that does not exist", link("a", "ghost")],
+		["from a node that does not exist", link("ghost", "a")],
+	])("lays the rest out when an edge runs %s", async (_label, edge) => {
+		const hidden = mk({ id: "h", type: "goal", hidden: true });
+		const result = await layout([...TREE, hidden], [...TREE_EDGES, edge], {
+			direction: "TB",
+		});
+		expectSamePositions(result, await baseline());
+		expect(result.edges).toHaveLength(3);
+	});
+
+	it("returns the very arrays it was given when nothing is visible", async () => {
+		const nodes = [mk({ id: "h", hidden: true })];
+		const edges = [link("h", "h")];
+		const result = await layout(nodes, edges, { direction: "TB" });
+		expect(result.nodes).toBe(nodes);
+		expect(result.edges).toBe(edges);
+	});
+
+	it("gives the same positions for the same input", async () => {
+		const again = await layout(TREE, TREE_EDGES, { direction: "TB" });
+		expectSamePositions(again, await baseline());
+	});
+});
+
+describe("when the layout engine fails", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
+		resetLogSink();
+	});
+
+	it("reports the direction, the sizes of the graph and the error", async () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const ELK = (await import("elkjs/lib/elk.bundled.js")).default;
+		vi.spyOn(ELK.prototype, "layout").mockRejectedValueOnce(
+			new Error("engine failed")
+		);
+		const entries: LogEntry[] = [];
+		setLogSink((entry) => {
+			entries.push(entry);
+		});
+
+		await layout(
+			[mk({ id: "a" }), mk({ id: "b" }), mk({ id: "c" })],
+			[link("a", "b")],
+			{ direction: "LR" }
+		);
+
+		const entry = entries.find((e) => e.level === "error");
+		expect(entry).toMatchObject({
+			direction: "LR",
+			nodeCount: 3,
+			edgeCount: 1,
+		});
+		expect(entry?.error).toMatchObject({ message: "engine failed" });
 	});
 });
