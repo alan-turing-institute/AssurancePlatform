@@ -379,16 +379,10 @@ describe("reduction and aggregation wording", () => {
 	it("words a worst-of aggregation in words that differ from the other kinds", () => {
 		const text = aggregationText("worst-of", {});
 		expect(text.endsWith(` ${DOT} a1`)).toBe(true);
-		expect(aggregationText("unlisted", {}).split(` ${DOT} `)[0]).toBe(
-			"unlisted"
-		);
-		expect(text.split(` ${DOT} `)[0]).not.toBe("worst-of");
-		const unknownKind = aggregationText("unlisted", {}).replace(
-			"unlisted",
-			"worst-of"
-		);
-		expect(text.split(` ${DOT} `)[0]).not.toBe("");
-		expect(text).not.toBe(unknownKind);
+		const words = text.split(` ${DOT} `)[0];
+		expect(words).not.toBe("worst-of");
+		expect(words).not.toBe("");
+		// "unlisted" is outside the allowed kinds; it is used only as a comparison.
 		expect(text).not.toBe(aggregationText("unlisted", {}));
 		expect(text).not.toBe(aggregationText("percentile", { percentile: 95 }));
 	});
