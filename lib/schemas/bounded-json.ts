@@ -1,15 +1,14 @@
 import { z } from "zod";
 
 /**
- * Shared recursive "bounded JSON" building blocks: `lib/schemas/plugin.ts`'s `settings` (capped at 4096 bytes) and
- * `lib/schemas/health-evidence.ts`'s `provenance` (capped at 8192 bytes) are
- * structurally the SAME bounded-JSON shape — same depth, per-object key
- * count, per-array item count, and per-string length caps; only the final
- * serialized-byte cap differs per call site (a settings blob and a
- * regulator-grade evidence provenance payload have different generous-but-
- * bounded budgets). Extracted here so both schemas define the recursive
- * shape exactly once. Callers parameterise only the byte cap — everything
- * else is fixed and shared.
+ * Shared building blocks for bounded JSON values: the limits on nesting
+ * depth, keys per object, items per array and string length
+ * (`BOUNDED_JSON_MAX_DEPTH`, `BOUNDED_JSON_MAX_KEYS`,
+ * `BOUNDED_JSON_MAX_ARRAY_ITEMS`, `BOUNDED_JSON_MAX_STRING_LENGTH`), the
+ * recursive rule built from them (`boundedJsonValueSchema`), and a helper
+ * that measures a value's size once written out (`serializedByteLength`).
+ * Each caller chooses its own size limit. Other rules in `lib/schemas` build
+ * on these.
  */
 
 export const BOUNDED_JSON_MAX_DEPTH = 4;
