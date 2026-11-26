@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import prisma from "@/lib/prisma";
 import { mockAuth, mockNoAuth } from "../utils/auth-helpers";
 import {
 	createTestIntegrationWithSystemUser,
@@ -93,5 +94,59 @@ describe("DELETE /api/users/me", () => {
 		expect(response.status).toBe(400);
 		const body = await response.json();
 		expect(body.error).toBe('Unrecognized key: "extra"');
+	});
+});
+
+function patchProfileRequest(body: unknown): NextRequest {
+	return new NextRequest("http://localhost:3000/api/users/me", {
+		method: "PATCH",
+		body: JSON.stringify(body),
+	});
+}
+
+describe("PATCH /api/users/me — first and last name", () => {
+	it.each([
+		["null", null],
+		["an empty string", ""],
+		["only spaces", "   "],
+	])("removes the stored names when each is %s, with nothing else in the request", async (_name, blank) => {
+		const user = await createTestUser({ firstName: "Ada", lastName: "Byron" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/users/me/route");
+		const response = await PATCH(
+			patchProfileRequest({ firstName: blank, lastName: blank })
+		);
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(inDb?.firstName).toBeNull();
+		expect(inDb?.lastName).toBeNull();
+	});
+
+	it("leaves a name that is left out of the request as it was", async () => {
+		const user = await createTestUser({ firstName: "Ada", lastName: "Byron" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/users/me/route");
+		const response = await PATCH(patchProfileRequest({ firstName: "" }));
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(inDb?.firstName).toBeNull();
+		expect(inDb?.lastName).toBe("Byron");
+	});
+
+	it("saves a name given as text", async () => {
+		const user = await createTestUser({ firstName: "Ada", lastName: "Byron" });
+		await mockAuth(user.id, user.username, user.email);
+
+		const { PATCH } = await import("@/app/api/users/me/route");
+		const response = await PATCH(patchProfileRequest({ lastName: " King " }));
+
+		expect(response.status).toBe(200);
+		const inDb = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(inDb?.firstName).toBe("Ada");
+		expect(inDb?.lastName).toBe("King");
 	});
 });

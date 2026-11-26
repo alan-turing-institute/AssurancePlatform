@@ -54,7 +54,7 @@ describe("registerIntegrationSchema — boundary caps", () => {
 	});
 });
 
-describe("updateIntegrationSchema — description cap (shares optionalString(1000))", () => {
+describe("updateIntegrationSchema — description is capped at 1000 characters", () => {
 	it("accepts a description at exactly 1000 characters", () => {
 		const result = updateIntegrationSchema.safeParse({
 			description: "a".repeat(1000),
@@ -145,8 +145,23 @@ describe("updateIntegrationSchema: something to update", () => {
 		["a description alone", { description: "New text" }],
 		["scopes alone", { scopes: ["case:read"] }],
 		["a description and scopes", { description: "x", scopes: ["case:read"] }],
+		["a null description alone", { description: null }],
+		["an empty description alone", { description: "" }],
+		["a description of only spaces alone", { description: "  " }],
 	])("accepts %s", (_name, body) => {
 		expect(issuesOf(updateIntegrationSchema, body)).toEqual([]);
+	});
+
+	it.each([
+		["absent", { scopes: ["case:read"] }, undefined],
+		["null", { description: null }, null],
+		["empty", { description: "" }, null],
+		["only spaces", { description: "   " }, null],
+		["text", { description: " New text " }, "New text"],
+	])("reads a %s description", (_name, body, expected) => {
+		const result = updateIntegrationSchema.safeParse(body);
+		expect(result.success).toBe(true);
+		expect(result.data?.description).toBe(expected);
 	});
 });
 

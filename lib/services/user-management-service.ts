@@ -26,8 +26,8 @@ const log = logger.child({ component: "user-management-service" });
 
 export interface UpdateProfileInput {
 	email?: string;
-	firstName?: string;
-	lastName?: string;
+	firstName?: string | null;
+	lastName?: string | null;
 	username?: string;
 }
 

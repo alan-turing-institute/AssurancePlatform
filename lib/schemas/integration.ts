@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { SCOPES } from "@/lib/auth/scopes";
-import { optionalString, requiredString, uuidSchema } from "@/lib/schemas/base";
+import {
+	clearableString,
+	optionalString,
+	requiredString,
+	uuidSchema,
+} from "@/lib/schemas/base";
 
 /**
  * Zod schemas for the integration management API (ADR 0002 v2 §2.4, work
@@ -82,7 +87,7 @@ export type RegisterIntegrationFormInput = z.input<
 // lands and a caller needs the parsed shape by name.
 export const updateIntegrationSchema = z
 	.strictObject({
-		description: optionalString(1000),
+		description: clearableString(1000),
 		scopes: integrationScopesSchema.optional(),
 	})
 	.refine(

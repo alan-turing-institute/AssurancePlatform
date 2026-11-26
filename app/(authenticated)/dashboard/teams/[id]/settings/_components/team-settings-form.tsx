@@ -26,11 +26,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-	type CreateTeamSchemaInput,
-	createTeamSchema,
+	type UpdateTeamSchemaInput,
+	updateTeamBaseSchema,
 } from "@/lib/schemas/team";
 
-type FormValues = CreateTeamSchemaInput;
+type FormValues = UpdateTeamSchemaInput;
 
 interface TeamSettingsFormProps {
 	team: {
@@ -51,7 +51,7 @@ export function TeamSettingsForm({ team }: TeamSettingsFormProps) {
 	const [success, setSuccess] = useState<string | null>(null);
 
 	const form = useForm<FormValues>({
-		resolver: zodResolver(createTeamSchema),
+		resolver: zodResolver(updateTeamBaseSchema),
 		defaultValues: {
 			name: team.name,
 			description: team.description || "",

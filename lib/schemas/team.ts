@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { optionalString, requiredString } from "./base";
+import { clearableString, optionalString, requiredString } from "./base";
 
 /**
  * Create team input
@@ -17,7 +17,7 @@ export type CreateTeamSchemaOutput = z.output<typeof createTeamSchema>;
  */
 export const updateTeamBaseSchema = z.strictObject({
 	name: requiredString("Team name", 1, 100).optional(),
-	description: optionalString(500),
+	description: clearableString(500),
 });
 
 /**

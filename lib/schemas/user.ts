@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
+	clearableString,
 	emailSchema,
-	optionalString,
 	requiredString,
 	usernameSchema,
 } from "./base";
@@ -159,8 +159,8 @@ export type RegisterUserSchemaOutput = z.output<typeof registerUserSchema>;
 export const updateUserProfileSchema = z
 	.strictObject({
 		username: requiredString("Username", 1, 150).optional(),
-		firstName: optionalString(150),
-		lastName: optionalString(150),
+		firstName: clearableString(150),
+		lastName: clearableString(150),
 		email: emailSchema.optional(),
 	})
 	.refine((data) => Object.values(data).some((v) => v !== undefined), {

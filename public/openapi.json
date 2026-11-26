@@ -8243,7 +8243,7 @@
                 "type": "object",
                 "properties": {
                   "description": {
-                    "description": "Optional string field",
+                    "description": "Optional string field; empty clears it",
                     "nullable": true,
                     "type": "string",
                     "maxLength": 1000
@@ -10241,7 +10241,7 @@
                     "description": "Required Team name field"
                   },
                   "description": {
-                    "description": "Optional string field",
+                    "description": "Optional string field; empty clears it",
                     "nullable": true,
                     "type": "string",
                     "maxLength": 500
@@ -12056,13 +12056,13 @@
                     "description": "Required Username field"
                   },
                   "firstName": {
-                    "description": "Optional string field",
+                    "description": "Optional string field; empty clears it",
                     "nullable": true,
                     "type": "string",
                     "maxLength": 150
                   },
                   "lastName": {
-                    "description": "Optional string field",
+                    "description": "Optional string field; empty clears it",
                     "nullable": true,
                     "type": "string",
                     "maxLength": 150

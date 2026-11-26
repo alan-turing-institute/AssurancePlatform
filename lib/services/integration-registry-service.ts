@@ -340,7 +340,7 @@ export async function registerIntegration(
 }
 
 export interface UpdateIntegrationInput {
-	description?: string;
+	description?: string | null;
 	scopes?: string[];
 }
 
