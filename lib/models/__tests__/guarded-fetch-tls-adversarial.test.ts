@@ -71,6 +71,26 @@ beforeAll(async () => {
 	port = (server.address() as AddressInfo).port;
 });
 
+// Resolves true once the server has recorded a refused handshake, or false if
+// none arrives within the bound. The client's refusal can reach the caller
+// before the server emits its own event, so the record is awaited, not assumed.
+function refusedHandshakeRecorded(boundMs: number): Promise<boolean> {
+	if (clientErrors.length > 0) {
+		return Promise.resolve(true);
+	}
+	return new Promise<boolean>((resolve) => {
+		const onRecorded = () => {
+			clearTimeout(timer);
+			resolve(true);
+		};
+		const timer = setTimeout(() => {
+			server?.off("tlsClientError", onRecorded);
+			resolve(false);
+		}, boundMs);
+		server?.once("tlsClientError", onRecorded);
+	});
+}
+
 afterAll(async () => {
 	server?.closeAllConnections();
 	await new Promise<void>((resolve) => {
@@ -84,6 +104,10 @@ afterAll(async () => {
 
 describe.skipIf(!available)("guardedFetch: certificates", () => {
 	it("refuses a server whose certificate is not trusted, even at an address on the operator's list", async () => {
+		// Only records made during this attempt count, so a retry cannot pass on
+		// an earlier attempt's record.
+		clientErrors.length = 0;
+		handled = 0;
 		vi.stubEnv("TEA_MODELS_LOCAL_ADDRESSES", `https://localhost:${port}`);
 		try {
 			const outcome = await guardedFetch(
@@ -100,6 +124,10 @@ describe.skipIf(!available)("guardedFetch: certificates", () => {
 			expect(String(outcome)).not.toContain(String(port));
 			// The handshake began and was refused by the client, so the refusal is
 			// about the certificate and not about reaching the server.
+			const recorded = await refusedHandshakeRecorded(1500);
+			expect(recorded, "the server never recorded a refused handshake").toBe(
+				true
+			);
 			expect(clientErrors.length).toBeGreaterThan(0);
 			expect(handled).toBe(0);
 		} finally {
