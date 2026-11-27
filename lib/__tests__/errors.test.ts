@@ -7,6 +7,7 @@ import {
 	gatewayTimeout,
 	handleError,
 	notFound,
+	payloadTooLarge,
 	toActionResult,
 	unauthorised,
 	validationError,
@@ -225,6 +226,93 @@ describe("handleError", () => {
 
 		expect(result.code).toBe("INTERNAL");
 		expect(result.statusCode).toBe(500);
+	});
+});
+
+describe("handleError messages and log entries", () => {
+	afterEach(() => {
+		resetLogSink();
+		vi.unstubAllEnvs();
+	});
+
+	it("gives every default message and the timeout and fallback messages some text", () => {
+		vi.stubEnv("NODE_ENV", "test");
+		const messages = [
+			gatewayTimeout().message,
+			payloadTooLarge().message,
+			dbUnavailable().message,
+			handleError(new TimeoutError(1000)).message,
+			handleError("not an error object").message,
+		];
+
+		for (const message of messages) {
+			expect(message.length).toBeGreaterThan(0);
+		}
+	});
+
+	it("matches a pool timeout message that has surrounding whitespace", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		captureLogs();
+
+		const result = handleError(
+			new Error("  timeout exceeded when trying to connect\n")
+		);
+
+		expect(result.code).toBe("DB_UNAVAILABLE");
+	});
+
+	it("logs a timeout with the component name and the error", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = captureLogs();
+
+		handleError(new TimeoutError(1000));
+
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			level: "error",
+			component: "errors",
+			error: { name: "TimeoutError" },
+		});
+	});
+
+	it("logs an unexpected error with the component name and the error", () => {
+		vi.stubEnv("LOG_LEVEL", "debug");
+		const entries = captureLogs();
+
+		handleError(new Error("disk on fire"));
+
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
+			level: "error",
+			component: "errors",
+			error: { message: "disk on fire" },
+		});
+	});
+
+	it("keeps the original message outside production", () => {
+		vi.stubEnv("NODE_ENV", "development");
+		captureLogs();
+
+		expect(handleError(new Error("disk on fire")).message).toBe("disk on fire");
+	});
+
+	it("hides the original message of an unexpected error in production", () => {
+		vi.stubEnv("NODE_ENV", "production");
+		captureLogs();
+
+		const result = handleError(new Error("disk on fire"));
+
+		expect(result.code).toBe("INTERNAL");
+		expect(result.message).not.toContain("disk on fire");
+		expect(result.message.length).toBeGreaterThan(0);
+	});
+
+	it("keeps the original error as the cause in production", () => {
+		vi.stubEnv("NODE_ENV", "production");
+		captureLogs();
+		const original = new Error("disk on fire");
+
+		expect(handleError(original).cause).toBe(original);
 	});
 });
 

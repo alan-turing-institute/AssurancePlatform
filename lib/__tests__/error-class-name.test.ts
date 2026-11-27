@@ -65,6 +65,15 @@ describe("errorClassName", () => {
 		expect(errorClassName(error)).toBe("unknown");
 	});
 
+	it("gives unknown when the name is an object that reads as a plain identifier", () => {
+		const error = new Error("boom");
+		Object.defineProperty(error, "name", {
+			value: { toString: () => "TypeError" },
+		});
+
+		expect(errorClassName(error)).toBe("unknown");
+	});
+
 	it.each([
 		["a string", "connect ECONNREFUSED db.internal"],
 		["null", null],
