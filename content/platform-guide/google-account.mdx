@@ -11,6 +11,11 @@ Choose **Google** on the sign-in page to authorise the account. The platform sto
 Google requests the `drive.file` scope.
 GitHub sign-in requests the `read:user` and `user:email` scopes, which read your profile and email address.
 Check the consent screen before authorising either connection.
+A first sign-in with Google or GitHub is matched to an existing account by email address only when the provider says the address is verified.
+For GitHub, the platform reads your GitHub email list with the sign-in's access token to check this.
+If the address is not verified, the sign-in is refused and the login page explains why.
+Connecting Google or GitHub from Settings while signed in does not need this check.
+Signing in with an account that is already connected does not need this check.
 
 ## Import a case
 

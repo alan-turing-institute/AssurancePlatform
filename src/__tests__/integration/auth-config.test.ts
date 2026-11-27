@@ -140,6 +140,7 @@ describe("authenticateGoogleWithPrisma — OAuth login clears retention warnings
 		const result = await authenticateGoogleWithPrisma({
 			sub: "google-sub-123",
 			email: user.email,
+			email_verified: true,
 			name: "Test User",
 		});
 
@@ -239,7 +240,12 @@ describe("authenticateGoogleWithPrisma — production key-absent path", () => {
 		const logs = captureLogs();
 		try {
 			const result = await authenticateGoogleWithPrisma(
-				{ sub: "google-sub-prod-1", email: user.email, name: "Test User" },
+				{
+					sub: "google-sub-prod-1",
+					email: user.email,
+					email_verified: true,
+					name: "Test User",
+				},
 				"ya29.newaccesstoken",
 				"1//newrefreshtoken",
 				Math.floor(Date.now() / 1000) + 3600

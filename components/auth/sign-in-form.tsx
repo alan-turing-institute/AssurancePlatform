@@ -9,7 +9,10 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
-import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
+import {
+	EMAIL_NOT_VERIFIED,
+	SIGN_IN_RATE_LIMITED,
+} from "@/lib/auth/sign-in-error";
 import { type SignInFormInput, signInFormSchema } from "@/lib/schemas/user";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
@@ -48,6 +51,18 @@ function signInFailureMessage(error: string | null | undefined): string {
 		return `Too many sign-in attempts. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}, or reset your password.`;
 	}
 	return "Unable to log in. Please try again.";
+}
+
+/**
+ * The sentence shown for the `error` reason in the page address, set when a
+ * GitHub or Google sign-in is sent back here. Only the reasons listed here are
+ * shown; any other value shows nothing, and the value itself is never rendered.
+ */
+function addressFailureMessage(reason: string | null): string | null {
+	if (reason === EMAIL_NOT_VERIFIED) {
+		return "The sign-in provider did not confirm that this email address belongs to you. Sign in with your password and connect GitHub or Google from Settings, or verify the address with the provider and try again.";
+	}
+	return null;
 }
 
 const SignInForm = () => {
@@ -116,6 +131,11 @@ const SignInForm = () => {
 	};
 
 	useEffect(() => {
+		const addressMessage = addressFailureMessage(searchParams.get("error"));
+		if (addressMessage) {
+			setErrors([addressMessage]);
+		}
+
 		// Check for registration success message
 		if (searchParams.get("registered") === "true") {
 			setSuccessMessage(

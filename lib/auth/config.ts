@@ -4,12 +4,16 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { extractClientIp } from "@/lib/auth/extract-client-ip";
+import { isGitHubEmailVerified } from "@/lib/auth/github-verified-email";
 import { verifyLinkIntent } from "@/lib/auth/link-intent";
 import {
 	assertSessionVersionCurrent,
 	getSessionVersion,
 } from "@/lib/auth/session-version";
-import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
+import {
+	EMAIL_NOT_VERIFIED,
+	SIGN_IN_RATE_LIMITED,
+} from "@/lib/auth/sign-in-error";
 import {
 	normaliseSignInIdentifier,
 	signInIdentifierKey,
@@ -193,8 +197,109 @@ export async function authenticateWithPrisma(
 }
 
 /**
+ * What a GitHub or Google sign-in function answers: the user to sign in, null
+ * for an ordinary refusal, or `refused: EMAIL_NOT_VERIFIED` when the provider
+ * did not confirm that the email address belongs to the person.
+ */
+export type ProviderSignInResult =
+	| { id: string; refused?: undefined }
+	| { id?: undefined; refused: typeof EMAIL_NOT_VERIFIED };
+
+const EMAIL_NOT_VERIFIED_REFUSAL = {
+	refused: EMAIL_NOT_VERIFIED,
+} as const satisfies ProviderSignInResult;
+
+/** Where the `signIn` callback sends a person whose address the provider did not verify. */
+const EMAIL_NOT_VERIFIED_PATH = `/login?error=${EMAIL_NOT_VERIFIED}`;
+
+/**
+ * Turns a provider sign-in result into the `signIn` callback's answer: true
+ * (with the user's id and provider recorded on `user`), false for an ordinary
+ * refusal, or the login address for an unverified email.
+ */
+function applyProviderResult(
+	result: ProviderSignInResult | null,
+	user: { id?: string; provider?: string },
+	provider: "github" | "google"
+): boolean | string {
+	if (result?.refused) {
+		return EMAIL_NOT_VERIFIED_PATH;
+	}
+	if (!result) {
+		return false;
+	}
+	user.id = result.id;
+	user.provider = provider;
+	return true;
+}
+
+/**
+ * Attaches a GitHub sign-in that is not a linking call to a user, or refuses
+ * it. A user who already carries the GitHub id is signed in without any
+ * verified check. Otherwise the address must be in the person's GitHub email
+ * list marked verified; an account with that address then takes the sign-in
+ * (keeping its recorded provider), and with none a new user is created.
+ */
+async function signInGitHubUser({
+	githubId,
+	githubUsername,
+	email,
+	accessToken,
+	githubLinkedUser,
+	githubTokenData,
+}: {
+	githubId: string;
+	githubUsername: string;
+	email: string;
+	accessToken: string | undefined;
+	githubLinkedUser: { id: string } | null;
+	githubTokenData: ReturnType<typeof buildGitHubTokenData>;
+}): Promise<ProviderSignInResult> {
+	const { prisma } = await import("@/lib/prisma");
+
+	let userId = githubLinkedUser?.id;
+	if (!userId) {
+		if (!(await isGitHubEmailVerified(accessToken, email))) {
+			return EMAIL_NOT_VERIFIED_REFUSAL;
+		}
+		const emailUser = await prisma.user.findFirst({
+			where: { email },
+			select: { id: true },
+		});
+		userId = emailUser?.id;
+	}
+
+	if (userId) {
+		await prisma.user.update({
+			where: { id: userId },
+			data: {
+				githubId,
+				githubUsername,
+				// Store access token for GitHub API calls (e.g., importing cases from repos)
+				...githubTokenData,
+				...loginResetFields(),
+			},
+		});
+		return { id: userId };
+	}
+
+	const newUser = await prisma.user.create({
+		data: {
+			email,
+			username: githubUsername || email,
+			githubId,
+			githubUsername,
+			authProvider: "GITHUB",
+			...githubTokenData,
+		},
+	});
+	return { id: newUser.id };
+}
+
+/**
  * Authenticates a GitHub user using Prisma.
  * Creates or updates user record, stores OAuth access token, and returns session credentials.
+ * A profile with no account id is refused before any database call.
  *
  * @param profile - GitHub OAuth profile
  * @param accessToken - OAuth access token for API calls
@@ -203,17 +308,22 @@ export async function authenticateWithPrisma(
  */
 async function authenticateGitHubWithPrisma(
 	profile: {
-		id?: string | number;
+		id?: string | number | null;
 		login?: string;
 		email?: string | null;
 	},
 	accessToken?: string,
 	expiresAt?: number,
 	linkToUserId?: string
-): Promise<{ id: string } | null> {
+): Promise<ProviderSignInResult | null> {
+	const githubId = String(profile?.id ?? "");
+	if (githubId === "") {
+		log.error("GitHub OAuth: No account id provided");
+		return null;
+	}
+
 	const { prisma } = await import("@/lib/prisma");
 
-	const githubId = String(profile?.id ?? "");
 	const githubUsername = profile?.login ?? "";
 	const email = profile?.email;
 
@@ -258,42 +368,14 @@ async function authenticateGitHubWithPrisma(
 		return { id: linkToUserId };
 	}
 
-	// Standard flow: Find existing user by GitHub ID or email
-	const existingUser = await prisma.user.findFirst({
-		where: {
-			OR: [{ githubId }, { email }],
-		},
+	return signInGitHubUser({
+		githubId,
+		githubUsername,
+		email,
+		accessToken,
+		githubLinkedUser,
+		githubTokenData,
 	});
-
-	let userId: string;
-	if (existingUser) {
-		userId = existingUser.id;
-		await prisma.user.update({
-			where: { id: userId },
-			data: {
-				githubId,
-				githubUsername,
-				authProvider: "GITHUB",
-				// Store access token for GitHub API calls (e.g., importing cases from repos)
-				...githubTokenData,
-				...loginResetFields(),
-			},
-		});
-	} else {
-		const newUser = await prisma.user.create({
-			data: {
-				email,
-				username: githubUsername || email,
-				githubId,
-				githubUsername,
-				authProvider: "GITHUB",
-				...githubTokenData,
-			},
-		});
-		userId = newUser.id;
-	}
-
-	return { id: userId };
 }
 
 /**
@@ -336,6 +418,11 @@ async function linkGoogleToUser(
  * Authenticates a Google user using Prisma.
  * Creates or updates user record, stores OAuth access and refresh tokens, and returns session credentials.
  *
+ * A profile with no account id is refused before any database call. A user
+ * who already carries the Google id is signed in as before; otherwise
+ * `email_verified` must be exactly the boolean true before the sign-in is
+ * attached to an account with that address or a new user is created.
+ *
  * @param profile - Google OAuth profile
  * @param accessToken - OAuth access token for API calls
  * @param refreshToken - OAuth refresh token for token renewal
@@ -344,18 +431,24 @@ async function linkGoogleToUser(
  */
 export async function authenticateGoogleWithPrisma(
 	profile: {
-		sub?: string;
+		sub?: string | null;
 		email?: string | null;
+		email_verified?: unknown;
 		name?: string;
 	},
 	accessToken?: string,
 	refreshToken?: string,
 	expiresAt?: number,
 	linkToUserId?: string
-): Promise<{ id: string } | null> {
+): Promise<ProviderSignInResult | null> {
+	const googleId = profile?.sub ?? "";
+	if (googleId === "") {
+		log.error("Google OAuth: No account id provided");
+		return null;
+	}
+
 	const { prisma } = await import("@/lib/prisma");
 
-	const googleId = profile?.sub ?? "";
 	const email = profile?.email;
 
 	if (!email) {
@@ -375,10 +468,18 @@ export async function authenticateGoogleWithPrisma(
 		return linkGoogleToUser(linkToUserId, googleId, email, tokenData);
 	}
 
-	// Standard flow: Find existing user by Google ID or email
-	const existingUser = await prisma.user.findFirst({
-		where: { OR: [{ googleId }, { email }] },
+	// Standard flow: the user who carries this Google id signs in; otherwise
+	// the address must be verified before it is matched or used.
+	const idUser = await prisma.user.findUnique({
+		where: { googleId },
+		select: { id: true },
 	});
+	if (!idUser && profile.email_verified !== true) {
+		return EMAIL_NOT_VERIFIED_REFUSAL;
+	}
+	const existingUser =
+		idUser ??
+		(await prisma.user.findFirst({ where: { email }, select: { id: true } }));
 
 	if (existingUser) {
 		await prisma.user.update({
@@ -769,18 +870,14 @@ export const authOptions: NextAuthOptions = {
 					account.expires_at,
 					linkToUserId
 				);
-				if (result) {
-					user.id = result.id;
-					user.provider = "github";
-					return true;
-				}
-				return false;
+				return applyProviderResult(result, user, "github");
 			}
 
 			if (account?.provider === "google") {
 				const googleProfile = profile as {
 					sub?: string;
 					email?: string;
+					email_verified?: unknown;
 					name?: string;
 				};
 
@@ -792,12 +889,7 @@ export const authOptions: NextAuthOptions = {
 					account.expires_at,
 					linkToUserId
 				);
-				if (result) {
-					user.id = result.id;
-					user.provider = "google";
-					return true;
-				}
-				return false;
+				return applyProviderResult(result, user, "google");
 			}
 
 			// For credentials, allow default processing

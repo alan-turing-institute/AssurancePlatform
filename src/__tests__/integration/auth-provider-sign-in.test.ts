@@ -68,13 +68,30 @@ function githubProfile(email: string | null | undefined, login?: string) {
 	return { id: 4242, login, email: email as string | undefined };
 }
 
-function googleProfile(email: string | null | undefined) {
+function googleProfile(
+	email: string | null | undefined,
+	emailVerified: unknown = true
+) {
 	return {
 		sub: "google-sub-1",
 		email: email as string | undefined,
+		email_verified: emailVerified,
 		name: "Test User",
 	};
 }
+
+/** Replaces the network: GitHub answers the email-list request with `body`. */
+function stubGitHubEmails(body: unknown, init: ResponseInit = { status: 200 }) {
+	const fetchMock = vi.fn(() =>
+		Promise.resolve(new Response(JSON.stringify(body), init))
+	);
+	vi.stubGlobal("fetch", fetchMock);
+	return fetchMock;
+}
+
+const VERIFIED_NEW_EMAIL = [
+	{ email: NEW_EMAIL, primary: true, verified: true },
+];
 
 const signInAs = async (
 	account: Account,
@@ -152,10 +169,12 @@ beforeEach(() => {
 	vi.stubEnv("TOKEN_ENCRYPTION_KEY", ENCRYPTION_KEY);
 	vi.stubEnv("NEXTAUTH_SECRET", NEXTAUTH_SECRET);
 	vi.stubEnv("NEXTAUTH_URL", PUBLIC_ORIGIN);
+	stubGitHubEmails(VERIFIED_NEW_EMAIL);
 });
 
 afterEach(() => {
 	vi.unstubAllEnvs();
+	vi.unstubAllGlobals();
 });
 
 describe("GitHub sign-in", () => {
@@ -180,17 +199,6 @@ describe("GitHub sign-in", () => {
 		await signInAs(githubAccount(), githubProfile(NEW_EMAIL));
 
 		expect((await rowByEmail(NEW_EMAIL))?.username).toBe(NEW_EMAIL);
-	});
-
-	it("stores no token and no expiry for a new user when none is given", async () => {
-		await signInAs(
-			githubAccount({ access_token: undefined }),
-			githubProfile(NEW_EMAIL, "octo-login")
-		);
-
-		const row = await rowByEmail(NEW_EMAIL);
-		expect(row?.githubAccessToken).toBeNull();
-		expect(row?.githubTokenExpiresAt).toBeNull();
 	});
 
 	it.each([
@@ -470,6 +478,264 @@ describe("Google sign-in", () => {
 			before
 		);
 		expect(await userCount()).toBe(2);
+	});
+});
+
+const EMAIL_NOT_VERIFIED_PATH = "/login?error=EmailNotVerified";
+
+describe("GitHub sign-in needs an account id and a verified address", () => {
+	it.each([
+		["missing", undefined],
+		["null", null],
+		["empty", ""],
+	])("refuses a profile whose id is %s, before any database or network call", async (_label, id) => {
+		const fetchMock = stubGitHubEmails(VERIFIED_NEW_EMAIL);
+		const profile = {
+			id,
+			login: "octo-login",
+			email: NEW_EMAIL,
+		} as unknown as SignInParams["profile"];
+
+		const { result } = await signInAs(githubAccount(), profile);
+
+		expect(result).toBe(false);
+		expect(fetchMock).not.toHaveBeenCalled();
+		expect(await userCount()).toBe(0);
+	});
+
+	it("refuses a linking sign-in whose profile has no id and changes nothing", async () => {
+		const user = await createTestUser();
+		const before = await rowById(user.id);
+		await installLinkJar(user.id, "github");
+		const profile = {
+			login: "octo-login",
+			email: NEW_EMAIL,
+		} as unknown as SignInParams["profile"];
+
+		const { result } = await signInAs(githubAccount(), profile);
+
+		expect(result).toBe(false);
+		expect(await rowById(user.id)).toStrictEqual(before);
+	});
+
+	it("signs in a user who carries the GitHub id without asking GitHub for the email list", async () => {
+		const { target } = await decoyAndLinkedUser({ githubId: "4242" });
+		const fetchMock = stubGitHubEmails([]);
+
+		const { result, userId } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(true);
+		expect(userId).toBe(target.id);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("attaches the sign-in to the account with a verified address and keeps its provider", async () => {
+		const existing = await createTestUser({ email: NEW_EMAIL });
+		const fetchMock = stubGitHubEmails([
+			{ email: NEW_EMAIL.toUpperCase(), primary: true, verified: true },
+		]);
+
+		const { result, userId } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(true);
+		expect(userId).toBe(existing.id);
+		expect(await userCount()).toBe(1);
+		const row = await rowById(existing.id);
+		expect(row?.githubId).toBe("4242");
+		expect(row?.authProvider).toBe("LOCAL");
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		const [, init] = fetchMock.mock.calls[0] as unknown as [
+			string,
+			RequestInit,
+		];
+		expect(init.headers).toMatchObject({
+			Authorization: "Bearer gho_test_access_token",
+		});
+		expect(init.redirect).toBe("manual");
+	});
+
+	it("creates a GitHub user when the address is verified and no account has it", async () => {
+		const { result } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(true);
+		expect((await rowByEmail(NEW_EMAIL))?.authProvider).toBe("GITHUB");
+	});
+
+	it("does not ask GitHub when linking from Settings", async () => {
+		const user = await createTestUser();
+		await installLinkJar(user.id, "github");
+		const fetchMock = stubGitHubEmails([]);
+
+		const { result } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(true);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		[
+			"the address is not in the list",
+			[{ email: "other@example.test", verified: true }],
+		],
+		[
+			"the address is listed unverified",
+			[{ email: NEW_EMAIL, verified: false }],
+		],
+		["verified is the text true", [{ email: NEW_EMAIL, verified: "true" }]],
+		["the body is not a list", { message: "Not Found" }],
+	])("refuses and changes nothing when %s", async (_label, body) => {
+		const existing = await createTestUser({ email: NEW_EMAIL });
+		const before = await rowById(existing.id);
+		stubGitHubEmails(body);
+
+		const { result } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(EMAIL_NOT_VERIFIED_PATH);
+		expect(await rowById(existing.id)).toStrictEqual(before);
+		expect(await userCount()).toBe(1);
+	});
+
+	it("refuses when GitHub answers with an error status", async () => {
+		stubGitHubEmails({ message: "Bad credentials" }, { status: 401 });
+
+		const { result } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(EMAIL_NOT_VERIFIED_PATH);
+		expect(await userCount()).toBe(0);
+	});
+
+	it("refuses when the request fails", async () => {
+		vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+
+		const { result } = await signInAs(
+			githubAccount(),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(EMAIL_NOT_VERIFIED_PATH);
+		expect(await userCount()).toBe(0);
+	});
+
+	it("refuses when the sign-in has no access token, without a request", async () => {
+		const fetchMock = stubGitHubEmails(VERIFIED_NEW_EMAIL);
+
+		const { result } = await signInAs(
+			githubAccount({ access_token: undefined }),
+			githubProfile(NEW_EMAIL, "octo-login")
+		);
+
+		expect(result).toBe(EMAIL_NOT_VERIFIED_PATH);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("writes no log entry that carries the address or the token", async () => {
+		stubGitHubEmails([{ email: "other@example.test", verified: true }]);
+		const logs = captureLogs();
+		try {
+			await signInAs(githubAccount(), githubProfile(NEW_EMAIL, "octo-login"));
+			const text = JSON.stringify(logs.entries);
+			expect(text).not.toContain(NEW_EMAIL);
+			expect(text).not.toContain("gho_test_access_token");
+			expect(text).not.toContain("other@example.test");
+		} finally {
+			logs.restore();
+		}
+	});
+});
+
+describe("Google sign-in needs an account id and a verified address", () => {
+	it.each([
+		["missing", undefined],
+		["null", null],
+		["empty", ""],
+	])("refuses a profile whose sub is %s", async (_label, sub) => {
+		const profile = {
+			...googleProfile(NEW_EMAIL),
+			sub,
+		} as unknown as SignInParams["profile"];
+
+		const { result } = await signInAs(googleAccount(), profile);
+
+		expect(result).toBe(false);
+		expect(await userCount()).toBe(0);
+	});
+
+	it("attaches a verified sign-in to the account with that address", async () => {
+		const existing = await createTestUser({ email: NEW_EMAIL });
+
+		const result = await authenticateGoogleWithPrisma(googleProfile(NEW_EMAIL));
+
+		expect(result).toStrictEqual({ id: existing.id });
+		expect((await rowById(existing.id))?.googleId).toBe("google-sub-1");
+	});
+
+	it.each([
+		["false", false],
+		["missing", undefined],
+		["the text true", "true"],
+		["the number 1", 1],
+	])("refuses when email_verified is %s, and the callback answers the login error", async (_label, flag) => {
+		const existing = await createTestUser({ email: NEW_EMAIL });
+		const before = await rowById(existing.id);
+
+		const profile = { ...googleProfile(NEW_EMAIL), email_verified: flag };
+		const direct = await authenticateGoogleWithPrisma(profile);
+		const { result } = await signInAs(googleAccount(), profile);
+
+		expect(direct).toStrictEqual({ refused: "EmailNotVerified" });
+		expect(result).toBe(EMAIL_NOT_VERIFIED_PATH);
+		expect(await rowById(existing.id)).toStrictEqual(before);
+		expect(await userCount()).toBe(1);
+	});
+
+	it("refuses an unverified address when no account has it, and creates nobody", async () => {
+		const { result } = await signInAs(
+			googleAccount(),
+			googleProfile(NEW_EMAIL, false)
+		);
+
+		expect(result).toBe(EMAIL_NOT_VERIFIED_PATH);
+		expect(await userCount()).toBe(0);
+	});
+
+	it("signs in a user who carries the Google id whatever the verified flag says", async () => {
+		const { target } = await decoyAndLinkedUser({ googleId: "google-sub-1" });
+
+		const result = await authenticateGoogleWithPrisma(
+			googleProfile(NEW_EMAIL, false)
+		);
+
+		expect(result).toStrictEqual({ id: target.id });
+	});
+
+	it("links from Settings without needing a verified address", async () => {
+		const user = await createTestUser();
+		await installLinkJar(user.id, "google");
+
+		const { result } = await signInAs(
+			googleAccount(),
+			googleProfile(NEW_EMAIL, false)
+		);
+
+		expect(result).toBe(true);
 	});
 });
 
