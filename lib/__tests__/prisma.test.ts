@@ -32,6 +32,8 @@ interface Shared {
 	prisma?: unknown;
 }
 const MISSING_ADDRESS_PATTERN = /DATABASE_URL/;
+const MODULE_REFUSAL_PATTERN =
+	/^Element validation failed for MODULE: .*moduleReferenceId/;
 const shared = globalThis as unknown as Shared;
 
 type Loaded = typeof import("../prisma");
@@ -143,6 +145,30 @@ describe("database client: reuse outside production", () => {
 		expect(made.pools).toHaveLength(1);
 		expect(shared.pgPool).toBe(made.pools[0]?.pool);
 		expect(shared.prisma).toBe(second.prisma);
+	});
+});
+
+describe("database client: element write check", () => {
+	it("refuses an element that breaks its type's rules before any query is sent", async () => {
+		// A closed local port: if the check is not attached, the call goes on to
+		// the database and fails at once with a refused connection instead.
+		vi.stubEnv(
+			"DATABASE_URL",
+			"postgresql://example_user:example_pw@127.0.0.1:1/example_db"
+		);
+		vi.stubEnv("SKIP_ELEMENT_VALIDATION", "");
+		const { prisma } = await freshLoad();
+
+		const write = prisma.assuranceElement.create({
+			data: {
+				caseId: "00000000-0000-4000-8000-000000000001",
+				createdById: "00000000-0000-4000-8000-000000000002",
+				elementType: "MODULE",
+				description: "d",
+			},
+		});
+
+		await expect(write).rejects.toThrow(MODULE_REFUSAL_PATTERN);
 	});
 });
 

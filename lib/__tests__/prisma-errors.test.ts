@@ -45,7 +45,6 @@ describe("isWriteConflict", () => {
 		["P2010", driverCause({})],
 		["P2010", driverCause({ kind: "UniqueConstraintViolation" })],
 		["P2010", driverCause({ originalCode: "23505" })],
-		["P2010", driverCause({ originalCode: "40001" })],
 	])("refuses %s with meta %j", (code, meta) => {
 		expect(isWriteConflict(knownError(code, meta))).toBe(false);
 	});

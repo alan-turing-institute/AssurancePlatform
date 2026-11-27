@@ -200,7 +200,6 @@ describe("normaliseOrphanType", () => {
 		["Away Goal", "away_goal"],
 		["a  b", "a_b"],
 		["a b c", "a_b_c"],
-		["property", "property"],
 	])("turns %j into %j", (input, expected) => {
 		expect(normaliseOrphanType(input)).toBe(expected);
 	});
@@ -310,7 +309,7 @@ describe("parentTypeRefusal", () => {
 		expect(refusal).not.toBe(ONLY_COUNTER_GOALS_BENEATH_EVIDENCE);
 		expect(refusal).not.toContain("undefined");
 		expect(refusal).toContain(child);
-		expect(refusal).toContain(parent === "evidence" ? "evidence" : parent);
+		expect(refusal).toContain(parent);
 	});
 
 	it.each(

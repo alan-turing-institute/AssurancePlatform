@@ -155,14 +155,29 @@ describe("generateUuid", () => {
 			expect(id.slice(14, 16)).toBe(`4${low.toString(16)}`);
 		});
 
-		it.each(
-			Array.from({ length: 16 }, (_unused, nibble) => nibble)
-		)("maps a variant byte with high nibble %i to one of 8, 9, a, b and keeps the low nibble", (high) => {
+		it.each([
+			[0, "8"],
+			[1, "9"],
+			[2, "a"],
+			[3, "b"],
+			[4, "8"],
+			[5, "9"],
+			[6, "a"],
+			[7, "b"],
+			[8, "8"],
+			[9, "9"],
+			[10, "a"],
+			[11, "b"],
+			[12, "8"],
+			[13, "9"],
+			[14, "a"],
+			[15, "b"],
+		])("maps a variant byte with high nibble %i to digit %s and keeps the low nibble", (high, digit) => {
 			install(bytesWith(8, high * 16 + 5));
 
 			const id = generateUuid();
 
-			expect(id.slice(19, 21)).toBe(`${"89ab"[high % 4]}5`);
+			expect(id.slice(19, 21)).toBe(`${digit}5`);
 			expect(id).toMatch(UUID_V4_REGEX);
 		});
 

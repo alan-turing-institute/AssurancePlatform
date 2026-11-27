@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+let loadedLogging: typeof import("../logger") | undefined;
+
 /** Loads the pool config and the logger it writes to as one fresh pair. */
 async function freshModules() {
 	vi.resetModules();
 	const config = await import("../db-pool-config");
 	const logging = await import("../logger");
+	loadedLogging = logging;
 	const entries: unknown[] = [];
 	logging.setLogSink((entry) => {
 		entries.push(entry);
@@ -18,6 +21,8 @@ describe("resolveDbPoolTimeoutMs with a fresh module", () => {
 	});
 
 	afterEach(() => {
+		loadedLogging?.resetLogSink();
+		loadedLogging = undefined;
 		vi.unstubAllEnvs();
 		vi.resetModules();
 	});
@@ -28,27 +33,25 @@ describe("resolveDbPoolTimeoutMs with a fresh module", () => {
 		["blank", "   "],
 	])("gives the default without a warning when the value is %s", async (_label, value) => {
 		vi.stubEnv("DB_POOL_TIMEOUT_MS", value);
-		const { config, logging, entries } = await freshModules();
+		const { config, entries } = await freshModules();
 
 		expect(config.resolveDbPoolTimeoutMs()).toBe(
 			config.DEFAULT_DB_POOL_TIMEOUT_MS
 		);
 		expect(entries).toStrictEqual([]);
-		logging.resetLogSink();
 	});
 
 	it("reads a value with surrounding spaces as its number", async () => {
 		vi.stubEnv("DB_POOL_TIMEOUT_MS", " 250 ");
-		const { config, logging, entries } = await freshModules();
+		const { config, entries } = await freshModules();
 
 		expect(config.resolveDbPoolTimeoutMs()).toBe(250);
 		expect(entries).toStrictEqual([]);
-		logging.resetLogSink();
 	});
 
 	it("warns once with the value and the fallback for an unusable value", async () => {
 		vi.stubEnv("DB_POOL_TIMEOUT_MS", "-5");
-		const { config, logging, entries } = await freshModules();
+		const { config, entries } = await freshModules();
 
 		config.resolveDbPoolTimeoutMs();
 		config.resolveDbPoolTimeoutMs();
@@ -60,6 +63,5 @@ describe("resolveDbPoolTimeoutMs with a fresh module", () => {
 			value: "-5",
 			fallbackMs: config.DEFAULT_DB_POOL_TIMEOUT_MS,
 		});
-		logging.resetLogSink();
 	});
 });

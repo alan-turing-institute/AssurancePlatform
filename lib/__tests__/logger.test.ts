@@ -324,9 +324,9 @@ describe("logger entries", () => {
 
 describe("logger", () => {
 	afterEach(() => {
+		vi.unstubAllGlobals();
 		resetLogSink();
 		vi.unstubAllEnvs();
-		vi.unstubAllGlobals();
 		vi.restoreAllMocks();
 	});
 

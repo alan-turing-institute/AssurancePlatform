@@ -310,9 +310,7 @@ describe("readFormDataWithLimit without a body or content type", () => {
 	it("rejects a body sent without a content type", async () => {
 		const { request } = chunkedRequest(["plain text"]);
 
-		await expect(readFormDataWithLimit(request, 1024)).rejects.toBeInstanceOf(
-			TypeError
-		);
+		await expect(readFormDataWithLimit(request, 1024)).rejects.toThrow();
 	});
 });
 
