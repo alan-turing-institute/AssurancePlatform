@@ -13,6 +13,15 @@ import {
 const TEST_KEY = Buffer.alloc(32, 7).toString("base64");
 const OTHER_KEY = Buffer.alloc(32, 9).toString("base64");
 
+function captureThrown(action: () => unknown): unknown {
+	try {
+		action();
+	} catch (error) {
+		return error;
+	}
+	return undefined;
+}
+
 describe("token-encryption", () => {
 	const originalKey = process.env.TOKEN_ENCRYPTION_KEY;
 
@@ -75,6 +84,40 @@ describe("token-encryption", () => {
 			);
 		});
 
+		it("round-trips a value with non-ASCII characters", () => {
+			const plain = "tökén-✓-日本";
+			expect(decryptToken(encryptToken(plain))).toBe(plain);
+		});
+
+		it("names an unknown envelope version in the error it throws", () => {
+			const thrown = captureThrown(() => decryptToken("v99:aXY:cGF5bG9hZA"));
+			expect(thrown).toBeInstanceOf(TokenEncryptionUnavailableError);
+			expect((thrown as Error).message).toBe(
+				'No encryption key is configured for token envelope version "v99".'
+			);
+		});
+
+		it("gives the error a name callers can recognise", () => {
+			Reflect.deleteProperty(process.env, "TOKEN_ENCRYPTION_KEY");
+			const thrown = captureThrown(() => encryptToken("secret-value"));
+			expect((thrown as Error).name).toBe("TokenEncryptionUnavailableError");
+		});
+
+		it("says what is wrong with a key of the wrong length", () => {
+			process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(16, 1).toString("base64");
+			const thrown = captureThrown(() => encryptToken("secret-value"));
+			expect((thrown as Error).message).toBe(
+				"TOKEN_ENCRYPTION_KEY must be base64 encoding exactly 32 bytes."
+			);
+		});
+
+		it.each([
+			["text before the version", "x-v1:aXY:cGF5bG9hZA"],
+			["a fourth part", "v1:aXY:cGF5bG9hZA:extra"],
+		])("returns a value that only partly looks like an envelope unchanged (%s)", (_label, stored) => {
+			expect(decryptToken(stored)).toBe(stored);
+		});
+
 		it("returns legacy plaintext unchanged", () => {
 			expect(decryptToken("plain-legacy-token")).toBe("plain-legacy-token");
 		});
@@ -114,6 +157,14 @@ describe("token-encryption", () => {
 		it("returns false for legacy plaintext", () => {
 			expect(isEncrypted("gho_plaintexttoken")).toBe(false);
 			expect(isEncrypted("")).toBe(false);
+		});
+
+		it.each([
+			["text before the version", "x-v1:aXY:cGF5bG9hZA"],
+			["a fourth part", "v1:aXY:cGF5bG9hZA:extra"],
+			["a missing last part", "v1:aXY"],
+		])("returns false for a value that only partly looks like an envelope (%s)", (_label, stored) => {
+			expect(isEncrypted(stored)).toBe(false);
 		});
 	});
 

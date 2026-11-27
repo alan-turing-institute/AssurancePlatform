@@ -19,6 +19,17 @@ function signedToken(payloadB64: string): string {
 	return `${payloadB64}.${signature}`;
 }
 
+const VALID_PAYLOAD = {
+	u: "user-1",
+	p: "github",
+	n: "nonce",
+	exp: 9_999_999_999,
+};
+
+function encodePayload(payload: unknown): string {
+	return Buffer.from(JSON.stringify(payload)).toString("base64url");
+}
+
 describe("createLinkIntent / verifyLinkIntent", () => {
 	beforeEach(() => {
 		vi.stubEnv("NEXTAUTH_SECRET", TEST_SECRET);
@@ -160,6 +171,42 @@ describe("createLinkIntent / verifyLinkIntent", () => {
 		);
 
 		expect(verifyLinkIntent(token, { provider: "github" })).toBeNull();
+	});
+
+	it("returns null for a validly signed token that has a third part", () => {
+		const token = createLinkIntent({ userId: "user-1", provider: "github" });
+
+		expect(
+			verifyLinkIntent(`${token}.extra`, { provider: "github" })
+		).toBeNull();
+	});
+
+	it.each([
+		["null", null],
+		["a number", 5],
+		["a string", "text"],
+		["an array", []],
+	])("returns null, without throwing, for a validly signed payload that is %s", (_label, payload) => {
+		const token = signedToken(encodePayload(payload));
+
+		expect(verifyLinkIntent(token, { provider: "github" })).toBeNull();
+	});
+
+	it.each([
+		["user id", { u: 42 }],
+		["nonce", { n: 42 }],
+	])("returns null for a validly signed payload whose %s is not a string", (_label, override) => {
+		const token = signedToken(encodePayload({ ...VALID_PAYLOAD, ...override }));
+
+		expect(verifyLinkIntent(token, { provider: "github" })).toBeNull();
+	});
+
+	it("accepts a validly signed payload with every field of the right type", () => {
+		const token = signedToken(encodePayload(VALID_PAYLOAD));
+
+		expect(verifyLinkIntent(token, { provider: "github" })).toStrictEqual({
+			userId: "user-1",
+		});
 	});
 
 	it("returns null, without throwing, when NEXTAUTH_SECRET is unset at verify time", () => {
