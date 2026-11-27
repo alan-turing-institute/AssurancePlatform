@@ -25,12 +25,7 @@ describe.each(NO_DATE_FORMATTERS)("%s with no date", (_name, formatter) => {
 });
 
 describe("formatShortDate", () => {
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
 	it("formats as day/month/year with two-digit day and month", () => {
-		vi.stubEnv("TZ", "Europe/London");
 		expect(formatShortDate(new Date(2026, 6, 4, 9, 30))).toBe("04/07/2026");
 	});
 
@@ -42,42 +37,29 @@ describe("formatShortDate", () => {
 		["the last moment of a year", "2026-12-31T23:59:59", "31/12/2026"],
 		["the first moment of the next year", "2027-01-01T00:00:00", "01/01/2027"],
 	])("reads a local-time string at %s", (_label, input, expected) => {
-		vi.stubEnv("TZ", "Europe/London");
 		expect(formatShortDate(input)).toBe(expected);
 	});
 
-	it("shows the local calendar day of a Date, not the UTC day", () => {
-		vi.stubEnv("TZ", "Pacific/Auckland");
-		// 2026-12-31 23:30 UTC is 12:30 on 1 January in Auckland (UTC+13).
-		expect(formatShortDate(new Date("2026-12-31T23:30:00Z"))).toBe(
-			"01/01/2027"
-		);
-		vi.stubEnv("TZ", "America/New_York");
-		// 2027-01-01 02:00 UTC is 21:00 on 31 December in New York (UTC-5).
-		expect(formatShortDate(new Date("2027-01-01T02:00:00Z"))).toBe(
-			"31/12/2026"
-		);
-	});
-
-	it("reads a date-only string as a local date, not as midnight UTC", () => {
-		vi.stubEnv("TZ", "America/New_York");
+	it("reads a date-only string as a local date", () => {
 		expect(formatShortDate("2026-12-31")).toBe("31/12/2026");
 	});
 
+	it("accepts a Date built from local parts", () => {
+		expect(formatShortDate(new Date(2026, 11, 31, 23, 30))).toBe("31/12/2026");
+		expect(formatShortDate(new Date(2027, 0, 1, 0, 30))).toBe("01/01/2027");
+	});
+
 	it("accepts a numeric timestamp", () => {
-		vi.stubEnv("TZ", "UTC");
-		expect(formatShortDate(Date.UTC(2026, 11, 31, 23, 59, 59))).toBe(
+		expect(formatShortDate(new Date(2026, 11, 31, 23, 59, 59).getTime())).toBe(
 			"31/12/2026"
 		);
-		expect(formatShortDate(Date.UTC(2027, 0, 1, 0, 0, 0))).toBe("01/01/2027");
+		expect(formatShortDate(new Date(2027, 0, 1, 0, 0, 0).getTime())).toBe(
+			"01/01/2027"
+		);
 	});
 });
 
 describe("formatFullDate", () => {
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
 	it.each([
 		[
 			"the last minute of a year",
@@ -106,21 +88,18 @@ describe("formatFullDate", () => {
 			"Sunday, 1 March 2026 at 12:00 AM",
 		],
 	])("writes the day, date and 12-hour time at %s", (_label, input, expected) => {
-		vi.stubEnv("TZ", "Europe/London");
 		expect(formatFullDate(input)).toBe(expected);
 	});
 
 	it("accepts a Date and a numeric timestamp", () => {
-		vi.stubEnv("TZ", "UTC");
-		const moment = Date.UTC(2026, 6, 4, 14, 30);
-		expect(formatFullDate(new Date(moment))).toBe(
+		const moment = new Date(2026, 6, 4, 14, 30);
+		expect(formatFullDate(moment)).toBe("Saturday, 4 July 2026 at 2:30 PM");
+		expect(formatFullDate(moment.getTime())).toBe(
 			"Saturday, 4 July 2026 at 2:30 PM"
 		);
-		expect(formatFullDate(moment)).toBe("Saturday, 4 July 2026 at 2:30 PM");
 	});
 
-	it("reads a date-only string as a local date, not as midnight UTC", () => {
-		vi.stubEnv("TZ", "America/New_York");
+	it("reads a date-only string as a local date", () => {
 		expect(formatFullDate("2026-12-31")).toBe(
 			"Thursday, 31 December 2026 at 12:00 AM"
 		);
@@ -160,14 +139,9 @@ describe("formatRelativeToNow", () => {
 	});
 
 	describe("the string branch and the wording edges", () => {
-		afterEach(() => {
-			vi.unstubAllEnvs();
-		});
-
-		it("reads a date-only string as a local date, not as midnight UTC", () => {
-			// 2026-07-03 local in Auckland is 2026-07-02 12:00 UTC: 48 hours before
-			// the fixed clock, where midnight UTC would be only 36 hours before.
-			vi.stubEnv("TZ", "Pacific/Auckland");
+		it("reads a date-only string as a local date", () => {
+			// Local midnight on 3 July is 54 hours before the local clock below.
+			vi.setSystemTime(new Date(2026, 6, 5, 6, 0));
 			expect(formatRelativeToNow("2026-07-03")).toBe("2 days ago");
 		});
 

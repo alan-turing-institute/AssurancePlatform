@@ -47,6 +47,7 @@ const VALIDATION_EXACT = [
 	"12 elements still to fill in; 10 variables with no value",
 	"1 variable with no value",
 	"3 variables with no value",
+	"12 variables with no value",
 	"Invalid or expired reset token",
 	"Invalid invite",
 	"Invite has expired",

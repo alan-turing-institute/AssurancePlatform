@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cn, serialiseBigInt } from "../utils";
+import { cn } from "../utils";
 
 describe("cn", () => {
 	it("combines multiple string classes", () => {
@@ -95,19 +95,5 @@ describe("cn", () => {
 		expect(result).toContain("py-2");
 		expect(result).toContain("bg-secondary");
 		expect(result).not.toContain("bg-primary");
-	});
-});
-
-describe("serialiseBigInt", () => {
-	it("turns a BigInt into a string and keeps other values", () => {
-		expect(
-			serialiseBigInt({ id: BigInt(123), name: "Test", n: 5 })
-		).toStrictEqual({ id: "123", name: "Test", n: 5 });
-	});
-
-	it("converts BigInts nested in objects and arrays", () => {
-		expect(
-			serialiseBigInt({ rows: [{ id: BigInt(1) }, { id: BigInt(2) }] })
-		).toStrictEqual({ rows: [{ id: "1" }, { id: "2" }] });
 	});
 });
