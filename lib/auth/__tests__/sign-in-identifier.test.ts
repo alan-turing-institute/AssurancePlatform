@@ -2,11 +2,23 @@ import { createHash, createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KELVIN_SIGN } from "@/src/__tests__/helpers/identifier-characters";
 import {
+	countedName,
 	identifierFingerprint,
 	isEmailName,
 	normaliseSignInIdentifier,
 	signInIdentifierKey,
 } from "../sign-in-identifier";
+
+describe("countedName", () => {
+	it("is empty for a blank name", () => {
+		expect(countedName("")).toBe("");
+		expect(countedName("   \t")).toBe("");
+	});
+
+	it("is the trimmed name", () => {
+		expect(countedName("  Demo ")).toBe("Demo");
+	});
+});
 
 describe("normaliseSignInIdentifier", () => {
 	it("removes spaces, tabs and line breaks from both ends", () => {

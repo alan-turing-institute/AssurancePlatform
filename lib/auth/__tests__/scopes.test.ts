@@ -75,6 +75,15 @@ describe("scopes", () => {
 			).toBe(true);
 		});
 
+		it("treats the same members in the opposite order as the same, with the second list unsorted", () => {
+			expect(
+				sameScopes(
+					["case:read", "health:evidence:write"],
+					["health:evidence:write", "case:read"]
+				)
+			).toBe(true);
+		});
+
 		it("treats sets of different length as different", () => {
 			expect(
 				sameScopes(["case:read"], ["case:read", "health:evidence:write"])
