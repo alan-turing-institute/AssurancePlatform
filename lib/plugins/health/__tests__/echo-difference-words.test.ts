@@ -68,6 +68,45 @@ describe("describeDifference", () => {
 		);
 	});
 
+	it.each([
+		["check.version", [1, 2], { major: 3 }, '{"major":3}', "[1,2]"],
+		["rule.version", 2, { v: 1 }, '{"v":1}', "2"],
+		["window", { a: 1 }, 90, "90", '{"a":1}'],
+		["valid_for", null, [5], "[5]", "null"],
+	])("writes the %s values that are not text as they are stored", (field, declared, used, usedText, declaredText) => {
+		const text = describeDifference({ field, declared, used });
+
+		expect(text.indexOf(usedText)).toBeGreaterThanOrEqual(0);
+		expect(text.indexOf(declaredText)).toBeGreaterThan(text.indexOf(usedText));
+	});
+
+	it("treats a missing used value as not used", () => {
+		const difference = (used: unknown) =>
+			describeDifference({ field: "reduction", declared: "d1", used });
+
+		expect(difference(undefined)).toBe(difference(null));
+		expect(difference(undefined)).not.toBe(difference("d1"));
+	});
+
+	it("does not word a rule field as presence or absence", () => {
+		const difference = (declared: unknown, used: unknown) =>
+			describeDifference({ field: "rule", declared, used });
+
+		expect(difference(null, "identity")).toBe(
+			difference("threshold", "identity")
+		);
+		expect(difference(null, "identity")).toContain("rule");
+		expect(difference("threshold", null)).toBe(difference(null, "identity"));
+		const unknownField = describeDifference({
+			field: "unlisted",
+			declared: null,
+			used: "identity",
+		});
+		expect(difference(null, "identity")).toBe(
+			unknownField.replace("unlisted", "rule")
+		);
+	});
+
 	it("falls back to a plain sentence for a field it does not know", () => {
 		expect(
 			describeDifference({ field: "something", declared: 1, used: 2 })

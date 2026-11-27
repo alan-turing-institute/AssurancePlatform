@@ -27,6 +27,12 @@ describe("modelTimeoutMs", () => {
 		expect(modelTimeoutMs("9999999")).toBe(600_000);
 	});
 
+	it("ignores spaces around the number", () => {
+		expect(modelTimeoutMs("  90000 ")).toBe(90_000);
+		expect(techniquesTimeoutMs("\t20000\n")).toBe(20_000);
+		expect(rankingTimeoutMs(" 12000 ")).toBe(12_000);
+	});
+
 	it("falls back to the default for a non-number", () => {
 		expect(modelTimeoutMs("soon")).toBe(60_000);
 		expect(modelTimeoutMs("12.5")).toBe(60_000);

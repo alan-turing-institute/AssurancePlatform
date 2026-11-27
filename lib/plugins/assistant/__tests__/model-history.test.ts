@@ -282,3 +282,131 @@ describe("modelHistory — suggestions", () => {
 		expect(results[1]).toMatchObject({ output: { value: refusal } });
 	});
 });
+
+describe("modelHistory — what is kept and what is left alone", () => {
+	const toolPart = (type: string, output: unknown) =>
+		({
+			type,
+			toolCallId: "t1",
+			input: {},
+			state: "output-available",
+			output,
+		}) as UIMessage["parts"][number];
+
+	const toolResultsSent = async (part: UIMessage["parts"][number]) => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply({ type: "step-start" }, part),
+			asked("two"),
+		]);
+		return sent
+			.filter((message) => message.role === "tool")
+			.flatMap((message) => message.content);
+	};
+
+	it("leaves out an assistant message whose only text is blank", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply({ type: "step-start" }, { type: "text", text: "  \n " }),
+			asked("two"),
+		]);
+
+		expect(sent.map((message) => message.role)).toStrictEqual(["user", "user"]);
+	});
+
+	it("keeps an assistant message that has text", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply({ type: "text", text: " Here is the answer. " }),
+			asked("two"),
+		]);
+
+		expect(sent.map((message) => message.role)).toStrictEqual([
+			"user",
+			"assistant",
+			"user",
+		]);
+	});
+
+	it("sends a call with its whole input but not one still receiving its input", async () => {
+		const sent = await modelHistory([
+			asked("one"),
+			reply({ type: "text", text: "Looking." }, call("input-streaming"), {
+				type: "tool-read_element",
+				toolCallId: "c9",
+				state: "input-available",
+				input: {},
+			} as UIMessage["parts"][number]),
+			asked("two"),
+		]);
+		const calls = sent
+			.filter((message) => message.role === "assistant")
+			.flatMap((message) =>
+				typeof message.content === "string" ? [] : message.content
+			)
+			.filter((part) => part.type === "tool-call");
+
+		expect(calls).toMatchObject([{ toolCallId: "c9" }]);
+	});
+
+	it("leaves out a call that is still waiting for an approval, since it has no result to send", async () => {
+		const waiting = {
+			type: "tool-read_element",
+			toolCallId: "c8",
+			state: "approval-requested",
+			input: {},
+			approval: { id: "a1" },
+		} as UIMessage["parts"][number];
+
+		const sent = await modelHistory([
+			asked("one"),
+			reply({ type: "text", text: "Asking." }, waiting),
+			asked("two"),
+		]);
+
+		expect(JSON.stringify(sent)).not.toContain("c8");
+	});
+
+	it("leaves the output of another tool alone, even when it looks like a suggestion", async () => {
+		const output = { suggested: true, note: "Kept.", extra: 1 };
+
+		const results = await toolResultsSent(toolPart("tool-other_tool", output));
+
+		expect(results).toMatchObject([
+			{ output: { type: "json", value: output } },
+		]);
+		expect(JSON.stringify(results)).not.toContain("userDecision");
+	});
+
+	it("removes the tool's own note from a suggestion and adds the decision", async () => {
+		const results = await toolResultsSent(
+			toolPart("tool-suggest_edit", {
+				suggested: true,
+				note: "Not yet applied",
+			})
+		);
+
+		expect(results).toMatchObject([
+			{
+				output: {
+					value: { suggested: true, userDecision: expect.any(String) },
+				},
+			},
+		]);
+		expect(JSON.stringify(results)).not.toContain("Not yet applied");
+	});
+
+	it.each([
+		["a text", "plain text"],
+		["a number", 7],
+		["a null", null],
+		["an object with no suggested flag", { reason: "No." }],
+		["an object whose suggested flag is not true", { suggested: "yes" }],
+	])("sends %s output of a suggestion tool as it was", async (_label, output) => {
+		const results = await toolResultsSent(
+			toolPart("tool-suggest_edit", output)
+		);
+
+		expect(results).toMatchObject([{ output: { value: output } }]);
+	});
+});

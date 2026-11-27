@@ -651,3 +651,91 @@ describe("claimHealthPrompt", () => {
 		);
 	});
 });
+
+describe("read_claim_health: the shape of the tree and of the text", () => {
+	const HIGH_SURROGATE_PAIR = "\u{1F600}";
+
+	interface ReadResult {
+		claims: { id: string; text: string }[];
+		claimsWithoutResults: string[];
+	}
+
+	async function readWithDescription(description?: string) {
+		showTree(
+			goal([{ id: "p1", type: "PROPERTY_CLAIM", name: "P1", description }])
+		);
+		return (await read()) as ReadResult;
+	}
+
+	it("lists only property claims, and copes with nodes that have no children", async () => {
+		showTree({
+			id: "g1",
+			type: "GOAL",
+			name: "G1",
+			children: [
+				{ id: "s1", type: "STRATEGY", name: "S1" },
+				{ id: "p1", type: "PROPERTY_CLAIM", name: "P1", description: "d" },
+			],
+		});
+
+		const result = (await read()) as ReadResult;
+
+		expect(result.claims.map((claim) => claim.id)).toStrictEqual(["p1"]);
+		expect(result.claimsWithoutResults).toStrictEqual([]);
+	});
+
+	it("gives empty text for a claim with no description", async () => {
+		expect((await readWithDescription()).claims[0]?.text).toBe("");
+	});
+
+	it("drops half a character left at the cut, and keeps whole characters elsewhere", async () => {
+		const cut = await readWithDescription(
+			`${"a".repeat(CUT - 1)}${HIGH_SURROGATE_PAIR}`
+		);
+		const middle = await readWithDescription(
+			`x${HIGH_SURROGATE_PAIR}y\uD83D${"b".repeat(10)}`
+		);
+
+		expect(cut.claims[0]?.text).toBe("a".repeat(CUT - 1));
+		expect(middle.claims[0]?.text).toBe(
+			`x${HIGH_SURROGATE_PAIR}y\uD83D${"b".repeat(10)}`
+		);
+	});
+
+	it("reads no evidence nodes and logs nothing when the health service refuses", async () => {
+		const logged: LogEntry[] = [];
+		setLogSink((entry) => logged.push(entry));
+		vi.stubEnv("LOG_LEVEL", "debug");
+		vi.mocked(readHealthStatusesForCase).mockResolvedValue({
+			error: "Plugin 'tea.health' is not enabled",
+		});
+
+		try {
+			expect(await read()).toEqual(UNAVAILABLE);
+		} finally {
+			resetLogSink();
+			vi.unstubAllEnvs();
+		}
+
+		expect(readClaimEvidenceNodes).not.toHaveBeenCalled();
+		expect(logged).toHaveLength(0);
+	});
+
+	it("logs the name unknown when the node read fails with something that is not an error", async () => {
+		const logged: LogEntry[] = [];
+		setLogSink((entry) => logged.push(entry));
+		vi.stubEnv("LOG_LEVEL", "debug");
+		vi.mocked(readClaimEvidenceNodes).mockRejectedValue("db.internal refused");
+
+		try {
+			expect(await read()).toMatchObject({ found: true });
+		} finally {
+			resetLogSink();
+			vi.unstubAllEnvs();
+		}
+
+		expect(logged).toHaveLength(1);
+		expect(logged[0]).toMatchObject({ errorName: "unknown" });
+		expect(JSON.stringify(logged)).not.toContain("db.internal");
+	});
+});

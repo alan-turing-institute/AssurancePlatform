@@ -260,3 +260,32 @@ describe("replyNotices", () => {
 		expect(sent).not.toContain(NOTICE_REASON.steps);
 	});
 });
+
+describe("replyNotices — what counts as a tool call", () => {
+	it("counts a tool call whose input was refused as a tool call in the last step", async () => {
+		const refused: UIMessageChunk = {
+			type: "tool-input-error",
+			toolCallId: "c1",
+			toolName: "read_case",
+			input: {},
+			errorText: "Bad input",
+		};
+		const chunks: UIMessageChunk[] = [
+			{ type: "start-step" },
+			refused,
+			{ type: "finish-step" },
+		];
+
+		expect(await through([...chunks, finish("stop")], 1)).toEqual([
+			...chunks,
+			notice(NOTICE_REASON.steps),
+			finish("stop"),
+		]);
+	});
+
+	it("does not take a stream that made no steps for one that hit the step limit", async () => {
+		const chunks = [text, finish("stop")];
+
+		expect(await through(chunks, 0)).toEqual(chunks);
+	});
+});

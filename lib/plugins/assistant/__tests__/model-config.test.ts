@@ -106,6 +106,36 @@ describe("resolveChatModel", () => {
 	});
 });
 
+describe("resolveChatModel — one message for each way it fails", () => {
+	async function errorFor(setup: () => void): Promise<string> {
+		setup();
+		const result = await resolveChatModel("u1");
+		return "error" in result ? result.error : "";
+	}
+
+	it("tells the user apart the settings, the chat job, the connection and the model", async () => {
+		const messages = [
+			await errorFor(() =>
+				vi.mocked(getRoles).mockResolvedValue({ error: "Failed" })
+			),
+			await errorFor(() => rolesAre({})),
+			await errorFor(() => {
+				rolesAre({ chat: CHAT_JOB });
+				vi.mocked(getConnectionForUse).mockResolvedValue({ error: "Gone" });
+			}),
+			await errorFor(() => {
+				rolesAre({ chat: CHAT_JOB });
+				vi.mocked(getConnectionForUse).mockResolvedValue({
+					data: { ...OLLAMA, type: "ANTHROPIC", apiKey: null },
+				});
+			}),
+		];
+
+		expect(messages.every((message) => message.length > 0)).toBe(true);
+		expect(new Set(messages).size).toBe(messages.length);
+	});
+});
+
 describe("modelAccessFor", () => {
 	it("reads the user's jobs and connections when asked, for that user only", async () => {
 		rolesAre({ chat: CHAT_JOB });

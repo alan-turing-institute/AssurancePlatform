@@ -129,6 +129,34 @@ describe("showWaitingLine", () => {
 		).toBe(true);
 	});
 
+	it("is hidden while text is still arriving above a finished tool, and shown once that text is done", () => {
+		const text = (state: string) => ({ type: "text", text: "Hello", state });
+
+		expect(
+			waiting(
+				"streaming",
+				user(),
+				assistant(text("streaming"), tool("output-available"))
+			)
+		).toBe(false);
+		expect(
+			waiting(
+				"streaming",
+				user(),
+				assistant(text("done"), tool("output-available"))
+			)
+		).toBe(true);
+	});
+
+	it("reads the last message, not the second, when the reply is the only message", () => {
+		expect(waiting("streaming", assistant({ type: "text", text: "Hi" }))).toBe(
+			false
+		);
+		expect(waiting("streaming", assistant(tool("output-available")))).toBe(
+			true
+		);
+	});
+
 	it("is hidden under the timeout notice", () => {
 		expect(
 			waiting(

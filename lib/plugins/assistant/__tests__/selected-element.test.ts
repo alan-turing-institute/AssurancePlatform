@@ -84,6 +84,27 @@ describe("selected element in the prompt", () => {
 		expect(selectionPrompt(selection)).toBe("");
 	});
 
+	it.each([
+		["a type", { id: "x1", name: "X1", description: "Some text" }],
+		["a description", { id: "x1", name: "X1", type: "STRATEGY" }],
+	])("resolves an element with no %s, without a marked form", async (_missing, found) => {
+		vi.mocked(exportCase).mockResolvedValue({
+			data: {
+				case: { name: "C", description: "d" },
+				tree: { ...tree, children: [found] },
+			},
+		} as never);
+
+		const selection = await resolveSelectedElement("u", "c", "x1");
+
+		expect(selection).toStrictEqual({
+			id: "x1",
+			label: "X1",
+			type: "type" in found ? found.type : "element",
+			text: "description" in found ? found.description : "",
+		});
+	});
+
 	it("adds nothing for an id that is not in the case", async () => {
 		const selection = await resolveSelectedElement("u", "c", "foreign");
 
