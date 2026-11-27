@@ -24,7 +24,7 @@ vi.mock("next/headers", async (importOriginal) => ({
 
 const { cookies } = await import("next/headers");
 
-const NEXTAUTH_SECRET = "provider-verified-email-test-secret";
+const SESSION_SIGNING_VALUE = "provider-verified-email-test-signing-value";
 const PUBLIC_ORIGIN = "https://staging-assuranceplatform.azurewebsites.net";
 const SESSION_COOKIE_NAME = "__Secure-next-auth.session-token";
 const ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
@@ -85,7 +85,7 @@ async function installLinkJar(userId: string, provider: "github" | "google") {
 		[LINK_COOKIE_NAME]: createLinkIntent({ userId, provider }),
 		[SESSION_COOKIE_NAME]: await encode({
 			token: { id: userId, sub: userId },
-			secret: NEXTAUTH_SECRET,
+			secret: SESSION_SIGNING_VALUE,
 		}),
 	});
 }
@@ -154,7 +154,7 @@ function rowOf(id: string) {
 	return prisma.user.findUniqueOrThrow({ where: { id } });
 }
 
-function passwordMember() {
+function localAccountMember() {
 	return createTestUser({ email: MEMBER_EMAIL, authProvider: "LOCAL" });
 }
 
@@ -177,7 +177,7 @@ beforeEach(() => {
 		undefined as unknown as Awaited<ReturnType<typeof cookies>>
 	);
 	vi.stubEnv("TOKEN_ENCRYPTION_KEY", ENCRYPTION_KEY);
-	vi.stubEnv("NEXTAUTH_SECRET", NEXTAUTH_SECRET);
+	vi.stubEnv("NEXTAUTH_SECRET", SESSION_SIGNING_VALUE);
 	vi.stubEnv("NEXTAUTH_URL", PUBLIC_ORIGIN);
 	stubFetch(() => Promise.reject(new Error("no request expected")));
 });
@@ -206,7 +206,7 @@ describe("Google sign-in and the verified flag", () => {
 	it.each(
 		NOT_EXACTLY_TRUE
 	)("refuses an address that matches an account when email_verified is %s", async (_label, verified) => {
-		await passwordMember();
+		await localAccountMember();
 
 		expect(
 			await refusal(() => googleIn(MEMBER_EMAIL, { verified }))
@@ -223,7 +223,7 @@ describe("Google sign-in and the verified flag", () => {
 	});
 
 	it("attaches a verified address to a password account and keeps it a password account", async () => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 
 		const { result, userId } = await googleIn(MEMBER_EMAIL);
 
@@ -248,7 +248,7 @@ describe("Google sign-in and the verified flag", () => {
 	it.each(
 		NOT_EXACTLY_TRUE
 	)("signs in the user who already carries the Google id when email_verified is %s", async (_label, verified) => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		await prisma.user.update({
 			where: { id: member.id },
 			data: { googleId: "made-up-sub-1" },
@@ -272,7 +272,7 @@ describe("Google sign-in and the verified flag", () => {
 	});
 
 	it("applies the same rule to the exported function", async () => {
-		await passwordMember();
+		await localAccountMember();
 		const before = await allUsers();
 
 		const refused = await authenticateGoogleWithPrisma({
@@ -353,7 +353,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	it.each(
 		FAILED_ANSWERS
 	)("refuses, with nothing created or changed, when %s", async (_label, handler) => {
-		await passwordMember();
+		await localAccountMember();
 		stubFetch(handler);
 
 		const known = await refusal(() => githubIn(MEMBER_EMAIL));
@@ -366,7 +366,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	});
 
 	it("refuses when the sign-in carries no access token, without asking GitHub", async () => {
-		await passwordMember();
+		await localAccountMember();
 		const stand = stubList([verifiedEntry(MEMBER_EMAIL)]);
 
 		const outcome = await refusal(() =>
@@ -378,7 +378,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	});
 
 	it("refuses when GitHub does not answer before the time limit", async () => {
-		await passwordMember();
+		await localAccountMember();
 		stubFetch(
 			(_url, init) =>
 				new Promise((_resolve, reject) => {
@@ -394,7 +394,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	}, 20_000);
 
 	it("refuses an address that is verified only on a later page of the list", async () => {
-		await passwordMember();
+		await localAccountMember();
 		stubFetch((url) =>
 			listing(
 				new URL(url).searchParams.get("page") === "2"
@@ -427,7 +427,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	it.each(
 		VERIFIED_LISTS
 	)("attaches to a password account and keeps its provider when the list has %s", async (_label, entries) => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		stubList(entries);
 
 		const { result, userId } = await githubIn(MEMBER_EMAIL);
@@ -451,7 +451,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	});
 
 	it("asks GitHub once, with the sign-in's own token in the header only", async () => {
-		await passwordMember();
+		await localAccountMember();
 		const stand = stubList([verifiedEntry(MEMBER_EMAIL)]);
 
 		await githubIn(MEMBER_EMAIL);
@@ -470,7 +470,7 @@ describe("GitHub sign-in and the verified email list", () => {
 			[{ email: MEMBER_EMAIL, verified: false }],
 		],
 	])("signs in the user who already carries the GitHub id with %s, asking nothing", async (_label, entries) => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		await prisma.user.update({
 			where: { id: member.id },
 			data: { githubId: "7001" },
@@ -485,7 +485,7 @@ describe("GitHub sign-in and the verified email list", () => {
 	});
 
 	it("signs in the carrier of the id even when the profile now shows a different address", async () => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		await prisma.user.update({
 			where: { id: member.id },
 			data: { githubId: "7001" },
@@ -527,7 +527,7 @@ describe("a sign-in with no account id", () => {
 	it.each(
 		MISSING_IDS
 	)("is refused for GitHub when the id is %s, on the ordinary path", async (_label, id) => {
-		await passwordMember();
+		await localAccountMember();
 		const before = await allUsers();
 		const stand = stubList([verifiedEntry(MEMBER_EMAIL)]);
 
@@ -541,7 +541,7 @@ describe("a sign-in with no account id", () => {
 	it.each(
 		MISSING_IDS
 	)("is refused for Google when the id is %s, on the ordinary path", async (_label, id) => {
-		await passwordMember();
+		await localAccountMember();
 		const before = await allUsers();
 
 		const { result } = await googleIn(MEMBER_EMAIL, { id });
@@ -553,7 +553,7 @@ describe("a sign-in with no account id", () => {
 	it.each(
 		MISSING_IDS
 	)("is refused for GitHub when the id is %s, even with a valid link intent", async (_label, id) => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		const before = await allUsers();
 		await installLinkJar(member.id, "github");
 
@@ -566,7 +566,7 @@ describe("a sign-in with no account id", () => {
 	it.each(
 		MISSING_IDS
 	)("is refused for Google when the id is %s, even with a valid link intent", async (_label, id) => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		const before = await allUsers();
 		await installLinkJar(member.id, "google");
 
@@ -588,7 +588,7 @@ describe("a sign-in with no account id", () => {
 
 describe("linking from Settings", () => {
 	it("links Google although the flag is not true, with no verified check", async () => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		await installLinkJar(member.id, "google");
 
 		const { result, userId } = await googleIn(MEMBER_EMAIL, {
@@ -601,7 +601,7 @@ describe("linking from Settings", () => {
 	});
 
 	it("links GitHub without asking GitHub for the email list", async () => {
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		await installLinkJar(member.id, "github");
 		const stand = stubList([]);
 
@@ -619,7 +619,7 @@ describe("linking from Settings", () => {
 			where: { id: owner.id },
 			data: { githubId: "7001", googleId: "made-up-sub-1" },
 		});
-		const member = await passwordMember();
+		const member = await localAccountMember();
 		await installLinkJar(member.id, "github");
 		const before = await allUsers();
 
@@ -648,7 +648,7 @@ describe("what the log records", () => {
 		],
 		["a failed request that names the token", SECRET_THROW],
 	])("leaves out the address, the token and GitHub's answer on %s", async (_label, handler) => {
-		await passwordMember();
+		await localAccountMember();
 		stubFetch(handler);
 		const logs = captureLogs();
 		try {
@@ -665,7 +665,7 @@ describe("what the log records", () => {
 	});
 
 	it("leaves out the address on a Google refusal and on a verified sign-in of either provider", async () => {
-		await passwordMember();
+		await localAccountMember();
 		stubList([verifiedEntry(MEMBER_EMAIL)]);
 		const logs = captureLogs();
 		try {
