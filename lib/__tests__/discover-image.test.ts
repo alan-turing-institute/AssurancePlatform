@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FALLBACK_IMAGE, resolveFeatureImageSrc } from "../discover-image";
+import { isAcceptableExternalMediaUrl } from "../media-key";
 
 const SLUG = "a-slug";
 const VERSION_ID = "11111111-1111-1111-1111-111111111111";
@@ -11,6 +12,12 @@ const VERSION_ID = "11111111-1111-1111-1111-111111111111";
  * distinct from `null`, so any published case whose author never touched
  * the image field stores `""` rather than `null`.
  */
+describe("FALLBACK_IMAGE", () => {
+	it("is an https address the app can show as it stands", () => {
+		expect(isAcceptableExternalMediaUrl(FALLBACK_IMAGE)).toBe(true);
+	});
+});
+
 describe("resolveFeatureImageSrc", () => {
 	it("falls back to the placeholder for an empty string", () => {
 		expect(resolveFeatureImageSrc("", SLUG, VERSION_ID)).toBe(FALLBACK_IMAGE);

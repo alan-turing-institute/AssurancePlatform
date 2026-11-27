@@ -9,6 +9,7 @@ import {
 } from "../api-request";
 
 const URL = "http://localhost:3000/api/__test__/body-size";
+const NON_BLANK = /\S/;
 
 /**
  * A `ReadableStream` that yields one chunk per `pull()` invocation, with a
@@ -191,8 +192,85 @@ describe("readJsonBody", () => {
 	});
 });
 
+describe("readJsonBody declared length and empty streams", () => {
+	it("reads a body whose declared length is under the cap", async () => {
+		const { request } = chunkedRequest(['{"a":1}'], {
+			headers: { "content-length": "7" },
+		});
+
+		await expect(readJsonBody(request, { maxBytes: 1024 })).resolves.toEqual({
+			a: 1,
+		});
+	});
+
+	it("reads a body whose declared length equals the cap", async () => {
+		const { request } = chunkedRequest(['{"a":1}'], {
+			headers: { "content-length": "7" },
+		});
+
+		await expect(readJsonBody(request, { maxBytes: 7 })).resolves.toEqual({
+			a: 1,
+		});
+	});
+
+	it("rejects a declared length one byte over the cap", async () => {
+		const { request } = chunkedRequest(['{"a":1}'], {
+			headers: { "content-length": "8" },
+		});
+
+		await expect(readJsonBody(request, { maxBytes: 7 })).rejects.toMatchObject({
+			code: "PAYLOAD_TOO_LARGE",
+		});
+	});
+
+	it("ignores a declared length that is not a finite number and still reads the body", async () => {
+		const { request } = chunkedRequest(['{"a":1}'], {
+			headers: { "content-length": "Infinity" },
+		});
+
+		await expect(readJsonBody(request, { maxBytes: 1024 })).resolves.toEqual({
+			a: 1,
+		});
+	});
+
+	it("does not reject a request with no body and no declared length under a negative cap", async () => {
+		const request = new NextRequest(URL, { method: "POST" });
+
+		await expect(
+			readJsonBody(request, { maxBytes: -1 })
+		).resolves.toBeUndefined();
+	});
+
+	it("treats a stream that ends without data as an empty body", async () => {
+		const { request } = chunkedRequest([]);
+
+		await expect(readJsonBody(request)).resolves.toBeUndefined();
+	});
+
+	it("gives emptyBodyAs for a stream that ends without data", async () => {
+		const { request } = chunkedRequest([]);
+
+		await expect(
+			readJsonBody(request, { emptyBodyAs: { fallback: true } })
+		).resolves.toStrictEqual({ fallback: true });
+	});
+});
+
 describe("parseJsonBody", () => {
 	const schema = z.strictObject({ name: z.string() });
+
+	it("throws a 400 validation error with some message when the schema fails with no issues", async () => {
+		const { request } = chunkedRequest(["{}"]);
+		const issueless = {
+			safeParse: () => ({ success: false, error: { issues: [] } }),
+		} as unknown as z.ZodType;
+
+		await expect(parseJsonBody(request, issueless)).rejects.toMatchObject({
+			code: "VALIDATION",
+			statusCode: 400,
+			message: expect.stringMatching(NON_BLANK),
+		});
+	});
 
 	it("returns the schema's parsed data on success", async () => {
 		const { request } = chunkedRequest([JSON.stringify({ name: "Ada" })]);
@@ -217,6 +295,22 @@ describe("parseJsonBody", () => {
 		await expect(
 			parseJsonBody(request, schema, { maxBytes: 10 })
 		).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+	});
+});
+
+describe("readFormDataWithLimit without a body or content type", () => {
+	it("gives empty FormData for a request with no body", async () => {
+		const request = new NextRequest(URL, { method: "POST" });
+
+		const result = await readFormDataWithLimit(request, -1);
+
+		expect([...result.keys()]).toStrictEqual([]);
+	});
+
+	it("rejects a body sent without a content type", async () => {
+		const { request } = chunkedRequest(["plain text"]);
+
+		await expect(readFormDataWithLimit(request, 1024)).rejects.toThrow();
 	});
 });
 
