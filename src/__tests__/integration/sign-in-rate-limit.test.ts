@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { authorizeCredentials } from "@/lib/auth/config";
 import { hashPassword } from "@/lib/auth/password-service";
+import { SIGN_IN_RATE_LIMITED } from "@/lib/auth/sign-in-error";
 import { signInIdentifierKey } from "@/lib/auth/sign-in-identifier";
 import prisma from "@/lib/prisma";
 import { resetPassword } from "@/lib/services/password-reset-service";
@@ -392,5 +393,66 @@ describe("sign-in attempt limit: password reset", () => {
 			vi.unstubAllEnvs();
 		}
 		expect(await attempt("alice", NEW_PASSWORD)).toBe("signed-in");
+	});
+});
+
+describe("credentials sign-in: input and failures", () => {
+	const ADDRESS = { "x-client-ip": "203.0.113.7" };
+
+	it.each([
+		["no credentials", undefined],
+		["an empty password", { username: "alice", password: "" }],
+		["an empty username", { username: "", password: PASSWORD }],
+		["a blank username", { username: "   ", password: PASSWORD }],
+	])("refuses %s with null and counts no attempt", async (_label, credentials) => {
+		await demoUser();
+
+		await expect(authorizeCredentials(credentials, ADDRESS)).resolves.toBe(
+			null
+		);
+
+		expect(await prisma.rateLimitAttempt.count()).toBe(0);
+	});
+
+	it("returns null for an account whose stored hash cannot be read", async () => {
+		await createTestUser({
+			username: "alice",
+			passwordHash: "not-a-password-hash",
+			passwordAlgorithm: "argon2id",
+		});
+
+		await expect(
+			authorizeCredentials({ username: "alice", password: PASSWORD }, ADDRESS)
+		).resolves.toBe(null);
+	});
+
+	async function pausedError(): Promise<Error | undefined> {
+		await demoUser();
+		await failTimes(10, "alice", ADDRESS);
+		const outcome = await authorizeCredentials(
+			{ username: "alice", password: PASSWORD },
+			ADDRESS
+		).catch((thrown: unknown) => thrown);
+		return outcome instanceof Error ? outcome : undefined;
+	}
+
+	it("sends the exported pause text followed by the minutes to wait", async () => {
+		const error = await pausedError();
+
+		expect(error?.message).toBe(`${SIGN_IN_RATE_LIMITED}:15`);
+	});
+
+	it("logs a pause as a medium-severity security event", async () => {
+		const logs = captureLogs();
+		try {
+			await pausedError();
+
+			const entry = logs.entries.find(
+				(candidate) => candidate.msg === "sign_in_rate_limited"
+			);
+			expect(entry).toMatchObject({ level: "warn", severity: "medium" });
+		} finally {
+			logs.restore();
+		}
 	});
 });

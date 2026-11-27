@@ -512,3 +512,49 @@ describe("provider token storage without an encryption key in production", () =>
 		expect(fields).toStrictEqual(["googleAccessToken", "googleRefreshToken"]);
 	});
 });
+
+describe("signIn callback outside the provider flows", () => {
+	it.each([
+		["github", githubAccount, githubProfile(NEW_EMAIL, "octo-login")],
+		["google", googleAccount, googleProfile(NEW_EMAIL)],
+	])("marks the %s user it signs in with that provider", async (provider, account, profile) => {
+		const user: NonNullable<SignInParams["user"]> = { id: "placeholder" };
+
+		await signIn({ user, account: account(), profile });
+
+		expect(user.provider).toBe(provider);
+	});
+
+	it("refuses a GitHub sign-in that arrives with no profile and creates nobody", async () => {
+		const { result } = await signInAs(githubAccount(), undefined);
+
+		expect(result).toBe(false);
+		expect(await userCount()).toBe(0);
+	});
+
+	it("allows a sign-in with no provider account when the user has an id", async () => {
+		const user: NonNullable<SignInParams["user"]> = { id: "some-user-id" };
+
+		await expect(
+			signIn({ user, account: null, profile: undefined })
+		).resolves.toBe(true);
+	});
+
+	it("allows a sign-in with no provider account while a link cookie is present", async () => {
+		const owner = await createTestUser();
+		await installLinkJar(owner.id, "github");
+		const user: NonNullable<SignInParams["user"]> = { id: "some-user-id" };
+
+		await expect(
+			signIn({ user, account: null, profile: undefined })
+		).resolves.toBe(true);
+	});
+
+	it("refuses a sign-in with no provider account and no user id", async () => {
+		const user = { id: "" } as NonNullable<SignInParams["user"]>;
+
+		await expect(
+			signIn({ user, account: null, profile: undefined })
+		).resolves.toBe(false);
+	});
+});

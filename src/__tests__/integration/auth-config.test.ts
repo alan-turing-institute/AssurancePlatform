@@ -5,7 +5,7 @@ import {
 	authenticateWithPrisma,
 	authOptions,
 } from "@/lib/auth/config";
-import { hashPassword } from "@/lib/auth/password-service";
+import { hashPassword, verifyPassword } from "@/lib/auth/password-service";
 import { encryptToken } from "@/lib/auth/token-encryption";
 import prisma from "@/lib/prisma";
 import { getUserGitHubToken } from "@/lib/services/github-api-service";
@@ -452,5 +452,61 @@ describe("authenticateWithPrisma — email matching ignores capitals", () => {
 		);
 
 		expect(result?.id).toBe(user.id);
+	});
+});
+
+// Made once from the password "test-password", the salt "test-salt", 10
+// iterations, a 32-byte key and SHA-256, written as base64.
+const LEGACY_PASSWORD = "test-password";
+const LEGACY_HASH =
+	"pbkdf2_sha256$10$test-salt$1MWwuTlxtyw+PnGX8OADFZkp+ENWwLlWljz6vPUpWQo=";
+
+describe("authenticateWithPrisma — older password hashes", () => {
+	it("signs in and replaces an older hash with an argon2id hash of the same password", async () => {
+		const user = await createTestUser({
+			passwordHash: LEGACY_HASH,
+			passwordAlgorithm: "django_pbkdf2",
+		});
+
+		const result = await authenticateWithPrisma(user.username, LEGACY_PASSWORD);
+
+		expect(result?.id).toBe(user.id);
+		const row = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(row?.passwordAlgorithm).toBe("argon2id");
+		expect(row?.passwordHash).not.toBe(LEGACY_HASH);
+		expect(
+			await verifyPassword(LEGACY_PASSWORD, row?.passwordHash ?? "", "argon2id")
+		).toStrictEqual({ valid: true, needsUpgrade: false });
+	});
+
+	it("leaves an older hash in place when the password is wrong", async () => {
+		const user = await createTestUser({
+			passwordHash: LEGACY_HASH,
+			passwordAlgorithm: "django_pbkdf2",
+		});
+
+		const result = await authenticateWithPrisma(
+			user.username,
+			"wrong-password"
+		);
+
+		expect(result).toBeNull();
+		const row = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(row?.passwordAlgorithm).toBe("django_pbkdf2");
+		expect(row?.passwordHash).toBe(LEGACY_HASH);
+	});
+
+	it("keeps an argon2id hash as it is on a later sign-in", async () => {
+		const passwordHash = await hashPassword(TEST_PASSWORD);
+		const user = await createTestUser({
+			passwordHash,
+			passwordAlgorithm: "argon2id",
+		});
+
+		await authenticateWithPrisma(user.username, TEST_PASSWORD);
+
+		const row = await prisma.user.findUnique({ where: { id: user.id } });
+		expect(row?.passwordHash).toBe(passwordHash);
+		expect(row?.passwordAlgorithm).toBe("argon2id");
 	});
 });

@@ -2,7 +2,11 @@ import type { JWT } from "next-auth/jwt";
 import { describe, expect, it, vi } from "vitest";
 import { authOptions } from "@/lib/auth/config";
 import { hashPassword } from "@/lib/auth/password-service";
-import { SessionRevokedError } from "@/lib/auth/session-version";
+import {
+	assertSessionVersionCurrent,
+	getSessionVersion,
+	SessionRevokedError,
+} from "@/lib/auth/session-version";
 import prisma from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/services/email-service";
 import {
@@ -39,6 +43,7 @@ type JwtParams = Parameters<typeof jwt>[0];
 const CURRENT_PASSWORD = "correct horse battery staple";
 const NEW_PASSWORD = "StrongP@ss1";
 const TEST_IP = "127.0.0.1";
+const MISSING_USER_ID = "00000000-0000-0000-0000-000000000000";
 
 /** Minimal sign-in call: only `user` matters to the callback's initial-sign-in branch. */
 function signInParams(userId: string, provider = "credentials"): JwtParams {
@@ -161,5 +166,89 @@ describe("callbacks.jwt — session version (AP-QA-003)", () => {
 		await expect(jwt({ token: githubToken } as JwtParams)).resolves.toEqual(
 			githubToken
 		);
+	});
+});
+
+describe("callbacks.jwt — provider on the token", () => {
+	it.each([
+		["github", "github"],
+		["google", "google"],
+		[undefined, "credentials"],
+		["", "credentials"],
+	])("puts %j on the token as %s at sign-in", async (provider, expected) => {
+		const user = await createTestUser();
+
+		const token = await jwt({
+			token: {} as JWT,
+			user: { id: user.id, provider },
+		} as JwtParams);
+
+		expect(token.provider).toBe(expected);
+	});
+});
+
+describe("getSessionVersion", () => {
+	it("returns the stored version for a user and null for one that does not exist", async () => {
+		const user = await createTestUser();
+
+		await expect(getSessionVersion(user.id)).resolves.toBe(user.sessionVersion);
+		await expect(getSessionVersion(MISSING_USER_ID)).resolves.toBeNull();
+	});
+});
+
+describe("assertSessionVersionCurrent", () => {
+	it("accepts a token stamped with the user's current version", async () => {
+		const user = await createTestUser();
+
+		await expect(
+			assertSessionVersionCurrent(user.id, user.sessionVersion)
+		).resolves.toBeUndefined();
+	});
+
+	it("refuses a token stamped with an older version", async () => {
+		const user = await createTestUser();
+		await prisma.user.update({
+			where: { id: user.id },
+			data: { sessionVersion: { increment: 1 } },
+		});
+
+		await expect(
+			assertSessionVersionCurrent(user.id, user.sessionVersion)
+		).rejects.toThrow(SessionRevokedError);
+	});
+
+	it("refuses a user id that does not exist", async () => {
+		await expect(
+			assertSessionVersionCurrent(MISSING_USER_ID, 1)
+		).rejects.toThrow(SessionRevokedError);
+	});
+
+	it("refuses a missing user id without looking anything up", async () => {
+		await expect(assertSessionVersionCurrent(undefined, 1)).rejects.toThrow(
+			SessionRevokedError
+		);
+	});
+
+	it.each([
+		["a string", "1"],
+		["undefined", undefined],
+		["null", null],
+	])("refuses a stamp that is %s", async (_label, stamp) => {
+		const user = await createTestUser();
+
+		await expect(assertSessionVersionCurrent(user.id, stamp)).rejects.toThrow(
+			SessionRevokedError
+		);
+	});
+
+	it("refuses with the error name and message a caller sees", async () => {
+		const error = await assertSessionVersionCurrent(undefined, 1).catch(
+			(thrown: unknown) => thrown
+		);
+
+		expect(error).toMatchObject({
+			name: "SessionRevokedError",
+			message: "Session revoked",
+		});
 	});
 });
