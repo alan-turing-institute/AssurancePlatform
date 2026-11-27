@@ -213,6 +213,27 @@ const EMAIL_NOT_VERIFIED_REFUSAL = {
 const EMAIL_NOT_VERIFIED_PATH = `/login?error=${EMAIL_NOT_VERIFIED}`;
 
 /**
+ * Turns a provider sign-in result into the `signIn` callback's answer: true
+ * (with the user's id and provider recorded on `user`), false for an ordinary
+ * refusal, or the login address for an unverified email.
+ */
+function applyProviderResult(
+	result: ProviderSignInResult | null,
+	user: { id?: string; provider?: string },
+	provider: "github" | "google"
+): boolean | string {
+	if (result?.refused) {
+		return EMAIL_NOT_VERIFIED_PATH;
+	}
+	if (!result) {
+		return false;
+	}
+	user.id = result.id;
+	user.provider = provider;
+	return true;
+}
+
+/**
  * Attaches a GitHub sign-in that is not a linking call to a user, or refuses
  * it. A user who already carries the GitHub id is signed in without any
  * verified check. Otherwise the address must be in the person's GitHub email
@@ -285,7 +306,7 @@ async function signInGitHubUser({
  * @param expiresAt - Token expiry timestamp
  * @param linkToUserId - If provided, links GitHub to this existing user instead of creating/finding by email
  */
-export async function authenticateGitHubWithPrisma(
+async function authenticateGitHubWithPrisma(
 	profile: {
 		id?: string | number | null;
 		login?: string;
@@ -849,15 +870,7 @@ export const authOptions: NextAuthOptions = {
 					account.expires_at,
 					linkToUserId
 				);
-				if (result?.refused) {
-					return EMAIL_NOT_VERIFIED_PATH;
-				}
-				if (result) {
-					user.id = result.id;
-					user.provider = "github";
-					return true;
-				}
-				return false;
+				return applyProviderResult(result, user, "github");
 			}
 
 			if (account?.provider === "google") {
@@ -876,15 +889,7 @@ export const authOptions: NextAuthOptions = {
 					account.expires_at,
 					linkToUserId
 				);
-				if (result?.refused) {
-					return EMAIL_NOT_VERIFIED_PATH;
-				}
-				if (result) {
-					user.id = result.id;
-					user.provider = "google";
-					return true;
-				}
-				return false;
+				return applyProviderResult(result, user, "google");
 			}
 
 			// For credentials, allow default processing
