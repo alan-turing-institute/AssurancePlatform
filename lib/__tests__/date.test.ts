@@ -44,6 +44,10 @@ describe("formatShortDate", () => {
 		expect(formatShortDate("2026-12-31")).toBe("31/12/2026");
 	});
 
+	it("reads compact ISO text without separators", () => {
+		expect(formatShortDate("20260314T120000")).toBe("14/03/2026");
+	});
+
 	it("accepts a Date built from local parts", () => {
 		expect(formatShortDate(new Date(2026, 11, 31, 23, 30))).toBe("31/12/2026");
 		expect(formatShortDate(new Date(2027, 0, 1, 0, 30))).toBe("01/01/2027");
@@ -99,6 +103,12 @@ describe("formatFullDate", () => {
 		);
 	});
 
+	it("reads compact ISO text without separators", () => {
+		expect(formatFullDate("20260314T120000")).toBe(
+			"Saturday, 14 March 2026 at 12:00 PM"
+		);
+	});
+
 	it("reads a date-only string as a local date", () => {
 		expect(formatFullDate("2026-12-31")).toBe(
 			"Thursday, 31 December 2026 at 12:00 AM"
@@ -126,6 +136,10 @@ describe("formatRelativeToNow", () => {
 			expect(formatRelativeToNow("2026-07-04T09:00:00.000Z")).toBe(
 				"about 3 hours ago"
 			);
+		});
+
+		it("reads compact ISO text without separators", () => {
+			expect(formatRelativeToNow("20260704T090000Z")).toBe("about 3 hours ago");
 		});
 
 		it("formats a numeric timestamp relative to now", () => {

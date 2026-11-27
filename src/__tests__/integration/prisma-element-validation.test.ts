@@ -360,18 +360,18 @@ describe("element write check: update", () => {
 		expect(back.description).toBe("changed");
 	});
 
-	it("passes an update that names no element type through as sent", async () => {
+	it("stores a change to a field of the element's own type when the update names no element type", async () => {
 		const { caseId, createdById } = await seed();
-		const goal = await createTestElement(caseId, createdById, {
-			elementType: "GOAL",
+		const evidence = await createTestElement(caseId, createdById, {
+			elementType: "EVIDENCE",
 		});
 
 		await prisma.assuranceElement.update({
-			where: { id: goal.id },
+			where: { id: evidence.id },
 			data: { description: "only this", url: "https://example.org/sent" },
 		});
 
-		const back = await stored(goal.id);
+		const back = await stored(evidence.id);
 		expect(back.description).toBe("only this");
 		expect(back.url).toBe("https://example.org/sent");
 	});
