@@ -27,6 +27,17 @@ describe("evidenceNodeText", () => {
 		}
 	});
 
+	it("adds a full stop to a description whose punctuation is only in the middle", () => {
+		expect(
+			evidenceNodeText(
+				{ name: "Check", description: "Counts marks. Per batch" },
+				"Pipeline"
+			)
+		).toBe(
+			"Results from the Check check, run by Pipeline. It measures: Counts marks. Per batch."
+		);
+	});
+
 	it("does not add a full stop to a description that already ends its sentence", () => {
 		for (const ending of [".", "?", "!"]) {
 			expect(
