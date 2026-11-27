@@ -348,7 +348,90 @@ describe("model lists", () => {
 	});
 });
 
+describe("what is asked of the server", () => {
+	const EMPTY_ANSWER = { data: [], models: [] };
+
+	it.each([
+		["OPENROUTER", "/api/v1/key"],
+		["OLLAMA", "/api/tags"],
+		["OPENAI_COMPATIBLE", "/models"],
+		["ANTHROPIC", "/v1/models?limit=1000"],
+		["OPENAI", "/models"],
+	] as const)("drops every trailing slash of a %s address", async (type, path) => {
+		for (const slashes of ["", "/", "//", "///"]) {
+			server.requests.length = 0;
+			server.respond = (_request, response) => sendJson(response, EMPTY_ANSWER);
+
+			await testConnection(
+				connection(type, { baseUrl: `${server.origin}${slashes}` })
+			);
+
+			expect(server.requests[0]?.url).toBe(path);
+		}
+	});
+
+	it.each([
+		"OPENROUTER",
+		"OLLAMA",
+		"OPENAI_COMPATIBLE",
+		"ANTHROPIC",
+	] as const)("asks a %s server for JSON in every request", async (type) => {
+		server.respond = (_request, response) => sendJson(response, EMPTY_ANSWER);
+
+		await testConnection(connection(type));
+
+		expect(server.requests.length).toBeGreaterThan(0);
+		for (const request of server.requests) {
+			expect(request.headers.accept).toBe("application/json");
+		}
+	});
+});
+
+describe("model names", () => {
+	it("keeps a name of exactly the longest length and drops one character more", async () => {
+		const longest = "n".repeat(MAX_MODEL_NAME_CHARS);
+		server.respond = routes({
+			"/models": listOf(longest, `${longest}x`, "short"),
+		});
+
+		const result = await testConnection(connection("OPENAI_COMPATIBLE"));
+
+		expect(result.models.chat).toStrictEqual([longest, "short"]);
+	});
+
+	it("reads only entries that have a name from an Ollama list", async () => {
+		server.respond = routes({
+			"/api/tags": {
+				models: [
+					{ name: "kept:latest" },
+					{ model: "has-no-name:latest" },
+					null,
+					{ name: 7 },
+				],
+			},
+		});
+
+		const result = await testConnection(connection("OLLAMA"));
+
+		expect(result.ok).toBe(true);
+		expect(result.models.chat).toStrictEqual(["kept:latest"]);
+	});
+});
+
 describe("failures", () => {
+	it("names the HTTP status of an answer that has no body", async () => {
+		server.respond = (_request, response) => {
+			response.writeHead(304);
+			response.end();
+		};
+
+		expect(await testConnection(connection("OLLAMA"))).toStrictEqual({
+			ok: false,
+			message: "The server answered with an error (HTTP 304).",
+			models: { chat: [], ranking: [], search: [] },
+		});
+	});
+
 	it("names the HTTP status of a server error", async () => {
 		server.respond = (_request, response) => sendJson(response, {}, 500);
 		const result = await testConnection(connection("OLLAMA"));

@@ -9,6 +9,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { releaseMockedNetwork } from "@/src/__tests__/utils/model-adversarial-kit";
 import { EMBEDDING_MAX_RESPONSE_BYTES } from "../adapters";
 import { TECHNIQUES_SERVICE_MAX_BYTES } from "../capped-json";
 import type {
@@ -248,6 +249,64 @@ describe("checkEmbedding", () => {
 	});
 });
 
+describe("checkEmbedding at the edges", () => {
+	/** A vector in the plane of the first two axes whose cosine with `[1, 0, 0, 0]` is exactly 0.999. */
+	const AT_THRESHOLD = [0.999, 0.044_710_177_812_216_01, 0, 0];
+
+	it("passes a probe whose similarity is exactly the threshold", async () => {
+		server.respond = embedding((index) =>
+			index === 0 ? AT_THRESHOLD : (SPEC.probes[index]?.vector ?? [])
+		);
+
+		const result = await check();
+
+		expect(result.lowestCosine).toBe(EMBEDDING_CHECK_THRESHOLD);
+		expect(result.ok).toBe(true);
+	});
+
+	it("measures the angle between vectors of any length, not their dot product", async () => {
+		const scaled: EmbeddingSpec = {
+			...SPEC,
+			probes: SPEC.probes.map((probe) => ({
+				...probe,
+				vector: probe.vector.map((value) => value * 2),
+			})),
+		};
+		server.respond = embedding((index) =>
+			(SPEC.probes[index]?.vector ?? []).map((value) => value * 3)
+		);
+
+		const result = await check({ spec: scaled });
+
+		expect(result.ok).toBe(true);
+		expect(result.lowestCosine).toBeCloseTo(1, 10);
+	});
+
+	it("fails when the server returns more vectors than probes", async () => {
+		server.respond = (_request, response) =>
+			sendJson(response, {
+				object: "list",
+				model: "m",
+				data: [...SPEC.probes, SPEC.probes[0]].map((probe, index) => ({
+					object: "embedding",
+					index,
+					embedding: probe?.vector,
+				})),
+				usage: { prompt_tokens: 1, total_tokens: 1 },
+			});
+
+		expect(await check()).toStrictEqual({ ok: false, lowestCosine: null });
+	});
+
+	it("fails when only one of the vectors has the wrong dimensions", async () => {
+		server.respond = embedding((index) =>
+			index === 1 ? [0, 1, 0, 0, 0] : (SPEC.probes[index]?.vector ?? [])
+		);
+
+		expect(await check()).toStrictEqual({ ok: false, lowestCosine: null });
+	});
+});
+
 describe("embeddingCheckId", () => {
 	it("is the catalogue model id, a hash sign and the SHA-256 of the probe sentences as a JSON array", () => {
 		const digest = createHash("sha256")
@@ -445,5 +504,37 @@ describe("fetchEmbeddingSpec", () => {
 	])("returns null for %s", async (_label, body) => {
 		serveSpec(body);
 		expect(await fetchEmbeddingSpec()).toBeNull();
+	});
+});
+
+describe("fetchEmbeddingSpec from a local server", () => {
+	beforeAll(async () => {
+		await releaseMockedNetwork();
+	});
+
+	beforeEach(() => {
+		vi.stubEnv("TECHNIQUES_MCP_URL", `${server.origin}/mcp`);
+	});
+
+	const specWithProbes = (count: number) => ({
+		...SPEC,
+		probes: Array.from({ length: count }, (_unused, index) => ({
+			text: `probe ${index}`,
+			vector: [1, 0, 0, 0],
+		})),
+	});
+
+	it.each([
+		[1, true],
+		[10, true],
+		[11, false],
+	])("reads a spec with %i probes: %s", async (count, accepted) => {
+		const spec = specWithProbes(count);
+		server.respond = (_request, response) => sendJson(response, spec);
+
+		expect(await fetchEmbeddingSpec()).toStrictEqual(accepted ? spec : null);
+		expect(server.requests.map((request) => request.url)).toStrictEqual([
+			"/embedding-spec",
+		]);
 	});
 });

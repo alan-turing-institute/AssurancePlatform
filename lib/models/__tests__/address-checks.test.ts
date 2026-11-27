@@ -108,4 +108,36 @@ describe("isBlockedAddress", () => {
 	])("blocks %j because it is not an address", (text) => {
 		expect(isBlockedAddress(text)).toBe(true);
 	});
+
+	it.each([
+		["1.2.3.4:5::", "an IPv4 tail that is not the last group"],
+		["::1.2.3.4:5", "an IPv4 tail that is not the last group, after ::"],
+		["2606:4700::1.2.3", "an IPv4 tail with three parts"],
+		["2606:4700::256.1.1.1", "an IPv4 tail with an octet out of range"],
+		["1:2:3:4:5::6:7:8:9", "more groups than fit around ::"],
+		["1:2:3:4:5:6:7", "seven groups without ::"],
+		["2606:4700:4700::1111]", "a closing bracket only"],
+		["[2606:4700:4700::1111", "an opening bracket only"],
+	])("blocks the malformed IPv6 text %s (%s)", (address) => {
+		expect(isBlockedAddress(address)).toBe(true);
+	});
+
+	it.each([
+		["2606:4700:4700:0:0:0:0:1111", "eight groups written in full"],
+		["2606:4700:4700::1111%eth0", "a zone suffix"],
+		["[2606:4700:4700::1111]", "URL brackets"],
+		["2606:2:3:4:5:6:7:1", "no zero groups"],
+		["2606:ff9b::7f00:1", "the NAT64 second group under another first group"],
+		["2606:4700:1::7f00:1", "a third group of 1 outside NAT64"],
+		[
+			"2606:4700:0:0:0:ffff:7f00:1",
+			"a sixth group of ffff outside ::ffff:0:0/96",
+		],
+		[
+			"2606:4700:0:0:ffff:0:7f00:1",
+			"a fifth group of ffff outside ::ffff:0:0/96",
+		],
+	])("allows the global unicast IPv6 address %s (%s)", (address) => {
+		expect(isBlockedAddress(address)).toBe(false);
+	});
 });
