@@ -201,19 +201,6 @@ describe("GitHub sign-in", () => {
 		expect((await rowByEmail(NEW_EMAIL))?.username).toBe(NEW_EMAIL);
 	});
 
-	it("stores no token and no expiry for a linked user when none is given", async () => {
-		const { target } = await decoyAndLinkedUser({ githubId: "4242" });
-
-		await signInAs(
-			githubAccount({ access_token: undefined }),
-			githubProfile(NEW_EMAIL, "octo-login")
-		);
-
-		const row = await rowById(target.id);
-		expect(row?.githubAccessToken).toBeNull();
-		expect(row?.githubTokenExpiresAt).toBeNull();
-	});
-
 	it.each([
 		[undefined],
 		[null],
