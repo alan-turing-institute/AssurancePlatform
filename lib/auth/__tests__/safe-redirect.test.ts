@@ -47,6 +47,24 @@ describe("safeRedirectPath", () => {
 		expect(safeRedirectPath(raw)).toBe(FALLBACK);
 	});
 
+	it.each([
+		["the last C0 control character", "/a\u001Fb"],
+		["the delete character", "/a\u007Fb"],
+		["the first C1 control character", "/a\u0080b"],
+		["the last C1 control character", "/a\u009Fb"],
+	])("falls back for a path holding %s", (_label, raw) => {
+		expect(safeRedirectPath(raw, "/home")).toBe("/home");
+	});
+
+	it.each([
+		["the first printable ASCII character", "/a b", "/a%20b"],
+		["the character just after the C1 range", "/a b", "/a%C2%A0b"],
+		["a letter outside ASCII", "/café", "/caf%C3%A9"],
+		["a character outside the first plane", "/a\u{1F600}", "/a%F0%9F%98%80"],
+	])("follows a path holding %s, percent-encoded", (_label, raw, expected) => {
+		expect(safeRedirectPath(raw, "/home")).toBe(expected);
+	});
+
 	it("keeps an encoded slash or backslash after the first slash on this site", () => {
 		for (const raw of ["/%2F%2Fevil.example", "/%5Cevil.example"]) {
 			const result = safeRedirectPath(raw);
