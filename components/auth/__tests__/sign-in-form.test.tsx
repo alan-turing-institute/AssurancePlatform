@@ -150,3 +150,38 @@ describe("SignInForm accessibility and wording", () => {
 		).toBeInTheDocument();
 	});
 });
+
+describe("SignInForm reason in the page address", () => {
+	beforeEach(() => {
+		resetNavigationMocks();
+		vi.mocked(signIn).mockReset();
+	});
+
+	it("explains that the provider did not confirm the email address", async () => {
+		mockUseSearchParams.mockReturnValue(
+			new URLSearchParams("error=EmailNotVerified")
+		);
+		renderWithoutProviders(<SignInForm />);
+
+		const alert = await screen.findByRole("alert");
+
+		expect(alert).toHaveTextContent(
+			"did not confirm that this email address belongs to you"
+		);
+		expect(alert).toHaveTextContent("connect GitHub or Google from Settings");
+	});
+
+	it.each([
+		"SomethingElse",
+		"<script>alert(1)</script>",
+		"",
+	])("shows no error for the reason %j and never renders it", (reason) => {
+		mockUseSearchParams.mockReturnValue(new URLSearchParams({ error: reason }));
+		const { container } = renderWithoutProviders(<SignInForm />);
+
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+		if (reason) {
+			expect(container.textContent).not.toContain(reason);
+		}
+	});
+});
