@@ -58,7 +58,7 @@ describe("safeRedirectPath", () => {
 
 	it.each([
 		["the first printable ASCII character", "/a b", "/a%20b"],
-		["the character just after the C1 range", "/a b", "/a%C2%A0b"],
+		["the character just after the C1 range", "/a\u{A0}b", "/a%C2%A0b"],
 		["a letter outside ASCII", "/café", "/caf%C3%A9"],
 		["a character outside the first plane", "/a\u{1F600}", "/a%F0%9F%98%80"],
 	])("follows a path holding %s, percent-encoded", (_label, raw, expected) => {

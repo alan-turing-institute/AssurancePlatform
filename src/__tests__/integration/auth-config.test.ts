@@ -10,6 +10,7 @@ import { encryptToken } from "@/lib/auth/token-encryption";
 import prisma from "@/lib/prisma";
 import { getUserGitHubToken } from "@/lib/services/github-api-service";
 import { captureLogs } from "../helpers/capture-logs";
+import { LEGACY_HASH, LEGACY_PASSWORD } from "../utils/legacy-password-hash";
 import { createTestUser } from "../utils/prisma-factories";
 
 /** A valid-shaped base64, 32-byte test key — distinct per describe block below. */
@@ -455,12 +456,6 @@ describe("authenticateWithPrisma — email matching ignores capitals", () => {
 	});
 });
 
-// Made once from the password "test-password", the salt "test-salt", 10
-// iterations, a 32-byte key and SHA-256, written as base64.
-const LEGACY_PASSWORD = "test-password";
-const LEGACY_HASH =
-	"pbkdf2_sha256$10$test-salt$1MWwuTlxtyw+PnGX8OADFZkp+ENWwLlWljz6vPUpWQo=";
-
 describe("authenticateWithPrisma — older password hashes", () => {
 	it("signs in and replaces an older hash with an argon2id hash of the same password", async () => {
 		const user = await createTestUser({
@@ -503,8 +498,9 @@ describe("authenticateWithPrisma — older password hashes", () => {
 			passwordAlgorithm: "argon2id",
 		});
 
-		await authenticateWithPrisma(user.username, TEST_PASSWORD);
+		const result = await authenticateWithPrisma(user.username, TEST_PASSWORD);
 
+		expect(result?.id).toBe(user.id);
 		const row = await prisma.user.findUnique({ where: { id: user.id } });
 		expect(row?.passwordHash).toBe(passwordHash);
 		expect(row?.passwordAlgorithm).toBe("argon2id");

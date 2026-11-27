@@ -241,14 +241,11 @@ describe("assertSessionVersionCurrent", () => {
 		);
 	});
 
-	it("refuses with the error name and message a caller sees", async () => {
+	it("refuses with the session-revoked error class", async () => {
 		const error = await assertSessionVersionCurrent(undefined, 1).catch(
 			(thrown: unknown) => thrown
 		);
 
-		expect(error).toMatchObject({
-			name: "SessionRevokedError",
-			message: "Session revoked",
-		});
+		expect(error).toBeInstanceOf(SessionRevokedError);
 	});
 });

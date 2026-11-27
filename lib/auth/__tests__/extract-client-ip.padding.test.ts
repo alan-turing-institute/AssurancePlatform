@@ -14,7 +14,7 @@ import { extractClientIp } from "../extract-client-ip";
  * helper's own trimming is what decides the answer.
  */
 
-const NBSP = " ";
+const NBSP = "\u{A0}";
 const FORM_FEED = "\f";
 
 setOriginSecretForEachTest();

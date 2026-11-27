@@ -75,7 +75,7 @@ describe("scopes", () => {
 			).toBe(true);
 		});
 
-		it("treats the same members in the opposite order as the same, whichever side is unsorted", () => {
+		it("treats the same members in the opposite order as the same, with the second list unsorted", () => {
 			expect(
 				sameScopes(
 					["case:read", "health:evidence:write"],

@@ -21,7 +21,7 @@ describe("link cookie name", () => {
 });
 
 describe("loading the environment file", () => {
-	it("prints nothing to standard output", async () => {
+	it("does not call console.log", async () => {
 		const printed = vi
 			.spyOn(console, "log")
 			.mockImplementation(() => undefined);
