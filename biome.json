@@ -134,6 +134,19 @@
       }
     },
     {
+      "includes": ["e2e/**"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1500, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["lib/schemas/**"],
       "plugins": ["./lint-rules/no-bare-zod-object.grit"]
     },
