@@ -158,7 +158,7 @@ Run the checks relevant to the change, and report the commands, the results and 
 TypeScript is strict: no `any`, no `@ts-ignore`, no unexplained casts in application code.
 `biome.json` carries narrower exceptions for test files.
 
-A source file may hold at most 500 non-blank lines, and a test file at most 1,500.
+A source file may hold at most 500 lines of code, and a test file at most 1,500; blank lines and comment lines are not counted.
 A file over the limit, or one that would grow past its cap, is split; its cap is never raised.
 When a capped file shrinks, lower its cap to the new size in the same change.
 
