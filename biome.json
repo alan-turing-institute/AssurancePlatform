@@ -58,7 +58,11 @@
     "rules": {
       "recommended": true,
       "nursery": {
-        "noIncrementDecrement": "off"
+        "noIncrementDecrement": "off",
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": { "maxLines": 500, "skipBlankLines": true }
+        }
       },
       "performance": {
         "noBarrelFile": "off"
@@ -93,6 +97,12 @@
       "includes": ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
       "linter": {
         "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1500, "skipBlankLines": true }
+            }
+          },
           "suspicious": {
             "noConsole": "off",
             "noExplicitAny": "off"
@@ -126,6 +136,426 @@
     {
       "includes": ["lib/schemas/**"],
       "plugins": ["./lint-rules/no-bare-zod-object.grit"]
+    },
+    {
+      "includes": [
+        "src/__tests__/integration/case-batch-update-service.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 3001, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/element-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 2117, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/__tests__/integration/element-service.test.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1795, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/case-batch-update-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1584, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/cases/__tests__/node-edit-dialog.test.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1580, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/__tests__/integration/health-criteria-strict-adversarial.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1557, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/health-criteria-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1252, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/check-pages.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1113, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/plugins/assistant/linter/structural.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 1060, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/export/exporters/word-exporter.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 912, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/integration-registry-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 909, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/health-evidence-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 904, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/case-fetch-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 889, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["prisma/seed/dev-seed.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 882, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/model-connection-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 837, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/schemas/health-criteria.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 836, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/plugins/health/criteria-draft.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 834, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/case-import-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 764, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/publish-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 691, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/export/exporters/pdf-components.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 686, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/cases/node-edit-dialog.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 685, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/auth/config.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 626, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/docs/curriculum/quiz-components.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 598, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/case/layout-helper.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 592, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["components/cases/json-view-panel.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 586, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/plugins/health/criteria-form.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 566, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/case/tree-diff.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 556, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/assistant/generate-ruleset.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 552, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/openapi/operations.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 550, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/plugins/health/settings-view.tsx"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 524, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/globals.css"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 522, "skipBlankLines": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["lib/services/case-permission-service.ts"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": { "maxLines": 515, "skipBlankLines": true }
+            }
+          }
+        }
+      }
     }
   ]
 }
