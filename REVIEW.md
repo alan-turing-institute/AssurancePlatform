@@ -73,6 +73,7 @@ Rules marked **(run)** need a test or CI result, so ask the author for the evide
 - For any function the change touches or extracts, ask which test reaches it directly.
 - Only findings the change introduced count.
   Existing findings are out of scope.
+- A change that raises a file's cap in `biome.json`, or adds a new capped file, is refused unless the plan says why.
 
 ## 8. What goes into a public repository
 
